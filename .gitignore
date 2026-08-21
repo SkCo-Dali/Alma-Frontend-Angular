@@ -1,0 +1,21 @@
+# Compilados
+/dist
+/out-tsc
+/coverage
+
+# Dependencias
+/node_modules
+
+# IDEs y editores
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.launch
+.settings/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Angular
+.angular/

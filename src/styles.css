@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * ALMA design system — lenguaje de diseño macOS (portado 1:1 del front React).
+ *
+ * Materiales: superficies translúcidas (tokens con alpha) + utilidad .glass
+ * (backdrop-filter) sobre un wallpaper de gradientes suaves que les da
+ * profundidad. Tipografía: stack SF Pro con tracking negativo. Geometría:
+ * --radius 14px (tarjetas), controles ~10-12px. Acento: verde Skandia como
+ * accentColor del sistema (#00C83C claro / #30D158 oscuro).
+ *
+ * El @theme inline mapea variables a utilidades Tailwind. :root define modo
+ * claro y .dark el oscuro; todos los colores en oklch.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-3xl: calc(var(--radius) + 8px);
+  --radius-4xl: calc(var(--radius) + 14px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.875rem; /* 14px — tarjetas y paneles */
+
+  /* Lienzo gris sistema (#F5F5F7) y tinta (#1D1D1F / #6E6E73) */
+  --background: oklch(0.975 0.001 286);
+  --foreground: oklch(0.24 0.005 286);
+  --card: oklch(1 0 0 / 68%);
+  --card-foreground: oklch(0.24 0.005 286);
+  --popover: oklch(1 0 0 / 97%);
+  --popover-foreground: oklch(0.24 0.005 286);
+
+  /* Acento del sistema: verde Skandia (#00C83C) */
+  --primary: oklch(0.7 0.2 148);
+  --primary-foreground: oklch(0.995 0 0);
+  --primary-hover: oklch(0.62 0.19 148);
+  --secondary: oklch(0.62 0.012 286 / 14%);
+  --secondary-foreground: oklch(0.3 0.005 286);
+  --muted: oklch(0.62 0.012 286 / 12%);
+  --muted-foreground: oklch(0.55 0.008 286);
+  --accent: oklch(0.62 0.012 286 / 14%);
+  --accent-foreground: oklch(0.3 0.005 286);
+  --destructive: oklch(0.6 0.21 27);
+  --destructive-foreground: oklch(0.995 0 0);
+  --success: oklch(0.7 0.2 148);
+  --warning: oklch(0.75 0.15 75);
+
+  /* Hairlines */
+  --border: oklch(0 0 0 / 8%);
+  --input: oklch(0 0 0 / 9%);
+  --ring: oklch(0.7 0.2 148 / 55%);
+
+  --surface-raised: oklch(1 0 0 / 72%);
+  --surface-sunken: oklch(0.62 0.012 286 / 10%);
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --shadow-md: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px -6px oklch(0 0 0 / 0.08);
+  --shadow-lg: 0 1px 2px oklch(0 0 0 / 0.05), 0 16px 40px -8px oklch(0 0 0 / 0.14);
+
+  --chart-1: oklch(0.7 0.2 148);
+  --chart-2: oklch(0.55 0.14 255);
+  --chart-3: oklch(0.72 0.14 180);
+  --chart-4: oklch(0.62 0.15 290);
+  --chart-5: oklch(0.75 0.15 75);
+
+  /* Sidebar translúcida (material sidebar de macOS) */
+  --sidebar: oklch(1 0 0 / 62%);
+  --sidebar-foreground: oklch(0.28 0.005 286);
+  --sidebar-primary: oklch(0.7 0.2 148);
+  --sidebar-primary-foreground: oklch(0.995 0 0);
+  --sidebar-accent: oklch(0.62 0.012 286 / 14%);
+  --sidebar-accent-foreground: oklch(0.28 0.005 286);
+  --sidebar-border: oklch(0 0 0 / 7%);
+  --sidebar-ring: oklch(0.7 0.2 148 / 55%);
+
+  /* Tablas: superficies OPACAS (legibilidad sobre el wallpaper) */
+  --table-surface: oklch(1 0 0);
+  --table-header: oklch(0.965 0.003 286);
+  --table-stripe: oklch(0.988 0.001 286);
+
+  /* Wallpaper vivo estilo Big Sur (paleta Skandia: verde/teal/azul) */
+  --wp-base: oklch(0.93 0.03 170);
+  --wp-a: oklch(0.85 0.17 152 / 90%);
+  --wp-b: oklch(0.8 0.11 235 / 85%);
+  --wp-c: oklch(0.86 0.11 185 / 85%);
+  --wp-d: oklch(0.9 0.12 120 / 70%);
+}
+
+.dark {
+  /* Lienzo #161618, superficies grafito translúcidas, tinta #F5F5F7 */
+  --background: oklch(0.205 0.004 286);
+  --foreground: oklch(0.975 0.001 286);
+  --card: oklch(0.3 0.005 286 / 62%);
+  --card-foreground: oklch(0.975 0.001 286);
+  --popover: oklch(0.28 0.005 286 / 97%);
+  --popover-foreground: oklch(0.975 0.001 286);
+
+  /* Verde sistema en oscuro (#30D158) */
+  --primary: oklch(0.76 0.2 150);
+  --primary-foreground: oklch(0.18 0.02 150);
+  --primary-hover: oklch(0.82 0.19 150);
+  --secondary: oklch(0.75 0.01 286 / 16%);
+  --secondary-foreground: oklch(0.95 0.002 286);
+  --muted: oklch(0.75 0.01 286 / 13%);
+  --muted-foreground: oklch(0.68 0.006 286);
+  --accent: oklch(0.75 0.01 286 / 16%);
+  --accent-foreground: oklch(0.95 0.002 286);
+  --destructive: oklch(0.68 0.19 25);
+  --destructive-foreground: oklch(0.995 0 0);
+  --success: oklch(0.76 0.2 150);
+  --warning: oklch(0.78 0.15 80);
+
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.76 0.2 150 / 55%);
+
+  --surface-raised: oklch(0.27 0.005 286 / 70%);
+  --surface-sunken: oklch(0.75 0.01 286 / 10%);
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-md: 0 1px 2px oklch(0 0 0 / 0.3), 0 10px 28px -6px oklch(0 0 0 / 0.4);
+  --shadow-lg: 0 1px 2px oklch(0 0 0 / 0.35), 0 18px 44px -8px oklch(0 0 0 / 0.5);
+
+  --chart-1: oklch(0.76 0.2 150);
+  --chart-2: oklch(0.68 0.13 255);
+  --chart-3: oklch(0.78 0.13 180);
+  --chart-4: oklch(0.7 0.14 290);
+  --chart-5: oklch(0.78 0.15 80);
+
+  --sidebar: oklch(0.26 0.005 286 / 58%);
+  --sidebar-foreground: oklch(0.95 0.002 286);
+  --sidebar-primary: oklch(0.76 0.2 150);
+  --sidebar-primary-foreground: oklch(0.18 0.02 150);
+  --sidebar-accent: oklch(0.75 0.01 286 / 16%);
+  --sidebar-accent-foreground: oklch(0.95 0.002 286);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.76 0.2 150 / 55%);
+
+  --table-surface: oklch(0.23 0.005 286);
+  --table-header: oklch(0.285 0.006 286);
+  --table-stripe: oklch(0.25 0.005 286);
+
+  --wp-base: oklch(0.2 0.02 200);
+  --wp-a: oklch(0.42 0.13 155 / 75%);
+  --wp-b: oklch(0.38 0.11 250 / 70%);
+  --wp-c: oklch(0.4 0.1 190 / 65%);
+  --wp-d: oklch(0.35 0.09 300 / 45%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      "SF Pro Display",
+      "SF Pro Text",
+      "Segoe UI Variable Display",
+      "Segoe UI",
+      Roboto,
+      system-ui,
+      sans-serif;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    color: var(--color-foreground);
+    background-color: var(--wp-base);
+    background-image:
+      radial-gradient(55% 65% at 12% 12%, var(--wp-a), transparent 72%),
+      radial-gradient(50% 60% at 92% 8%, var(--wp-b), transparent 70%),
+      radial-gradient(60% 70% at 80% 95%, var(--wp-c), transparent 72%),
+      radial-gradient(45% 55% at 18% 95%, var(--wp-d), transparent 70%);
+    background-attachment: fixed;
+    transition: background-color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  /* Barras de scroll estilo macOS: delgadas, redondeadas, semitransparentes,
+     superpuestas (no roban ancho de layout). Firefox usa scrollbar-width. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent)
+      transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--foreground) 22%, transparent);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklch, var(--foreground) 38%, transparent);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* Material de vidrio esmerilado (sidebar, toolbar, dock, tarjetas) */
+  .glass {
+    background-color: var(--card);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--border);
+  }
+  .glass-strong {
+    background-color: var(--surface-raised);
+    backdrop-filter: blur(24px) saturate(180%);
+  }
+}
+
+/* Loader de marca: la A de ALMA se dibuja en loop (ver alma-loader.component) */
+.alma-loader-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: alma-draw 1.8s ease-in-out infinite;
+}
+.alma-loader-arc {
+  animation-delay: 0.3s;
+}
+@keyframes alma-draw {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  50% {
+    stroke-dashoffset: 0;
+  }
+  72% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+/* Dock: transición suave de la magnificación (reemplaza los springs de
+   motion/react; el tamaño lo calcula DockComponent en cada mousemove) */
+.dock-tile {
+  transition:
+    width 0.09s ease-out,
+    height 0.09s ease-out,
+    transform 0.09s ease-out;
+  will-change: width, height, transform;
+}
+.dock-panel {
+  transition:
+    transform 0.28s cubic-bezier(0.32, 0.72, 0.35, 1),
+    opacity 0.22s ease;
+}
+.dock-tooltip {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* El loader de marca queda exento: es feedback de estado (como cualquier
+     spinner), no una animación decorativa */
+  *:not(.alma-loader-stroke),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

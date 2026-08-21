@@ -1,0 +1,69 @@
+name: ALMA Angular Static Web App
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - develop
+      - staging
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'Development'
+        type: choice
+        options:
+          - Development
+          - UAT
+          - Production
+
+jobs:
+  build_and_deploy_job:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    # Rama -> GitHub Environment -> Static Web App (mismo esquema del front React):
+    #   main    -> Production  -> (pendiente crear)
+    #   staging -> UAT         -> (pendiente crear)
+    #   develop -> Development -> SkCoAlmaAngularDev
+    environment: ${{ github.event.inputs.environment != '' && github.event.inputs.environment || (github.base_ref || github.ref_name) == 'main' && 'Production' || (github.base_ref || github.ref_name) == 'staging' && 'UAT' || 'Development' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        # La configuración de Angular se elige por environment (fileReplacements
+        # inyecta clientId/tenant/apiUrl; no hay variables de build).
+        run: |
+          case "${{ github.event.inputs.environment != '' && github.event.inputs.environment || (github.base_ref || github.ref_name) == 'main' && 'Production' || (github.base_ref || github.ref_name) == 'staging' && 'UAT' || 'Development' }}" in
+            Production) npm run build:prd ;;
+            UAT)        npm run build:stg ;;
+            *)          npm run build:dev ;;
+          esac
+      - name: Prepare isolation directory for SWA
+        run: |
+          mkdir _deploy
+          cp -r dist/browser/* _deploy/
+          cp staticwebapp.config.json _deploy/
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "_deploy"
+          api_location: ""
+          output_location: ""
+          skip_app_build: true
