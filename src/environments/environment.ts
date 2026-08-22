@@ -13,6 +13,14 @@ export const environment = {
     sacUsuarios: {
       scriptUrl: 'http://localhost:4310/SkCo.UserManagement.Angular.js',
       styleUrl: 'http://localhost:4310/SkCo.UserManagement.Angular.css',
+      /**
+       * Vacío ⇒ la app remota recibe el token de Alma (su API acepta la
+       * audiencia de Alma). Para que valide su PROPIA audiencia y sus app roles
+       * sin cambiarle código, poner aquí su scope
+       * ('api://37f7436f-806a-4372-90f4-f5f56d24edc1/access_as_user')
+       * y pre-autorizar el cliente de Alma en su app registration.
+       */
+      scopes: [] as string[],
     },
   },
 };

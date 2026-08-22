@@ -57,6 +57,18 @@ function accountToUser(account: AccountInfo, me: MeApi | null, foto: string | nu
   };
 }
 
+/** Mensaje entendible para los fallos típicos al pedir el token de otro recurso. */
+function describirErrorDeToken(err: unknown, scopes: string[]): string {
+  const texto = err instanceof Error ? err.message : String(err);
+  if (/consent|AADSTS65001/i.test(texto)) {
+    return `Falta el consentimiento del administrador para ${scopes.join(', ')}.`;
+  }
+  if (/AADSTS500011|invalid_resource|was not found in the tenant/i.test(texto)) {
+    return `El recurso ${scopes.join(', ')} no existe en el tenant o no expone ese scope.`;
+  }
+  return texto;
+}
+
 export type AuthStatus = 'loading' | 'login' | 'inactive' | 'ready';
 
 @Injectable({ providedIn: 'root' })
@@ -193,6 +205,38 @@ export class AuthService {
     } catch {
       await app.acquireTokenRedirect({ scopes: [API_SCOPE], account });
       return null;
+    }
+  }
+
+  /**
+   * Access token para el API de OTRA app montada en el shell (micro-frontend con
+   * su propio recurso en Entra). Así la app remota valida su propia audiencia y
+   * sus propios app roles y no hay que tocarle el código.
+   *
+   * Es tolerante a fallos: si falta el consentimiento del administrador o la
+   * pre-autorización del cliente de Alma, no rompe el shell — se intenta una vez
+   * con popup (no redirect, para no perder la página) y si no se logra devuelve
+   * el motivo para que el host lo muestre.
+   */
+  async getRemoteToken(scopes: string[]): Promise<{ token: string | null; motivo?: string }> {
+    if (!authEnabled) return { token: null, motivo: 'La autenticación está deshabilitada.' };
+    if (!scopes.length) return { token: null, motivo: 'La app remota no declara scopes.' };
+    const app = await this.getMsal();
+    const account = this.getAccount(app);
+    if (!account) return { token: null, motivo: 'No hay sesión activa.' };
+    try {
+      const result = await app.acquireTokenSilent({ scopes, account });
+      return { token: result.accessToken };
+    } catch (err) {
+      if (err instanceof InteractionRequiredAuthError) {
+        try {
+          const result = await app.acquireTokenPopup({ scopes, account });
+          return { token: result.accessToken };
+        } catch (err2) {
+          return { token: null, motivo: describirErrorDeToken(err2, scopes) };
+        }
+      }
+      return { token: null, motivo: describirErrorDeToken(err, scopes) };
     }
   }
 

@@ -55,6 +55,18 @@ export interface RemoteApp {
   styleUrl?: string;
   /** Nombre del custom element que define ese bundle. */
   elementName: string;
+  /**
+   * Scopes del API de la app remota (p. ej. `api://<su-client-id>/access_as_user`).
+   *
+   * Si se declaran, Alma pide a Entra un token PARA ESE RECURSO y se lo entrega
+   * al elemento: la app remota sigue validando su propia audiencia y sus propios
+   * app roles, sin tocar su código. Requiere que su app registration
+   * pre-autorice el cliente de Alma (o consentimiento del administrador).
+   *
+   * Vacío o ausente ⇒ se le pasa el token de Alma (entonces su API tiene que
+   * aceptar la audiencia de Alma).
+   */
+  scopes?: string[];
   /** Permiso de Alma → rol funcional que espera la app remota. */
   roleMap?: Record<string, string>;
 }

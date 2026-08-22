@@ -123,7 +123,7 @@ export class MicrofrontendHostComponent implements OnDestroy {
       await customElements.whenDefined(remoto.elementName);
 
       const el = document.createElement(remoto.elementName);
-      this.aplicarSesion(el, await this.auth.getAccessToken());
+      this.aplicarSesion(el, await this.token());
       this.contenedor.nativeElement.replaceChildren(el);
       this.elemento = el;
       this.montado = remoto.scriptUrl;
@@ -131,7 +131,7 @@ export class MicrofrontendHostComponent implements OnDestroy {
 
       // Renovación silenciosa del token mientras la app esté abierta.
       this.timer = setInterval(() => {
-        void this.auth.getAccessToken().then((t) => {
+        void this.token().then((t) => {
           if (t && this.elemento) {
             (this.elemento as unknown as Record<string, unknown>)['accessToken'] = t;
           }
@@ -145,6 +145,20 @@ export class MicrofrontendHostComponent implements OnDestroy {
           : 'La aplicación remota no respondió. Revisa que esté publicada.',
       );
     }
+  }
+
+  /**
+   * Token que recibe la app remota:
+   *  - si declara `scopes`, uno emitido PARA SU PROPIO API (conserva su audiencia
+   *    y sus app roles, sin cambiarle el código);
+   *  - si no, el token de Alma (su API tiene que aceptar la audiencia de Alma).
+   */
+  private async token(): Promise<string | null> {
+    const scopes = this.remoto()?.scopes;
+    if (!scopes?.length) return this.auth.getAccessToken();
+    const { token, motivo } = await this.auth.getRemoteToken(scopes);
+    if (!token) throw new Error(motivo ?? 'No se pudo obtener el token de la aplicación.');
+    return token;
   }
 
   /** Propiedades del elemento = los @Input() de la app remota. */
