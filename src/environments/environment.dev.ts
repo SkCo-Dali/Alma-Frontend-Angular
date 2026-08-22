@@ -13,6 +13,8 @@ export const environment = {
     sacUsuarios: {
       scriptUrl: 'https://skcoalmaremotesdev.z20.web.core.windows.net/sac-usuarios/SkCo.UserManagement.Angular.js',
       styleUrl: 'https://skcoalmaremotesdev.z20.web.core.windows.net/sac-usuarios/SkCo.UserManagement.Angular.css',
+      /** Base del API de la app remota; vacío ⇒ la que trae su propio build. */
+      apiBaseUrl: '',
       /**
        * Vacío ⇒ la app remota recibe el token de Alma (su API acepta la
        * audiencia de Alma). Para que valide su PROPIA audiencia y sus app roles

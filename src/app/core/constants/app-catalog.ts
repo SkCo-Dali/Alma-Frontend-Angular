@@ -27,6 +27,7 @@ export const APP_CATALOG: Application[] = [
       scriptUrl: environment.remotes.sacUsuarios.scriptUrl,
       styleUrl: environment.remotes.sacUsuarios.styleUrl,
       scopes: environment.remotes.sacUsuarios.scopes,
+      apiBaseUrl: environment.remotes.sacUsuarios.apiBaseUrl || undefined,
       elementName: 'sac-usuarios',
       roleMap: {
         'app.sac-usuarios.fraude': 'prevencion.fraude',

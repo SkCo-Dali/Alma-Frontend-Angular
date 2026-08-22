@@ -165,6 +165,8 @@ export class MicrofrontendHostComponent implements OnDestroy {
   private aplicarSesion(el: HTMLElement, token: string | null): void {
     const props = el as unknown as Record<string, unknown>;
     const user = this.auth.user();
+    const base = this.remoto()?.apiBaseUrl;
+    if (base) props['apiBaseUrl'] = base;
     props['accessToken'] = token ?? '';
     props['userName'] = user.nombre;
     props['userEmail'] = user.correo;

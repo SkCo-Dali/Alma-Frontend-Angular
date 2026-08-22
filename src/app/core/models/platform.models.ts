@@ -56,6 +56,12 @@ export interface RemoteApp {
   /** Nombre del custom element que define ese bundle. */
   elementName: string;
   /**
+   * Base del API que debe consumir la app remota. Permite repuntarla (p. ej. de
+   * un App Service al gateway corporativo) por configuración, sin recompilar su
+   * bundle. Ausente ⇒ usa la que trae su propio build.
+   */
+  apiBaseUrl?: string;
+  /**
    * Scopes del API de la app remota (p. ej. `api://<su-client-id>/access_as_user`).
    *
    * Si se declaran, Alma pide a Entra un token PARA ESE RECURSO y se lo entrega
