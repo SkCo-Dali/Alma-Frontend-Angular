@@ -13,6 +13,15 @@ import { ApiConflictError, HTTP_CONFLICT } from './api-error';
 const API_BASE = environment.apiUrl.replace(/\/+$/, '');
 const RETRIES = 3;
 
+/** Nombre de archivo del header, con la variante UTF-8 primero. */
+function nombreDeContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8?.[1]) return decodeURIComponent(utf8[1]);
+  const ascii = header.match(/filename="?([^";]+)"?/i);
+  return ascii?.[1] ?? null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ComisionesHttp {
   private readonly auth = inject(AuthService);
@@ -64,6 +73,29 @@ export class ComisionesHttp {
     if (!res.ok) throw await this.error(res, fallbackMessage);
     const texto = await res.text();
     return (texto ? JSON.parse(texto) : null) as T;
+  }
+
+  /**
+   * Descarga un archivo (Excel del motor). El nombre sale del
+   * Content-Disposition cuando el backend lo manda; si no, del fallback.
+   */
+  async descargar(path: string, fallbackFilename: string): Promise<void> {
+    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
+      headers: await this.headers(),
+    });
+    if (!res.ok) throw await this.error(res, 'No se pudo generar el archivo');
+
+    const blob = await res.blob();
+    const nombre =
+      nombreDeContentDisposition(res.headers.get('Content-Disposition')) ??
+      fallbackFilename;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   /**

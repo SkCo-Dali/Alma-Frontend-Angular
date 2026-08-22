@@ -106,6 +106,14 @@ export const routes: Routes = [
     title: 'Catálogos — ALMA',
   },
   {
+    path: 'apps/motor-comisiones/ejecucion-motor',
+    loadComponent: () =>
+      import('./features/comisiones/ejecucion/ejecucion-motor.page').then(
+        (m) => m.EjecucionMotorPageComponent,
+      ),
+    title: 'Ejecución del Motor — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),
