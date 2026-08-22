@@ -5,7 +5,7 @@ import { Component, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { Application } from '../../core/models/platform.models';
-import { UiStateService } from '../../core/services/ui-state.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 
 @Component({
   selector: 'alma-app-card-grid',
@@ -89,7 +89,7 @@ import { UiStateService } from '../../core/services/ui-state.service';
   `,
 })
 export class AppCardGridComponent {
-  private readonly ui = inject(UiStateService);
+  private readonly ui = inject(PreferencesService);
   private readonly router = inject(Router);
 
   readonly apps = input.required<Application[]>();

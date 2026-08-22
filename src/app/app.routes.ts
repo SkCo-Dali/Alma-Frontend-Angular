@@ -8,14 +8,10 @@ export const routes: Routes = [
     loadComponent: () => import('./ui/home/home.component').then((m) => m.HomeComponent),
     title: 'ALMA — Skandia',
   },
-  {
-    path: 'applications',
-    loadComponent: () =>
-      import('./ui/applications/applications.component').then(
-        (m) => m.ApplicationsComponent,
-      ),
-    title: 'Aplicaciones — ALMA',
-  },
+  // La antigua /applications se reemplazó por el Launchpad del Dock; /help se
+  // integró en Configuración. Se mantienen solo para redirigir enlaces viejos.
+  { path: 'applications', redirectTo: '', pathMatch: 'full' },
+  { path: 'help', redirectTo: 'settings', pathMatch: 'full' },
   {
     path: 'favorites',
     loadComponent: () =>
@@ -44,7 +40,7 @@ export const routes: Routes = [
       import('./features/suscripcion/suscripcion-page.component').then(
         (m) => m.SuscripcionPageComponent,
       ),
-    title: 'Motor de Suscripción — ALMA',
+    title: 'Suscripción de Seguros — ALMA',
   },
   {
     path: 'apps/:appId',
@@ -53,29 +49,16 @@ export const routes: Routes = [
     title: 'ALMA — Skandia',
   },
   {
-    path: 'access-requests',
-    loadComponent: () =>
-      import('./ui/access-requests/access-requests.component').then(
-        (m) => m.AccessRequestsComponent,
-      ),
-    title: 'Solicitudes de acceso — ALMA',
-  },
-  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () => import('./ui/admin/admin.component').then((m) => m.AdminComponent),
-    title: 'Administración — ALMA',
+    title: 'Accesos — ALMA',
   },
   {
     path: 'settings',
     loadComponent: () =>
       import('./ui/settings/settings.component').then((m) => m.SettingsComponent),
     title: 'Configuración — ALMA',
-  },
-  {
-    path: 'help',
-    loadComponent: () => import('./ui/help/help.component').then((m) => m.HelpComponent),
-    title: 'Ayuda — ALMA',
   },
   {
     path: 'profile',

@@ -4,7 +4,7 @@
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
 import { AuthService } from '../auth/auth.service';
-import { MeApi } from '../models/platform.models';
+import { MeApi, PreferenciasPortal } from '../models/platform.models';
 
 const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 
@@ -36,8 +36,21 @@ export class ApiService {
     return body as T;
   }
 
-  /** Perfil del usuario autenticado contra alma.Users (rol único, estilo Dali). */
+  /** Perfil del usuario autenticado: identidad + permisos RBAC por App. */
   getMe(): Promise<MeApi> {
     return this.fetch<MeApi>('/api/users/me');
+  }
+
+  /** Preferencias del portal persistidas por usuario (cross-device). */
+  async getPreferences(): Promise<PreferenciasPortal> {
+    const r = await this.fetch<{ data: PreferenciasPortal }>('/api/users/me/preferences');
+    return r?.data ?? {};
+  }
+
+  async savePreferences(data: PreferenciasPortal): Promise<void> {
+    await this.fetch('/api/users/me/preferences', {
+      method: 'PUT',
+      body: JSON.stringify({ data }),
+    });
   }
 }

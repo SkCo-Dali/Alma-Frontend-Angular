@@ -1,46 +1,47 @@
-// Consola administrativa (paridad con routes/admin.tsx): tabs por query param
-// ?tab= con tablas de aplicaciones, roles, equipos, usuarios y permisos.
+// Consola de Accesos v2 (paridad routes/admin.tsx): pestañas por permiso —
+// Aplicaciones (solo plataforma), Usuarios, Roles, Auditoría y Métricas.
 
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { APP_CATALOG, ROLES, TEAMS } from '../../core/constants/app-catalog';
+import { APP_CATALOG } from '../../core/constants/app-catalog';
+import { AccesosApi, RolCatalogo } from '../../core/services/accesos.api';
+import { AdminTableComponent } from '../../shared/components/admin-table.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
+import { AuditoriaAccesosComponent } from '../../features/accesos/auditoria-accesos.component';
+import { UsuariosAccesosComponent } from '../../features/accesos/usuarios-accesos.component';
+import { MetricasUsoComponent } from '../../features/metricas/metricas-uso.component';
 
-type Tab = 'apps' | 'roles' | 'teams' | 'users' | 'permissions' | 'reports';
-
-const VALID_TABS: Tab[] = ['apps', 'roles', 'teams', 'users', 'permissions', 'reports'];
-
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'apps', label: 'Aplicaciones', icon: 'layout-grid' },
-  { id: 'roles', label: 'Roles', icon: 'shield' },
-  { id: 'teams', label: 'Equipos', icon: 'users' },
-  { id: 'users', label: 'Usuarios', icon: 'user-circle-2' },
-  { id: 'permissions', label: 'Permisos', icon: 'key-round' },
-  { id: 'reports', label: 'Reportes', icon: 'bar-chart-3' },
-];
+type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
 
 @Component({
   selector: 'alma-admin',
-  imports: [LucideAngularModule, PageHeaderComponent],
+  imports: [
+    LucideAngularModule,
+    PageHeaderComponent,
+    AdminTableComponent,
+    UsuariosAccesosComponent,
+    AuditoriaAccesosComponent,
+    MetricasUsoComponent,
+  ],
   template: `
     <alma-page-header
-      title="Administración"
-      description="Consola de gestión del portal de operaciones."
+      title="Accesos"
+      description="Usuarios, roles, auditoría y métricas de la plataforma."
     />
 
     <div
       class="mb-5 flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1 shadow-[var(--shadow-sm)]"
     >
-      @for (t of tabs; track t.id) {
+      @for (t of visiblesTabs(); track t.id) {
         <button
           type="button"
           (click)="setTab(t.id)"
           class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
           [class]="
             activeTab() === t.id
-              ? 'bg-[oklch(0.94_0.03_255)] text-[oklch(0.35_0.16_255)]'
+              ? 'bg-primary/10 text-primary'
               : 'text-muted-foreground hover:bg-accent hover:text-foreground'
           "
         >
@@ -52,180 +53,142 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
     @switch (activeTab()) {
       @case ('apps') {
-        <div class="admin-table">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr>
-                  <th>Aplicación</th><th>Categoría</th><th>Integración</th><th>Permiso</th><th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (a of catalog; track a.id) {
-                  <tr>
-                    <td>
-                      <div class="flex items-center gap-2.5">
-                        <div
-                          class="flex h-8 w-8 items-center justify-center rounded-md"
-                          [style.backgroundColor]="a.color + '18'"
-                          [style.color]="a.color"
-                        >
-                          <lucide-icon [name]="a.icono" [size]="16" />
-                        </div>
-                        <span class="font-medium text-foreground">{{ a.nombre }}</span>
-                      </div>
-                    </td>
-                    <td>{{ a.categoria }}</td>
-                    <td>{{ a.integrationType }}</td>
-                    <td><code>{{ a.requiredPermission }}</code></td>
-                    <td>{{ a.estado }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- Catálogo de Apps registradas en la plataforma (registry del frontend) -->
+        <alma-admin-table
+          [headers]="['Aplicación', 'Categoría', 'Integración', 'Permiso requerido', 'Estado']"
+          [rows]="catalogo"
+          [rowTpl]="filaApp"
+        />
+        <ng-template #filaApp let-a>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2.5">
+              <div
+                class="flex h-8 w-8 items-center justify-center rounded-md"
+                [style.backgroundColor]="a.color + '18'"
+                [style.color]="a.color"
+              >
+                <lucide-icon [name]="a.icono" [size]="16" />
+              </div>
+              <span class="font-medium text-foreground">{{ a.nombre }}</span>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.categoria }}</td>
+          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.integrationType }}</td>
+          <td class="px-4 py-3">
+            <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
+              {{ a.requiredPermission }}
+            </code>
+          </td>
+          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.estado }}</td>
+        </ng-template>
+      }
+      @case ('usuarios') {
+        <alma-usuarios-accesos />
       }
       @case ('roles') {
-        <div class="admin-table">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr><th>Rol</th><th>Descripción</th><th>Permisos</th></tr></thead>
-              <tbody>
-                @for (r of roles; track r.id) {
-                  <tr>
-                    <td><span class="font-medium text-foreground">{{ r.nombre }}</span></td>
-                    <td>{{ r.descripcion ?? '—' }}</td>
-                    <td>
-                      <div class="flex flex-wrap gap-1">
-                        @for (p of r.permissions; track p) {
-                          <code>{{ p }}</code>
-                        }
-                      </div>
-                    </td>
-                  </tr>
+        <!-- Roles reales del RBAC (alma.Roles vía API, filtrados al ámbito) -->
+        @if (rolesCargando()) {
+          <div class="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <lucide-icon name="loader-2" [size]="16" class="animate-spin" /> Cargando roles…
+          </div>
+        } @else if (rolesError(); as err) {
+          <p class="py-8 text-sm text-destructive">{{ err }}</p>
+        } @else {
+          <alma-admin-table
+            [headers]="['Ámbito', 'Rol', 'Descripción', 'Permisos']"
+            [rows]="roles()"
+            [rowTpl]="filaRol"
+          />
+          <ng-template #filaRol let-r>
+            <td class="px-4 py-3 text-sm text-muted-foreground">
+              @if (r.app) {
+                {{ r.app }}
+              } @else {
+                <span class="font-medium text-primary">Plataforma</span>
+              }
+            </td>
+            <td class="px-4 py-3">
+              <span class="font-medium text-foreground">{{ r.name }}</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-muted-foreground">{{ r.description ?? '—' }}</td>
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap gap-1">
+                @for (p of r.permissions; track p) {
+                  <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
+                    {{ p }}
+                  </code>
                 }
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </div>
+            </td>
+          </ng-template>
+        }
       }
-      @case ('teams') {
-        <div class="admin-table">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr><th>Equipo</th><th>Miembros</th></tr></thead>
-              <tbody>
-                @for (t of teams; track t.id) {
-                  <tr>
-                    <td><span class="font-medium text-foreground">{{ t.nombre }}</span></td>
-                    <td>{{ t.miembros }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
+      @case ('auditoria') {
+        <alma-auditoria-accesos />
       }
-      @case ('users') {
-        <div class="admin-table">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr><th>Usuario</th><th>Correo</th><th>Cargo</th><th>Equipo</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <img [src]="user().foto" class="h-7 w-7 rounded-full" alt="" />
-                      <span class="font-medium text-foreground">{{ user().nombre }}</span>
-                    </div>
-                  </td>
-                  <td>{{ user().correo }}</td>
-                  <td>{{ user().cargo }}</td>
-                  <td>{{ user().equipo }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      @case ('metricas') {
+        <alma-metricas-uso />
       }
-      @case ('permissions') {
-        <div class="admin-table">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead><tr><th>Permiso</th><th>Descripción</th></tr></thead>
-              <tbody>
-                @for (a of catalog; track a.id) {
-                  <tr>
-                    <td><code>{{ a.requiredPermission }}</code></td>
-                    <td>Acceso a {{ a.nombre }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
-      @case ('reports') {
-        <div
-          class="rounded-lg border border-dashed border-border bg-card p-10 text-center shadow-[var(--shadow-sm)]"
-        >
-          <lucide-icon name="bar-chart-3" [size]="32" class="mx-auto text-muted-foreground" />
-          <h3 class="mt-3 text-sm font-semibold text-foreground">
-            Reportes de uso de la plataforma
-          </h3>
-          <p class="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-            Maqueta — aquí vivirán los reportes de adopción, accesos y actividad por
-            aplicación y equipo.
-          </p>
-        </div>
-      }
-    }
-  `,
-  styles: `
-    .admin-table {
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      background-color: var(--card);
-      box-shadow: var(--shadow-sm);
-    }
-    thead {
-      background-color: var(--surface-sunken);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted-foreground);
-    }
-    th { padding: 12px 16px; text-align: left; font-weight: 500; }
-    tbody tr { border-top: 1px solid var(--border); }
-    tbody tr:hover { background-color: var(--surface-sunken); }
-    td { padding: 12px 16px; vertical-align: middle; color: var(--muted-foreground); }
-    code {
-      border-radius: 4px;
-      background-color: var(--surface-sunken);
-      padding: 2px 6px;
-      font-size: 11px;
     }
   `,
 })
 export class AdminComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly accesos = inject(AccesosApi);
 
   /** Query param ?tab= (withComponentInputBinding). */
   readonly tab = input<string | undefined>(undefined);
 
-  protected readonly tabs = TABS;
-  protected readonly catalog = APP_CATALOG;
-  protected readonly roles = ROLES;
-  protected readonly teams = TEAMS;
-  protected readonly user = this.auth.user;
+  protected readonly catalogo = APP_CATALOG;
+  protected readonly roles = signal<RolCatalogo[]>([]);
+  protected readonly rolesCargando = signal(true);
+  protected readonly rolesError = signal<string | null>(null);
+
+  // Admin de App = permiso comodín app.<slug>.*; admin de PLATAFORMA = platform.*
+  private readonly esAdminDeApp = computed(() =>
+    this.auth.user().permissions.some((p) => p.startsWith('app.') && p.endsWith('.*')),
+  );
+  private readonly esAdminPlataforma = computed(
+    () =>
+      this.auth.hasPermission('platform.access.view') ||
+      this.auth.hasPermission('platform.audit.view') ||
+      this.auth.hasPermission('platform.metrics.view'),
+  );
+  private readonly puedeAccesos = computed(
+    () => this.auth.hasPermission('platform.access.view') || this.esAdminDeApp(),
+  );
+  private readonly puedeAuditoria = computed(
+    () => this.auth.hasPermission('platform.audit.view') || this.esAdminDeApp(),
+  );
+  private readonly puedeMetricas = computed(
+    () => this.auth.hasPermission('platform.metrics.view') || this.esAdminDeApp(),
+  );
+
+  protected readonly visiblesTabs = computed(() => {
+    const tabs: { id: Tab; label: string; icon: string; visible: boolean }[] = [
+      { id: 'apps', label: 'Aplicaciones', icon: 'layout-grid', visible: this.esAdminPlataforma() },
+      { id: 'usuarios', label: 'Usuarios', icon: 'user-circle-2', visible: this.puedeAccesos() },
+      { id: 'roles', label: 'Roles', icon: 'shield', visible: this.puedeAccesos() },
+      { id: 'auditoria', label: 'Auditoría', icon: 'scroll-text', visible: this.puedeAuditoria() },
+      { id: 'metricas', label: 'Métricas', icon: 'bar-chart-3', visible: this.puedeMetricas() },
+    ];
+    return tabs.filter((t) => t.visible);
+  });
 
   protected readonly activeTab = computed<Tab>(() => {
+    const visibles = this.visiblesTabs();
     const t = this.tab() as Tab | undefined;
-    return t && VALID_TABS.includes(t) ? t : 'apps';
+    return t && visibles.some((v) => v.id === t) ? t : (visibles[0]?.id ?? 'usuarios');
   });
+
+  constructor() {
+    this.accesos
+      .listarRoles()
+      .then((r) => this.roles.set(r))
+      .catch((e) => this.rolesError.set(e instanceof Error ? e.message : String(e)))
+      .finally(() => this.rolesCargando.set(false));
+  }
 
   protected setTab(t: Tab): void {
     void this.router.navigate([], { queryParams: { tab: t }, replaceUrl: true });

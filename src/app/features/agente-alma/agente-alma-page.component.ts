@@ -1,15 +1,13 @@
-// Página de la app Agente Alma (paridad con routes/apps.agente-alma.tsx).
+// Página de la app Agente Alma (paridad con routes/apps.agente-alma.tsx v2 — sin miga).
 
 import { Component } from '@angular/core';
-import { BreadcrumbComponent } from '../../shared/components/breadcrumb.component';
 import { ChatAgenteComponent } from './chat-agente.component';
 
 @Component({
   selector: 'alma-agente-page',
-  imports: [BreadcrumbComponent, ChatAgenteComponent],
+  imports: [ChatAgenteComponent],
   template: `
     <div class="flex flex-col gap-4">
-      <alma-breadcrumb current="Agente Alma" />
       <alma-chat-agente />
     </div>
   `,

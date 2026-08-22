@@ -29,6 +29,9 @@ export interface Application {
   descripcion: string;
   categoria: string;
   icono: string;
+  /** Ícono estilo App de iOS (imagen full-bleed): ruta a un PNG cuadrado en
+   *  /public/app-icons. Si está presente, reemplaza al ícono lucide + degradado. */
+  iconUrl?: string;
   color: string;
   url: string;
   integrationType: IntegrationType;
@@ -62,12 +65,29 @@ export interface AccessRequest {
   justification: string;
 }
 
-/** Perfil crudo de alma.Users (rol único estilo Dali); ver GET /api/users/me. */
+export interface AppRole {
+  role_id: string;
+  app: string | null; // null = rol de plataforma
+  slug: string;
+  nombre: string;
+}
+
+/** Perfil del usuario autenticado: identidad (alma.Users) + permisos RBAC por App. */
 export interface MeApi {
   email: string | null;
   id: string | null;
   name: string | null;
-  role: string | null;
+  role: string | null; // legacy (rol único); usar `permissions`
   is_active: boolean;
   registrado: boolean;
+  permissions?: string[];
+  app_roles?: AppRole[];
+}
+
+/** Preferencias del portal persistidas por usuario (cross-device). */
+export interface PreferenciasPortal {
+  theme?: string;
+  background?: string;
+  appOrder?: string[];
+  dockCount?: number;
 }

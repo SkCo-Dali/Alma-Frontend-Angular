@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaHousingComponent } from '../../shared/components/alma-housing.component';
+import { AlmaSphereComponent } from '../../shared/components/alma-sphere.component';
 import {
   AgenteAlmaApi,
   ConversacionItem,
@@ -33,7 +35,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
 
 @Component({
   selector: 'alma-chat-agente',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaHousingComponent, AlmaSphereComponent],
   template: `
     <div class="flex h-[calc(100dvh-11rem)] gap-4">
       <!-- Rail de historial -->
@@ -76,10 +78,8 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
         class="flex min-w-0 flex-1 flex-col rounded-xl border border-border bg-card"
       >
         <header class="flex items-center gap-3 border-b border-border px-5 py-3">
-          <span
-            class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary"
-          >
-            <lucide-icon name="sparkles" [size]="20" />
+          <span class="h-9 w-9 overflow-hidden rounded-full">
+            <alma-sphere />
           </span>
           <div>
             <h1 class="text-sm font-semibold text-foreground">Agente Alma</h1>
@@ -93,11 +93,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
             <div
               class="mx-auto flex h-full max-w-xl flex-col items-center justify-center gap-5 text-center"
             >
-              <span
-                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-              >
-                <lucide-icon name="sparkles" [size]="28" />
-              </span>
+              <alma-housing [size]="132" [interactive]="true" />
               <p class="text-sm text-muted-foreground">{{ bienvenida }}</p>
               <div class="grid w-full gap-2 sm:grid-cols-2">
                 @for (s of sugerencias; track s) {
@@ -121,14 +117,15 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
               @for (m of visibles(); track m.key) {
                 <div class="flex gap-3" [class.flex-row-reverse]="m.rol === 'user'">
                   <span
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                    [class]="
-                      m.rol === 'user'
-                        ? 'bg-muted text-muted-foreground'
-                        : 'bg-primary/10 text-primary'
-                    "
+                    class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full"
+                    [class.bg-muted]="m.rol === 'user'"
+                    [class.text-muted-foreground]="m.rol === 'user'"
                   >
-                    <lucide-icon [name]="m.rol === 'user' ? 'user' : 'sparkles'" [size]="16" />
+                    @if (m.rol === 'user') {
+                      <lucide-icon name="user" [size]="16" />
+                    } @else {
+                      <alma-sphere />
+                    }
                   </span>
                   <div
                     class="max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm"

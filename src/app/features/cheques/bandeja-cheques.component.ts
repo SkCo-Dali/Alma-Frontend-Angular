@@ -128,7 +128,7 @@ import {
       @if (formAbierto()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div
-            class="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-lg)]"
+            class="surface-solid max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border p-5 shadow-[var(--shadow-lg)]"
           >
             <div class="mb-4 flex items-center justify-between">
               <h2 class="text-sm font-semibold text-foreground">

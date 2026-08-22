@@ -1,13 +1,13 @@
-// Dock estilo macOS — navegación única de ALMA (paridad con layout/Dock.tsx).
+// Dock estilo macOS v2 — navegación única de ALMA (paridad layout/Dock.tsx).
 //
-// Magnificación: en cada mousemove se calcula el tamaño de cada icono según
-// la distancia del cursor a su centro (misma curva que el original React:
-// BASE + (PEAK - BASE) * t², t = 1 - d/RADIUS). Los springs de motion/react
-// se reemplazan por una transición CSS corta (.dock-tile en styles.css).
-//
-// Dentro de una aplicación (/apps/*) el dock se auto-oculta pero nunca
-// desaparece del todo: queda un asa tipo indicador de iPhone en el borde
-// inferior que lo invoca con hover, clic o foco de teclado.
+// - Magnificación por mousemove (curva BASE + (PEAK-BASE)·t²) con transición CSS.
+// - Nav fijo mínimo: Inicio + "Ver todas" (abre el Launchpad).
+// - Las Apps ancladas son las primeras `dockCount` del orden ÚNICO del usuario;
+//   en pantallas angostas se muestran solo las que caben.
+// - Reordenamiento drag & drop EN VIVO (desktop + táctil) y menú contextual
+//   (Abrir / Quitar del Dock).
+// - Se auto-oculta fuera del inicio (/apps/*, /admin, /settings, /help); el asa
+//   inferior lo invoca.
 
 import { NgTemplateOutlet } from '@angular/common';
 import {
@@ -20,11 +20,17 @@ import {
   signal,
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
 import { filter } from 'rxjs/operators';
-import { AuthService } from '../../core/auth/auth.service';
-import { ApplicationsService } from '../../core/services/applications.service';
-import { UiStateService } from '../../core/services/ui-state.service';
+import { Application } from '../../core/models/platform.models';
+import {
+  MAX_DOCK,
+  PreferencesService,
+  clampDock,
+} from '../../core/services/preferences.service';
+import { OrderedAppsService, reordenar } from '../../core/services/ordered-apps.service';
+import { AppIconArtComponent } from './app-icon-art.component';
+import { DockLaunchpadComponent } from './dock-launchpad.component';
+import { TouchDrag, setCloneDragImage } from '../drag-utils';
 
 const BASE = 48; // icono en reposo (px)
 const PEAK = 76; // icono bajo el cursor (px)
@@ -34,32 +40,38 @@ interface DockEntry {
   key: string;
   label: string;
   active: boolean;
-  kind: 'app' | 'nav' | 'sep';
-  icon: string;
-  color?: string;
+  kind: 'app' | 'nav-img' | 'nav-action';
+  app?: Application;
+  img?: string;
   to?: string;
   href?: string;
-  appId?: string;
 }
 
 @Component({
   selector: 'alma-dock',
-  imports: [RouterLink, LucideAngularModule, NgTemplateOutlet],
+  imports: [NgTemplateOutlet, RouterLink, AppIconArtComponent, DockLaunchpadComponent],
   template: `
-    <!-- Asa tipo indicador de iPhone: el dock nunca desaparece del todo -->
+    <!-- Asa tipo indicador de iPhone -->
     @if (insideApp()) {
       <div
-        class="fixed inset-x-0 bottom-0 z-30 flex h-5 items-end justify-center"
-        (mouseenter)="summoned.set(true)"
+        class="fixed inset-x-0 bottom-0 z-30 flex items-end justify-center"
+        (dragenter)="summoned.set(true)"
+        (dragover)="$event.preventDefault(); summoned.set(true)"
       >
         <button
           type="button"
           aria-label="Mostrar dock"
+          (mouseenter)="summoned.set(true)"
           (click)="summoned.set(true)"
           (focus)="summoned.set(true)"
-          class="glass-strong mb-1.5 h-[7px] w-32 cursor-pointer rounded-full border border-border shadow-[var(--shadow-md)] transition-opacity duration-200"
-          [class.opacity-0]="!hidden()"
-        ></button>
+          class="flex cursor-pointer flex-col items-center px-3 pb-1.5 pt-3 transition-opacity duration-200"
+          [style.opacity]="hidden() ? 1 : 0"
+          [style.pointerEvents]="hidden() ? 'auto' : 'none'"
+        >
+          <span
+            class="glass-strong h-[7px] w-32 rounded-full border border-border shadow-[var(--shadow-md)]"
+          ></span>
+        </button>
       </div>
     }
 
@@ -71,40 +83,68 @@ interface DockEntry {
     >
       <nav
         aria-label="Dock de navegación"
-        class="glass-strong pointer-events-auto flex items-end gap-2 rounded-[24px] border border-border px-3 pb-1.5 pt-2 shadow-[var(--shadow-lg)]"
+        class="glass-strong pointer-events-auto relative flex items-end gap-2 rounded-[24px] border border-border px-3 pb-1.5 pt-2 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
-        (mouseleave)="onLeave()"
+        (mouseleave)="onLeaveNav()"
         (focusin)="insideApp() && summoned.set(true)"
       >
         @for (entry of entries(); track entry.key; let i = $index) {
-          @if (entry.kind === 'sep') {
+          @if (entry.key === 'sep') {
             <div class="mx-1 h-10 w-px self-center bg-border"></div>
-          } @else if (entry.to) {
+          } @else if (entry.kind === 'nav-action') {
+            <button
+              type="button"
+              class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              [attr.aria-label]="entry.label"
+              (click)="launchpadOpen.set(true)"
+            >
+              <ng-container *ngTemplateOutlet="tile; context: { entry, i }" />
+            </button>
+          } @else if (entry.kind === 'nav-img') {
             <a
               [routerLink]="entry.to"
               class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
               [attr.aria-label]="entry.label"
-              (click)="onOpen(entry)"
             >
-              <ng-container
-                [ngTemplateOutlet]="tile"
-                [ngTemplateOutletContext]="{ entry, i }"
-              />
+              <ng-container *ngTemplateOutlet="tile; context: { entry, i }" />
             </a>
           } @else {
-            <a
-              [href]="entry.href"
-              target="_blank"
-              rel="noreferrer"
-              class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              [attr.aria-label]="entry.label"
-              (click)="onOpen(entry)"
+            <div
+              class="dock-reorder"
+              [attr.data-drag-id]="entry.key"
+              [draggable]="dragArmed() === entry.key"
+              [style.opacity]="hiddenAppId() === entry.key ? 0 : 1"
+              (touchstart)="touch.begin($any($event), entry.key)"
+              (mousedown)="armDrag($any($event), entry.key)"
+              (mouseup)="dragArmed.set(null)"
+              (dragstart)="onDragStart($any($event), entry.key)"
+              (dragend)="onDragEnd()"
+              (dragover)="onDragOverTile($any($event), entry.key)"
+              (drop)="$event.preventDefault()"
+              (contextmenu)="onContextMenu($any($event), entry)"
             >
-              <ng-container
-                [ngTemplateOutlet]="tile"
-                [ngTemplateOutletContext]="{ entry, i }"
-              />
-            </a>
+              @if (entry.to) {
+                <a
+                  [routerLink]="entry.to"
+                  class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  [attr.aria-label]="entry.label"
+                  (click)="onOpen(entry)"
+                >
+                  <ng-container *ngTemplateOutlet="tile; context: { entry, i }" />
+                </a>
+              } @else {
+                <a
+                  [href]="entry.href"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  [attr.aria-label]="entry.label"
+                  (click)="onOpen(entry)"
+                >
+                  <ng-container *ngTemplateOutlet="tile; context: { entry, i }" />
+                </a>
+              }
+            </div>
           }
         }
       </nav>
@@ -124,20 +164,9 @@ interface DockEntry {
           [style.transform]="'translateY(' + liftAt(i) + 'px)'"
         >
           @if (entry.kind === 'app') {
-            <div
-              class="flex h-full w-full items-center justify-center text-white"
-              [style.background]="
-                'linear-gradient(160deg, ' + entry.color + ', ' + entry.color + 'bb)'
-              "
-            >
-              <lucide-icon [name]="entry.icon" class="h-[55%] w-[55%]" [strokeWidth]="1.75" />
-            </div>
+            <alma-app-icon-art [app]="entry.app" />
           } @else {
-            <div
-              class="glass-strong flex h-full w-full items-center justify-center text-foreground/80"
-            >
-              <lucide-icon [name]="entry.icon" class="h-1/2 w-1/2" [strokeWidth]="1.75" />
-            </div>
+            <img [src]="entry.img" alt="" draggable="false" class="h-full w-full object-cover" />
           }
         </div>
         <span
@@ -147,25 +176,105 @@ interface DockEntry {
         ></span>
       </div>
     </ng-template>
+
+    <!-- Menú contextual estilo macOS (clic derecho sobre una App del Dock) -->
+    @if (menuCtx(); as ctx) {
+      <div
+        class="fixed inset-0 z-50"
+        (click)="menuCtx.set(null)"
+        (contextmenu)="$event.preventDefault(); menuCtx.set(null)"
+      ></div>
+      <div
+        class="surface-solid fixed z-50 min-w-44 rounded-lg border border-border p-1 shadow-[var(--shadow-lg)]"
+        [style.left.px]="ctx.x"
+        [style.top.px]="ctx.y - 88 > 8 ? ctx.y - 88 : 8"
+      >
+        <p class="px-2.5 py-1 text-xs font-medium text-muted-foreground">{{ ctx.label }}</p>
+        @if (ctx.to) {
+          <button
+            class="w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent"
+            (click)="abrirDesdeMenu(ctx.to)"
+          >
+            Abrir
+          </button>
+        }
+        <button
+          class="w-full rounded-md px-2.5 py-1.5 text-left text-sm text-destructive hover:bg-accent"
+          (click)="quitarDelDock(ctx.appId)"
+        >
+          Quitar del Dock
+        </button>
+      </div>
+    }
+
+    <alma-dock-launchpad [open]="launchpadOpen()" (closed)="launchpadOpen.set(false)" />
   `,
 })
 export class DockComponent {
-  private readonly apps = inject(ApplicationsService);
-  private readonly auth = inject(AuthService);
-  private readonly ui = inject(UiStateService);
+  private readonly orderedApps = inject(OrderedAppsService);
+  private readonly prefs = inject(PreferencesService);
   private readonly router = inject(Router);
 
   @ViewChildren('iconEl') private iconEls!: QueryList<ElementRef<HTMLElement>>;
 
   protected readonly pathname = signal(this.router.url);
   protected readonly summoned = signal(false);
-  protected readonly insideApp = computed(() => this.pathname().startsWith('/apps/'));
+  protected readonly launchpadOpen = signal(false);
+  protected readonly insideApp = computed(() => {
+    const p = this.pathname();
+    return (
+      p.startsWith('/apps/') ||
+      p.startsWith('/admin') ||
+      p.startsWith('/settings') ||
+      p.startsWith('/help')
+    );
+  });
   protected readonly hidden = computed(() => this.insideApp() && !this.summoned());
+
+  // Ancho de viewport reactivo (cuántas apps caben en el Dock)
+  private readonly vw = signal(window.innerWidth);
+  private readonly onResize = () => this.vw.set(window.innerWidth);
+
+  // Drag & drop
+  protected readonly dragArmed = signal<string | null>(null);
+  protected readonly hiddenAppId = signal<string | null>(null);
+  private readonly dragAppId = signal<string | null>(null);
+  private readonly liveOrder = signal<string[] | null>(null);
+  protected readonly menuCtx = signal<{
+    x: number;
+    y: number;
+    appId: string;
+    label: string;
+    to?: string;
+  } | null>(null);
 
   /** Tamaños por índice de entry; null ⇒ todos en reposo (BASE). */
   private readonly sizes = signal<number[] | null>(null);
 
+  protected readonly touch = new TouchDrag({
+    onStart: (id) => {
+      this.sizes.set(null);
+      this.dragAppId.set(id);
+      this.liveOrder.set(this.orderIds());
+      this.hiddenAppId.set(id);
+    },
+    onOver: (overId, after) => {
+      const dragging = this.dragAppId();
+      const live = this.liveOrder();
+      if (!dragging || !live || overId === dragging) return;
+      this.liveOrder.set(reordenar(live, dragging, overId, after));
+    },
+    onEnd: () => {
+      const orden = this.liveOrder();
+      this.dragAppId.set(null);
+      this.hiddenAppId.set(null);
+      this.liveOrder.set(null);
+      if (orden) this.prefs.appOrder.set(orden);
+    },
+  });
+
   constructor() {
+    window.addEventListener('resize', this.onResize);
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
@@ -174,49 +283,57 @@ export class DockComponent {
       });
   }
 
+  private orderIds(): string[] {
+    return this.orderedApps.ordered().map((a) => a.id);
+  }
+
   protected readonly entries = computed<DockEntry[]>(() => {
     const path = this.pathname();
-    const apps: DockEntry[] = this.apps.applications().map((a) => ({
-      key: a.id,
-      label: a.nombre,
-      active: Boolean(a.internalRoute && path.startsWith(a.internalRoute)),
-      kind: 'app' as const,
-      icon: a.icono,
-      color: a.color,
-      to: a.internalRoute ?? undefined,
-      href: a.internalRoute ? undefined : a.url,
-      appId: a.id,
-    }));
+    const ordered = this.orderedApps.ordered();
+    const orderIds = ordered.map((a) => a.id);
+    const porId = new Map(ordered.map((a) => [a.id, a]));
 
-    const nav = (key: string, label: string, to: string, icon: string): DockEntry => ({
-      key,
-      label,
-      active: to === '/' ? path === '/' : path.startsWith(to),
-      kind: 'nav',
-      icon,
-      to,
-    });
+    const vw = this.vw();
+    const esMovil = vw < 768;
+    const disponible = vw - (esMovil ? 150 : 260);
+    const caben = Math.max(1, Math.floor(disponible / 56));
+    const topeVista = Math.min(caben, esMovil ? 8 : MAX_DOCK);
+    const anclas = clampDock(Math.min(this.prefs.dockCount(), orderIds.length));
+    const visibles = Math.min(anclas, topeVista);
 
-    const sep = (key: string): DockEntry => ({
-      key,
-      label: '',
-      active: false,
-      kind: 'sep',
-      icon: '',
-    });
+    const efectivo = this.liveOrder() ?? orderIds;
+    const shownIds = efectivo.slice(0, visibles);
+    const apps: DockEntry[] = shownIds
+      .map((id) => porId.get(id))
+      .filter((a): a is Application => Boolean(a))
+      .map((a) => ({
+        key: a.id,
+        label: a.nombre,
+        active: Boolean(a.internalRoute && path.startsWith(a.internalRoute)),
+        kind: 'app' as const,
+        app: a,
+        to: a.internalRoute ?? undefined,
+        href: a.internalRoute ? undefined : a.url,
+      }));
 
     return [
-      nav('inicio', 'Inicio', '/', 'home'),
-      sep('sep-1'),
+      {
+        key: 'inicio',
+        label: 'Inicio',
+        active: path === '/',
+        kind: 'nav-img',
+        img: '/app-icons/nav-inicio.png',
+        to: '/',
+      },
+      {
+        key: 'apps',
+        label: 'Ver todas las aplicaciones',
+        active: this.launchpadOpen(),
+        kind: 'nav-action',
+        img: '/app-icons/nav-todas.png',
+      },
+      { key: 'sep', label: '', active: false, kind: 'nav-img' },
       ...apps,
-      sep('sep-2'),
-      nav('apps', 'Aplicaciones', '/applications', 'layout-grid'),
-      nav('solicitudes', 'Solicitudes de acceso', '/access-requests', 'calendar-check'),
-      ...(this.auth.isAdmin()
-        ? [nav('admin', 'Administración', '/admin', 'shield-check')]
-        : []),
-      nav('settings', 'Configuración', '/settings', 'settings'),
-      nav('help', 'Ayuda', '/help', 'help-circle'),
     ];
   });
 
@@ -230,13 +347,13 @@ export class DockComponent {
   }
 
   protected onMove(event: MouseEvent): void {
+    if (this.dragAppId()) return; // sin magnificar al arrastrar
     const els = this.iconEls?.toArray() ?? [];
     const entries = this.entries();
     const next = entries.map(() => BASE);
-    // Los separadores no renderizan #iconEl: se mapean tiles reales → índices
     const tileIdxs = entries
       .map((e, idx) => ({ e, idx }))
-      .filter(({ e }) => e.kind !== 'sep')
+      .filter(({ e }) => e.key !== 'sep')
       .map(({ idx }) => idx);
     tileIdxs.forEach((entryIdx, tileIdx) => {
       const el = els[tileIdx]?.nativeElement;
@@ -249,11 +366,77 @@ export class DockComponent {
     this.sizes.set(next);
   }
 
-  protected onLeave(): void {
+  protected onLeaveNav(): void {
     this.sizes.set(null);
   }
 
   protected onOpen(entry: DockEntry): void {
-    if (entry.appId) this.ui.pushRecent(entry.appId);
+    if (entry.app) this.prefs.pushRecent(entry.app.id);
+  }
+
+  /** PERF: `draggable` se arma SOLO al presionar (el hit-testing de Chromium
+   *  degrada el hover de la magnificación si es permanente). */
+  protected armDrag(ev: MouseEvent, appId: string): void {
+    if (ev.button === 0) this.dragArmed.set(appId);
+  }
+
+  protected onDragStart(ev: DragEvent, appId: string): void {
+    if (!ev.dataTransfer) return;
+    ev.dataTransfer.effectAllowed = 'move';
+    setCloneDragImage(ev, ev.currentTarget as HTMLElement);
+    this.sizes.set(null); // congela la magnificación durante el arrastre
+    this.dragAppId.set(appId);
+    this.liveOrder.set(this.orderIds());
+    // Ocultado DIFERIDO del origen (si se oculta en el mismo tick, la imagen
+    // de arrastre se captura en blanco).
+    setTimeout(() => this.hiddenAppId.set(appId), 0);
+  }
+
+  protected onDragEnd(): void {
+    this.dragArmed.set(null);
+    this.hiddenAppId.set(null);
+    const orden = this.liveOrder();
+    this.dragAppId.set(null);
+    this.liveOrder.set(null);
+    // SIEMPRE confirmar el reorden en vivo; NUNCA quitar por arrastrar afuera.
+    if (orden) this.prefs.appOrder.set(orden);
+  }
+
+  protected onDragOverTile(ev: DragEvent, targetId: string): void {
+    ev.preventDefault();
+    const dragging = this.dragAppId();
+    const live = this.liveOrder();
+    if (!dragging || dragging === targetId || !live) return;
+    const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = ev.clientX > r.left + r.width / 2;
+    this.liveOrder.set(reordenar(live, dragging, targetId, after));
+  }
+
+  protected onContextMenu(ev: MouseEvent, entry: DockEntry): void {
+    ev.preventDefault();
+    this.menuCtx.set({
+      x: ev.clientX,
+      y: ev.clientY,
+      appId: entry.key,
+      label: entry.label,
+      to: entry.to,
+    });
+  }
+
+  protected abrirDesdeMenu(to: string): void {
+    this.menuCtx.set(null);
+    void this.router.navigateByUrl(to);
+  }
+
+  /** Quitar del Dock = mover la App justo después de la zona anclada y reducir
+   *  el conteo (sigue en el Launchpad). Mínimo 1 anclada. */
+  protected quitarDelDock(appId: string): void {
+    this.menuCtx.set(null);
+    const anclas = clampDock(Math.min(this.prefs.dockCount(), this.orderIds().length));
+    if (anclas <= 1) return;
+    const ids = this.orderIds().filter((id) => id !== appId);
+    ids.splice(anclas - 1, 0, appId);
+    this.prefs.appOrder.set(ids);
+    this.prefs.setDockCount(anclas - 1);
   }
 }

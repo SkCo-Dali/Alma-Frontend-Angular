@@ -1,14 +1,8 @@
 // Catálogo de aplicaciones de ALMA (paridad con data/mock.ts del front React).
-// Las apps reales están "en migración" desde el front React: su manifest ya
-// existe pero la ruta interna muestra el estado de migración hasta portarlas.
+// Nota: la gestión de accesos, roles, auditoría y métricas vive en la consola
+// /admin (ícono Accesos del Dock), no como Apps del catálogo.
 
-import {
-  AccessRequest,
-  Application,
-  Role,
-  Team,
-  User,
-} from '../models/platform.models';
+import { Application, User } from '../models/platform.models';
 
 export const APP_CATALOG: Application[] = [
   // ---- Aplicaciones reales ----
@@ -19,6 +13,7 @@ export const APP_CATALOG: Application[] = [
       'Asistente conversacional de Servicio al Cliente: procesos, casos de Salesforce y cheques.',
     categoria: 'Asistentes',
     icono: 'sparkles',
+    iconUrl: '/app-icons/agente-alma.png',
     color: '#00C83C',
     url: '/apps/agente-alma',
     internalRoute: '/apps/agente-alma',
@@ -44,10 +39,12 @@ export const APP_CATALOG: Application[] = [
   },
   {
     id: 'app-suscripcion',
-    nombre: 'Motor de Suscripción',
-    descripcion: 'Bandeja de aprobación de pólizas de Vida Individual — Crea Patrimonio.',
+    nombre: 'Suscripción de Seguros',
+    descripcion:
+      'Bandeja de cotizaciones de Vida: declaraciones, evaluación del motor y emisión.',
     categoria: 'Suscripción',
     icono: 'brain',
+    iconUrl: '/app-icons/suscripcion.png',
     color: '#00C83C',
     url: '/apps/suscripcion',
     internalRoute: '/apps/suscripcion',
@@ -64,6 +61,7 @@ export const APP_CATALOG: Application[] = [
       'Planes de compensación, parametrización, ejecución del motor e información gerencial.',
     categoria: 'Comisiones',
     icono: 'calculator',
+    iconUrl: '/app-icons/motor-comisiones.png',
     color: '#00C83C',
     url: '/apps/motor-comisiones',
     internalRoute: '/apps/motor-comisiones',
@@ -155,93 +153,23 @@ export const MOCK_USER: User = {
   foto: 'https://api.dicebear.com/9.x/initials/svg?seed=Daniel%20Cano&backgroundColor=0d6cbd&textColor=ffffff',
   roles: ['admin', 'operations.analyst'],
   permissions: [
+    'app.suscripcion.view',
+    'app.suscripcion.solicitudes.manage',
+    'app.suscripcion.solicitudes.emit',
+    'app.suscripcion.motor.config',
+    'app.suscripcion.simulador.config',
+    'app.motor-comisiones.view',
     'app.agente-alma.view',
     'app.cheques.view',
-    'app.suscripcion.view',
-    'app.motor-comisiones.view',
     'app.emision.view',
     'app.documental.view',
     'app.pharos.view',
     'app.dashboard.view',
     'app.salesforce.view',
     'platform.admin',
+    'platform.access.view',
+    'platform.access.assign',
+    'platform.audit.view',
+    'platform.metrics.view',
   ],
-};
-
-export const TEAMS: Team[] = [
-  { id: 't-1', nombre: 'Emisión y Novedades', miembros: 28 },
-  { id: 't-2', nombre: 'Suscripción', miembros: 14 },
-  { id: 't-3', nombre: 'Comisiones', miembros: 9 },
-  { id: 't-4', nombre: 'Gestión Documental', miembros: 17 },
-  { id: 't-5', nombre: 'Servicio al Cliente', miembros: 46 },
-  { id: 't-6', nombre: 'Excelencia Operacional', miembros: 12 },
-];
-
-export const ROLES: Role[] = [
-  {
-    id: 'r-admin',
-    nombre: 'Administrador de Plataforma',
-    descripcion: 'Acceso completo a la administración del portal.',
-    permissions: ['platform.admin', '*.view', '*.manage'],
-  },
-  {
-    id: 'r-suscriptor',
-    nombre: 'Suscriptor',
-    descripcion: 'Evaluación y aprobación de solicitudes en el Motor de Suscripción.',
-    permissions: ['app.suscripcion.view', 'app.pharos.view', 'app.documental.view'],
-  },
-  {
-    id: 'r-supervisor-comisiones',
-    nombre: 'Supervisor de Comisiones',
-    descripcion: 'Parametrización y ejecución del Motor de Comisiones.',
-    permissions: ['app.motor-comisiones.view'],
-  },
-  {
-    id: 'r-analista-comisiones',
-    nombre: 'Analista de Comisiones',
-    descripcion: 'Consulta y análisis de comisiones causadas.',
-    permissions: ['app.motor-comisiones.view'],
-  },
-  {
-    id: 'r-operador',
-    nombre: 'Analista de Operaciones',
-    descripcion: 'Acceso operativo diario a emisión y consultas.',
-    permissions: ['app.emision.view', 'app.pharos.view', 'app.dashboard.view'],
-  },
-];
-
-export const ACCESS_REQUESTS: AccessRequest[] = [
-  {
-    id: 'req-1',
-    applicationId: 'app-motor-comisiones',
-    applicationName: 'Motor de Comisiones',
-    requestedAt: '2026-07-22',
-    status: 'pending',
-    justification: 'Apoyo en la parametrización de planes del canal Vida.',
-  },
-  {
-    id: 'req-2',
-    applicationId: 'app-dashboard-operaciones',
-    applicationName: 'Dashboard Operaciones',
-    requestedAt: '2026-07-20',
-    status: 'pending',
-    justification: 'Seguimiento de indicadores del equipo de Emisión.',
-  },
-  {
-    id: 'req-3',
-    applicationId: 'app-salesforce-hub',
-    applicationName: 'Salesforce Hub',
-    requestedAt: '2026-07-18',
-    status: 'pending',
-    justification: 'Consulta de vistas 360 para atención de casos.',
-  },
-];
-
-// Rol único de alma.Users (estilo Dali) → permisos de la plataforma.
-// Claves en minúsculas; la comparación es case-insensitive.
-export const ROLE_PERMISSIONS: Record<string, string[]> = {
-  admin: ['*'],
-  analista: ['app.agente-alma.view', 'app.cheques.view'],
-  supervisorcomisiones: ['app.motor-comisiones.view'],
-  analistacomisiones: ['app.motor-comisiones.view'],
 };

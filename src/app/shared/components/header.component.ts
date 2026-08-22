@@ -1,11 +1,11 @@
-// Header del shell (paridad con layout/Header.tsx): logo + lema, toggle de
-// tema, notificaciones, ayuda y menú de usuario.
+// Header del shell v2 (paridad Header.tsx): transparente, logo dual
+// claro/oscuro, toggle de tema y menú de usuario.
 
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { ThemeService } from '../../core/services/theme.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 
 /** "Nombre Apellido" a partir del display name completo (paridad lib/name.ts). */
 function shortName(full: string): string {
@@ -17,12 +17,15 @@ function shortName(full: string): string {
   selector: 'alma-header',
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <header
-      class="glass-strong sticky top-0 z-30 flex h-20 items-center gap-4 border-b border-border px-4 md:px-6"
-    >
+    <header class="sticky top-0 z-30 flex h-24 items-center gap-4 bg-transparent px-4 md:px-6">
       <a routerLink="/" class="flex shrink-0 items-center gap-3" aria-label="Inicio">
-        <img src="alma-logo.png" alt="Alma Skandia" class="h-14 w-auto" />
-        <span class="hidden text-[11px] font-medium text-muted-foreground sm:block">
+        <img src="alma-logo.png" alt="Alma Skandia" class="block h-[3.25rem] w-auto dark:hidden" />
+        <img
+          src="alma-logo-neg.png"
+          alt="Alma Skandia"
+          class="hidden h-[3.25rem] w-auto dark:block"
+        />
+        <span class="hidden text-[13px] font-medium text-muted-foreground sm:block">
           Conecta - Orquesta - Impulsa
         </span>
       </a>
@@ -30,28 +33,13 @@ function shortName(full: string): string {
       <div class="ml-auto flex items-center gap-1">
         <button
           type="button"
-          (click)="theme.toggle()"
+          (click)="prefs.toggleTheme()"
           class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           [attr.aria-label]="dark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
           [title]="dark() ? 'Modo claro' : 'Modo oscuro'"
         >
           <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="18" />
         </button>
-        <button
-          type="button"
-          class="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          aria-label="Notificaciones"
-        >
-          <lucide-icon name="bell" [size]="18" />
-          <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary"></span>
-        </button>
-        <a
-          routerLink="/help"
-          class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          aria-label="Ayuda"
-        >
-          <lucide-icon name="help-circle" [size]="18" />
-        </a>
 
         <div class="relative">
           <button
@@ -77,7 +65,7 @@ function shortName(full: string): string {
 
           @if (menuOpen()) {
             <div
-              class="absolute right-0 z-50 mt-2 w-56 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-md)]"
+              class="surface-solid absolute right-0 z-50 mt-2 w-56 rounded-md border border-border p-1 text-popover-foreground shadow-[var(--shadow-md)]"
             >
               <div class="px-2 py-1.5">
                 <p class="text-sm font-semibold">{{ user().nombre }}</p>
@@ -114,14 +102,14 @@ function shortName(full: string): string {
   `,
 })
 export class HeaderComponent {
-  protected readonly theme = inject(ThemeService);
+  protected readonly prefs = inject(PreferencesService);
   private readonly auth = inject(AuthService);
 
   protected readonly user = this.auth.user;
   protected readonly displayName = computed(() => shortName(this.user().nombre));
   protected readonly dark = computed(() => {
-    this.theme.theme();
-    return this.theme.resolved() === 'dark';
+    this.prefs.theme();
+    return this.prefs.resolved() === 'dark';
   });
   protected readonly menuOpen = signal(false);
 

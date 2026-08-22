@@ -1,8 +1,10 @@
-// Inicio minimalista, como un escritorio de Mac recién abierto: la fecha, el
-// saludo y el dock. Las aplicaciones viven en el dock. (Paridad routes/index.tsx)
+// Inicio: la esfera de Alma saluda al usuario, como si fuera Alma hablándole.
+// A futuro, este espacio será donde el Agente interactúe con el usuario.
+// (Paridad routes/index.tsx v2.)
 
 import { Component, computed, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { AlmaHousingComponent } from '../../shared/components/alma-housing.component';
 
 function firstName(full: string): string {
   return full.trim().split(/\s+/)[0] ?? full;
@@ -10,26 +12,18 @@ function firstName(full: string): string {
 
 @Component({
   selector: 'alma-home',
+  imports: [AlmaHousingComponent],
   template: `
-    <div class="flex min-h-[55vh] flex-col items-center justify-center text-center">
-      <p class="text-sm capitalize text-muted-foreground">{{ today }}</p>
-      <h1 class="mt-3 text-5xl font-bold tracking-tight text-foreground">
-        {{ greeting() }} 👋
+    <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <alma-housing [size]="188" [interactive]="true" />
+      <h1 class="mt-5 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        {{ greeting() }}
       </h1>
-      <p class="mt-3 text-sm text-muted-foreground">
-        Tus aplicaciones te esperan en el dock.
-      </p>
     </div>
   `,
 })
 export class HomeComponent {
   private readonly auth = inject(AuthService);
-
-  protected readonly today = new Date().toLocaleDateString('es-CO', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
 
   protected readonly greeting = computed(() => {
     const h = new Date().getHours();

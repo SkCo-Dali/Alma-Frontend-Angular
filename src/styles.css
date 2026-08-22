@@ -5,14 +5,10 @@
 /*
  * ALMA design system — lenguaje de diseño macOS (portado 1:1 del front React).
  *
- * Materiales: superficies translúcidas (tokens con alpha) + utilidad .glass
- * (backdrop-filter) sobre un wallpaper de gradientes suaves que les da
- * profundidad. Tipografía: stack SF Pro con tracking negativo. Geometría:
- * --radius 14px (tarjetas), controles ~10-12px. Acento: verde Skandia como
- * accentColor del sistema (#00C83C claro / #30D158 oscuro).
- *
- * El @theme inline mapea variables a utilidades Tailwind. :root define modo
- * claro y .dark el oscuro; todos los colores en oklch.
+ * Materiales: superficies sólidas con borde y sombra sobre un wallpaper de
+ * gradientes suaves. Tipografía: fuente de texto del sistema con peso base 450.
+ * Geometría: --radius 14px (tarjetas), controles ~10-12px. Acento: verde
+ * Skandia (#00C83C claro / #30D158 oscuro).
  */
 
 @theme inline {
@@ -48,14 +44,6 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
@@ -63,9 +51,11 @@
 
   /* Lienzo gris sistema (#F5F5F7) y tinta (#1D1D1F / #6E6E73) */
   --background: oklch(0.975 0.001 286);
-  --foreground: oklch(0.24 0.005 286);
-  --card: oklch(1 0 0 / 68%);
-  --card-foreground: oklch(0.24 0.005 286);
+  --foreground: oklch(0.19 0.006 286);
+  /* Superficies de texto OPACAS: sin alpha ni backdrop-filter, para que
+     Windows conserve el subpíxel de ClearType y el texto se vea nítido. */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.006 286);
   --popover: oklch(1 0 0 / 97%);
   --popover-foreground: oklch(0.24 0.005 286);
 
@@ -76,7 +66,7 @@
   --secondary: oklch(0.62 0.012 286 / 14%);
   --secondary-foreground: oklch(0.3 0.005 286);
   --muted: oklch(0.62 0.012 286 / 12%);
-  --muted-foreground: oklch(0.55 0.008 286);
+  --muted-foreground: oklch(0.43 0.01 286);
   --accent: oklch(0.62 0.012 286 / 14%);
   --accent-foreground: oklch(0.3 0.005 286);
   --destructive: oklch(0.6 0.21 27);
@@ -89,7 +79,7 @@
   --input: oklch(0 0 0 / 9%);
   --ring: oklch(0.7 0.2 148 / 55%);
 
-  --surface-raised: oklch(1 0 0 / 72%);
+  --surface-raised: oklch(1 0 0);
   --surface-sunken: oklch(0.62 0.012 286 / 10%);
   --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.04);
   --shadow-md: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 24px -6px oklch(0 0 0 / 0.08);
@@ -101,36 +91,26 @@
   --chart-4: oklch(0.62 0.15 290);
   --chart-5: oklch(0.75 0.15 75);
 
-  /* Sidebar translúcida (material sidebar de macOS) */
-  --sidebar: oklch(1 0 0 / 62%);
-  --sidebar-foreground: oklch(0.28 0.005 286);
-  --sidebar-primary: oklch(0.7 0.2 148);
-  --sidebar-primary-foreground: oklch(0.995 0 0);
-  --sidebar-accent: oklch(0.62 0.012 286 / 14%);
-  --sidebar-accent-foreground: oklch(0.28 0.005 286);
-  --sidebar-border: oklch(0 0 0 / 7%);
-  --sidebar-ring: oklch(0.7 0.2 148 / 55%);
-
   /* Tablas: superficies OPACAS (legibilidad sobre el wallpaper) */
   --table-surface: oklch(1 0 0);
   --table-header: oklch(0.965 0.003 286);
   --table-stripe: oklch(0.988 0.001 286);
 
-  /* Wallpaper vivo estilo Big Sur (paleta Skandia: verde/teal/azul) */
-  --wp-base: oklch(0.93 0.03 170);
-  --wp-a: oklch(0.85 0.17 152 / 90%);
-  --wp-b: oklch(0.8 0.11 235 / 85%);
-  --wp-c: oklch(0.86 0.11 185 / 85%);
-  --wp-d: oklch(0.9 0.12 120 / 70%);
+  /* Fondo por defecto ESMERALDA — verde Skandia protagonista + acento naranja */
+  --wp-base: oklch(0.93 0.04 150);
+  --wp-a: oklch(0.84 0.17 150 / 90%);
+  --wp-b: oklch(0.82 0.12 178 / 82%);
+  --wp-c: oklch(0.87 0.1 132 / 82%);
+  --wp-d: oklch(0.9 0.09 70 / 55%);
 }
 
 .dark {
-  /* Lienzo #161618, superficies grafito translúcidas, tinta #F5F5F7 */
+  /* Lienzo #161618, superficies grafito, tinta #F5F5F7 */
   --background: oklch(0.205 0.004 286);
   --foreground: oklch(0.975 0.001 286);
-  --card: oklch(0.3 0.005 286 / 62%);
+  --card: oklch(0.275 0.006 286);
   --card-foreground: oklch(0.975 0.001 286);
-  --popover: oklch(0.28 0.005 286 / 97%);
+  --popover: oklch(0.28 0.005 286);
   --popover-foreground: oklch(0.975 0.001 286);
 
   /* Verde sistema en oscuro (#30D158) */
@@ -140,7 +120,7 @@
   --secondary: oklch(0.75 0.01 286 / 16%);
   --secondary-foreground: oklch(0.95 0.002 286);
   --muted: oklch(0.75 0.01 286 / 13%);
-  --muted-foreground: oklch(0.68 0.006 286);
+  --muted-foreground: oklch(0.76 0.007 286);
   --accent: oklch(0.75 0.01 286 / 16%);
   --accent-foreground: oklch(0.95 0.002 286);
   --destructive: oklch(0.68 0.19 25);
@@ -152,7 +132,7 @@
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.76 0.2 150 / 55%);
 
-  --surface-raised: oklch(0.27 0.005 286 / 70%);
+  --surface-raised: oklch(0.275 0.006 286);
   --surface-sunken: oklch(0.75 0.01 286 / 10%);
   --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-md: 0 1px 2px oklch(0 0 0 / 0.3), 0 10px 28px -6px oklch(0 0 0 / 0.4);
@@ -164,24 +144,98 @@
   --chart-4: oklch(0.7 0.14 290);
   --chart-5: oklch(0.78 0.15 80);
 
-  --sidebar: oklch(0.26 0.005 286 / 58%);
-  --sidebar-foreground: oklch(0.95 0.002 286);
-  --sidebar-primary: oklch(0.76 0.2 150);
-  --sidebar-primary-foreground: oklch(0.18 0.02 150);
-  --sidebar-accent: oklch(0.75 0.01 286 / 16%);
-  --sidebar-accent-foreground: oklch(0.95 0.002 286);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.76 0.2 150 / 55%);
-
   --table-surface: oklch(0.23 0.005 286);
   --table-header: oklch(0.285 0.006 286);
   --table-stripe: oklch(0.25 0.005 286);
 
-  --wp-base: oklch(0.2 0.02 200);
-  --wp-a: oklch(0.42 0.13 155 / 75%);
-  --wp-b: oklch(0.38 0.11 250 / 70%);
-  --wp-c: oklch(0.4 0.1 190 / 65%);
-  --wp-d: oklch(0.35 0.09 300 / 45%);
+  --wp-base: oklch(0.2 0.03 150);
+  --wp-a: oklch(0.44 0.14 150 / 78%);
+  --wp-b: oklch(0.4 0.1 178 / 68%);
+  --wp-c: oklch(0.42 0.09 132 / 62%);
+  --wp-d: oklch(0.36 0.08 70 / 42%);
+}
+
+/* ── Fondos esmerilados alternativos (Configuración > Apariencia > Fondo) ──
+   Paleta Skandia (#00C83C verde, #FF9200 naranja, #02B1FF azul, gris). */
+
+/* OCÉANO ─ azul Skandia protagonista (+ acento verde) */
+html[data-bg="oceano"] {
+  --wp-base: oklch(0.93 0.035 235);
+  --wp-a: oklch(0.82 0.15 235 / 90%);
+  --wp-b: oklch(0.85 0.11 205 / 82%);
+  --wp-c: oklch(0.86 0.12 150 / 68%);
+  --wp-d: oklch(0.9 0.08 250 / 60%);
+}
+html.dark[data-bg="oceano"] {
+  --wp-base: oklch(0.19 0.03 238);
+  --wp-a: oklch(0.4 0.13 235 / 76%);
+  --wp-b: oklch(0.4 0.1 205 / 68%);
+  --wp-c: oklch(0.42 0.1 150 / 58%);
+  --wp-d: oklch(0.35 0.08 250 / 45%);
+}
+
+/* AURORA ─ multicolor Skandia (verde + azul + naranja) */
+html[data-bg="aurora"] {
+  --wp-base: oklch(0.93 0.03 200);
+  --wp-a: oklch(0.83 0.16 150 / 88%);
+  --wp-b: oklch(0.82 0.14 235 / 84%);
+  --wp-c: oklch(0.85 0.14 65 / 80%);
+  --wp-d: oklch(0.88 0.1 185 / 62%);
+}
+html.dark[data-bg="aurora"] {
+  --wp-base: oklch(0.19 0.03 200);
+  --wp-a: oklch(0.44 0.14 150 / 76%);
+  --wp-b: oklch(0.42 0.12 235 / 68%);
+  --wp-c: oklch(0.44 0.12 65 / 62%);
+  --wp-d: oklch(0.38 0.09 185 / 45%);
+}
+
+/* ATARDECER ─ naranja Skandia protagonista (+ ámbar y acento verde) */
+html[data-bg="atardecer"] {
+  --wp-base: oklch(0.95 0.04 75);
+  --wp-a: oklch(0.83 0.15 65 / 90%);
+  --wp-b: oklch(0.86 0.13 88 / 82%);
+  --wp-c: oklch(0.85 0.12 145 / 62%);
+  --wp-d: oklch(0.9 0.1 55 / 60%);
+}
+html.dark[data-bg="atardecer"] {
+  --wp-base: oklch(0.21 0.03 65);
+  --wp-a: oklch(0.45 0.13 62 / 76%);
+  --wp-b: oklch(0.44 0.11 88 / 66%);
+  --wp-c: oklch(0.42 0.1 145 / 55%);
+  --wp-d: oklch(0.38 0.09 55 / 45%);
+}
+
+/* GRAFITO ─ gris Skandia protagonista (premium, tintes de marca muy sutiles) */
+html[data-bg="grafito"] {
+  --wp-base: oklch(0.94 0.008 260);
+  --wp-a: oklch(0.87 0.025 150 / 85%);
+  --wp-b: oklch(0.85 0.022 235 / 80%);
+  --wp-c: oklch(0.89 0.018 70 / 72%);
+  --wp-d: oklch(0.91 0.01 260 / 58%);
+}
+html.dark[data-bg="grafito"] {
+  --wp-base: oklch(0.18 0.006 260);
+  --wp-a: oklch(0.35 0.025 150 / 72%);
+  --wp-b: oklch(0.33 0.022 235 / 66%);
+  --wp-c: oklch(0.36 0.018 70 / 58%);
+  --wp-d: oklch(0.3 0.01 260 / 42%);
+}
+
+/* CIELO ─ celeste claro protagonista (aireado, más blanco) */
+html[data-bg="cielo"] {
+  --wp-base: oklch(0.96 0.02 225);
+  --wp-a: oklch(0.9 0.09 220 / 85%);
+  --wp-b: oklch(0.92 0.06 195 / 80%);
+  --wp-c: oklch(0.95 0.04 240 / 80%);
+  --wp-d: oklch(0.93 0.06 155 / 55%);
+}
+html.dark[data-bg="cielo"] {
+  --wp-base: oklch(0.22 0.02 225);
+  --wp-a: oklch(0.44 0.09 218 / 72%);
+  --wp-b: oklch(0.42 0.07 195 / 66%);
+  --wp-c: oklch(0.46 0.05 240 / 62%);
+  --wp-d: oklch(0.4 0.05 155 / 42%);
 }
 
 @layer base {
@@ -197,18 +251,22 @@
   }
 
   body {
+    /* Fuente de texto del sistema (Segoe UI Variable Text en Windows, SF Pro
+       Text en Mac) con peso base 450 para más presencia sin verse fino. */
     font-family:
       -apple-system,
       BlinkMacSystemFont,
-      "SF Pro Display",
       "SF Pro Text",
+      "Segoe UI Variable Text",
       "Segoe UI Variable Display",
       "Segoe UI",
       Roboto,
       system-ui,
       sans-serif;
-    letter-spacing: -0.011em;
-    -webkit-font-smoothing: antialiased;
+    font-weight: 450;
+    letter-spacing: -0.003em;
+    -webkit-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
     color: var(--color-foreground);
     background-color: var(--wp-base);
     background-image:
@@ -229,8 +287,7 @@
 }
 
 @layer base {
-  /* Barras de scroll estilo macOS: delgadas, redondeadas, semitransparentes,
-     superpuestas (no roban ancho de layout). Firefox usa scrollbar-width. */
+  /* Barras de scroll estilo macOS: delgadas, redondeadas, semitransparentes. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent)
@@ -257,16 +314,32 @@
   }
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer components {
-  /* Material de vidrio esmerilado (sidebar, toolbar, dock, tarjetas) */
+  /* Superficies opacas: se quitó backdrop-filter (en Windows promovía cada
+     tarjeta a una capa GPU que renderiza el texto borroso). */
   .glass {
     background-color: var(--card);
-    backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid var(--border);
   }
   .glass-strong {
     background-color: var(--surface-raised);
-    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--border);
+  }
+
+  /* Superficie OPACA para modales y menús desplegables. */
+  .surface-solid {
+    background-color: oklch(0.99 0.002 286);
+  }
+  .dark .surface-solid {
+    background-color: oklch(0.27 0.006 286);
   }
 
   /* Primitivas de formulario/botón (equivalentes a los shadcn del React) */
@@ -371,29 +444,140 @@
   }
 }
 
-/* Loader de marca: la A de ALMA se dibuja en loop (ver alma-loader.component) */
-.alma-loader-stroke {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: alma-draw 1.8s ease-in-out infinite;
+/* ── Esfera de Alma (AlmaSphere) ── técnica aurora/metaballs en CSS: blobs con
+   blur + mix-blend-mode:screen sobre base vívida, con ojos que parpadean. */
+.almasph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  animation: almasph-breathe 5s ease-in-out infinite;
 }
-.alma-loader-arc {
-  animation-delay: 0.3s;
+.almasph-core {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(140deg, #2ee06a, #00c83c 52%, #007a28 100%);
+  box-shadow:
+    inset 0 0 0 1.2cqmin rgba(255, 255, 255, 0.18),
+    inset 5cqmin 4cqmin 12cqmin rgba(255, 255, 255, 0.16),
+    inset -7cqmin -9cqmin 26cqmin rgba(0, 0, 0, 0.5),
+    0 6cqmin 18cqmin rgba(60, 40, 120, 0.4);
 }
-@keyframes alma-draw {
-  0% {
-    stroke-dashoffset: 1;
-  }
-  50% {
-    stroke-dashoffset: 0;
-  }
-  72% {
-    stroke-dashoffset: 0;
-  }
-  100% {
-    stroke-dashoffset: -1;
-  }
+.almasph-field {
+  position: absolute;
+  inset: 0;
+  filter: blur(3.5cqmin) saturate(1.5);
 }
+.almasph-field .b {
+  position: absolute;
+  top: 19%;
+  left: 19%;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.almasph .b1 { background: radial-gradient(circle, #00c83c 0%, transparent 70%); animation: blobA 6s ease-in-out infinite; }
+.almasph .b2 { background: radial-gradient(circle, #35e075 0%, transparent 70%); animation: blobB 7.5s ease-in-out infinite; }
+.almasph .b3 { background: radial-gradient(circle, #ff9200 0%, transparent 70%); animation: blobC 9s ease-in-out infinite; }
+.almasph .b4 { background: radial-gradient(circle, #02b1ff 0%, transparent 70%); animation: blobD 5.5s ease-in-out infinite; }
+.almasph .b5 { background: radial-gradient(circle, #eafff2 0%, transparent 70%); animation: blobE 8s ease-in-out infinite; }
+.almasph-gloss {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 28% at 32% 22%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(10% 8% at 28% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+}
+.almasph-eyes {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: translateY(-6%);
+}
+.almasph-gaze {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10cqmin;
+  transition: transform 0.18s ease-out;
+}
+.almasph-eye {
+  width: 7.5cqmin;
+  height: 18cqmin;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 3cqmin rgba(255, 255, 255, 0.7);
+  animation: almasph-blink 2.9s ease-in-out infinite;
+}
+@keyframes blobA { 0%{transform:translate(-40%,-30%) scale(1)} 25%{transform:translate(38%,-10%) scale(1.35)} 50%{transform:translate(16%,42%) scale(.9)} 75%{transform:translate(-34%,24%) scale(1.2)} 100%{transform:translate(-40%,-30%) scale(1)} }
+@keyframes blobB { 0%{transform:translate(42%,-34%) scale(1.15)} 30%{transform:translate(-28%,-12%) scale(.85)} 60%{transform:translate(-36%,36%) scale(1.35)} 100%{transform:translate(42%,-34%) scale(1.15)} }
+@keyframes blobC { 0%{transform:translate(-30%,40%) scale(1)} 35%{transform:translate(34%,30%) scale(1.3)} 70%{transform:translate(40%,-28%) scale(.9)} 100%{transform:translate(-30%,40%) scale(1)} }
+@keyframes blobD { 0%{transform:translate(34%,34%) scale(1.2)} 25%{transform:translate(-40%,16%) scale(.9)} 55%{transform:translate(-10%,-38%) scale(1.35)} 80%{transform:translate(30%,-8%) scale(1.05)} 100%{transform:translate(34%,34%) scale(1.2)} }
+@keyframes blobE { 0%{transform:translate(0%,-14%) scale(1.15)} 33%{transform:translate(40%,28%) scale(.85)} 66%{transform:translate(-40%,-22%) scale(1.4)} 100%{transform:translate(0%,-14%) scale(1.15)} }
+@keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes almasph-blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(.12); } }
+
+/* ── Marco "vivo" de la esfera (AlmaHousing): aura + ondas + partículas ── */
+.almah {
+  position: relative;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+.almah > * {
+  grid-area: 1 / 1;
+  place-self: center;
+}
+.almah-aura {
+  width: 104%;
+  height: 104%;
+  border-radius: 50%;
+  z-index: 0;
+  background: radial-gradient(circle, rgba(0, 200, 60, 0.72), rgba(255, 146, 0, 0.3) 44%, rgba(2, 177, 255, 0.2) 60%, rgba(0, 200, 60, 0) 76%);
+  filter: blur(9cqmin);
+  animation: almah-aura 4s ease-in-out infinite;
+}
+.almah-ripple {
+  width: 64%;
+  height: 64%;
+  border-radius: 50%;
+  z-index: 1;
+  border: 1.4cqmin solid rgba(120, 255, 170, 0.55);
+  animation: almah-ripple 3s ease-out infinite;
+}
+.almah-ripple.r2 { animation-delay: 1s; }
+.almah-ripple.r3 { animation-delay: 2s; }
+.almah-sphere {
+  position: relative;
+  z-index: 2;
+}
+.almah-p {
+  z-index: 3;
+  border-radius: 50%;
+  width: 2.4cqmin;
+  height: 2.4cqmin;
+  filter: blur(0.3cqmin);
+  box-shadow: 0 0 4cqmin currentColor;
+  align-self: center;
+}
+.almah .p1 { color: #00c83c; transform: translate(-30cqmin, -26cqmin); animation: almah-float 6s ease-in-out infinite; }
+.almah .p2 { color: #ff9200; transform: translate(30cqmin, -22cqmin); animation: almah-float 7.5s ease-in-out infinite reverse; }
+.almah .p3 { color: #02b1ff; transform: translate(-32cqmin, 24cqmin); animation: almah-float 8.5s ease-in-out infinite; }
+.almah .p4 { color: #ffffff; transform: translate(30cqmin, 28cqmin); animation: almah-float 6.8s ease-in-out infinite reverse; }
+.almah .p5 { color: #c9d2da; transform: translate(-40cqmin, 2cqmin); animation: almah-float 9s ease-in-out infinite; }
+@keyframes almah-aura { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.12); } }
+@keyframes almah-ripple { 0% { transform: scale(0.7); opacity: 0.55; } 100% { transform: scale(1.65); opacity: 0; } }
+@keyframes almah-float { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
 
 /* Dock: transición suave de la magnificación (reemplaza los springs de
    motion/react; el tamaño lo calcula DockComponent en cada mousemove) */
@@ -412,14 +596,129 @@
 .dock-tooltip {
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
+/* Reordenamiento del Dock/Launchpad: desplazamiento suave de los tiles */
+.dock-reorder {
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0.35, 1);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  /* El loader de marca queda exento: es feedback de estado (como cualquier
-     spinner), no una animación decorativa */
-  *:not(.alma-loader-stroke),
+  /* La esfera de Alma queda exenta cuando actúa como loader (feedback de
+     estado); el resto de animaciones se reducen. */
+  *:not(.almasph):not(.almasph *),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Grid Suscripción ──
+   Sticky/scroll del grid de la bandeja de Suscripción (port del CSS de Mi
+   Cartera en Dali, adaptado a los tokens de Alma). */
+.leads-table-container-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  contain: layout style;
+}
+
+.leads-table-scroll-wrapper {
+  position: relative;
+  width: 100%;
+  height: 500px; /* las tablas lo sobreescriben con style inline */
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  contain: strict;
+}
+
+.leads-table-inner-scroll {
+  width: max-content !important;
+  min-width: 100% !important;
+  height: auto;
+  position: relative;
+  overflow: visible;
+}
+
+.leads-table-inner-scroll > div {
+  overflow: visible !important;
+}
+
+/* Header sticky (top) — vive dentro del scroll wrapper */
+.susc-grid-header-sticky,
+.susc-grid-header-sticky th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 15 !important;
+  background: var(--table-header) !important;
+}
+
+.susc-grid-header-sticky th {
+  border-bottom: 1px solid var(--border) !important;
+  overflow: visible !important;
+}
+
+/* Separadores verticales SOLO en el encabezado */
+.susc-grid-header-sticky .susc-header-cell {
+  box-shadow: inset -1px 0 0 var(--border);
+}
+.susc-grid-header-sticky .susc-header-cell:last-child {
+  box-shadow: none;
+}
+
+/* Celdas del cuerpo: sin fondo propio (deja pasar el hover de la fila) */
+.susc-body-cell {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Columnas fijas (NroCotizacion, Asegurado): left lo calcula el JS */
+.susc-col1-sticky,
+.susc-col2-sticky {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+@media (min-width: 768px) {
+  .susc-col1-sticky,
+  .susc-col2-sticky {
+    position: sticky !important;
+    z-index: 10 !important;
+    background: var(--table-surface) !important;
+  }
+
+  .susc-col2-sticky {
+    border-right: 1px solid var(--border) !important;
+    box-shadow: 2px 0 4px oklch(0 0 0 / 0.06) !important;
+  }
+
+  .susc-grid-header-sticky .susc-col1-sticky,
+  .susc-grid-header-sticky .susc-col2-sticky {
+    z-index: 20 !important;
+    background: var(--table-header) !important;
+  }
+
+  tr:hover .susc-col1-sticky,
+  tr:hover .susc-col2-sticky {
+    background: color-mix(in oklch, var(--primary) 6%, var(--table-surface)) !important;
+    color: inherit !important;
+  }
+
+  .susc-grid-header-sticky tr:hover .susc-col1-sticky,
+  .susc-grid-header-sticky tr:hover .susc-col2-sticky {
+    background: var(--table-header) !important;
+    color: inherit !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .susc-grid-header-sticky .susc-col1-sticky,
+  .susc-grid-header-sticky .susc-col2-sticky {
+    position: sticky !important;
+    top: 0 !important;
+    left: unset !important;
   }
 }
