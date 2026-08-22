@@ -122,6 +122,14 @@ export const routes: Routes = [
     title: 'Parametrización — ALMA',
   },
   {
+    path: 'apps/motor-comisiones/info-gerencial',
+    loadComponent: () =>
+      import('./features/comisiones/info-gerencial/info-gerencial.page').then(
+        (m) => m.InfoGerencialPageComponent,
+      ),
+    title: 'Métricas y Reportes — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),
