@@ -114,6 +114,14 @@ export const routes: Routes = [
     title: 'Ejecución del Motor — ALMA',
   },
   {
+    path: 'apps/motor-comisiones/accounting',
+    loadComponent: () =>
+      import('./features/comisiones/parametrizacion/parametrizacion.page').then(
+        (m) => m.ParametrizacionPageComponent,
+      ),
+    title: 'Parametrización — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),
