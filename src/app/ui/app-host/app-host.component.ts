@@ -9,13 +9,16 @@ import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { LucideAngularModule } from 'lucide-angular';
 import { ApplicationsService } from '../../core/services/applications.service';
+import { MicrofrontendHostComponent } from './microfrontend-host.component';
 
 @Component({
   selector: 'alma-app-host',
-  imports: [RouterLink, LucideAngularModule],
+  imports: [RouterLink, LucideAngularModule, MicrofrontendHostComponent],
   template: `
     @if (app(); as a) {
-      @if (a.integrationType === 'iframe') {
+      @if (a.integrationType === 'microfrontend') {
+        <alma-microfrontend-host [app]="a" />
+      } @else if (a.integrationType === 'iframe') {
         <div class="glass overflow-hidden rounded-xl shadow-[var(--shadow-md)]">
           <iframe
             [src]="iframeUrl()"

@@ -2,10 +2,37 @@
 // Nota: la gestión de accesos, roles, auditoría y métricas vive en la consola
 // /admin (ícono Accesos del Dock), no como Apps del catálogo.
 
+import { environment } from '@env/environment';
 import { Application, User } from '../models/platform.models';
 
 export const APP_CATALOG: Application[] = [
   // ---- Aplicaciones reales ----
+  {
+    id: 'app-sac-usuarios',
+    nombre: 'Usuarios SAC',
+    descripcion:
+      'Administración de usuarios del Servicio al Cliente: consulta, bloqueo y desbloqueo con trazabilidad, creación y validación de PIN.',
+    categoria: 'Servicio al Cliente',
+    icono: 'user-cog',
+    color: '#0A84FF',
+    url: '/apps/sac-usuarios',
+    internalRoute: '/apps/sac-usuarios',
+    integrationType: 'microfrontend',
+    requiredPermission: 'app.sac-usuarios.view',
+    estado: 'beta',
+    favorito: false,
+    // App del equipo del SAC: vive en su propio despliegue y se monta aquí como
+    // Web Component. Alma le pasa la sesión; ella no vuelve a autenticar.
+    remote: {
+      scriptUrl: environment.remotes.sacUsuarios.scriptUrl,
+      styleUrl: environment.remotes.sacUsuarios.styleUrl,
+      elementName: 'sac-usuarios',
+      roleMap: {
+        'app.sac-usuarios.fraude': 'prevencion.fraude',
+        'app.sac-usuarios.operaciones': 'sac.operaciones',
+      },
+    },
+  },
   {
     id: 'app-agente-alma',
     nombre: 'Agente Alma',
@@ -160,6 +187,8 @@ export const MOCK_USER: User = {
     'app.suscripcion.simulador.config',
     'app.motor-comisiones.view',
     'app.motor-comisiones.catalogs',
+    'app.sac-usuarios.view',
+    'app.sac-usuarios.operaciones',
     'app.agente-alma.view',
     'app.cheques.view',
     'app.emision.view',

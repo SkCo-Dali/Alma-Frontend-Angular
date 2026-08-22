@@ -8,4 +8,11 @@ export const environment = {
     clientId: '',
     tenantId: '',
   },
+  /** Apps de otros equipos montadas en el shell (App Manifest). */
+  remotes: {
+    sacUsuarios: {
+      scriptUrl: 'http://localhost:4310/SkCo.UserManagement.Angular.js',
+      styleUrl: 'http://localhost:4310/SkCo.UserManagement.Angular.css',
+    },
+  },
 };

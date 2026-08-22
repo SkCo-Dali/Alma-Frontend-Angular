@@ -39,7 +39,24 @@ export interface Application {
   estado: AppStatus;
   favorito: boolean;
   lastUsedAt?: string;
+  /** Ruta DENTRO del shell. La declaran todas las apps que Alma pinta
+   *  (internal, iframe y microfrontend); las 'external' no la tienen. */
   internalRoute?: string;
+  /** Solo para integrationType 'microfrontend': la app remota se publica como
+   *  Web Component (lo que produce la plantilla Angular corporativa). */
+  remote?: RemoteApp;
+}
+
+/** Punto de entrada de una app de otro equipo montada dentro del shell. */
+export interface RemoteApp {
+  /** Bundle publicado por el equipo dueño (Blob Storage o App Service). */
+  scriptUrl: string;
+  /** Hoja de estilos del bundle, si la publica aparte. */
+  styleUrl?: string;
+  /** Nombre del custom element que define ese bundle. */
+  elementName: string;
+  /** Permiso de Alma → rol funcional que espera la app remota. */
+  roleMap?: Record<string, string>;
 }
 
 export interface Team {

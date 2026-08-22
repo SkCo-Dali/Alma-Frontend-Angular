@@ -7,4 +7,11 @@ export const environment = {
     clientId: '30fe7ddc-476c-4341-adef-f053bfe376b3',
     tenantId: '08271f42-81ef-45d6-81ac-49776c4be615',
   },
+  /** Apps de otros equipos montadas en el shell (App Manifest). */
+  remotes: {
+    sacUsuarios: {
+      scriptUrl: 'https://skco-sac-usuarios-web-prd.azurewebsites.net/SkCo.UserManagement.Angular.js',
+      styleUrl: 'https://skco-sac-usuarios-web-prd.azurewebsites.net/SkCo.UserManagement.Angular.css',
+    },
+  },
 };
