@@ -54,6 +54,16 @@ export const routes: Routes = [
     title: 'Bandeja de Cotizaciones — ALMA',
   },
   {
+    // Detalle de una cotización. Va DESPUÉS de las rutas fijas de la app para
+    // que /cotizaciones, /motor y /simulador no se traguen como :solicitudId.
+    path: 'apps/suscripcion/:solicitudId',
+    loadComponent: () =>
+      import('./features/suscripcion/detalle-solicitud.component').then(
+        (m) => m.DetalleSolicitudComponent,
+      ),
+    title: 'Suscripción de Seguros — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),
