@@ -25,6 +25,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import { CatalogsStore } from '../catalogos/catalogs.store';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionRule } from './commission-plans.api';
@@ -42,7 +44,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
 @Component({
   selector: 'alma-rule-dialog',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, PortalDirective],
   template: `
     <div
       class="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -298,7 +300,7 @@ type Tab = 'information' | 'rule' | 'preview';
                     <div class="relative w-full sm:col-span-3">
                       <button
                         type="button"
-                        (click)="alternarValores(c)"
+                        (click)="alternarValores(c, $event)"
                         class="alma-btn alma-btn-outline w-full justify-between"
                         [class.text-muted-foreground]="!c.value"
                       >
@@ -312,7 +314,9 @@ type Tab = 'information' | 'rule' | 'preview';
 
                       @if (valoresAbiertos() === c.id) {
                         <div
-                          class="surface-solid absolute left-0 top-full z-[120] mt-1 w-full min-w-[240px] rounded-lg border border-border p-1 shadow-[var(--shadow-lg)]"
+                          #panel
+                          almaPortal
+                          class="surface-solid fixed z-[120] min-w-[240px] rounded-lg border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                         >
                           <input
                             class="alma-input mb-1 h-8 text-sm"
@@ -528,8 +532,18 @@ export class RuleDialogComponent implements OnInit {
     this.catalogo.set(id);
   }
 
-  protected alternarValores(c: ConditionRow): void {
+  /** Al aparecer el panel (ya en <body>) se coloca bajo el botón de valor. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchorValor) colocarPanel(el.nativeElement, this.anchorValor);
+  }
+
+  private anchorValor: DOMRect | null = null;
+
+  protected alternarValores(c: ConditionRow, ev?: MouseEvent): void {
     this.valorLibre = '';
+    if (ev) {
+      this.anchorValor = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    }
     this.valoresAbiertos.update((prev) => (prev === c.id ? null : c.id));
     if (c.fieldId && this.catalogo()) {
       void this.catalogos.cargarValores(this.catalogo(), c.fieldId);

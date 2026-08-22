@@ -17,6 +17,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { DistinctStore } from './distinct.store';
 import { DistinctBaseRequest, GridFilter, SuscripcionGridApi } from './suscripcion-grid.api';
 import { TextFilterCondition, TextFilterTabComponent } from './text-filter-tab.component';
@@ -25,7 +26,7 @@ const RENDER_CAP = 200;
 
 @Component({
   selector: 'alma-discrete-filter',
-  imports: [FormsModule, TextFilterTabComponent],
+  imports: [FormsModule, AlmaCheckboxComponent, TextFilterTabComponent],
   template: `
     <div (click)="$event.stopPropagation()">
       @if (store.loading()) {
@@ -78,28 +79,30 @@ const RENDER_CAP = 200;
           <div class="h-60 overflow-y-auto">
             <div class="space-y-0.5">
               @if (store.values().length > 0) {
-                <label
+                <div
                   class="flex items-center gap-2 border-b border-border/60 p-2 hover:bg-accent/50"
+                  (click)="seleccionarTodos(!todosSeleccionados())"
                 >
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 accent-[var(--primary)]"
+                  <alma-checkbox
                     [checked]="todosSeleccionados()"
-                    (change)="seleccionarTodos($any($event.target).checked)"
+                    [indeterminate]="algunosSeleccionados()"
+                    (checkedChange)="seleccionarTodos($event)"
+                    ariaLabel="Seleccionar todos"
                   />
                   <span class="cursor-pointer select-none text-sm font-medium text-foreground">
                     Seleccionar todos
                   </span>
-                </label>
+                </div>
               }
 
               @for (item of visibles(); track item.key) {
-                <label class="flex items-center gap-2 rounded-md p-2 hover:bg-accent/50">
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 accent-[var(--primary)]"
+                <div
+                  class="flex items-center gap-2 rounded-md p-2 hover:bg-accent/50"
+                  (click)="toggleValor(item.key, !seleccionados().includes(item.key))"
+                >
+                  <alma-checkbox
                     [checked]="seleccionados().includes(item.key)"
-                    (change)="toggleValor(item.key, $any($event.target).checked)"
+                    (checkedChange)="toggleValor(item.key, $event)"
                   />
                   <span
                     class="flex flex-1 cursor-pointer select-none items-center justify-between text-sm text-foreground"
@@ -126,7 +129,7 @@ const RENDER_CAP = 200;
                       ({{ item.count }})
                     </span>
                   </span>
-                </label>
+                </div>
               }
 
               @if (ocultos() > 0) {
@@ -242,6 +245,15 @@ export class DiscreteFilterComponent implements OnInit, OnDestroy {
     const vals = this.store.values();
     const sel = this.seleccionados();
     return vals.length > 0 && vals.every((i) => sel.includes(String(i.value ?? '')));
+  });
+
+  /** Estado mixto del "Seleccionar todos" (algunos, pero no todos). */
+  protected readonly algunosSeleccionados = computed(() => {
+    const vals = this.store.values();
+    const sel = this.seleccionados();
+    return (
+      !this.todosSeleccionados() && vals.some((i) => sel.includes(String(i.value ?? '')))
+    );
   });
 
   constructor() {

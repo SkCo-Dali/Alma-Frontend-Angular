@@ -20,6 +20,7 @@ import {
   untracked,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { TooltipDirective } from '../../../shared/tooltip.directive';
 import {
   DECISION_BADGE,
   UW_BADGE,
@@ -58,7 +59,9 @@ interface CeldaRender {
 
 @Component({
   selector: 'alma-suscripcion-grid-table',
-  imports: [NgTemplateOutlet, LucideAngularModule, ColumnHeaderMenuComponent],
+  imports: [NgTemplateOutlet, LucideAngularModule, ColumnHeaderMenuComponent,
+    TooltipDirective,
+  ],
   template: `
     <div class="leads-table-container-scroll relative w-full bg-[var(--table-surface)]">
       <!-- Altura: crece hasta ~25 filas (tope 800px) en pantallas altas, con
@@ -149,7 +152,9 @@ interface CeldaRender {
                         [class.border-b]="col.tooltip"
                         [class.border-dotted]="col.tooltip"
                         [class.border-muted-foreground/50]="col.tooltip"
-                        [title]="col.tooltip ?? ''"
+                        [almaTooltip]="col.tooltip ?? ''"
+                        almaTooltipSide="bottom"
+                        almaTooltipMaxWidth="200px"
                       >
                         {{ col.label }}
                       </span>

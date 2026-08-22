@@ -65,8 +65,18 @@ export class AuthService {
   private initPromise: Promise<PublicClientApplication> | null = null;
 
   readonly status = signal<AuthStatus>(authEnabled ? 'loading' : 'ready');
-  readonly user = signal<User>(MOCK_USER);
   readonly profile = signal<MeApi | null>(null);
+
+  // El usuario se DERIVA de cuenta + perfil + foto. Antes se asignaba con
+  // user.set() en varios puntos y la foto de Graph (que llega asíncrona) se
+  // perdía cuando el set del perfil corría después: el header se quedaba con
+  // las iniciales. Con señales derivadas el orden de llegada ya no importa.
+  private readonly account = signal<AccountInfo | null>(null);
+  private readonly foto = signal<string | null>(null);
+  readonly user = computed<User>(() => {
+    const account = this.account();
+    return account ? accountToUser(account, this.profile(), this.foto()) : MOCK_USER;
+  });
   readonly isAuthenticated = computed(() => !authEnabled || this.status() === 'ready');
   readonly isAdmin = computed(() => this.hasPermission('platform.admin'));
 
@@ -80,23 +90,21 @@ export class AuthService {
         this.status.set('login');
         return;
       }
+      this.account.set(account);
       void this.fetchAccountPhoto().then((url) => {
-        if (url) this.user.update((u) => ({ ...u, foto: url }));
+        if (url) this.foto.set(url);
       });
-      let me: MeApi | null = null;
       try {
-        me = await loadProfile();
+        const me = await loadProfile();
         this.profile.set(me);
         // Usuario inactivo: aunque la autenticación sea válida, no entra.
         if (me?.registrado && me.is_active === false) {
-          this.user.set(accountToUser(account, me, null));
           this.status.set('inactive');
           return;
         }
       } catch (err) {
         console.error('[auth] no se pudo cargar /api/users/me', err);
       }
-      this.user.set(accountToUser(account, me, null));
       this.status.set('ready');
     } catch (err) {
       console.error('[auth] error inicializando MSAL', err);

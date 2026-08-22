@@ -14,6 +14,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { DistinctStore } from './distinct.store';
 import { DistinctBaseRequest, SuscripcionGridApi } from './suscripcion-grid.api';
 import { DateFilterTabComponent } from './date-filter-tab.component';
@@ -38,7 +39,7 @@ interface AnioGrupo {
 
 @Component({
   selector: 'alma-date-filter',
-  imports: [LucideAngularModule, DateFilterTabComponent],
+  imports: [LucideAngularModule, AlmaCheckboxComponent, DateFilterTabComponent],
   template: `
     <div (click)="$event.stopPropagation()">
       @if (store.loading()) {
@@ -82,11 +83,10 @@ interface AnioGrupo {
             <label
               class="flex items-center gap-2 border-b border-border/60 p-2 hover:bg-accent/50"
             >
-              <input
-                type="checkbox"
-                class="h-4 w-4 accent-[var(--primary)]"
+              <alma-checkbox
                 [checked]="incluirVacios()"
-                (change)="incluirVacios.set($any($event.target).checked)"
+                (checkedChange)="incluirVacios.set($event)"
+                ariaLabel="Incluir registros sin fecha"
               />
               <span
                 class="flex flex-1 cursor-pointer select-none items-center justify-between text-sm"
@@ -119,11 +119,9 @@ interface AnioGrupo {
                 @for (grupoAnio of agrupadas(); track grupoAnio.anio) {
                   <div>
                     <div class="flex w-full items-center gap-2 p-1 hover:bg-accent/50">
-                      <input
-                        type="checkbox"
-                        class="h-4 w-4 accent-[var(--primary)]"
+                      <alma-checkbox
                         [checked]="anioCompleto(grupoAnio)"
-                        (change)="toggleAnio(grupoAnio, $any($event.target).checked)"
+                        (checkedChange)="toggleAnio(grupoAnio, $event)"
                       />
                       <button
                         type="button"
@@ -145,11 +143,9 @@ interface AnioGrupo {
                         @for (grupoMes of grupoAnio.meses; track grupoMes.mes) {
                           <div>
                             <div class="flex w-full items-center gap-2 p-1 hover:bg-accent/50">
-                              <input
-                                type="checkbox"
-                                class="h-4 w-4 accent-[var(--primary)]"
+                              <alma-checkbox
                                 [checked]="mesCompleto(grupoMes)"
-                                (change)="toggleMes(grupoMes, $any($event.target).checked)"
+                                (checkedChange)="toggleMes(grupoMes, $event)"
                               />
                               <button
                                 type="button"
@@ -176,13 +172,9 @@ interface AnioGrupo {
                                   <label
                                     class="flex items-center gap-2 p-1 hover:bg-accent/50"
                                   >
-                                    <input
-                                      type="checkbox"
-                                      class="h-4 w-4 accent-[var(--primary)]"
+                                    <alma-checkbox
                                       [checked]="seleccionadas().includes(dia.fullDate)"
-                                      (change)="
-                                        toggleDia(dia.fullDate, $any($event.target).checked)
-                                      "
+                                      (checkedChange)="toggleDia(dia.fullDate, $event)"
                                     />
                                     <span
                                       class="flex-1 cursor-pointer select-none text-xs text-muted-foreground"

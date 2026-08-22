@@ -6,6 +6,7 @@
 
 import { Component, computed, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 
 // Catálogo espejo de ENFERMEDADES_CUESTIONARIO en el backend
 // (app/services/motor_suscripcion.py). Debe mantenerse alineado.
@@ -24,7 +25,7 @@ const CATALOGO: { clave: string; etiqueta: string }[] = [
 
 @Component({
   selector: 'alma-enfermedades-editor',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, AlmaCheckboxComponent],
   template: `
     <div class="flex flex-col gap-2">
       <div
@@ -39,11 +40,9 @@ const CATALOGO: { clave: string; etiqueta: string }[] = [
                 : 'text-muted-foreground hover:bg-muted/50'
             "
           >
-            <input
-              type="checkbox"
-              class="h-4 w-4 accent-[var(--primary)]"
+            <alma-checkbox
               [checked]="activa(c.clave)"
-              (change)="toggle(c.clave, $any($event.target).checked)"
+              (checkedChange)="toggle(c.clave, $event)"
             />
             <lucide-icon
               name="heart-pulse"

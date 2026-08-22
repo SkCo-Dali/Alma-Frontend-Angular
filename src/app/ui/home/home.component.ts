@@ -5,10 +5,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { AlmaHousingComponent } from '../../shared/components/alma-housing.component';
-
-function firstName(full: string): string {
-  return full.trim().split(/\s+/)[0] ?? full;
-}
+import { firstName } from '../../core/utils/name';
 
 @Component({
   selector: 'alma-home',

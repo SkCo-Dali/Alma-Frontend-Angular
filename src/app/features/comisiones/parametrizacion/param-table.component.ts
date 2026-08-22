@@ -3,9 +3,20 @@
 // acciones y paginación), así que se describen por columnas en vez de repetir
 // ocho tablas casi idénticas. Paridad AccountingTable y sus gemelas.
 
-import { Component, computed, input, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  computed,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import { ColumnFilterComponent } from '../ui/column-filter.component';
 import { DateColumnFilterComponent } from '../ui/date-column-filter.component';
 import {
@@ -49,6 +60,8 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
   selector: 'alma-param-table',
   imports: [
     LucideAngularModule,
+    AlmaSwitchComponent,
+    PortalDirective,
     GridPaginationComponent,
     ColumnFilterComponent,
     DateColumnFilterComponent,
@@ -135,17 +148,10 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                               >
                                 {{ verdadero(row, col.key) ? 'Activo' : 'Inactivo' }}
                               </span>
-                              <input
-                                type="checkbox"
-                                class="h-4 w-8 accent-[var(--primary)]"
+                              <alma-switch
                                 [checked]="verdadero(row, col.key)"
-                                (change)="
-                                  alternar.emit({
-                                    row: row,
-                                    activo: $any($event.target).checked,
-                                  })
-                                "
-                                [attr.aria-label]="'Activar o desactivar'"
+                                (checkedChange)="alternar.emit({ row: row, activo: $event })"
+                                ariaLabel="Activar o desactivar"
                               />
                             </div>
                           }
@@ -195,19 +201,21 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                       <td
                         class="sticky right-0 z-10 border-b border-border bg-[var(--table-surface)] px-3 py-2 text-center group-hover:bg-primary/5"
                       >
-                        <div class="relative">
+                        <div>
                           <button
                             type="button"
-                            (click)="menu.set(menu() === row ? null : row)"
+                            (click)="abrirMenu(row, $event)"
                             class="h-8 w-8 rounded-full hover:bg-primary/10"
                             aria-label="Acciones de la fila"
                           >
                             <lucide-icon name="more-horizontal" [size]="16" />
                           </button>
                           @if (menu() === row) {
-                            <div class="fixed inset-0 z-[80]" (click)="menu.set(null)"></div>
+                            <div almaPortal class="fixed inset-0 z-[80]" (click)="menu.set(null)"></div>
                             <div
-                              class="surface-solid absolute right-0 z-[85] mt-1 min-w-[160px] rounded-xl border border-border p-1 text-left shadow-[var(--shadow-lg)]"
+                              #panel
+                              almaPortal
+                              class="surface-solid fixed z-[85] min-w-[160px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                             >
                               <button
                                 type="button"
@@ -270,6 +278,22 @@ export class ParamTableComponent {
 
   protected readonly tamanos = PARAM_PAGE_SIZE_OPTIONS;
   protected readonly menu = signal<ParamRow | null>(null);
+  private anchor: DOMRect | null = null;
+
+  /** El menú se monta en <body> y se coloca bajo el botón (como el Dropdown). */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor, 'end');
+  }
+
+  protected abrirMenu(row: ParamRow, ev: MouseEvent): void {
+    ev.stopPropagation();
+    if (this.menu() === row) {
+      this.menu.set(null);
+      return;
+    }
+    this.anchor = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menu.set(row);
+  }
   protected readonly sort = signal<{ key: string; direction: SortDirection }>({
     key: '',
     direction: null,

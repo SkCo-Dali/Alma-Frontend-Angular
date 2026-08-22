@@ -10,6 +10,7 @@
 
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import {
   CATALOG_FIELD_TYPES,
   Catalog,
@@ -22,7 +23,7 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
 
 @Component({
   selector: 'alma-create-catalog-dialog',
-  imports: [FormsModule, FieldRowsComponent],
+  imports: [FormsModule, AlmaSwitchComponent, FieldRowsComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -81,12 +82,10 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
                 Habilitar este catálogo para usar en reglas
               </p>
             </div>
-            <input
-              type="checkbox"
-              class="h-5 w-5 accent-[var(--primary)]"
+            <alma-switch
               [checked]="activo()"
-              (change)="activo.set($any($event.target).checked)"
-              aria-label="Activo"
+              (checkedChange)="activo.set($event)"
+              ariaLabel="Activo"
             />
           </div>
 
@@ -344,7 +343,7 @@ export class CreateFieldsDialogComponent {
 
 @Component({
   selector: 'alma-edit-field-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, AlmaSwitchComponent],
   template: `
     <div
       class="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -400,25 +399,23 @@ export class CreateFieldsDialogComponent {
             ></textarea>
           </div>
 
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                class="h-4 w-4 accent-[var(--primary)]"
+          <div class="flex gap-6">
+            <div class="flex items-center gap-2 text-sm">
+              <alma-switch
                 [checked]="filtrable()"
-                (change)="filtrable.set($any($event.target).checked)"
+                (checkedChange)="filtrable.set($event)"
+                ariaLabel="Filtrable"
               />
               Filtrable
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                class="h-4 w-4 accent-[var(--primary)]"
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+              <alma-switch
                 [checked]="visible()"
-                (change)="visible.set($any($event.target).checked)"
+                (checkedChange)="visible.set($event)"
+                ariaLabel="Visible"
               />
               Visible
-            </label>
+            </div>
           </div>
         </div>
 

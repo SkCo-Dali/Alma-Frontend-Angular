@@ -6,12 +6,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { PreferencesService } from '../../core/services/preferences.service';
-
-/** "Nombre Apellido" a partir del display name completo (paridad lib/name.ts). */
-function shortName(full: string): string {
-  const parts = full.trim().split(/\s+/);
-  return parts.length <= 2 ? full : `${parts[0]} ${parts[parts.length - 2]}`;
-}
+import { shortName } from '../../core/utils/name';
 
 @Component({
   selector: 'alma-header',

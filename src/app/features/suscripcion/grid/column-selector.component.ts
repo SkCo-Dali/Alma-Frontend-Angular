@@ -7,11 +7,20 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import { TooltipDirective } from '../../../shared/tooltip.directive';
 import { ColumnConfig } from './suscripcion-grid.api';
 
 @Component({
   selector: 'alma-column-selector',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    AlmaCheckboxComponent,
+    AlmaSwitchComponent,
+    TooltipDirective,
+  ],
   template: `
     <button
       type="button"
@@ -104,13 +113,11 @@ import { ColumnConfig } from './suscripcion-grid.api';
                       class="text-muted-foreground/40"
                     />
                   </span>
-                  <input
-                    type="checkbox"
+                  <alma-checkbox
                     [id]="'susc-column-' + col.key"
                     [checked]="col.visible"
                     [disabled]="esRequerida(col.key)"
-                    (change)="toggle(col.key)"
-                    class="h-4 w-4 accent-[var(--primary)]"
+                    (checkedChange)="toggle(col.key)"
                   />
                   <label
                     [for]="'susc-column-' + col.key"
@@ -129,12 +136,14 @@ import { ColumnConfig } from './suscripcion-grid.api';
                     }
                   </label>
                   @if (col.tooltip; as tip) {
-                    <span
-                      [title]="tip"
-                      class="shrink-0 cursor-help text-muted-foreground/40 hover:text-primary"
+                    <button
+                      type="button"
+                      [almaTooltip]="tip"
+                      (click)="$event.stopPropagation()"
+                      class="shrink-0 text-muted-foreground/40 transition-colors hover:text-primary"
                     >
                       <lucide-icon name="info" [size]="14" />
-                    </span>
+                    </button>
                   }
                 </div>
               }
@@ -144,15 +153,14 @@ import { ColumnConfig } from './suscripcion-grid.api';
 
         <!-- Footer -->
         <div class="shrink-0 border-t border-border/40 bg-muted/20 px-4 py-3">
-          <label class="flex items-center justify-between">
+          <div class="flex items-center justify-between">
             <span class="text-xs font-semibold">Seleccionar todas</span>
-            <input
-              type="checkbox"
+            <alma-switch
               [checked]="todasSeleccionadas()"
-              (change)="toggleTodas($any($event.target).checked)"
-              class="h-4 w-4 accent-[var(--primary)]"
+              (checkedChange)="toggleTodas($event)"
+              ariaLabel="Seleccionar todas las columnas"
             />
-          </label>
+          </div>
         </div>
       </div>
     }

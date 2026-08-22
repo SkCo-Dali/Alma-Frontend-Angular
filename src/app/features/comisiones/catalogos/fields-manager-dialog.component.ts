@@ -1,8 +1,20 @@
 // Administrador de campos de un catálogo: tabla de campos con editar/eliminar y
 // botón para agregar. Paridad CatalogFieldsManager.tsx + CatalogFieldsTable.tsx.
 
-import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import { Catalog, CatalogField } from './catalogs.api';
 import { CatalogsStore } from './catalogs.store';
 import {
@@ -23,7 +35,12 @@ const COLOR_TIPO: Record<string, string> = {
 
 @Component({
   selector: 'alma-fields-manager-dialog',
-  imports: [LucideAngularModule, CreateFieldsDialogComponent, EditFieldDialogComponent],
+  imports: [
+    LucideAngularModule,
+    PortalDirective,
+    CreateFieldsDialogComponent,
+    EditFieldDialogComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
@@ -125,16 +142,18 @@ const COLOR_TIPO: Record<string, string> = {
                       <td class="relative border-b border-border px-4 py-2 text-center text-xs">
                         <button
                           type="button"
-                          (click)="menu.set(menu() === f.id ? null : f.id)"
+                          (click)="abrirMenu(f.id, $event)"
                           class="h-8 w-8 rounded-full hover:bg-primary/10"
                           aria-label="Acciones del campo"
                         >
                           <lucide-icon name="more-horizontal" [size]="16" />
                         </button>
                         @if (menu() === f.id) {
-                          <div class="fixed inset-0 z-[115]" (click)="menu.set(null)"></div>
+                          <div almaPortal class="fixed inset-0 z-[115]" (click)="menu.set(null)"></div>
                           <div
-                            class="surface-solid absolute right-4 z-[116] mt-1 min-w-[150px] rounded-xl border border-border p-1 text-left shadow-[var(--shadow-lg)]"
+                            #panel
+                            almaPortal
+                            class="surface-solid fixed z-[116] min-w-[150px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"
@@ -240,6 +259,22 @@ export class FieldsManagerDialogComponent implements OnInit {
   ];
 
   protected readonly menu = signal<string | null>(null);
+  private anchor: DOMRect | null = null;
+
+  /** El menú se monta en <body> y se coloca bajo el botón. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor, 'end');
+  }
+
+  protected abrirMenu(id: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    if (this.menu() === id) {
+      this.menu.set(null);
+      return;
+    }
+    this.anchor = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menu.set(id);
+  }
   protected readonly agregando = signal(false);
   protected readonly enEdicion = signal<CatalogField | null>(null);
   protected readonly porBorrar = signal<CatalogField | null>(null);

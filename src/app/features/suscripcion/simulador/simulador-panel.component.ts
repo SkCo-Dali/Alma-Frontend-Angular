@@ -10,6 +10,7 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { SuscripcionGridApi } from '../grid/suscripcion-grid.api';
 import { CatalogoComboboxComponent } from './catalogo-combobox.component';
@@ -73,7 +74,12 @@ interface ItemVista {
 
 @Component({
   selector: 'alma-simulador-panel',
-  imports: [FormsModule, LucideAngularModule, CatalogoComboboxComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    AlmaSwitchComponent,
+    CatalogoComboboxComponent,
+  ],
   template: `
     <aside
       aria-label="Simulador de asegurabilidad"
@@ -285,11 +291,10 @@ interface ItemVista {
             <p class="text-xs font-medium text-foreground">
               ¿Practica algún hobby o actividad extracurricular?
             </p>
-            <input
-              type="checkbox"
-              class="h-4 w-8 accent-[var(--primary)]"
+            <alma-switch
               [checked]="practicaHobby()"
-              (change)="practicaHobby.set($any($event.target).checked)"
+              (checkedChange)="practicaHobby.set($event)"
+              ariaLabel="¿Practica algún hobby?"
             />
           </div>
           @if (practicaHobby()) {

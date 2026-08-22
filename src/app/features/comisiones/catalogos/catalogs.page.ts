@@ -2,9 +2,19 @@
 // con activar/desactivar, editar, eliminar y administración de campos.
 // Paridad pages/Catalogs.tsx + CatalogsTable.tsx + CatalogDetailsPanel.tsx.
 
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { Catalog } from './catalogs.api';
@@ -20,6 +30,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
   imports: [
     RouterLink,
     LucideAngularModule,
+    PortalDirective,
     AccessDeniedComponent,
     CreateCatalogDialogComponent,
     EditCatalogDialogComponent,
@@ -119,9 +130,11 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                             </button>
 
                             @if (menu() === c.id) {
-                              <div class="fixed inset-0 z-[80]" (click)="menu.set(null)"></div>
+                              <div almaPortal class="fixed inset-0 z-[80]" (click)="menu.set(null)"></div>
                               <div
-                                class="surface-solid absolute right-4 z-[85] mt-1 min-w-[160px] rounded-xl border border-border p-1 text-left shadow-[var(--shadow-lg)]"
+                                #panel
+                                almaPortal
+                                class="surface-solid fixed z-[85] min-w-[160px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                               >
                                 <button
                                   type="button"
@@ -337,9 +350,21 @@ export class CatalogsPageComponent implements OnInit {
     });
   }
 
+  /** El menú se monta en <body> y se coloca bajo el botón. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor, 'end');
+  }
+
+  private anchor: DOMRect | null = null;
+
   protected alternarMenu(c: Catalog, ev: Event): void {
     ev.stopPropagation();
-    this.menu.update((prev) => (prev === c.id ? null : c.id));
+    if (this.menu() === c.id) {
+      this.menu.set(null);
+      return;
+    }
+    this.anchor = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menu.set(c.id);
   }
 
   protected editar(c: Catalog, ev: Event): void {

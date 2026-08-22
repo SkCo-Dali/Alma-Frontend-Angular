@@ -5,6 +5,7 @@
 import { Component, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { CATALOG_FIELD_TYPES, CreateCatalogFieldRequest } from './catalogs.api';
 
 export function campoVacio(): CreateCatalogFieldRequest {
@@ -35,7 +36,7 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
 
 @Component({
   selector: 'alma-field-rows',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent],
   template: `
     <div class="space-y-4">
       <div class="flex items-center justify-between">
@@ -137,25 +138,23 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
             ></textarea>
           </div>
 
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                class="h-4 w-4 accent-[var(--primary)]"
-                [checked]="f.is_filterable"
-                (change)="actualizar(i, { is_filterable: $any($event.target).checked })"
+          <div class="flex gap-6">
+            <div class="flex items-center gap-2 text-sm">
+              <alma-switch
+                [checked]="!!f.is_filterable"
+                (checkedChange)="actualizar(i, { is_filterable: $event })"
+                ariaLabel="Filtrable"
               />
               Filtrable
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                class="h-4 w-4 accent-[var(--primary)]"
-                [checked]="f.is_visible"
-                (change)="actualizar(i, { is_visible: $any($event.target).checked })"
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+              <alma-switch
+                [checked]="!!f.is_visible"
+                (checkedChange)="actualizar(i, { is_visible: $event })"
+                ariaLabel="Visible"
               />
               Visible
-            </label>
+            </div>
           </div>
         </div>
       }

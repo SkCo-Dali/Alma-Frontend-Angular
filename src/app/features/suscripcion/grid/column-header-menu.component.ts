@@ -19,6 +19,8 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import {
   DistinctBaseRequest,
   GridColumnDefinition,
@@ -33,6 +35,7 @@ import { TextFilterCondition, TextFilterTabComponent } from './text-filter-tab.c
   selector: 'alma-column-header-menu',
   imports: [
     LucideAngularModule,
+    PortalDirective,
     DateFilterComponent,
     DiscreteFilterComponent,
     RangeFilterComponent,
@@ -66,11 +69,11 @@ import { TextFilterCondition, TextFilterTabComponent } from './text-filter-tab.c
     </button>
 
     @if (abierto()) {
-      <div class="fixed inset-0 z-[90]" (click)="cerrar()"></div>
+      <div almaPortal class="fixed inset-0 z-[90]" (click)="cerrar()"></div>
       <div
-        class="surface-solid fixed z-[95] rounded-lg border border-border p-0 shadow-[var(--shadow-lg)]"
-        [style.top.px]="pos().top"
-        [style.left.px]="pos().left"
+        #panel
+        almaPortal
+        class="surface-solid fixed z-[95] rounded-lg border border-border p-0 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         [style.width.px]="ancho()"
         (click)="$event.stopPropagation()"
       >
@@ -187,8 +190,13 @@ export class ColumnHeaderMenuComponent {
 
   @ViewChild('boton') private boton!: ElementRef<HTMLButtonElement>;
 
+  /** Al aparecer el panel (ya en <body>) se coloca con su medida real. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor);
+  }
+
   protected readonly abierto = signal(false);
-  protected readonly pos = signal({ top: 0, left: 0 });
+  private anchor: DOMRect | null = null;
 
   protected readonly esFecha = computed(() => this.def()?.type === 'date');
   protected readonly esDiscreta = computed(() => !!this.def()?.discrete);
@@ -233,12 +241,7 @@ export class ColumnHeaderMenuComponent {
       this.cerrar();
       return;
     }
-    const r = this.boton.nativeElement.getBoundingClientRect();
-    const w = this.ancho();
-    this.pos.set({
-      top: Math.min(r.bottom + 4, window.innerHeight - 380),
-      left: Math.min(Math.max(8, r.left), window.innerWidth - w - 8),
-    });
+    this.anchor = this.boton.nativeElement.getBoundingClientRect();
     this.abierto.set(true);
   }
 

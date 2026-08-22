@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 
 export type ParamFieldTipo =
   | 'texto'
@@ -49,7 +50,7 @@ export type ParamValues = Record<string, string | boolean>;
 
 @Component({
   selector: 'alma-param-form-dialog',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -72,16 +73,15 @@ export type ParamValues = Record<string, string | boolean>;
           @for (f of fields(); track f.key) {
             <div class="space-y-2" [class.sm:col-span-full]="f.ancho === 'full'">
               @if (f.tipo === 'switch') {
-                <label class="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    class="h-5 w-5 accent-[var(--primary)]"
-                    [disabled]="!!f.deshabilitado"
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium">{{ f.label }}</span>
+                  <alma-switch
                     [checked]="booleano(f.key)"
-                    (change)="setValor(f.key, $any($event.target).checked)"
+                    [disabled]="!!f.deshabilitado"
+                    (checkedChange)="setValor(f.key, $event)"
+                    [ariaLabel]="f.label"
                   />
-                  {{ f.label }}
-                </label>
+                </div>
                 @if (f.ayuda) {
                   <p class="text-xs text-muted-foreground">{{ f.ayuda }}</p>
                 }

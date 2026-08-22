@@ -16,10 +16,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 
 @Component({
   selector: 'alma-column-filter',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaCheckboxComponent, PortalDirective],
   template: `
     <button
       #boton
@@ -33,11 +36,11 @@ import { LucideAngularModule } from 'lucide-angular';
     </button>
 
     @if (abierto()) {
-      <div class="fixed inset-0 z-[90]" (click)="cancelar()"></div>
+      <div almaPortal class="fixed inset-0 z-[90]" (click)="cancelar()"></div>
       <div
-        class="surface-solid fixed z-[95] w-80 rounded-lg border border-border p-4 shadow-[var(--shadow-lg)]"
-        [style.top.px]="pos().top"
-        [style.left.px]="pos().left"
+        #panel
+        almaPortal
+        class="surface-solid fixed z-[95] w-80 rounded-lg border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         (click)="$event.stopPropagation()"
       >
         <h3 class="mb-4 text-sm font-medium">Filtrar por {{ label() }}</h3>
@@ -57,32 +60,33 @@ import { LucideAngularModule } from 'lucide-angular';
         <div class="h-60 overflow-y-auto">
           <div class="space-y-1">
             @if (visibles().length > 0) {
-              <label
+              <div
                 class="flex items-center gap-2 border-b border-border/60 p-2 hover:bg-accent/50"
+                (click)="seleccionarTodos(!todosSeleccionados())"
               >
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 accent-[var(--primary)]"
+                <alma-checkbox
                   [checked]="todosSeleccionados()"
-                  (change)="seleccionarTodos($any($event.target).checked)"
+                  (checkedChange)="seleccionarTodos($event)"
+                  ariaLabel="Seleccionar todo"
                 />
                 <span class="cursor-pointer select-none text-sm font-medium">
                   (Seleccionar todo)
                 </span>
-              </label>
+              </div>
             }
             @for (v of visibles(); track v) {
-              <label class="flex items-center gap-2 rounded-md p-2 hover:bg-accent/50">
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 accent-[var(--primary)]"
+              <div
+                class="flex items-center gap-2 rounded-md p-2 hover:bg-accent/50"
+                (click)="toggle(v, !seleccionados().includes(v))"
+              >
+                <alma-checkbox
                   [checked]="seleccionados().includes(v)"
-                  (change)="toggle(v, $any($event.target).checked)"
+                  (checkedChange)="toggle(v, $event)"
                 />
                 <span class="flex-1 cursor-pointer select-none text-sm">
                   {{ v === '' ? '(Vacío)' : v }}
                 </span>
-              </label>
+              </div>
             } @empty {
               <div class="py-4 text-center text-sm text-muted-foreground">
                 No se encontraron valores
@@ -130,11 +134,17 @@ export class ColumnFilterComponent {
 
   @ViewChild('boton') private boton!: ElementRef<HTMLButtonElement>;
 
+  /** Al aparecer el panel (ya en <body>) se coloca con su medida real. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor);
+  }
+
+  private anchor: DOMRect | null = null;
+
   protected readonly abierto = signal(false);
   protected readonly seleccionados = signal<string[]>([]);
   protected termino = '';
   protected readonly terminoSig = signal('');
-  protected readonly pos = signal({ top: 0, left: 0 });
 
   protected readonly tieneFiltros = computed(() => this.currentFilters().length > 0);
 
@@ -159,11 +169,7 @@ export class ColumnFilterComponent {
 
   protected abrir(ev: MouseEvent): void {
     ev.stopPropagation();
-    const r = this.boton.nativeElement.getBoundingClientRect();
-    this.pos.set({
-      top: Math.min(r.bottom + 4, window.innerHeight - 420),
-      left: Math.min(Math.max(8, r.left), window.innerWidth - 328),
-    });
+    this.anchor = this.boton.nativeElement.getBoundingClientRect();
     this.seleccionados.set(this.currentFilters());
     this.abierto.set(true);
   }

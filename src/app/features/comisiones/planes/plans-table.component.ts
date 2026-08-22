@@ -2,8 +2,18 @@
 // (los de fecha usan el filtro en cascada), menú de fila y paginación.
 // Paridad CommissionPlansTable.tsx.
 
-import { Component, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewChild,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { PortalDirective } from '../../../shared/portal.directive';
+import { colocarPanel } from '../../../shared/popover-position';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
 import { ColumnFilterComponent } from '../ui/column-filter.component';
 import { DateColumnFilterComponent } from '../ui/date-column-filter.component';
@@ -37,6 +47,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
   selector: 'alma-plans-table',
   imports: [
     LucideAngularModule,
+    PortalDirective,
     GridPaginationComponent,
     ColumnFilterComponent,
     DateColumnFilterComponent,
@@ -155,7 +166,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                       >
                         <button
                           type="button"
-                          (click)="menu.set(menu() === p.id ? null : p.id)"
+                          (click)="abrirMenu(p.id, $event)"
                           class="h-8 w-8 rounded-full transition-all hover:bg-primary/10 hover:text-primary"
                           aria-label="Acciones del plan"
                         >
@@ -164,11 +175,14 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
 
                         @if (menu() === p.id) {
                           <div
+                            almaPortal
                             class="fixed inset-0 z-[80]"
                             (click)="menu.set(null)"
                           ></div>
                           <div
-                            class="surface-solid absolute right-4 z-[85] mt-1 min-w-[170px] rounded-xl border border-border p-1 text-left shadow-[var(--shadow-lg)]"
+                            #panel
+                            almaPortal
+                            class="surface-solid fixed z-[85] min-w-[170px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"
@@ -279,6 +293,22 @@ export class PlansTableComponent {
   protected readonly pageSizeOptions = PLANS_PAGE_SIZE_OPTIONS;
 
   protected readonly menu = signal<string | null>(null);
+  private anchor: DOMRect | null = null;
+
+  /** El menú se monta en <body> y se coloca bajo el botón. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor, 'end');
+  }
+
+  protected abrirMenu(id: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    if (this.menu() === id) {
+      this.menu.set(null);
+      return;
+    }
+    this.anchor = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menu.set(id);
+  }
   protected readonly enEdicion = signal<CommissionPlan | null>(null);
   protected readonly porBorrar = signal<CommissionPlan | null>(null);
   protected readonly borrando = signal(false);
