@@ -11,8 +11,8 @@ export const environment = {
   /** Apps de otros equipos montadas en el shell (App Manifest). */
   remotes: {
     sacUsuarios: {
-      scriptUrl: 'https://skco-sac-usuarios-web-dev.azurewebsites.net/SkCo.UserManagement.Angular.js',
-      styleUrl: 'https://skco-sac-usuarios-web-dev.azurewebsites.net/SkCo.UserManagement.Angular.css',
+      scriptUrl: 'https://skcoalmaremotesdev.z20.web.core.windows.net/sac-usuarios/SkCo.UserManagement.Angular.js',
+      styleUrl: 'https://skcoalmaremotesdev.z20.web.core.windows.net/sac-usuarios/SkCo.UserManagement.Angular.css',
     },
   },
 };
