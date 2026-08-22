@@ -79,6 +79,24 @@ export const routes: Routes = [
       ),
     title: 'Suscripción de Seguros — ALMA',
   },
+  // App Motor de Comisiones: landing de tiles + sub-módulos.
+  {
+    path: 'apps/motor-comisiones',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/comisiones/comisiones-landing.component').then(
+        (m) => m.ComisionesLandingComponent,
+      ),
+    title: 'Motor de Comisiones — ALMA',
+  },
+  {
+    path: 'apps/motor-comisiones/compensation-plans',
+    loadComponent: () =>
+      import('./features/comisiones/planes/compensation-plans.page').then(
+        (m) => m.CompensationPlansPageComponent,
+      ),
+    title: 'Planes de Compensación — ALMA',
+  },
   {
     path: 'apps/:appId',
     loadComponent: () =>
