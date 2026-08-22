@@ -1,5 +1,5 @@
-// Cliente del módulo Motor de Suscripción (alma-backend) + tipos de dominio y
-// mapper de la bandeja. Portado de lib/suscripcion.api.ts y features/suscripcion/data.ts.
+// Cliente del módulo Motor de Suscripción (alma-backend).
+// Port 1:1 de lib/suscripcion.api.ts del front React (contrato v4).
 
 import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../core/services/api.service';
@@ -13,14 +13,6 @@ export type DecisionSlug =
   | 'devolucion'
   | 'bloqueado';
 
-export type EstadoTarea =
-  | 'pendiente'
-  | 'en_revision'
-  | 'aprobado'
-  | 'devuelto'
-  | 'escalado'
-  | 'emitido';
-
 export interface AlertaApi {
   variable: string;
   condicion: string;
@@ -32,6 +24,10 @@ export interface EvaluacionApi {
   id: string;
   decision: string;
   decision_slug: DecisionSlug;
+  /** Producto cuyas reglas aplicó el motor (p. ej. "Crea Ahorro"). */
+  producto?: string | null;
+  /** Slug del producto del motor (crea_patrimonio | crea_ahorro). */
+  producto_slug?: string | null;
   imc: number | null;
   edad: number | null;
   disponible: number | null;
@@ -42,18 +38,136 @@ export interface EvaluacionApi {
   evaluada_en: string | null;
 }
 
+/** Datos de la cotización de afiliaciones (espejo de TrkApplications). */
+export interface AfiliacionApi {
+  product_code: string | null;
+  producto_desc: string | null;
+  uw_status: string | null;
+  uw_status_desc: string | null;
+  sub_status: string | null;
+  sub_status_desc: string | null;
+  canal_venta: string | null;
+  usuario_afiliaciones: string | null;
+  agente_id: number | null;
+  fecha_recepcion: string | null;
+  fecha_cotizacion_pharos: string | null;
+  contrato_pharos: string | null;
+  cumulo_total: number | null;
+  source_id: number | null;
+  emitible: boolean;
+  motivo_no_emitible: string | null;
+}
+
+/**
+ * Detalle COMPLETO de la afiliación (script de Pipeline 2.0 ya traducido por el
+ * backend). Todos los strings pueden ser null; la UI oculta cada campo nulo.
+ */
+export interface AfiliacionDetalleApi {
+  estado_poliza: string | null;
+  subestado_poliza: string | null;
+  producto: string | null;
+  mes_afiliacion: string | null;
+  fecha_recepcion_afiliacion: string | null;
+  fecha_iron_mountain: string | null;
+  usuario_afiliaciones: string | null;
+  numero_cotizacion: string | null;
+  fecha_cotizacion_pharos: string | null;
+  contrato_ulla: string | null;
+  iniciativa: string | null;
+  asistencia: string | null;
+  observaciones: string | null;
+  tomador: {
+    tipo_documento: string | null;
+    numero_documento: string | null;
+    nombre: string | null;
+  };
+  asegurado: {
+    tipo_documento: string | null;
+    numero_documento: string | null;
+    nombre: string | null;
+    fecha_nacimiento: string | null;
+    edad: number | null;
+    genero: string | null;
+    telefono: string | null;
+    celular: string | null;
+    ciudad_cliente: string | null;
+    ciudad_afiliacion: string | null;
+    /** Ciudad de residencia (chankla) — la que usa el motor. */
+    ciudad_residencia: string | null;
+    direccion_residencia: string | null;
+  };
+  empresa: { nit: string | null; nombre: string | null };
+  comercial: {
+    codigo_agente: string | null;
+    id_agente: string | null;
+    nombre_agente: string | null;
+    tipo_agente: string | null;
+    agencia: string | null;
+    director_comercial: string | null;
+    canal: string | null;
+  };
+  condiciones: {
+    forma_pago: string | null;
+    periodicidad: string | null;
+    valor_asegurado: number | null;
+    prima_aporte: number | null;
+    vigencia_meses: number | null;
+    ape: number | null;
+    causal_retencion: string | null;
+    poliza_asegurable: string | null;
+    cobertura: string | null;
+    estado_cobertura: string | null;
+  };
+  sumas: {
+    vida_ahorro: number | null;
+    vida_incapacidad: number | null;
+    capital_seguro: number | null;
+    crea_patrimonio: number | null;
+    total_cumulo: number | null;
+  };
+  proceso: {
+    fecha_recibida_estudio: string | null;
+    fecha_envio_correo_asesor: string | null;
+    fecha_respuesta_asesor: string | null;
+    contrato_pharos: string | null;
+    fecha_emision: string | null;
+    usuario_emision: string | null;
+    fecha_limite_pago_primera: string | null;
+    dias_para_pago: number | null;
+    fecha_pago: string | null;
+    motivo_rechazo_retracto: string | null;
+  };
+  examenes: {
+    tipo: string | null;
+    fecha_envio_solicitud: string | null;
+    numero_cita: string | null;
+    fecha_llamada_cliente: string | null;
+    fecha_cita: string | null;
+    direccion_domicilio: string | null;
+    fecha_prueba_esfuerzo: string | null;
+    unidad: string | null;
+    observaciones_proveedor: string | null;
+    fecha_entrega_resultados: string | null;
+  };
+  reaseguro: {
+    fecha_envio: string | null;
+    fecha_recibido: string | null;
+    observaciones: string | null;
+  };
+}
+
 export interface SolicitudApi {
   id: string;
   nro_cotizacion: string;
-  estado: EstadoTarea;
   fecha_ingreso: string;
   asegurado: {
     nombre: string;
     cedula: string;
-    fecha_nacimiento: string;
-    genero: 'M' | 'F';
-    ciudad: string;
-    ocupacion: string;
+    // Nulos cuando la solicitud llegó por sync de afiliaciones y aún no se completa
+    fecha_nacimiento: string | null;
+    genero: 'M' | 'F' | null;
+    ciudad: string | null;
+    ocupacion: string | null;
   };
   producto: {
     suma_asegurada: number;
@@ -61,13 +175,104 @@ export interface SolicitudApi {
     anios_vigencia: number;
   };
   financiero: { ingresos: number; egresos: number };
-  medico: MedicoFlags;
+  medico: {
+    peso: number | null;
+    talla: number | null;
+    cardiovascular: boolean;
+    diabetes: boolean;
+    oncologico: boolean;
+    pulmonar: boolean;
+    neurologico: boolean;
+    cirugia: boolean;
+    tabaco: boolean;
+    alcohol: boolean;
+    discapacidad: boolean;
+    medicacion: boolean;
+  };
   beneficiarios: Array<{ nombre: string; porcentaje: number; parentesco: string }>;
   metadatos: { asesor: string | null; canal: string };
+  afiliacion: AfiliacionApi | null;
+  declaraciones: {
+    todas_negativas: boolean | null;
+    covid_positivo: boolean;
+    retiene_por_salud: boolean;
+    fecha: string;
+  } | null;
   evaluacion: EvaluacionApi | null;
 }
 
-export interface MedicoFlags {
+// ── Declaraciones (cuestionario de asegurabilidad desde Pharos) ──────────────
+
+export interface DeclaracionItemApi {
+  code: string | null;
+  descripcion: string | null;
+  tipoApi: number | null;
+  tipoBlob: string | null;
+  valor: string | null;
+  ddeclarationid: string;
+  calibrada: boolean;
+  /** Visibilidad en Pharos: 4 = oculta. null en snapshots antiguos. */
+  visibleType?: number | null;
+}
+
+export interface DeclaracionFormApi {
+  formCode: string | null;
+  descripcion: string | null;
+  ddeclarationFormId: string;
+  declaraciones: DeclaracionItemApi[];
+}
+
+export interface AnalisisDeclaracionesApi {
+  todasNegativas: boolean | null;
+  casillasPositivas: string[];
+  bloquesDetalle: Record<string, string>;
+  covidPositivo: boolean;
+  covidFecha: string | null;
+  covidVacunado: boolean;
+  covidDosis: string | null;
+  retieneContratoPorSalud: boolean;
+  peso: string | null;
+  estatura: string | null;
+}
+
+export interface DeclaracionesApi {
+  todas_negativas: boolean | null;
+  fecha: string;
+  analisis: AnalisisDeclaracionesApi | null;
+  contenido: Array<{
+    nodeId: number | null;
+    displayName: string | null;
+    nodeStatus: string | null;
+    formularios: DeclaracionFormApi[];
+    declaracionesRaiz?: DeclaracionItemApi[] | null;
+    sinCalibrar: number;
+  }> | null;
+  pharos: {
+    proposalNo: string | null;
+    contractNo: string | null;
+    wStatus: number | null;
+    nodos: Array<Record<string, unknown>> | null;
+  };
+}
+
+export interface Verificaciones {
+  cumulo_verificado: boolean;
+  pipeline_revisado: boolean;
+  pharos_revisado: boolean;
+  filenet_localizado: boolean;
+  correo_revisado: boolean;
+}
+
+export interface DatosEvaluables {
+  fecha_nacimiento: string;
+  genero: 'M' | 'F';
+  ciudad: string;
+  ocupacion: string;
+  suma_asegurada: number;
+  prima_mensual: number;
+  anios_vigencia: number;
+  ingresos: number;
+  egresos: number;
   peso: number;
   talla: number;
   cardiovascular: boolean;
@@ -80,208 +285,65 @@ export interface MedicoFlags {
   alcohol: boolean;
   discapacidad: boolean;
   medicacion: boolean;
-}
-
-export interface Verificaciones {
-  cumulo_verificado: boolean;
-  pipeline_revisado: boolean;
-  pharos_revisado: boolean;
-  filenet_localizado: boolean;
-  correo_revisado: boolean;
-}
-
-export interface DatosEvaluables extends MedicoFlags {
-  fecha_nacimiento: string;
-  genero: 'M' | 'F';
-  ciudad: string;
-  ocupacion: string;
-  suma_asegurada: number;
-  prima_mensual: number;
-  anios_vigencia: number;
-  ingresos: number;
-  egresos: number;
   verificaciones?: Verificaciones;
 }
 
-// ---- Dominio de la bandeja ----
+// ── Motor de Cúmulo (política POL-ADC-01-11-01 v13) ─────────────────────────
 
-export interface Alerta {
-  variable: string;
-  condicion: string;
+export type NivelCumulo = 'bajo' | 'medio' | 'alto' | 'limite_reaseguro';
+
+export interface CumuloAlertaApi {
+  codigo: string;
+  nivel: 'error' | 'advertencia' | 'info';
   mensaje: string;
-  prioridad: 'alta' | 'media';
 }
 
-export interface Evaluacion {
-  evaluacion_id: string | null;
-  decision: DecisionSlug;
-  decision_label: string;
-  decision_color: string;
-  accion_sugerida: string;
-  requiere_revision: boolean;
-  imc: number;
-  edad: number;
-  disponible_neto: number;
-  relacion_prima_pct: number;
-  alertas: Alerta[];
-  exclusiones: string[];
+export interface CumuloPolizaApi {
+  numero_poliza: string;
+  producto: string;
+  producto_pharos: string;
+  suma_asegurada: number;
+  fin_vigencia: string | null;
 }
 
-export interface Tarea {
-  tarea_id: string;
-  nro_cotizacion: string;
-  estado: EstadoTarea;
-  nuevo?: boolean;
-  fecha_ingreso: string;
-  _hrs: number;
-  asegurado: SolicitudApi['asegurado'];
-  producto: SolicitudApi['producto'];
-  financiero: SolicitudApi['financiero'];
-  medico: MedicoFlags;
-  beneficiarios: SolicitudApi['beneficiarios'];
-  metadatos: { asesor: string; canal: string };
-  evaluacion: Evaluacion;
+export interface CumuloResultadoApi {
+  cumulo_acumulado: number;
+  cumulo_total: number;
+  nivel: NivelCumulo;
+  requiere_asegurabilidad: boolean;
+  requiere_examenes: boolean;
+  nivel_examen: 'ninguno' | 'A' | 'B' | 'C' | 'D' | 'E';
+  examen_detalle: string;
+  suma_nueva_valida: boolean;
+  supera_reaseguro: boolean;
+  psa_requerido: boolean;
+  alertas: CumuloAlertaApi[];
+  tercero: { partyCode: string; nombre: string } | null;
+  polizas_vigentes: CumuloPolizaApi[];
+  advertencias: string[];
 }
 
-export const DECISION_META: Record<
-  DecisionSlug,
-  { label: string; color: string; accion: string; revision: boolean }
-> = {
-  emision_automatica: {
-    label: 'Emisión automática',
-    color: '#00C73D',
-    accion: 'Emitir la póliza automáticamente. No requiere revisión manual.',
-    revision: false,
-  },
-  emision_estandar: {
-    label: 'Emisión estándar',
-    color: '#007A26',
-    accion: 'Continuar con el proceso de emisión estándar.',
-    revision: false,
-  },
-  alerta_estandar: {
-    label: 'Alerta — Estándar con observaciones',
-    color: '#D97706',
-    accion: 'Emitir con observaciones. Documentar las alertas señaladas.',
-    revision: true,
-  },
-  condicionada: {
-    label: 'Aceptada con condiciones',
-    color: '#F59E0B',
-    accion: 'Aplicar las exclusiones confirmadas antes de emitir.',
-    revision: true,
-  },
-  flujo_suscriptor: {
-    label: 'Flujo suscriptor',
-    color: '#7C3AED',
-    accion: 'Revisión manual del suscriptor requerida para este caso.',
-    revision: true,
-  },
-  devolucion: {
-    label: 'Devolución al asesor',
-    color: '#DC2626',
-    accion: 'Devolver al asesor. El caso no cumple los criterios delegados.',
-    revision: false,
-  },
-  bloqueado: {
-    label: 'Bloqueado',
-    color: '#9CA3AF',
-    accion: 'Completar las verificaciones para continuar.',
-    revision: true,
-  },
-};
-
-export function evaluacionFromApi(
-  ev: EvaluacionApi,
-  fallback: { disponible: number },
-): Evaluacion {
-  const meta = DECISION_META[ev.decision_slug] ?? DECISION_META['flujo_suscriptor'];
-  return {
-    evaluacion_id: ev.id,
-    decision: ev.decision_slug,
-    decision_label: meta.label,
-    decision_color: meta.color,
-    accion_sugerida: meta.accion,
-    requiere_revision: meta.revision,
-    imc: ev.imc ?? 0,
-    edad: ev.edad ?? 0,
-    disponible_neto: ev.disponible ?? fallback.disponible,
-    relacion_prima_pct: ev.relacion_prima ?? 0,
-    alertas: ev.alertas.map((a) => ({
-      variable: a.variable,
-      condicion: a.condicion,
-      mensaje: a.mensaje,
-      prioridad: a.prioridad === 'Alta' ? 'alta' : 'media',
-    })),
-    exclusiones: ev.exclusiones,
-  };
-}
-
-const SIN_EVALUACION: Omit<Evaluacion, 'disponible_neto'> = {
-  evaluacion_id: null,
-  decision: 'bloqueado',
-  decision_label: 'Sin evaluación',
-  decision_color: '#9CA3AF',
-  accion_sugerida: 'Ejecutar el motor para obtener una decisión.',
-  requiere_revision: true,
-  imc: 0,
-  edad: 0,
-  relacion_prima_pct: 0,
-  alertas: [],
-  exclusiones: [],
-};
-
-export function apiToTarea(dto: SolicitudApi, index: number): Tarea {
-  const hrs = Math.max(
-    0,
-    Math.round((Date.now() - Date.parse(dto.fecha_ingreso)) / 3_600_000),
-  );
-  const disponible = dto.financiero.ingresos - dto.financiero.egresos;
-  return {
-    tarea_id: dto.id,
-    nro_cotizacion: dto.nro_cotizacion,
-    estado: dto.estado,
-    nuevo: dto.estado === 'pendiente' && hrs <= 3 && index < 3,
-    fecha_ingreso: dto.fecha_ingreso,
-    _hrs: hrs,
-    asegurado: dto.asegurado,
-    producto: dto.producto,
-    financiero: dto.financiero,
-    medico: dto.medico,
-    beneficiarios: dto.beneficiarios,
-    metadatos: { asesor: dto.metadatos.asesor ?? '—', canal: dto.metadatos.canal },
-    evaluacion: dto.evaluacion
-      ? evaluacionFromApi(dto.evaluacion, { disponible })
-      : { ...SIN_EVALUACION, disponible_neto: disponible },
-  };
-}
-
-export function fmtCOP(n: number): string {
-  return '$ ' + (Number(n) || 0).toLocaleString('es-CO');
-}
-
-export function fmtCOPShort(n: number): string {
-  n = Number(n) || 0;
-  if (n >= 1_000_000)
-    return '$' + (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + 'M';
-  return '$' + n.toLocaleString('es-CO');
-}
-
-export function hrsTxt(h: number): string {
-  if (h < 1) return 'hace min';
-  if (h < 24) return `hace ${h} h`;
-  return `hace ${Math.floor(h / 24)} d`;
+export interface CuentaPharosApi {
+  conectada: boolean;
+  estado: 'conectada' | 'requiere_refresco' | null;
+  pharos_user?: string;
+  ultima_verificacion?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
 export class SuscripcionApi {
   private readonly api = inject(ApiService);
 
-  async listSolicitudes(): Promise<SolicitudApi[]> {
-    const data = await this.api.fetch<{ solicitudes: SolicitudApi[] }>(
-      '/api/suscripcion/solicitudes',
+  /** Detalle de una solicitud (subpágina de la bandeja). */
+  getSolicitud(solicitudId: string): Promise<SolicitudApi> {
+    return this.api.fetch<SolicitudApi>(`/api/suscripcion/solicitudes/${solicitudId}`);
+  }
+
+  /** Detalle completo de la afiliación (todos los campos del Pipeline 2.0). */
+  getAfiliacion(solicitudId: string): Promise<AfiliacionDetalleApi> {
+    return this.api.fetch<AfiliacionDetalleApi>(
+      `/api/suscripcion/solicitudes/${solicitudId}/afiliacion`,
     );
-    return data.solicitudes;
   }
 
   evaluarSolicitud(solicitudId: string, datos?: DatosEvaluables): Promise<EvaluacionApi> {
@@ -291,14 +353,44 @@ export class SuscripcionApi {
     );
   }
 
-  cambiarEstado(
+  getDeclaraciones(solicitudId: string): Promise<DeclaracionesApi> {
+    return this.api.fetch<DeclaracionesApi>(
+      `/api/suscripcion/solicitudes/${solicitudId}/declaraciones`,
+    );
+  }
+
+  /** Verificación de cúmulo contra Pharos (pólizas vigentes del asegurado). */
+  verificarCumulo(solicitudId: string): Promise<CumuloResultadoApi> {
+    return this.api.fetch<CumuloResultadoApi>(
+      `/api/suscripcion/solicitudes/${solicitudId}/cumulo`,
+      { method: 'POST' },
+    );
+  }
+
+  emitirSolicitud(
     solicitudId: string,
-    estado: EstadoTarea,
-    comentario?: string,
-  ): Promise<{ estado_anterior: EstadoTarea; estado_nuevo: EstadoTarea }> {
-    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/estado`, {
+    confirmacion: string,
+  ): Promise<{ contrato: string; advertencia: string | null }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/emitir`, {
       method: 'POST',
-      body: JSON.stringify({ estado, comentario }),
+      body: JSON.stringify({ confirmacion }),
     });
+  }
+
+  // ── Cuenta de Pharos del usuario (emisión a su nombre) ────────────────────
+
+  getCuentaPharos(): Promise<CuentaPharosApi> {
+    return this.api.fetch<CuentaPharosApi>('/api/suscripcion/cuenta-pharos');
+  }
+
+  conectarCuentaPharos(pharosUser: string, password: string): Promise<CuentaPharosApi> {
+    return this.api.fetch<CuentaPharosApi>('/api/suscripcion/cuenta-pharos', {
+      method: 'PUT',
+      body: JSON.stringify({ pharos_user: pharosUser, password }),
+    });
+  }
+
+  desconectarCuentaPharos(): Promise<{ conectada: boolean }> {
+    return this.api.fetch('/api/suscripcion/cuenta-pharos', { method: 'DELETE' });
   }
 }

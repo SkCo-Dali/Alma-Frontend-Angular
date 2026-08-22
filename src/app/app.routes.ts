@@ -34,13 +34,24 @@ export const routes: Routes = [
       ),
     title: 'Agente Alma — ALMA',
   },
+  // App Suscripción de Seguros: landing de tiles + subpáginas de-anidadas
+  // (bandeja, config del motor, config del simulador y detalle por id).
   {
     path: 'apps/suscripcion',
+    pathMatch: 'full',
     loadComponent: () =>
-      import('./features/suscripcion/suscripcion-page.component').then(
-        (m) => m.SuscripcionPageComponent,
+      import('./features/suscripcion/suscripcion-landing.component').then(
+        (m) => m.SuscripcionLandingComponent,
       ),
     title: 'Suscripción de Seguros — ALMA',
+  },
+  {
+    path: 'apps/suscripcion/cotizaciones',
+    loadComponent: () =>
+      import('./features/suscripcion/cotizaciones-page.component').then(
+        (m) => m.CotizacionesPageComponent,
+      ),
+    title: 'Bandeja de Cotizaciones — ALMA',
   },
   {
     path: 'apps/:appId',
