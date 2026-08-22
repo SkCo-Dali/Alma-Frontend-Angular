@@ -24,6 +24,8 @@ export class ApplicationsService {
     Array.from(new Set(this.applications().map((a) => a.categoria))).sort(),
   );
 
+  readonly favorites = computed(() => this.applications().filter((a) => a.favorito));
+
   byRoute(route: string): Application | undefined {
     return this.applications().find((a) => a.internalRoute === route);
   }

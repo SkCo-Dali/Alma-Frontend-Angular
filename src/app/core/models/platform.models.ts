@@ -39,6 +39,29 @@ export interface Application {
   internalRoute?: string;
 }
 
+export interface Team {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  miembros: number;
+}
+
+export interface Role {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  permissions: string[];
+}
+
+export interface AccessRequest {
+  id: string;
+  applicationId: string;
+  applicationName: string;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  justification: string;
+}
+
 /** Perfil crudo de alma.Users (rol único estilo Dali); ver GET /api/users/me. */
 export interface MeApi {
   email: string | null;

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/auth/admin.guard';
 
 export const routes: Routes = [
   {
@@ -16,6 +17,36 @@ export const routes: Routes = [
     title: 'Aplicaciones — ALMA',
   },
   {
+    path: 'favorites',
+    loadComponent: () =>
+      import('./ui/favorites/favorites.component').then((m) => m.FavoritesComponent),
+    title: 'Favoritos — ALMA',
+  },
+  {
+    path: 'apps/cheques',
+    loadComponent: () =>
+      import('./features/cheques/cheques-page.component').then(
+        (m) => m.ChequesPageComponent,
+      ),
+    title: 'Cheques — ALMA',
+  },
+  {
+    path: 'apps/agente-alma',
+    loadComponent: () =>
+      import('./features/agente-alma/agente-alma-page.component').then(
+        (m) => m.AgenteAlmaPageComponent,
+      ),
+    title: 'Agente Alma — ALMA',
+  },
+  {
+    path: 'apps/suscripcion',
+    loadComponent: () =>
+      import('./features/suscripcion/suscripcion-page.component').then(
+        (m) => m.SuscripcionPageComponent,
+      ),
+    title: 'Motor de Suscripción — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),
@@ -24,51 +55,32 @@ export const routes: Routes = [
   {
     path: 'access-requests',
     loadComponent: () =>
-      import('./ui/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent),
-    data: {
-      pageTitle: 'Solicitudes de acceso',
-      pageDescription: 'Pide acceso a nuevas aplicaciones y sigue el estado de tus solicitudes.',
-    },
+      import('./ui/access-requests/access-requests.component').then(
+        (m) => m.AccessRequestsComponent,
+      ),
     title: 'Solicitudes de acceso — ALMA',
   },
   {
     path: 'admin',
-    loadComponent: () =>
-      import('./ui/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent),
-    data: {
-      pageTitle: 'Administración',
-      pageDescription: 'Gestión de aplicaciones, roles y accesos de la plataforma.',
-    },
+    canActivate: [adminGuard],
+    loadComponent: () => import('./ui/admin/admin.component').then((m) => m.AdminComponent),
     title: 'Administración — ALMA',
   },
   {
     path: 'settings',
     loadComponent: () =>
-      import('./ui/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent),
-    data: {
-      pageTitle: 'Configuración',
-      pageDescription: 'Preferencias de tu cuenta y de la plataforma.',
-    },
+      import('./ui/settings/settings.component').then((m) => m.SettingsComponent),
     title: 'Configuración — ALMA',
   },
   {
     path: 'help',
-    loadComponent: () =>
-      import('./ui/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent),
-    data: {
-      pageTitle: 'Ayuda',
-      pageDescription: 'Centro de ayuda y documentación de ALMA.',
-    },
+    loadComponent: () => import('./ui/help/help.component').then((m) => m.HelpComponent),
     title: 'Ayuda — ALMA',
   },
   {
     path: 'profile',
     loadComponent: () =>
-      import('./ui/coming-soon/coming-soon.component').then((m) => m.ComingSoonComponent),
-    data: {
-      pageTitle: 'Mi perfil',
-      pageDescription: 'Tu información personal y roles en la plataforma.',
-    },
+      import('./ui/profile/profile.component').then((m) => m.ProfileComponent),
     title: 'Mi perfil — ALMA',
   },
   {

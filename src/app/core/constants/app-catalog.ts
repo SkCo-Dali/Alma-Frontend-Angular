@@ -2,7 +2,13 @@
 // Las apps reales están "en migración" desde el front React: su manifest ya
 // existe pero la ruta interna muestra el estado de migración hasta portarlas.
 
-import { Application, User } from '../models/platform.models';
+import {
+  AccessRequest,
+  Application,
+  Role,
+  Team,
+  User,
+} from '../models/platform.models';
 
 export const APP_CATALOG: Application[] = [
   // ---- Aplicaciones reales ----
@@ -161,6 +167,75 @@ export const MOCK_USER: User = {
     'platform.admin',
   ],
 };
+
+export const TEAMS: Team[] = [
+  { id: 't-1', nombre: 'Emisión y Novedades', miembros: 28 },
+  { id: 't-2', nombre: 'Suscripción', miembros: 14 },
+  { id: 't-3', nombre: 'Comisiones', miembros: 9 },
+  { id: 't-4', nombre: 'Gestión Documental', miembros: 17 },
+  { id: 't-5', nombre: 'Servicio al Cliente', miembros: 46 },
+  { id: 't-6', nombre: 'Excelencia Operacional', miembros: 12 },
+];
+
+export const ROLES: Role[] = [
+  {
+    id: 'r-admin',
+    nombre: 'Administrador de Plataforma',
+    descripcion: 'Acceso completo a la administración del portal.',
+    permissions: ['platform.admin', '*.view', '*.manage'],
+  },
+  {
+    id: 'r-suscriptor',
+    nombre: 'Suscriptor',
+    descripcion: 'Evaluación y aprobación de solicitudes en el Motor de Suscripción.',
+    permissions: ['app.suscripcion.view', 'app.pharos.view', 'app.documental.view'],
+  },
+  {
+    id: 'r-supervisor-comisiones',
+    nombre: 'Supervisor de Comisiones',
+    descripcion: 'Parametrización y ejecución del Motor de Comisiones.',
+    permissions: ['app.motor-comisiones.view'],
+  },
+  {
+    id: 'r-analista-comisiones',
+    nombre: 'Analista de Comisiones',
+    descripcion: 'Consulta y análisis de comisiones causadas.',
+    permissions: ['app.motor-comisiones.view'],
+  },
+  {
+    id: 'r-operador',
+    nombre: 'Analista de Operaciones',
+    descripcion: 'Acceso operativo diario a emisión y consultas.',
+    permissions: ['app.emision.view', 'app.pharos.view', 'app.dashboard.view'],
+  },
+];
+
+export const ACCESS_REQUESTS: AccessRequest[] = [
+  {
+    id: 'req-1',
+    applicationId: 'app-motor-comisiones',
+    applicationName: 'Motor de Comisiones',
+    requestedAt: '2026-07-22',
+    status: 'pending',
+    justification: 'Apoyo en la parametrización de planes del canal Vida.',
+  },
+  {
+    id: 'req-2',
+    applicationId: 'app-dashboard-operaciones',
+    applicationName: 'Dashboard Operaciones',
+    requestedAt: '2026-07-20',
+    status: 'pending',
+    justification: 'Seguimiento de indicadores del equipo de Emisión.',
+  },
+  {
+    id: 'req-3',
+    applicationId: 'app-salesforce-hub',
+    applicationName: 'Salesforce Hub',
+    requestedAt: '2026-07-18',
+    status: 'pending',
+    justification: 'Consulta de vistas 360 para atención de casos.',
+  },
+];
 
 // Rol único de alma.Users (estilo Dali) → permisos de la plataforma.
 // Claves en minúsculas; la comparación es case-insensitive.
