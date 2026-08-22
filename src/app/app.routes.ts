@@ -98,6 +98,14 @@ export const routes: Routes = [
     title: 'Planes de Compensación — ALMA',
   },
   {
+    path: 'apps/motor-comisiones/catalogs',
+    loadComponent: () =>
+      import('./features/comisiones/catalogos/catalogs.page').then(
+        (m) => m.CatalogsPageComponent,
+      ),
+    title: 'Catálogos — ALMA',
+  },
+  {
     path: 'apps/:appId',
     loadComponent: () =>
       import('./ui/app-host/app-host.component').then((m) => m.AppHostComponent),

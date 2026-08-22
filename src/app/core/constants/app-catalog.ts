@@ -159,6 +159,7 @@ export const MOCK_USER: User = {
     'app.suscripcion.motor.config',
     'app.suscripcion.simulador.config',
     'app.motor-comisiones.view',
+    'app.motor-comisiones.catalogs',
     'app.agente-alma.view',
     'app.cheques.view',
     'app.emision.view',
