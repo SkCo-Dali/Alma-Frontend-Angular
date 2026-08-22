@@ -26,6 +26,7 @@ import {
 import { DeclaracionesDialogComponent } from './declaraciones-dialog.component';
 import { EmitirDialogComponent } from './emitir-dialog.component';
 import { EvaluarModalComponent } from './evaluar-modal.component';
+import { SimuladorHostComponent } from './simulador/simulador-host.component';
 
 @Component({
   selector: 'alma-detalle-solicitud',
@@ -38,6 +39,7 @@ import { EvaluarModalComponent } from './evaluar-modal.component';
     DeclaracionesDialogComponent,
     EmitirDialogComponent,
     EvaluarModalComponent,
+    SimuladorHostComponent,
   ],
   template: `
     @if (!puedeVer()) {
@@ -65,6 +67,8 @@ import { EvaluarModalComponent } from './evaluar-modal.component';
         </div>
       </div>
     } @else if (tarea(); as sel) {
+      <!-- El panel del simulador precarga ESTA cotización (patrón "Tu Dali"). -->
+      <alma-simulador-host [solicitudId]="solicitudId()">
       <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
         <!-- ── Encabezado: Large Title + identidad + acciones ── -->
         <header class="glass rounded-2xl px-5 py-4 shadow-[var(--shadow-sm)]">
@@ -367,6 +371,7 @@ import { EvaluarModalComponent } from './evaluar-modal.component';
           />
         }
       </div>
+      </alma-simulador-host>
     }
   `,
 })
