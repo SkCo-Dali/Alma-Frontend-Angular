@@ -17,6 +17,8 @@ export interface AlertaApi {
   condicion: string;
   mensaje: string;
   prioridad: 'Alta' | 'Media' | 'Baja';
+  /** v3: qué pedirle al asesor, redactado por suscripción en el catálogo. */
+  requisito?: string;
 }
 
 export interface EvaluacionApi {
@@ -285,6 +287,11 @@ export interface DatosEvaluables {
   discapacidad: boolean;
   medicacion: boolean;
   verificaciones?: Verificaciones;
+  // v3: ítems de catálogo que la bandeja no guarda como columna. Solo
+  // alimentan la evaluación; el backend no los persiste en la solicitud.
+  pais_residencia?: string | null;
+  hobbies?: string[];
+  preexistencias?: string[];
 }
 
 // ── Motor de Cúmulo (política POL-ADC-01-11-01 v13) ─────────────────────────
@@ -329,6 +336,53 @@ export interface CuentaPharosApi {
   ultima_verificacion?: string | null;
 }
 
+
+// ── Estados de Control y Emisión (escritura en Pipeline) ─────────────────────
+// Un método por caso del documento "ESTADOS CONTROL Y EMISIÓN" (ago-2026).
+
+/** Casos que el analista puede aplicar sobre la cotización en Pipeline. */
+export type CasoEstado =
+  | 'informacion_adicional'
+  | 'pendiente_fondeo'
+  | 'examen_medico'
+  | 'reaseguro'
+  | 'cobertura'
+  | 'examenes'
+  | 'reaseguro_seguimiento';
+
+export interface EstadosCatalogosApi {
+  subestados: Record<string, string>;
+  cobertura: Record<string, string>;
+  estadoCobertura: Record<string, string>;
+  unidadExamenes: Record<string, string>;
+  paquetesExamen: string[];
+  /** Longitudes reales de las columnas de TrkApplications (el borde corta ahí). */
+  observacionesMax: number;
+  numeroCitaMax: number;
+  direccionMax: number;
+}
+
+export interface EstadoAplicadoApi {
+  actualizadas: number;
+  nro_cotizacion: string;
+  accion: string;
+  /** Aviso no bloqueante (p. ej. fondeo sobre un producto que no es Capital + Seguro). */
+  advertencia?: string;
+}
+
+/** Campos de la pantalla "Registro Exámenes Médicos"; los omitidos no se tocan. */
+export interface ExamenesIn {
+  tipo_examen?: string | null;
+  fecha_envio_solicitud?: string | null;
+  numero_cita?: string | null;
+  fecha_llamada_cliente?: string | null;
+  fecha_cita?: string | null;
+  direccion_domicilio?: string | null;
+  fecha_prueba_esfuerzo?: string | null;
+  unidad?: string | null;
+  observaciones_proveedor?: string | null;
+  fecha_entrega_resultados?: string | null;
+}
 @Injectable({ providedIn: 'root' })
 export class SuscripcionApi {
   private readonly api = inject(ApiService);
@@ -392,4 +446,92 @@ export class SuscripcionApi {
   desconectarCuentaPharos(): Promise<{ conectada: boolean }> {
     return this.api.fetch('/api/suscripcion/cuenta-pharos', { method: 'DELETE' });
   }
+
+  // ── Estados de Control y Emisión ──────────────────────────────────────────
+  // Escriben en Pipeline (TrkApplications) vía backend + bridge. La respuesta
+  // trae cuántas filas se actualizaron; 0 nunca llega (el backend lo vuelve 409).
+
+  getCatalogosEstados(): Promise<EstadosCatalogosApi> {
+    return this.api.fetch<EstadosCatalogosApi>(
+      '/api/suscripcion/solicitudes/estados/catalogos',
+    );
+  }
+
+  private postEstado(
+    solicitudId: string,
+    ruta: string,
+    body: unknown,
+  ): Promise<EstadoAplicadoApi> {
+    return this.api.fetch<EstadoAplicadoApi>(
+      `/api/suscripcion/solicitudes/${solicitudId}/${ruta}`,
+      { method: 'POST', body: JSON.stringify(body) },
+    );
+  }
+
+  marcarInformacionAdicional(
+    solicitudId: string,
+    fechaCorreoAsesor: string | null,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/informacion-adicional', {
+      fecha_correo_asesor: fechaCorreoAsesor,
+      observaciones,
+    });
+  }
+
+  marcarPendienteFondeo(
+    solicitudId: string,
+    fechaCorreoAsesor: string | null,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/pendiente-fondeo', {
+      fecha_correo_asesor: fechaCorreoAsesor,
+      observaciones,
+    });
+  }
+
+  marcarExamenMedico(
+    solicitudId: string,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/examen-medico', { observaciones });
+  }
+
+  marcarReaseguro(
+    solicitudId: string,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/reaseguro', { observaciones });
+  }
+
+  definirCobertura(
+    solicitudId: string,
+    estadoCobertura: string,
+    cobertura: string | null,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/cobertura', {
+      estado_cobertura: estadoCobertura,
+      cobertura,
+      observaciones,
+    });
+  }
+
+  registrarExamenes(solicitudId: string, campos: ExamenesIn): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'examenes', campos);
+  }
+
+  registrarReaseguro(
+    solicitudId: string,
+    fechaEnvio: string | null,
+    fechaRecibido: string | null,
+    observaciones: string | null,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'reaseguro/seguimiento', {
+      fecha_envio: fechaEnvio,
+      fecha_recibido: fechaRecibido,
+      observaciones,
+    });
+  }
 }
+
