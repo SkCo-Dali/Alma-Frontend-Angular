@@ -1,12 +1,12 @@
-// Header del shell: barra de vidrio esmerilado con el logo, el lema de la
-// plataforma, el botón de cuadrícula (abre el Launchpad) y el chip de usuario
-// con su cargo. El cambio de tema vive dentro del menú del usuario.
+// Header del shell: PRÁCTICAMENTE INVISIBLE — el wallpaper corre por debajo sin
+// barras ni líneas. Solo un velo lácteo que nace en el borde izquierdo y se
+// desvanece hacia el centro (legibilidad del logo y el lema, como en el
+// concepto solarpunk), el toggle de tema y el chip de usuario con su cargo.
 
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { LaunchpadService } from '../../core/services/launchpad.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { shortName } from '../../core/utils/name';
 
@@ -14,8 +14,17 @@ import { shortName } from '../../core/utils/name';
   selector: 'alma-header',
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <header class="spk-bar sticky top-0 z-30 flex h-20 items-center gap-4 px-4 md:px-6">
-      <a routerLink="/" class="flex shrink-0 items-center gap-3" aria-label="Inicio">
+    <header
+      class="sticky top-0 z-30 flex h-20 items-center gap-4 bg-transparent px-4 md:px-6"
+    >
+      <!-- Velo lácteo SOLO tras el logo/lema: sin bordes ni línea inferior,
+           se funde con el wallpaper hacia el centro. -->
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-y-0 left-0 w-[34rem] max-w-[55vw] bg-gradient-to-r from-card/85 via-card/45 to-transparent"
+      ></div>
+
+      <a routerLink="/" class="relative flex shrink-0 items-center gap-3" aria-label="Inicio">
         <img src="alma-logo.png" alt="Alma Skandia" class="block h-[3.25rem] w-auto dark:hidden" />
         <img
           src="alma-logo-neg.png"
@@ -36,25 +45,25 @@ import { shortName } from '../../core/utils/name';
       <div class="ml-auto flex items-center gap-2">
         <button
           type="button"
-          (click)="launchpad.open.set(true)"
-          class="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/80 text-primary shadow-sm transition-all hover:-translate-y-px hover:shadow-md"
-          aria-label="Todas las aplicaciones"
-          title="Todas las aplicaciones"
+          (click)="prefs.toggleTheme()"
+          class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          [attr.aria-label]="dark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          [title]="dark() ? 'Modo claro' : 'Modo oscuro'"
         >
-          <lucide-icon name="layout-grid" [size]="18" />
+          <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="18" />
         </button>
 
         <div class="relative">
           <button
             type="button"
             (click)="toggleMenu($event)"
-            class="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/80 py-1 pl-1 pr-2.5 shadow-sm transition-all hover:shadow-md"
+            class="flex items-center gap-2.5 rounded-full bg-card/70 p-[3px] pr-3 shadow-sm backdrop-blur-md transition-all hover:bg-card/90 hover:shadow-md"
             [attr.aria-expanded]="menuOpen()"
           >
             <img
               [src]="user().foto"
               [alt]="user().nombre"
-              class="h-9 w-9 rounded-full border border-border object-cover"
+              class="h-9 w-9 rounded-full object-cover"
             />
             <span class="hidden flex-col items-start sm:flex">
               <span class="text-sm font-semibold leading-tight text-foreground">
@@ -94,14 +103,6 @@ import { shortName } from '../../core/utils/name';
               >
                 <lucide-icon name="settings" [size]="16" /> Configuración
               </a>
-              <button
-                type="button"
-                (click)="$event.stopPropagation(); prefs.toggleTheme()"
-                class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-              >
-                <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="16" />
-                {{ dark() ? 'Modo claro' : 'Modo oscuro' }}
-              </button>
               <div class="-mx-1 my-1 h-px bg-muted"></div>
               <button
                 type="button"
@@ -119,7 +120,6 @@ import { shortName } from '../../core/utils/name';
 })
 export class HeaderComponent {
   protected readonly prefs = inject(PreferencesService);
-  protected readonly launchpad = inject(LaunchpadService);
   private readonly auth = inject(AuthService);
 
   protected readonly user = this.auth.user;

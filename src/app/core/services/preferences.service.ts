@@ -8,10 +8,14 @@ import { PreferenciasPortal } from '../models/platform.models';
 
 export type Theme = 'system' | 'light' | 'dark';
 
-/** Fondos disponibles. 'solarpunk' es la escena ilustrada (ciudad-jardín con
- *  luz cálida); el resto son paletas esmeriladas --wp-* en styles.css. */
+/** Fondos disponibles: los cinco primeros son wallpapers solarpunk
+ *  (public/wallpapers/*.jpg); el resto son paletas esmeriladas --wp-*. */
 export const BACKGROUNDS = [
-  'solarpunk',
+  'terraza',
+  'mirador',
+  'lago',
+  'balcon',
+  'dorado',
   'oceano',
   'aurora',
   'atardecer',
@@ -37,17 +41,17 @@ interface Persisted {
 
 const DEFAULTS: Persisted = {
   theme: 'system',
-  background: 'solarpunk',
+  background: 'terraza',
   appOrder: [],
   dockCount: 6,
   favorites: [],
   recentApps: [],
 };
 
-/** 'esmeralda' fue el fondo por defecto hasta ago-2026; 'solarpunk' lo releva
- *  como el verde insignia, así que lo heredan quienes nunca cambiaron de fondo. */
+/** Fondos retirados ('esmeralda' fue el por defecto hasta ago-2026 y 'solarpunk'
+ *  la escena SVG que reemplazaron estos wallpapers): heredan el nuevo default. */
 function migrarFondo(bg: unknown): Background {
-  if (bg === 'esmeralda') return 'solarpunk';
+  if (bg === 'esmeralda' || bg === 'solarpunk') return 'terraza';
   return (BACKGROUNDS as readonly string[]).includes(bg as string)
     ? (bg as Background)
     : DEFAULTS.background;
@@ -96,7 +100,7 @@ export class PreferencesService {
     });
     effect(() => {
       const bg = this.background();
-      if (bg === 'solarpunk') delete document.documentElement.dataset['bg'];
+      if (bg === 'terraza') delete document.documentElement.dataset['bg'];
       else document.documentElement.dataset['bg'] = bg;
     });
     effect(() => {

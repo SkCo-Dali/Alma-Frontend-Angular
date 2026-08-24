@@ -1,6 +1,6 @@
-// Marco "vivo" de la esfera para login e Inicio: la esfera flota sobre una
-// plataforma de anillos de la que emanan ondas, con aura que respira y motas
-// alrededor. Estilos globales en styles.css (.almah).
+// Marco "vivo" de la esfera para login e Inicio: halo suave, órbitas
+// holográficas lentas, y la esfera flotando sobre una base de elipses de luz de
+// la que emanan ondas, con motas alrededor. Estilos globales en styles.css (.almah).
 
 import { Component, computed, input } from '@angular/core';
 import { AlmaSphereComponent } from './alma-sphere.component';
@@ -11,7 +11,8 @@ import { AlmaSphereComponent } from './alma-sphere.component';
   template: `
     <div class="almah" [style.width.px]="size()" [style.height.px]="size()">
       <div class="almah-aura"></div>
-      <div class="almah-beam"></div>
+      <span class="almah-orbit o1"></span>
+      <span class="almah-orbit o2"></span>
 
       <div class="almah-pad">
         <span class="almah-ring g3"></span>

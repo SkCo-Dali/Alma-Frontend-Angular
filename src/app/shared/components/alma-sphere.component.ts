@@ -1,6 +1,8 @@
-// Alma "viva": esfera de colores en movimiento caótico (blobs blur + screen)
-// con ojos que parpadean. LLENA su contenedor. Con `interactive` los ojos
-// siguen el cursor y miran alrededor. Estilos globales en styles.css (.almasph).
+// Alma "viva": burbuja holográfica de vidrio translúcido — volumen por capas
+// (vidrio + energía en movimiento + glow interno + reflejos + borde refractivo)
+// con ojos de luz que parpadean. LLENA su contenedor. Con `interactive` los
+// ojos siguen el cursor y miran alrededor. Estilos globales en styles.css
+// (.almasph). La lógica de mirada/parpadeo no cambia; solo el vidrio.
 
 import {
   Component,
@@ -17,6 +19,7 @@ import {
   template: `
     <div class="almasph" #root>
       <div class="almasph-core">
+        <!-- Energía interna (se mueve lento, muy sutil, bajo el vidrio) -->
         <div class="almasph-field">
           <span class="b b1"></span>
           <span class="b b2"></span>
@@ -24,7 +27,14 @@ import {
           <span class="b b4"></span>
           <span class="b b5"></span>
         </div>
-        <div class="almasph-gloss"></div>
+        <!-- Glow turquesa alrededor del centro -->
+        <div class="almasph-glow"></div>
+        <!-- Reflejos: luz principal arriba-izquierda + secundarios -->
+        <div class="almasph-hl almasph-hl-main"></div>
+        <div class="almasph-hl almasph-hl-dot"></div>
+        <div class="almasph-hl almasph-hl-sec"></div>
+        <!-- Borde refractivo del vidrio -->
+        <div class="almasph-rim"></div>
         <div class="almasph-eyes">
           <div class="almasph-gaze" #gaze>
             <span class="almasph-eye"></span>

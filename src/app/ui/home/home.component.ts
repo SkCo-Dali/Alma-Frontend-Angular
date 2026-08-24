@@ -3,9 +3,8 @@
 // una fila de widgets (continuar trabajando, pendientes, actividad, novedades
 // y accesos rápidos).
 //
-// Los widgets sin backend todavía (pendientes, actividad de procesos) muestran
-// datos ILUSTRATIVOS marcados como tales aquí; cuando exista el API de
-// resúmenes se conectan sin cambiar el layout.
+// Los widgets están construidos pero OCULTOS por ahora (MOSTRAR_WIDGETS):
+// se habilitan cuando exista el API de resúmenes que los alimente de verdad.
 
 import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -89,11 +88,16 @@ const ACCIONES_RAPIDAS: AccionRapida[] = [
 /** Sparkline ilustrativa del widget de actividad. */
 const SPARK = [4, 6, 5, 8, 7, 10, 9, 12];
 
+/** Widgets del command center: ocultos hasta tener datos reales que mostrar. */
+const MOSTRAR_WIDGETS = false;
+
 @Component({
   selector: 'alma-home',
   imports: [RouterLink, FormsModule, LucideAngularModule, AlmaHousingComponent, AppIconArtComponent],
   template: `
-    <div class="mx-auto flex w-full max-w-[1480px] flex-col items-center">
+    <div
+      class="mx-auto flex min-h-[72vh] w-full max-w-[1480px] flex-col items-center justify-center"
+    >
       <!-- Saludo + esfera -->
       <div class="flex w-full flex-col items-center pt-2 text-center">
         <h1
@@ -143,7 +147,8 @@ const SPARK = [4, 6, 5, 8, 7, 10, 9, 12];
         </button>
       </div>
 
-      <!-- Widgets -->
+      <!-- Widgets (listos, a la espera del API de resúmenes) -->
+      @if (mostrarWidgets) {
       <div class="mt-8 grid w-full gap-4 md:grid-cols-2 xl:grid-cols-5">
         <!-- Continuar trabajando -->
         <section class="spk-card flex flex-col p-4">
@@ -310,6 +315,7 @@ const SPARK = [4, 6, 5, 8, 7, 10, 9, 12];
           </div>
         </section>
       </div>
+      }
     </div>
   `,
 })
@@ -321,6 +327,7 @@ export class HomeComponent {
   protected readonly launchpad = inject(LaunchpadService);
 
   protected prompt = '';
+  protected readonly mostrarWidgets = MOSTRAR_WIDGETS;
   protected readonly chips = CHIPS;
   protected readonly novedades = NOVEDADES;
   protected readonly pendientes = PENDIENTES;
