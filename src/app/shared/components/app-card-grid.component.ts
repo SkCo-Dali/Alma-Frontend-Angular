@@ -1,5 +1,5 @@
-// Grid de tarjetas de aplicación (paridad con AppCard.tsx / AppCardGrid).
-// Compartido entre el catálogo de aplicaciones y Favoritos.
+// Grid de tarjetas de aplicación. Compartido entre el catálogo de aplicaciones y
+// Favoritos.
 
 import { Component, inject, input } from '@angular/core';
 import { Router } from '@angular/router';

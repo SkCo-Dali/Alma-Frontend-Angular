@@ -1,6 +1,5 @@
-// Catálogos: tabla de catálogos a la izquierda y panel de detalle a la derecha,
-// con activar/desactivar, editar, eliminar y administración de campos.
-// Paridad pages/Catalogs.tsx + CatalogsTable.tsx + CatalogDetailsPanel.tsx.
+// Catálogos: tabla de catálogos a la izquierda y panel de detalle a la derecha, con
+// activar/desactivar, editar, eliminar y administración de campos.
 
 import {
   Component,

@@ -1,6 +1,5 @@
-// Errores de mutación del módulo de comisiones: distingue el 409 (registro
-// duplicado) del resto para poder mostrar el aviso correcto.
-// Port de utils/apiMutationError.ts.
+// Errores de mutación del módulo de comisiones: distingue el 409 (registro duplicado)
+// del resto para poder mostrar el aviso correcto.
 
 export const HTTP_CONFLICT = 409;
 

@@ -1,6 +1,6 @@
-// Selector de roles con búsqueda e ícono ⓘ con la descripción del rol
-// (paridad RolesPicker.tsx). El panel usa posición fija calculada desde el
-// trigger para no quedar recortado por contenedores con overflow.
+// Selector de roles con búsqueda e ícono ⓘ con la descripción del rol. El panel usa
+// posición fija calculada desde el trigger para no quedar recortado por contenedores con
+// overflow.
 
 import { Component, ElementRef, ViewChild, computed, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

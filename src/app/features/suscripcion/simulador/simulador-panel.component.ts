@@ -1,11 +1,9 @@
 // Panel lateral del Simulador de asegurabilidad (réplica del Excel del equipo
-// operativo). Patrón "Tu Dali": panel fixed a la derecha SIN overlay en desktop
-// — el usuario interactúa con el panel y con la página al mismo tiempo.
-//
-// Precarga: con `solicitudId` (subpágina de detalle) trae la entrada precargada
-// + la pre-simulación automática del worker; en la bandeja permite buscar una
-// cotización por número/asegurado y precargarla.
-// Paridad SimuladorPanel.tsx.
+// operativo). Patrón "Tu Dali": panel fixed a la derecha SIN overlay en desktop — el
+// usuario interactúa con el panel y con la página al mismo tiempo. Precarga: con
+// `solicitudId` (subpágina de detalle) trae la entrada precargada + la pre-simulación
+// automática del worker; en la bandeja permite buscar una cotización por
+// número/asegurado y precargarla.
 
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

@@ -1,7 +1,6 @@
 // Editor de parámetros tipo "lista" del motor (ciudades elegibles, ocupaciones
-// delegadas): chips removibles + input para agregar. Normaliza a
-// minúsculas/trim y evita duplicados. Con más de 20 ítems aparece un buscador
-// local. Paridad ListaEditor.tsx.
+// delegadas): chips removibles + input para agregar. Normaliza a minúsculas/trim y evita
+// duplicados. Con más de 20 ítems aparece un buscador local.
 
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

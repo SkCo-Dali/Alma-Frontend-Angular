@@ -1,13 +1,9 @@
-// Menú unificado de encabezado de columna (estilo Excel): ordenar + filtrar en
-// un solo disclosure con ChevronDown. Paridad ColumnHeaderMenu.tsx. El cuerpo
-// del filtro se elige por TIPO de dato:
-//   date → DateFilter (árbol año/mes/día + presets)
-//   discrete → DiscreteFilter (checkboxes de valores únicos)
-//   number/currency → RangeFilter
-//   string no-discreta → TextFilterTab (contiene / comienza por / …)
-//
-// El popover se posiciona fijo desde el botón (los contenedores del grid tienen
-// overflow y recortarían un panel absoluto).
+// Menú unificado de encabezado de columna (estilo Excel): ordenar + filtrar en un solo
+// disclosure con ChevronDown. El cuerpo del filtro se elige por TIPO de dato: date →
+// DateFilter (árbol año/mes/día + presets) discrete → DiscreteFilter (checkboxes de
+// valores únicos) number/currency → RangeFilter string no-discreta → TextFilterTab
+// (contiene / comienza por / …) El popover se posiciona fijo desde el botón (los
+// contenedores del grid tienen overflow y recortarían un panel absoluto).
 
 import {
   Component,

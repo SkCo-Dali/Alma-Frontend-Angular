@@ -1,6 +1,6 @@
-// Pestaña "Filtros de Fecha": presets (hoy, esta semana, este mes, trimestre,
-// año…) + autofiltro personalizado. Las columnas de Suscripción son fechas
-// PURAS: los rangos se emiten date-only. Paridad DateFilterTab.tsx.
+// Pestaña "Filtros de Fecha": presets (hoy, esta semana, este mes, trimestre, año…) +
+// autofiltro personalizado. Las columnas de Suscripción son fechas PURAS: los rangos se
+// emiten date-only.
 
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

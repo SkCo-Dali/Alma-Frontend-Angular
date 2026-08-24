@@ -1,6 +1,5 @@
-// Parametrización del Motor de Comisiones: 6 pestañas que agrupan 8 secciones,
-// cada una con su búsqueda, su tabla y sus diálogos de crear/editar/eliminar.
-// Paridad pages/Accounting.tsx.
+// Parametrización del Motor de Comisiones: 6 pestañas que agrupan 8 secciones, cada una
+// con su búsqueda, su tabla y sus diálogos de crear/editar/eliminar.
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

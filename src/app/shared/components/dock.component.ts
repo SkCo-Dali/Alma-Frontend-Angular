@@ -1,4 +1,4 @@
-// Dock estilo macOS v2 — navegación única de ALMA (paridad layout/Dock.tsx).
+// Dock estilo macOS v2 — navegación única de ALMA.
 //
 // - Magnificación por mousemove (curva BASE + (PEAK-BASE)·t²) con transición CSS.
 // - Nav fijo mínimo: Inicio + "Ver todas" (abre el Launchpad).
@@ -272,7 +272,7 @@ export class DockComponent {
   private readonly vw = signal(window.innerWidth);
   private readonly onResize = () => this.vw.set(window.innerWidth);
 
-  // Drag & drop
+  // Drag & drop.
   protected readonly dragArmed = signal<string | null>(null);
   protected readonly hiddenAppId = signal<string | null>(null);
   private readonly dragAppId = signal<string | null>(null);

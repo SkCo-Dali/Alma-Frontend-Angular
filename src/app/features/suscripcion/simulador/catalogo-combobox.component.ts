@@ -1,6 +1,5 @@
-// Combobox buscable para los catálogos del simulador (países 229, ocupaciones
-// 150, etc.): panel con buscador y lista acotada para mantener el render
-// liviano. Paridad CatalogoCombobox.tsx.
+// Combobox buscable para los catálogos del simulador (países 229, ocupaciones 150,
+// etc.): panel con buscador y lista acotada para mantener el render liviano.
 
 import {
   Component,

@@ -1,6 +1,6 @@
 // Editor de una lista de campos de catálogo (nombre, tipo, etiqueta, ejemplo,
-// descripción y banderas). Lo comparten el diálogo de crear catálogo y el de
-// agregar campos a uno existente. Paridad CatalogFieldsList.tsx.
+// descripción y banderas). Lo comparten el diálogo de crear catálogo y el de agregar
+// campos a uno existente.
 
 import { Component, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';

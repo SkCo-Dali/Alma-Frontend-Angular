@@ -1,5 +1,4 @@
-// Loader de marca de ALMA: la esfera "viva" de Alma girando sus colores
-// mientras carga (paridad con AlmaLoader.tsx v2).
+// Loader de marca de ALMA: la esfera "viva" de Alma girando sus colores mientras carga.
 
 import { Component, input } from '@angular/core';
 import { AlmaSphereComponent } from './alma-sphere.component';

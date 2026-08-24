@@ -1,10 +1,7 @@
-// Editor de un plan de compensación: datos generales, sus reglas y las
-// transiciones de estado disponibles según en qué estado esté el plan.
-// Paridad EditCommissionPlanDialog.tsx (+ InactivatePlanDialog.tsx).
-//
-// Único cambio respecto al original: el motivo del rechazo se pide en un
-// diálogo propio en vez de un window.prompt() del navegador; es el mismo
-// diálogo que ya usaba la inactivación.
+// Editor de un plan de compensación: datos generales, sus reglas y las transiciones de
+// estado disponibles según en qué estado esté el plan. Único cambio respecto al
+// original: el motivo del rechazo se pide en un diálogo propio en vez de un
+// window.prompt() del navegador; es el mismo diálogo que ya usaba la inactivación.
 
 import {
   Component,

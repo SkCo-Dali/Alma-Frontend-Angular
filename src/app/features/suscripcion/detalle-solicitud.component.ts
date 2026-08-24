@@ -1,11 +1,8 @@
-// Subpágina de detalle de una cotización del Motor de Suscripción.
-//
-// Lenguaje visual "inset grouped" (HIG de Apple, como Ajustes de iOS):
-// encabezado con Large Title + línea de identidad del asegurado, fila de
-// decisiones (motor + declaraciones) y grupos de datos como listas de filas
-// label→valor con separadores finos — en columnas tipo masonry en desktop.
-// El único estado visible es el de Pipeline (uw_status/sub_status).
-// Paridad DetalleSolicitud.tsx.
+// Subpágina de detalle de una cotización del Motor de Suscripción. Lenguaje visual
+// "inset grouped" (HIG de Apple, como Ajustes de iOS): encabezado con Large Title +
+// línea de identidad del asegurado, fila de decisiones (motor + declaraciones) y grupos
+// de datos como listas de filas label→valor con separadores finos — en columnas tipo
+// masonry en desktop. El único estado visible es el de Pipeline (uw_status/sub_status).
 
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';

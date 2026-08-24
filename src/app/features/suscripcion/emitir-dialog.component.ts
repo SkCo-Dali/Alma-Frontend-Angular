@@ -1,7 +1,6 @@
-// Confirmación de emisión de la póliza en Pharos (issuecontract vía bridge).
-// La emisión NUNCA es automática: la dispara el analista con confirmación
-// explícita, y requiere su cuenta de Pharos conectada (queda a su nombre).
-// Paridad EmitirDialog.tsx.
+// Confirmación de emisión de la póliza en Pharos (issuecontract vía bridge). La emisión
+// NUNCA es automática: la dispara el analista con confirmación explícita, y requiere su
+// cuenta de Pharos conectada (queda a su nombre).
 
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

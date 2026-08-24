@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ALMA design system — lenguaje de diseño macOS (portado 1:1 del front React).
+ * ALMA design system — lenguaje de diseño macOS.
  *
  * Materiales: superficies sólidas con borde y sombra sobre un wallpaper de
  * gradientes suaves. Tipografía: fuente de texto del sistema con peso base 450.
@@ -342,7 +342,7 @@ html.dark[data-bg="cielo"] {
     background-color: oklch(0.27 0.006 286);
   }
 
-  /* Primitivas de formulario/botón (equivalentes a los shadcn del React) */
+  /* Primitivas de formulario/botón de la plataforma */
   .alma-btn {
     display: inline-flex;
     align-items: center;
@@ -415,7 +415,7 @@ html.dark[data-bg="cielo"] {
     font-weight: 500;
   }
 
-  /* Tabla estándar de las apps (equivalente al Table de shadcn) */
+  /* Tabla estándar de las apps */
   .alma-table {
     width: 100%;
     font-size: 0.875rem;
@@ -579,8 +579,8 @@ html.dark[data-bg="cielo"] {
 @keyframes almah-ripple { 0% { transform: scale(0.7); opacity: 0.55; } 100% { transform: scale(1.65); opacity: 0; } }
 @keyframes almah-float { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
 
-/* Dock: transición suave de la magnificación (reemplaza los springs de
-   motion/react; el tamaño lo calcula DockComponent en cada mousemove) */
+/* Dock: transición suave de la magnificación (el tamaño lo calcula
+   DockComponent en cada mousemove) */
 .dock-tile {
   transition:
     width 0.09s ease-out,
@@ -589,9 +589,8 @@ html.dark[data-bg="cielo"] {
   will-change: width, height, transform;
 }
 .dock-panel {
-  /* Equivalente al spring sobreamortiguado del front React (stiffness 200 /
-     damping 30): sin rebote y un pelín más lento que antes, para que
-     mostrar/ocultar el Dock se sienta suave. */
+  /* Curva sobreamortiguada: sin rebote y sin prisa, para que mostrar/ocultar
+     el Dock se sienta suave. */
   transition:
     transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
     opacity 0.3s ease;

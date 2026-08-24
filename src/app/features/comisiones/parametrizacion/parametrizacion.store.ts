@@ -1,11 +1,7 @@
-// Estado de Parametrización: las 8 entidades con su carga perezosa por pestaña.
-//
-// Como en el original, cada entidad se trae COMPLETA (todas las páginas) y el
-// filtrado, orden y paginación son en cliente; tras cualquier mutación se
-// recarga la entidad entera en vez de parchear el arreglo local.
-// Port de useAccounting + useCommissionTypes + useDeferredDelta +
-// useDeferredParameters + useContractConfig + useProductConfig +
-// useCommissionAdjustments + useSpecialCases.
+// Estado de Parametrización: las 8 entidades con su carga perezosa por pestaña. Como en
+// el original, cada entidad se trae COMPLETA (todas las páginas) y el filtrado, orden y
+// paginación son en cliente; tras cualquier mutación se recarga la entidad entera en vez
+// de parchear el arreglo local.
 
 import { Injectable, inject, signal } from '@angular/core';
 import { ComisionesToast } from '../comisiones-toast.service';

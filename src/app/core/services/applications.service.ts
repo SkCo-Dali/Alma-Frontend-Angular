@@ -1,4 +1,4 @@
-// Catálogo de aplicaciones visible para el usuario (paridad use-applications).
+// Catálogo de aplicaciones visible para el usuario.
 
 import { Injectable, computed, inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
@@ -12,7 +12,7 @@ export class ApplicationsService {
   private readonly prefs = inject(PreferencesService);
 
   readonly applications = computed<Application[]>(() => {
-    // user() como dependencia: el catálogo se recalcula al resolver la sesión
+    // user() como dependencia: el catálogo se recalcula al resolver la sesión.
     this.auth.user();
     const favorites = this.prefs.favorites();
     return APP_CATALOG.filter((a) => this.auth.hasPermission(a.requiredPermission)).map(

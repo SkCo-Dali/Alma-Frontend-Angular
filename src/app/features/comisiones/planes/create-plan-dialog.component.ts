@@ -1,5 +1,5 @@
-// Creación de un plan de compensación. Nace en borrador; las reglas se agregan
-// después desde el editor. Paridad CreateCommissionPlanDialog.tsx.
+// Creación de un plan de compensación. Nace en borrador; las reglas se agregan después
+// desde el editor.
 
 import { Component, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

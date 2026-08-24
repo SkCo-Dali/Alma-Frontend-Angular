@@ -1,12 +1,9 @@
-// Bandeja del Motor de Suscripción — grid server-side (paridad
-// BandejaSuscripcion.tsx): filtros por tipo de dato en cada encabezado, reorden
-// de columnas arrastrando, selector "Columnas", búsqueda con Enter, anchos
-// redimensionables con auto-fit y persistencia server-side vía grid-events.
-//
-// El JOURNEY de etapas saca sus conteos de POST /distincts
-// {field:'EstadoPipeline'} SIN filtros, y el clic en una etapa aplica/quita el
-// filtro discreto de la columna EstadoPipeline. El detalle vive en
-// /apps/suscripcion/{id}.
+// Bandeja del Motor de Suscripción — grid server-side: filtros por tipo de dato en cada
+// encabezado, reorden de columnas arrastrando, selector "Columnas", búsqueda con Enter,
+// anchos redimensionables con auto-fit y persistencia server-side vía grid-events. El
+// JOURNEY de etapas saca sus conteos de POST /distincts {field:'EstadoPipeline'} SIN
+// filtros, y el clic en una etapa aplica/quita el filtro discreto de la columna
+// EstadoPipeline. El detalle vive en /apps/suscripcion/{id}.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';

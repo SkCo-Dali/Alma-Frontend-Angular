@@ -1,5 +1,5 @@
-// Buscador con debounce de 500 ms (el filtrado es en cliente, así que no hace
-// falta esperar Enter). Paridad CommissionPlansSearch.tsx.
+// Buscador con debounce de 500 ms (el filtrado es en cliente, así que no hace falta
+// esperar Enter).
 
 import {
   Component,

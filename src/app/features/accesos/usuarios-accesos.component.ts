@@ -1,5 +1,4 @@
-// Directorio de usuarios con sus roles: crear, editar, otorgar y revocar
-// (paridad GestionAccesos.tsx → UsuariosAccesos + CrearUsuarioModal).
+// Directorio de usuarios con sus roles: crear, editar, otorgar y revocar.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -264,7 +263,7 @@ export class UsuariosAccesosComponent {
   protected readonly resolviendo = signal(false);
   protected readonly rolesSel = signal<string[]>([]);
 
-  // Señales espejo del filtro (ngModel no es señal): recalcular con un tick
+  // Señales espejo del filtro (ngModel no es señal): recalcular con un tick.
   private readonly refreshTick = signal(0);
 
   protected readonly puedeAsignarGlobal = computed(() =>
@@ -297,7 +296,7 @@ export class UsuariosAccesosComponent {
 
   constructor() {
     void this.cargar();
-    // el ngModel de filtro/estado no dispara computeds: refrescar por intervalo corto
+    // el ngModel de filtro/estado no dispara computeds: refrescar por intervalo corto.
     setInterval(() => this.refreshTick.update((n) => n + 1), 300);
   }
 

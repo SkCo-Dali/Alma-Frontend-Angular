@@ -1,5 +1,5 @@
-// Paginación compartida de los grids (paridad CommissionsPagination.tsx):
-// selector de tamaño de página, rango mostrado y números con elipsis.
+// Paginación compartida de los grids: selector de tamaño de página, rango mostrado y
+// números con elipsis.
 
 import { Component, computed, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

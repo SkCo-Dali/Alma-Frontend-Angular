@@ -1,6 +1,5 @@
-// Guarda de la consola /admin (paridad con el <Navigate to="/"> del React):
-// entran los admins de plataforma (platform.access/audit/metrics) y los admins
-// de App (permiso comodín app.<slug>.*).
+// Guarda de la consola /admin: entran los admins de plataforma
+// (platform.access/audit/metrics) y los admins de App (permiso comodín app.<slug>.*).
 
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';

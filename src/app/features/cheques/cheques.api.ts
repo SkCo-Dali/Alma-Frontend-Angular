@@ -1,5 +1,4 @@
 // Cliente del módulo Cheques (alma-backend /api/cheques/*).
-// Portado 1:1 de lib/cheques.api.ts del front React.
 
 import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../core/services/api.service';

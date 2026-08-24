@@ -1,7 +1,6 @@
-// Dock maximizado (estilo Launchpad): TODAS las Apps con buscador. El orden es
-// una secuencia ÚNICA con un DIVISOR; lo anterior al divisor son las Apps
-// ancladas al Dock (1..MAX_DOCK). Reemplaza a /applications.
-// (Paridad layout/DockLaunchpad.tsx.)
+// Dock maximizado (estilo Launchpad): TODAS las Apps con buscador. El orden es una
+// secuencia ÚNICA con un DIVISOR; lo anterior al divisor son las Apps ancladas al Dock
+// (1..MAX_DOCK). Reemplaza a /applications.
 
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';

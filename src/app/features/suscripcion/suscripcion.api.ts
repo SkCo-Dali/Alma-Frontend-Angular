@@ -1,5 +1,4 @@
 // Cliente del módulo Motor de Suscripción (alma-backend).
-// Port 1:1 de lib/suscripcion.api.ts del front React (contrato v4).
 
 import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../core/services/api.service';
@@ -163,7 +162,7 @@ export interface SolicitudApi {
   asegurado: {
     nombre: string;
     cedula: string;
-    // Nulos cuando la solicitud llegó por sync de afiliaciones y aún no se completa
+    // Nulos cuando la solicitud llegó por sync de afiliaciones y aún no se completa.
     fecha_nacimiento: string | null;
     genero: 'M' | 'F' | null;
     ciudad: string | null;

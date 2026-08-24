@@ -1,6 +1,5 @@
-// Bandeja de Cotizaciones (paridad routes/apps.suscripcion_.cotizaciones.tsx):
-// host del Simulador de asegurabilidad (botón flotante + panel lateral no
-// bloqueante) + barra con "volver" a la landing + la bandeja server-side.
+// Bandeja de Cotizaciones: host del Simulador de asegurabilidad (botón flotante + panel
+// lateral no bloqueante) + barra con "volver" a la landing + la bandeja server-side.
 
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';

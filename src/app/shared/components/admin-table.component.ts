@@ -1,6 +1,6 @@
-// Tabla estándar de la consola /admin (paridad AdminTable.tsx): área de scroll
-// con altura acotada + header sticky y paginado en cliente estilo Dali.
-// Las filas se definen con un <ng-template> del consumidor (let-row).
+// Tabla estándar de la consola /admin: área de scroll con altura acotada + header
+// sticky y paginado en cliente estilo Dali. Las filas se definen con un <ng-template>
+// del consumidor (let-row).
 
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, TemplateRef, computed, input, signal } from '@angular/core';

@@ -1,6 +1,5 @@
-// Pestaña "Ejecución del Motor": manual, contadores de estado y la lista de
-// procesos (el pipeline de ingesta 00 + los jobs de Databricks) con su avance.
-// Paridad MotorEjecucionTab.tsx.
+// Pestaña "Ejecución del Motor": manual, contadores de estado y la lista de procesos (el
+// pipeline de ingesta 00 + los jobs de Databricks) con su avance.
 
 import { Component, computed, inject, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

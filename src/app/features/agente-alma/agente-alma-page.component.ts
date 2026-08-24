@@ -1,4 +1,4 @@
-// Página de la app Agente Alma (paridad con routes/apps.agente-alma.tsx v2 — sin miga).
+// Página de la app Agente Alma.
 
 import { Component } from '@angular/core';
 import { ChatAgenteComponent } from './chat-agente.component';

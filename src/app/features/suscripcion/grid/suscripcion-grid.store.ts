@@ -1,6 +1,5 @@
-// Store del grid de Suscripción: unifica los tres hooks del front React
-// (useSuscripcionGridColumns + useSuscripcionGridState + useSuscripcionGrid)
-// en un servicio con signals. Puntos NO negociables conservados del original:
+// Store del grid de Suscripción: columnas, estado persistido y datos en un solo
+// servicio con signals. Puntos NO negociables del contrato con el backend:
 //
 // - Conversión bidireccional GridFilter[] ↔ ApiFilters (en el api client).
 // - `hidratado` GATEA el primer fetch: sin esto el grid pedía datos con los
@@ -80,11 +79,11 @@ export class SuscripcionGridStore implements OnDestroy {
   // incluirlo en CADA guardado.
   private widths: Record<string, number> = {};
 
-  // Guardado con debounce
+  // Guardado con debounce.
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private pendiente: { state: GridState; eventType: GridEventType } | null = null;
 
-  // Refs del valor previo para detectar QUÉ cambió
+  // Refs del valor previo para detectar QUÉ cambió.
   private prev = {
     filters: [] as GridFilter[],
     search: '',

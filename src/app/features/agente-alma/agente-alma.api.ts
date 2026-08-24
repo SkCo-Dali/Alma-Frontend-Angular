@@ -1,6 +1,5 @@
-// Cliente del módulo Agente Alma (alma-backend /api/agente/*).
-// Chat conversacional con el agente de Servicio al Cliente (Azure AI Foundry).
-// Portado 1:1 de lib/agente-alma.api.ts, incluido el consumo SSE en streaming.
+// Cliente del módulo Agente Alma (alma-backend /api/agente/*). Chat conversacional con
+// el agente de Servicio al Cliente (Azure AI Foundry).
 
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';

@@ -1,7 +1,6 @@
-// Barra de filtros de las tablas del motor. Dos variantes: comisiones
-// (compañía + periodo) y correos (periodo + segmento + estado). La búsqueda se
-// aplica al pulsar "Filtrar" o Enter, nunca al teclear.
-// Paridad MotorTableToolbar.tsx.
+// Barra de filtros de las tablas del motor. Dos variantes: comisiones (compañía +
+// periodo) y correos (periodo + segmento + estado). La búsqueda se aplica al pulsar
+// "Filtrar" o Enter, nunca al teclear.
 
 import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';

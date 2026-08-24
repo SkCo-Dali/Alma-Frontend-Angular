@@ -1,7 +1,7 @@
-// Preferencias del portal: tema, fondo esmerilado, orden ÚNICO de las Apps,
-// ancladas al Dock, favoritos y recientes. localStorage es el caché rápido; el
-// servidor (/api/users/me/preferences) es la fuente de verdad al iniciar sesión
-// y recibe cada cambio con debounce (paridad ui-store + PreferencesSync).
+// Preferencias del portal: tema, fondo esmerilado, orden ÚNICO de las Apps, ancladas al
+// Dock, favoritos y recientes. localStorage es el caché rápido; el servidor
+// (/api/users/me/preferences) es la fuente de verdad al iniciar sesión y recibe cada
+// cambio con debounce.
 
 import { Injectable, effect, signal } from '@angular/core';
 import { PreferenciasPortal } from '../models/platform.models';

@@ -1,6 +1,5 @@
-// Tabla de planes de compensación: columnas ordenables con filtro por columna
-// (los de fecha usan el filtro en cascada), menú de fila y paginación.
-// Paridad CommissionPlansTable.tsx.
+// Tabla de planes de compensación: columnas ordenables con filtro por columna (los de
+// fecha usan el filtro en cascada), menú de fila y paginación.
 
 import {
   Component,

@@ -1,11 +1,10 @@
-// Casilla de verificación de Alma. Es el port EXACTO del Checkbox de Alma
-// (components/ui/checkbox.tsx: Radix + shadcn): cuadrado de 16 px con esquina
-// suave, borde verde, y al marcarse se rellena de verde con el chulito blanco
-// de lucide. Antes se usaba <input type="checkbox"> nativo, que el navegador
-// pinta distinto (y en Windows se veía redondo y con otro chulito).
+// Casilla de verificación de Alma: cuadrado de 16 px con esquina suave, borde
+// verde, y al marcarse se rellena de verde con el chulito blanco de lucide. No se
+// usa <input type="checkbox"> nativo porque cada navegador lo pinta distinto (en
+// Windows salía redondo y con otro chulito).
 //
-// El host es un <button role="checkbox">, igual que Radix, así que un
-// <label for="..."> asociado lo activa (button es un elemento etiquetable).
+// El host es un <button role="checkbox">, así que un <label for="..."> asociado lo
+// activa (button es un elemento etiquetable).
 
 import { Component, computed, input, model } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

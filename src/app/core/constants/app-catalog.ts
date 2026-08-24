@@ -1,6 +1,6 @@
-// Catálogo de aplicaciones de ALMA (paridad con data/mock.ts del front React).
-// Nota: la gestión de accesos, roles, auditoría y métricas vive en la consola
-// /admin (ícono Accesos del Dock), no como Apps del catálogo.
+// Catálogo de aplicaciones de ALMA. Nota: la gestión de accesos, roles, auditoría y
+// métricas vive en la consola /admin (ícono Accesos del Dock), no como Apps del
+// catálogo.
 
 import { environment } from '@env/environment';
 import { Application, User } from '../models/platform.models';
@@ -172,7 +172,7 @@ export const APP_CATALOG: Application[] = [
   },
 ];
 
-/** Usuario mock para desarrollo local sin Entra (paridad con data/mock.ts). */
+/** Usuario mock para desarrollo local sin Entra. */
 export const MOCK_USER: User = {
   id: 'u-001',
   nombre: 'Daniel Cano',

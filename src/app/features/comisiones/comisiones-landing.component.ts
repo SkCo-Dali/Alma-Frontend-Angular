@@ -1,5 +1,5 @@
-// Landing de la App "Motor de Comisiones": tiles de módulos (estilo app Atajos
-// de Apple). Paridad pages/MotorComisiones.tsx.
+// Landing de la App "Motor de Comisiones": tiles de módulos (estilo app Atajos de
+// Apple).
 
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';

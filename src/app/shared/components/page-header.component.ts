@@ -1,4 +1,4 @@
-// Encabezado de página del shell (paridad con PageHeader de AppLayout.tsx).
+// Encabezado de página del shell.
 
 import { Component, input } from '@angular/core';
 

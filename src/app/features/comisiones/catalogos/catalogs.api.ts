@@ -1,6 +1,5 @@
-// Catálogos del motor de comisiones: las tablas/vistas fuente sobre las que se
-// escriben las fórmulas, sus campos y los valores permitidos de cada campo.
-// Port de types/catalogsApi.ts + utils/catalogsApiClient.ts.
+// Catálogos del motor de comisiones: las tablas/vistas fuente sobre las que se escriben
+// las fórmulas, sus campos y los valores permitidos de cada campo.
 
 import { Injectable, inject } from '@angular/core';
 import { ComisionesHttp } from '../comisiones-http.service';

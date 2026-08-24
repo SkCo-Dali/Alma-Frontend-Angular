@@ -1,6 +1,5 @@
-// Editores de la configuración del Simulador: selector de resultado, segmentos
-// de IMC, catálogos (tabla buscable), matriz de exámenes, paquetes y listas de
-// texto. Port de los subcomponentes de SimuladorConfigPage.tsx.
+// Editores de la configuración del Simulador: selector de resultado, segmentos de IMC,
+// catálogos (tabla buscable), matriz de exámenes, paquetes y listas de texto.
 
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

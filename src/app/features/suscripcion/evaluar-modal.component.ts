@@ -1,8 +1,8 @@
-// Modal "Evaluar emisión con el motor" — layout de dos paneles: a la izquierda
-// el formulario compacto (datos, producto, cuestionario, verificaciones,
-// cúmulo); a la derecha un panel de RESULTADO siempre visible que pasa por
-// vacío → evaluando → decisión con alertas y métricas, para que el analista vea
-// la respuesta en el momento en que evalúa. Paridad EvaluarModal.tsx (v4).
+// Modal "Evaluar emisión con el motor" — layout de dos paneles: a la izquierda el
+// formulario compacto (datos, producto, cuestionario, verificaciones, cúmulo); a la
+// derecha un panel de RESULTADO siempre visible que pasa por vacío → evaluando →
+// decisión con alertas y métricas, para que el analista vea la respuesta en el momento
+// en que evalúa.
 
 import {
   Component,
@@ -763,7 +763,7 @@ export class EvaluarModalComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      // Persiste las correcciones + registra la evaluación en la auditoría
+      // Persiste las correcciones + registra la evaluación en la auditoría.
       this.result.set(await this.api.evaluarSolicitud(this.tarea().tarea_id, this.payload()));
       // En pantallas angostas el panel queda abajo: llevar la vista al resultado.
       setTimeout(

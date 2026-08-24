@@ -1,6 +1,5 @@
-// Métricas y Reportes: pestaña Desempeño (filtros + 3 gráficas + tabla de
-// comisiones) y pestaña Reportes (8 reportes con la misma tabla).
-// Paridad pages/InfoGerencialComisiones.tsx + sus dos tabs.
+// Métricas y Reportes: pestaña Desempeño (filtros + 3 gráficas + tabla de comisiones) y
+// pestaña Reportes (8 reportes con la misma tabla).
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

@@ -1,6 +1,5 @@
-// Configuración v2 (paridad routes/settings.tsx): tema, fondo esmerilado,
-// cuentas conectadas (Pharos), conexiones del Agente (próximamente), ayuda y
-// sesión. La Ayuda se integró aquí (/help redirige).
+// Configuración v2: tema, fondo esmerilado, cuentas conectadas (Pharos), conexiones del
+// Agente (próximamente), ayuda y sesión. La Ayuda se integró aquí (/help redirige).
 
 import { Component, computed, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

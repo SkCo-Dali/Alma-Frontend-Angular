@@ -1,6 +1,5 @@
-// Autenticación con Microsoft Entra ID vía MSAL (una app registration por
-// ambiente: Alma-Dev / Alma-Uat / Alma-Prd). Portado 1:1 del front React
-// (lib/msal.ts + providers/AuthProvider.tsx) a un servicio Angular con signals.
+// Autenticación con Microsoft Entra ID vía MSAL (una app registration por ambiente:
+// Alma-Dev / Alma-Uat / Alma-Prd).
 //
 // - Sin clientId/tenantId en environment (dev local sin Entra) la auth queda
 //   deshabilitada y la app usa el usuario mock.
@@ -48,7 +47,7 @@ function accountToUser(account: AccountInfo, me: MeApi | null, foto: string | nu
     correo: account.username,
     cargo: 'Operaciones',
     equipo: 'Vicepresidencia de Operaciones',
-    // Foto real de la cuenta (Microsoft Graph); iniciales como fallback
+    // Foto real de la cuenta (Microsoft Graph); iniciales como fallback.
     foto:
       foto ??
       `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(nombre)}&backgroundColor=0d6cbd&textColor=ffffff`,
@@ -149,7 +148,7 @@ export class AuthService {
             postLogoutRedirectUri: window.location.origin,
           },
           cache: {
-            // localStorage: la sesión sobrevive refresh y pestañas nuevas
+            // localStorage: la sesión sobrevive refresh y pestañas nuevas.
             cacheLocation: 'localStorage',
           },
         });

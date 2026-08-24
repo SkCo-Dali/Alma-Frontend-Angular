@@ -1,7 +1,6 @@
-// Landing de la App "Suscripción de Seguros": tiles de módulos (estilo app
-// Atajos de Apple). La bandeja vive en /apps/suscripcion/cotizaciones, la
-// configuración del motor en /apps/suscripcion/motor y la del simulador en
-// /apps/suscripcion/simulador. Paridad routes/apps.suscripcion.tsx.
+// Landing de la App "Suscripción de Seguros": tiles de módulos (estilo app Atajos de
+// Apple). La bandeja vive en /apps/suscripcion/cotizaciones, la configuración del motor
+// en /apps/suscripcion/motor y la del simulador en /apps/suscripcion/simulador.
 
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';

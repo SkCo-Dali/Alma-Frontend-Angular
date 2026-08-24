@@ -1,8 +1,7 @@
-// Filtro de columna estilo Excel para las tablas de comisiones: valores únicos
-// del conjunto recibido, buscador, "seleccionar todo" y botones
-// Limpiar/Cancelar/Aplicar. Los valores se calculan sobre el TEXTO MOSTRADO
-// (mismo criterio que usa el store al filtrar). Paridad
-// CommissionPlanColumnFilter.tsx (y sus gemelos por módulo).
+// Filtro de columna estilo Excel para las tablas de comisiones: valores únicos del
+// conjunto recibido, buscador, "seleccionar todo" y botones Limpiar/Cancelar/Aplicar.
+// Los valores se calculan sobre el TEXTO MOSTRADO (mismo criterio que usa el store al
+// filtrar).
 
 import {
   Component,

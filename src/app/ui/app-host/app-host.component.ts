@@ -1,8 +1,11 @@
 // Host de aplicaciones: materializa el App Manifest según integrationType.
-//  - internal:      la app vive en este workspace (mientras se migra desde el
-//                   front React se muestra el estado de migración).
+//  - internal:      la app vive en este workspace y su ruta se declara en
+//                   app.routes.ts, así que nunca llega hasta aquí.
 //  - iframe:        app existente embebida con SSO silencioso de Entra.
-//  - microfrontend: remota federada (se habilita con Native Federation).
+//  - microfrontend: app de otro equipo montada como Web Component.
+//
+// El estado final es la red de seguridad: una App del catálogo que no declara
+// cómo se monta (o cuya ruta no existe) cae aquí en vez de romper la navegación.
 
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -45,10 +48,10 @@ import { MicrofrontendHostComponent } from './microfrontend-host.component';
           >
             <lucide-icon name="construction" [size]="22" class="shrink-0 text-warning" />
             <div>
-              <p class="text-sm font-semibold text-foreground">En migración a Angular</p>
+              <p class="text-sm font-semibold text-foreground">Aplicación no disponible</p>
               <p class="text-xs text-muted-foreground">
-                Esta aplicación funciona hoy en el front React de Alma y se está
-                portando a esta plataforma.
+                Su manifiesto no declara cómo se monta en la plataforma. Escríbele al
+                equipo dueño de la aplicación.
               </p>
             </div>
           </div>

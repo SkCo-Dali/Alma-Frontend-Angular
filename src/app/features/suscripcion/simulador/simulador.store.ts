@@ -1,6 +1,5 @@
-// Estado compartido del simulador de asegurabilidad (equivalente al
-// SimuladorContext del front React, resuelto con un servicio de raíz porque en la
-// app solo hay un simulador a la vez).
+// Estado compartido del simulador de asegurabilidad. Es un servicio de raíz porque
+// en la app solo hay un simulador a la vez.
 //
 // - `abierto` persiste en sessionStorage para sobrevivir la navegación
 //   bandeja ↔ detalle (cada ruta monta su propio host).

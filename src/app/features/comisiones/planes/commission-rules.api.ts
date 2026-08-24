@@ -1,6 +1,4 @@
 // Reglas de un plan de compensación y sus condiciones.
-// Port de types/commissionRulesApi.ts + utils/commissionRulesApiClient.ts +
-// types/conditionRulesApi.ts + utils/conditionRulesApiClient.ts + mappers.
 
 import { Injectable, inject } from '@angular/core';
 import { ComisionesHttp } from '../comisiones-http.service';

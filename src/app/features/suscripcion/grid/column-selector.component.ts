@@ -1,8 +1,5 @@
 // Panel lateral "Columnas": buscador, drag vertical para reordenar, toggles de
-// visibilidad y "Seleccionar todas". Paridad ColumnSelector.tsx — los cambios
-// aplican EN VIVO (la tabla reacciona) y la persistencia ocurre AL CERRAR
-// (evento closed → immediateSave columns_changed en el contenedor).
-// dnd-kit se reemplaza por HTML5 drag & drop nativo.
+// visibilidad y "Seleccionar todas". dnd-kit se reemplaza por HTML5 drag & drop nativo.
 
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

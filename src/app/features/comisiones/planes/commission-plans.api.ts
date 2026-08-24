@@ -1,6 +1,4 @@
 // Planes de compensación: tipos de dominio y de API, mappers y cliente.
-// Port de data/commissionPlans.ts + types/commissionPlansApi.ts +
-// utils/commissionPlansApiClient.ts + …Mapper.ts.
 
 import { Injectable, inject } from '@angular/core';
 import { ComisionesHttp } from '../comisiones-http.service';

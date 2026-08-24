@@ -1,4 +1,4 @@
-// Bitácora de cambios de acceso (solo lectura — paridad AuditoriaAccesos).
+// Bitácora de cambios de acceso (solo lectura —
 
 import { Component, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

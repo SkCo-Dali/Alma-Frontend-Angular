@@ -1,5 +1,4 @@
-// Chat del Agente Alma (paridad con features/agente-alma/ChatAgente.tsx):
-// rail de conversaciones + panel de chat con streaming SSE.
+// Chat del Agente Alma: rail de conversaciones + panel de chat con streaming SSE.
 
 import {
   AfterViewChecked,

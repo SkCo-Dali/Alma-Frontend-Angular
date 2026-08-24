@@ -1,5 +1,5 @@
-// Búsqueda global del grid (aplica con Enter o con el botón, NO por tecla:
-// cada búsqueda es un POST /grid al servidor). Paridad GridSearch.tsx.
+// Búsqueda global del grid (aplica con Enter o con el botón, NO por tecla: cada búsqueda
+// es un POST /grid al servidor).
 
 import { Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

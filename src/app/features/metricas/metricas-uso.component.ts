@@ -1,4 +1,4 @@
-// Métricas de uso por App de la plataforma (paridad MetricasUso.tsx).
+// Métricas de uso por App de la plataforma.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

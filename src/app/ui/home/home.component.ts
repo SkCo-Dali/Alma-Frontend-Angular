@@ -1,6 +1,5 @@
-// Inicio: la esfera de Alma saluda al usuario, como si fuera Alma hablándole.
-// A futuro, este espacio será donde el Agente interactúe con el usuario.
-// (Paridad routes/index.tsx v2.)
+// Inicio: la esfera de Alma saluda al usuario, como si fuera Alma hablándole. A futuro,
+// este espacio será donde el Agente interactúe con el usuario.
 
 import { Component, computed, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';

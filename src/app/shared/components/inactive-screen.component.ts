@@ -1,5 +1,4 @@
-// Pantalla para usuarios cuya cuenta existe en alma.Users pero está INACTIVA
-// (paridad InactiveScreen.tsx).
+// Pantalla para usuarios cuya cuenta existe en alma.Users pero está INACTIVA.
 
 import { Component, inject, input } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

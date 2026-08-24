@@ -1,7 +1,6 @@
-// Diálogo de formulario genérico de Parametrización. Los 14 formularios de la
-// pantalla comparten la misma mecánica (campos con validación por tipo, campos
-// derivados y deshabilitados, y guardar/cancelar), así que se describen por
-// campos. Paridad Create/Edit*Dialog + sus esquemas de validación.
+// Diálogo de formulario genérico de Parametrización. Los 14 formularios de la pantalla
+// comparten la misma mecánica (campos con validación por tipo, campos derivados y
+// deshabilitados, y guardar/cancelar), así que se describen por campos.
 
 import {
   Component,

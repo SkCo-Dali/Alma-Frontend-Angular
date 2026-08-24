@@ -1,4 +1,4 @@
-// Tabla del grid de la bandeja de Suscripción. Paridad SuscripcionGridTable.tsx:
+// Tabla del grid de la bandeja de Suscripción. tsx:
 // - Drag horizontal de encabezados regulares (handle GripVertical); dnd-kit se
 //   reemplaza por HTML5 drag & drop nativo.
 // - Columnas sticky NroCotizacion y Asegurado con `left` calculado en JS según

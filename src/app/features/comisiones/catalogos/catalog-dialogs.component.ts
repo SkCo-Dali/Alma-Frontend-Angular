@@ -5,8 +5,6 @@
 //  - EditCatalogDialogComponent: nombre, descripción y ruta de origen.
 //  - CreateFieldsDialogComponent: agrega campos a un catálogo existente.
 //  - EditFieldDialogComponent: edita un campo.
-// Paridad CreateCatalogDialog / EditCatalogDialog / CreateCatalogFieldDialog /
-// EditCatalogFieldDialog.
 
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

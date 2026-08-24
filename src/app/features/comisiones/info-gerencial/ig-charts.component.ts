@@ -1,7 +1,6 @@
-// Las tres gráficas del tab Desempeño: dona por canal, línea del total del
-// periodo y barras por regla. En React las dibujaba recharts; aquí van en SVG
-// nativo para no sumar una dependencia de gráficas al bundle, con la misma
-// forma, paleta y tooltips. Paridad InfoGerencialCharts.tsx.
+// Las tres gráficas del tab Desempeño: dona por canal, línea del total del periodo y
+// barras por regla. Van en SVG nativo — con su propia forma, paleta y tooltips — para no
+// sumarle una librería de gráficas al bundle.
 
 import { Component, computed, input, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

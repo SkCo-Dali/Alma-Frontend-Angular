@@ -1,6 +1,5 @@
 // Ejecución del motor: jobs de Databricks, pipeline de ingesta (ADF), tablas de
-// resultado y distribución de correos. Port de types/motorApi.ts +
-// utils/motorApiClient.ts + motorApiMapper.ts + motorTableHelpers.ts.
+// resultado y distribución de correos.
 
 import { Injectable, inject } from '@angular/core';
 import { ComisionesHttp } from '../comisiones-http.service';

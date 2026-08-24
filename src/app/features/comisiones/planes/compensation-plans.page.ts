@@ -1,5 +1,5 @@
-// Planes de Compensación: 5 tabs por estado (con conteo), buscador con debounce
-// y la tabla del estado activo. Paridad pages/CompensationPlans.tsx.
+// Planes de Compensación: 5 tabs por estado (con conteo), buscador con debounce y la
+// tabla del estado activo.
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';

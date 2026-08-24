@@ -1,5 +1,4 @@
 // Manual de uso plegable del proceso mensual de comisiones.
-// Paridad MotorManualGuia.tsx.
 
 import { Component, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

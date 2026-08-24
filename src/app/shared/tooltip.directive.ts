@@ -1,10 +1,5 @@
-// Tooltip de Alma. Port del Tooltip de Alma (components/ui/tooltip.tsx: Radix +
-// shadcn): burbuja verde con texto blanco, esquinas suaves, aparece arriba del
-// elemento sin retardo y se monta en <body> (Radix usa Portal) para que ningún
-// contenedor con overflow o filtro la recorte ni le herede estilos.
-//
-// Reemplaza los `title=""` nativos que se habían usado durante la migración: el
-// tooltip del navegador tiene otra tipografía, otro color y otro retardo.
+// Tooltip de Alma. Reemplaza los `title=""` nativos que se habían usado durante la
+// migración: el tooltip del navegador tiene otra tipografía, otro color y otro retardo.
 
 import {
   Directive,
@@ -26,9 +21,9 @@ import {
 })
 export class TooltipDirective implements OnDestroy {
   readonly almaTooltip = input('');
-  /** Lado preferido, igual que el `side` de Radix. */
+  /** Lado preferido para la burbuja. */
   readonly almaTooltipSide = input<'top' | 'bottom'>('top');
-  /** Ancho máximo de la burbuja (Radix lo pasa por className). */
+  /** Ancho máximo de la burbuja. */
   readonly almaTooltipMaxWidth = input('20rem');
 
   private readonly host = inject(ElementRef<HTMLElement>);
@@ -47,7 +42,7 @@ export class TooltipDirective implements OnDestroy {
     el.style.pointerEvents = 'none';
     document.body.appendChild(el);
 
-    // Centrado arriba del elemento, con 4 px de aire (sideOffset de Radix).
+    // Centrado arriba del elemento, con 4 px de aire.
     const r = this.host.nativeElement.getBoundingClientRect();
     const b = el.getBoundingClientRect();
     const left = Math.min(

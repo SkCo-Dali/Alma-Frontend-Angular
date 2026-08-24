@@ -1,5 +1,5 @@
-// Cuestionario de asegurabilidad de la cotización, leído de la BD de Pharos
-// (snapshot sincronizado por el worker). Paridad DeclaracionesDialog.tsx.
+// Cuestionario de asegurabilidad de la cotización, leído de la BD de Pharos (snapshot
+// sincronizado por el worker).
 
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

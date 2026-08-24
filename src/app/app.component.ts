@@ -1,4 +1,4 @@
-// Shell de la plataforma ALMA v2 (paridad AppLayout.tsx + AuthProvider.tsx):
+// Shell de la plataforma ALMA v2:
 // - loading → splash de marca; login → pantalla de ingreso; inactive → aviso.
 // - ready → app shell estilo macOS: alto de viewport acotado; el MAIN scrollea
 //   internamente, banda EXCLUSIVA del Dock al final para que nada quede tapado.

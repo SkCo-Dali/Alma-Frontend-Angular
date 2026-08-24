@@ -1,6 +1,6 @@
-// Registro de íconos lucide de la plataforma (equivalente a lib/icons.ts del
-// React). Se proveen una sola vez en app.config y cada componente usa
-// <lucide-icon name="..."> con el nombre kebab-case.
+// Registro de íconos lucide de la plataforma. Se proveen una sola vez en
+// app.config y cada componente usa <lucide-icon name="..."> con el nombre
+// kebab-case. Ojo: un ícono que se use en un template y NO esté aquí no se pinta.
 
 import {
   Activity,

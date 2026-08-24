@@ -1,7 +1,7 @@
-// Filtro de fechas para columnas 'date': árbol año/mes/día con checkboxes
-// tri-nivel (pestaña "Específicas") + presets/autofiltro ("Filtros de Fecha").
-// Las fechas de Suscripción son PURAS (YYYY-MM-DD) — los rangos se emiten
-// date-only, sin conversión de zona. Paridad DateFilter.tsx.
+// Filtro de fechas para columnas 'date': árbol año/mes/día con checkboxes tri-nivel
+// (pestaña "Específicas") + presets/autofiltro ("Filtros de Fecha"). Las fechas de
+// Suscripción son PURAS (YYYY-MM-DD) — los rangos se emiten date-only, sin conversión de
+// zona.
 
 import {
   Component,

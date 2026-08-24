@@ -1,6 +1,6 @@
 // Descripción de las 8 secciones de Parametrización: columnas de la tabla,
-// campos del formulario, campos derivados y validaciones cruzadas. Es el
-// equivalente declarativo de las 8 tablas + 14 diálogos del front React.
+// campos del formulario, campos derivados y validaciones cruzadas. Es la descripción
+// declarativa que alimenta una sola tabla y un solo diálogo genéricos.
 
 import { ParamColumn, ParamRow } from './param-table.component';
 import { ParamField, ParamValues } from './param-form-dialog.component';

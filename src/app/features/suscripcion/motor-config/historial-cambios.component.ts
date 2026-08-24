@@ -1,5 +1,5 @@
-// Historial de cambios de la configuración del motor (auditoría del PUT):
-// quién cambió qué, cuándo y por qué. Paridad HistorialCambios.tsx.
+// Historial de cambios de la configuración del motor (auditoría del PUT): quién cambió
+// qué, cuándo y por qué.
 
 import { Component, input } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

@@ -1,7 +1,5 @@
-// Métricas y Reportes: /api/performance (filtros, métricas, comisiones y Excel)
-// y /api/reports (8 reportes con su Excel).
-// Port de types/performanceApi.ts + performanceApiClient/Mapper +
-// types/reportsApi.ts + reportsApiClient/Mapper.
+// Métricas y Reportes: /api/performance (filtros, métricas, comisiones y Excel) y
+// /api/reports (8 reportes con su Excel).
 
 import { Injectable, inject } from '@angular/core';
 import { ComisionesHttp } from '../comisiones-http.service';

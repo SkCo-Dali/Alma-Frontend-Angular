@@ -1,8 +1,7 @@
-// Interruptor de Alma. Port EXACTO del Switch de Alma (components/ui/switch.tsx):
-// toggle "Liquid Glass" estilo iOS 26 / macOS Tahoe — pista translúcida con
-// desenfoque, brillo especular en la mitad superior y pulgar de vidrio con
-// reflejo radial. Reemplaza los <input type="checkbox"> que se habían usado
-// como toggles durante la migración.
+// Interruptor de Alma: toggle "Liquid Glass" estilo iOS 26 / macOS Tahoe — pista
+// translúcida con desenfoque, brillo especular en la mitad superior y pulgar de
+// vidrio con reflejo radial. Es el único toggle de la plataforma: nunca un
+// <input type="checkbox"> nativo.
 
 import { Component, input, model } from '@angular/core';
 

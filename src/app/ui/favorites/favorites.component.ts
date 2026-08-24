@@ -1,4 +1,4 @@
-// Favoritos (paridad con routes/favorites.tsx).
+// Favoritos.
 
 import { Component, inject } from '@angular/core';
 import { ApplicationsService } from '../../core/services/applications.service';

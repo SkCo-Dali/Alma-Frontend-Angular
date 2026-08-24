@@ -1,5 +1,5 @@
-// Consola de Accesos v2 (paridad routes/admin.tsx): pestañas por permiso —
-// Aplicaciones (solo plataforma), Usuarios, Roles, Auditoría y Métricas.
+// Consola de Accesos v2: pestañas por permiso — Aplicaciones (solo plataforma),
+// Usuarios, Roles, Auditoría y Métricas.
 
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';

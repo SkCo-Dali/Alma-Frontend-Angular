@@ -1,7 +1,6 @@
-// Tabla de columnas dinámicas de Métricas y Reportes: numeración, encabezados
-// ordenables con filtro por columna sobre la página cargada, formato de moneda
-// por columna y paginación del servidor.
-// Paridad de las tablas de InfoGerencialDesempenoTab / InfoGerencialReportesTab.
+// Tabla de columnas dinámicas de Métricas y Reportes: numeración, encabezados ordenables
+// con filtro por columna sobre la página cargada, formato de moneda por columna y
+// paginación del servidor.
 
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

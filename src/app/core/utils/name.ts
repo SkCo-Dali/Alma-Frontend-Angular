@@ -1,7 +1,6 @@
 // Nombres del directorio activo llegan como "Apellido1 Apellido2, Nombre1 Nombre2"
-// (apellidos, coma, nombres). Estas utilidades extraen el nombre de pila y una
-// etiqueta corta "Nombre A." para saludar y para el header.
-// Port 1:1 de lib/name.ts.
+// (apellidos, coma, nombres). Estas utilidades extraen el nombre de pila y una etiqueta
+// corta "Nombre A." para saludar y para el header.
 
 /** Separa un nombre del AD en { given, family }. */
 function splitName(full: string): { given: string; family: string } {

@@ -1,5 +1,5 @@
-// Utilidades de arrastre del Dock/Launchpad (port de lib/dragImage.ts y
-// lib/useTouchDrag.ts del front React — lógica framework-agnóstica).
+// Utilidades de arrastre del Dock/Launchpad: imagen de arrastre propia y gesto
+// táctil. Lógica pura de DOM, sin dependencias de Angular.
 
 /**
  * Fija una imagen de arrastre propia a partir de un CLON del elemento: la

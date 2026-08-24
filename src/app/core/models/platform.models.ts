@@ -1,4 +1,4 @@
-// Modelos de la plataforma ALMA (portados del front React, types/index.ts).
+// Modelos de dominio de la plataforma ALMA.
 
 /** Cómo se integra una app al shell:
  *  - internal:      construida dentro de este workspace (lazy route).

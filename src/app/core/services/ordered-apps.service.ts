@@ -1,7 +1,7 @@
-// Todas las Apps en el orden ÚNICO del usuario (preferencias.appOrder),
-// incluidas las Apps de plataforma (Configuración siempre; Accesos si el
-// usuario es admin de plataforma o de alguna App). Fuente de verdad para el
-// Dock (primeras dockCount) y el Launchpad (todas). Paridad use-ordered-apps.
+// Todas las Apps en el orden ÚNICO del usuario (preferencias.appOrder), incluidas las
+// Apps de plataforma (Configuración siempre; Accesos si el usuario es admin de
+// plataforma o de alguna App). Fuente de verdad para el Dock (primeras dockCount) y el
+// Launchpad (todas).
 
 import { Injectable, computed, inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';

@@ -1,6 +1,5 @@
-// Pestaña "Filtros de Texto" reutilizable para popovers de columnas string.
-// Presets rápidos estilo Excel + diálogo de autofiltro personalizado.
-// Paridad TextFilterTab.tsx.
+// Pestaña "Filtros de Texto" reutilizable para popovers de columnas string. Presets
+// rápidos estilo Excel + diálogo de autofiltro personalizado.
 
 import { Component, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

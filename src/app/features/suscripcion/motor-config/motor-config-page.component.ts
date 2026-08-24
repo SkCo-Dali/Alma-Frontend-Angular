@@ -1,9 +1,8 @@
 // Página de configuración del motor de suscripción (permiso
-// app.suscripcion.motor.config). Renderiza los grupos de parámetros que entrega
-// el backend (compartido / Crea Patrimonio / Crea Ahorro / mapeo de productos),
-// con editor por tipo, dirty-tracking contra el snapshot original, confirmación
-// con lista de cambios + comentario, y el historial de auditoría al final.
-// Paridad MotorConfigPage.tsx.
+// app.suscripcion.motor.config). Renderiza los grupos de parámetros que entrega el
+// backend (compartido / Crea Patrimonio / Crea Ahorro / mapeo de productos), con editor
+// por tipo, dirty-tracking contra el snapshot original, confirmación con lista de
+// cambios + comentario, y el historial de auditoría al final.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

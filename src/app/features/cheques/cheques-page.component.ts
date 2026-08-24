@@ -1,4 +1,4 @@
-// Página de la app Cheques (paridad con routes/apps.cheques.tsx v2 — sin miga).
+// Página de la app Cheques.
 
 import { Component } from '@angular/core';
 import { BandejaChequesComponent } from './bandeja-cheques.component';

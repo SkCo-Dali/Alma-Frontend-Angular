@@ -1,7 +1,4 @@
 // Clientes de las 8 entidades de Parametrización, con sus mapeos API↔UI.
-// Port de accountingApiClient + commissionTypesApiClient + deferredDelta* +
-// deferredParameters* + contractConfig* + productConfig* +
-// commissionAdjustments* + specialCases* (y sus mappers).
 //
 // Detalles del contrato que NO se pueden cambiar sin tocar el backend:
 // - El listado siempre pagina con un tamaño fijo por entidad (200, y 500 en

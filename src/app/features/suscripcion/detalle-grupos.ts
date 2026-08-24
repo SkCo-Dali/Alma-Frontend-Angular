@@ -1,6 +1,5 @@
-// Construcción de los grupos "inset" del detalle de una cotización
-// (port de buildGrupos en DetalleSolicitud.tsx). Filas label→valor, ya
-// filtradas: cada fila con valor null se oculta y un grupo sin filas visibles
+// Construcción de los grupos "inset" del detalle de una cotización.
+// Filas label→valor, ya filtradas: cada fila con valor null se oculta y un grupo sin filas visibles
 // no se dibuja.
 
 import { AfiliacionDetalleApi } from './suscripcion.api';

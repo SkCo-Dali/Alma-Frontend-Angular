@@ -1,7 +1,6 @@
-// HTTP base del módulo de comisiones. Equivale a los `*ApiClient` del front
-// React, con dos diferencias deliberadas:
-//  - El token de Entra se agrega aquí (en React lo inyectaba un interceptor
-//    global de fetch; en Angular es explícito).
+// HTTP base del módulo de comisiones:
+//  - El token de Entra se agrega aquí, de forma explícita (no hay interceptor
+//    global de fetch).
 //  - Conserva el retry con backoff exponencial ante 5xx/errores de red y el
 //    ApiConflictError en 409 (registro duplicado), que la UI trata distinto.
 

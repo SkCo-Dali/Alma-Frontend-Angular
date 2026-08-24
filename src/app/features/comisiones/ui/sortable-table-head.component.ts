@@ -1,5 +1,5 @@
-// Encabezado ordenable de las tablas de comisiones: etiqueta + par de chevrons
-// que marcan la dirección activa. Paridad SortableTableHead.tsx.
+// Encabezado ordenable de las tablas de comisiones: etiqueta + par de chevrons que
+// marcan la dirección activa.
 
 import { Component, computed, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

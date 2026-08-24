@@ -1,5 +1,5 @@
-// Header del shell v2 (paridad Header.tsx): transparente, logo dual
-// claro/oscuro, toggle de tema y menú de usuario.
+// Header del shell v2: transparente, logo dual claro/oscuro, toggle de tema y menú de
+// usuario.
 
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';

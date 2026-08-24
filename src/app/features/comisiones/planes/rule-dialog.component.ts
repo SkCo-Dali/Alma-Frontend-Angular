@@ -1,5 +1,4 @@
 // Editor de reglas de comisión (crear y editar en un solo componente).
-// Port de CreateRuleDialog.tsx + EditRuleDialog.tsx.
 //
 // Diferencias de comportamiento entre modos, conservadas del original:
 // - Crear: las condiciones se arman en memoria y se guardan DESPUÉS de crear

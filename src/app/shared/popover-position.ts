@@ -1,5 +1,5 @@
-// Coloca un panel flotante respecto a su disparador, como el Popover de Radix
-// con align="start": debajo y alineado a la izquierda del botón, volteando
+// Coloca un panel flotante respecto a su disparador. Con align="start":
+// debajo y alineado a la izquierda del botón, volteando
 // arriba si no cabe y corriéndose para no salirse de la pantalla.
 //
 // Se posiciona midiendo el panel YA renderizado (en <body>, vía almaPortal), no

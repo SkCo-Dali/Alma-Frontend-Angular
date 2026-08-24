@@ -1,9 +1,8 @@
 // Página "Configuración del Simulador de asegurabilidad" (permiso
-// app.suscripcion.simulador.config). Mismo patrón que la config del motor:
-// grupos que entrega el backend, dirty-tracking contra el snapshot original,
-// confirmación con lista de cambios + comentario, e historial de auditoría.
-// Cambian los editores: catálogos (tabla buscable), segmentos de IMC, matriz de
-// exámenes y paquetes. Paridad SimuladorConfigPage.tsx.
+// app.suscripcion.simulador.config). Mismo patrón que la config del motor: grupos que
+// entrega el backend, dirty-tracking contra el snapshot original, confirmación con lista
+// de cambios + comentario, e historial de auditoría. Cambian los editores: catálogos
+// (tabla buscable), segmentos de IMC, matriz de exámenes y paquetes.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

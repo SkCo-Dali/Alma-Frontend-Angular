@@ -1,5 +1,5 @@
-// Filtro discreto (checkboxes de valores únicos) embebido en el menú de
-// columna. Paridad DiscreteFilter.tsx. Conserva:
+// Filtro discreto (checkboxes de valores únicos) embebido en el menú de columna.
+// Conserva:
 // - Distincts lazy (initialize al montarse dentro del popover abierto).
 // - RENDER_CAP 200: pintar miles de checkboxes por tecla hacía lenta la
 //   escritura; el resto se alcanza refinando la búsqueda (valueSearch server).

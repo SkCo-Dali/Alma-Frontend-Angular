@@ -1,10 +1,7 @@
-// Tipos de dominio, mapper y badges del Motor de Suscripción.
-// Port de features/suscripcion/data.ts + badges.tsx del front React.
-//
-// El "Estado Alma" interno (pendiente/en_revision/…/emitido) se ELIMINÓ de la
-// plataforma: el único estado visible es el del Pipeline (uw_status). La
-// bandeja se alimenta del grid server-side; el journey de etapas se nutre de
-// POST /distincts {field:'EstadoPipeline'}.
+// Tipos de dominio, mapper y badges del Motor de Suscripción. El "Estado Alma" interno
+// (pendiente/en_revision/…/emitido) se ELIMINÓ de la plataforma: el único estado visible
+// es el del Pipeline (uw_status). La bandeja se alimenta del grid server-side; el
+// journey de etapas se nutre de POST /distincts {field:'EstadoPipeline'}.
 
 import { AfiliacionApi, DecisionSlug, EvaluacionApi, SolicitudApi } from './suscripcion.api';
 
@@ -216,7 +213,7 @@ export function fmtCOP(n: number): string {
   return '$ ' + (Number(n) || 0).toLocaleString('es-CO');
 }
 
-// ── Badges y pills compartidas (port de badges.tsx) ──────────────────────────
+// ── Badges y pills compartidas ───────────────────────────────────────────────
 
 /** Estado del pipeline de afiliaciones (TrkApplications). */
 export const UW_BADGE: Record<string, string> = {

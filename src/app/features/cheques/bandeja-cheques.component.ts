@@ -1,6 +1,5 @@
-// Bandeja de Cheques (paridad con features/cheques/BandejaCheques.tsx):
-// listado con búsqueda + CRUD con formulario modal. TanStack Query se
-// reemplaza por signals con recarga manual tras cada mutación.
+// Bandeja de Cheques: listado con búsqueda + CRUD con formulario modal. El estado va
+// en signals, con recarga manual tras cada mutación.
 
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

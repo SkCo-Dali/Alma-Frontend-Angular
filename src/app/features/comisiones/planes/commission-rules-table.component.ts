@@ -1,7 +1,6 @@
-// Tabla de reglas de un plan con panel de detalle a la derecha.
-// El resumen de condiciones de cada fila se arma con un GET por regla (el
-// listado de reglas no las trae) y se cachea por id mientras el diálogo vive.
-// Paridad CommissionRulesTable.tsx.
+// Tabla de reglas de un plan con panel de detalle a la derecha. El resumen de
+// condiciones de cada fila se arma con un GET por regla (el listado de reglas no las
+// trae) y se cachea por id mientras el diálogo vive.
 
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

@@ -1,6 +1,5 @@
-// Cliente del GRID de la bandeja de Suscripción (réplica del patrón Mi Cartera
-// de Dali). 5 endpoints: grid-columns / grid / distincts / grid-state /
-// grid-events. Port 1:1 de lib/suscripcion-grid.api.ts del front React.
+// Cliente del GRID de la bandeja de Suscripción (réplica del patrón Mi Cartera de Dali).
+// 5 endpoints: grid-columns / grid / distincts / grid-state / grid-events.
 
 import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../../core/services/api.service';

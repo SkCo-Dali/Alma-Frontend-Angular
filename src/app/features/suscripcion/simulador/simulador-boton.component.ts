@@ -1,6 +1,5 @@
 // Disparador del simulador para el toolbar de la bandeja (a juego con el botón
 // "Columnas"). Mientras está montado, el host oculta su botón flotante.
-// Paridad SimuladorToolbarButton (SimuladorHost.tsx).
 
 import { Component, DestroyRef, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

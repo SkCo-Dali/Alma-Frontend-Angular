@@ -1,5 +1,5 @@
-// Administrador de campos de un catálogo: tabla de campos con editar/eliminar y
-// botón para agregar. Paridad CatalogFieldsManager.tsx + CatalogFieldsTable.tsx.
+// Administrador de campos de un catálogo: tabla de campos con editar/eliminar y botón
+// para agregar.
 
 import {
   Component,

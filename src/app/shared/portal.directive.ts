@@ -1,4 +1,4 @@
-// Mueve el elemento a <body> mientras existe, como el Portal de Radix.
+// Mueve el elemento a <body> mientras existe.
 //
 // Por qué hace falta: los popovers del grid se posicionan con `position: fixed`
 // y coordenadas de pantalla, pero si un ancestro tiene filter/backdrop-filter o

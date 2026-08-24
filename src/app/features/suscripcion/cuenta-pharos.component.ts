@@ -1,7 +1,6 @@
-// Conector de la cuenta de Pharos del usuario (Configuración → Cuentas
-// conectadas). Al emitir una póliza, Alma autentica contra Pharos con esta
-// cuenta (trazabilidad). La contraseña se cifra en el backend.
-// (Paridad CuentaPharos.tsx.)
+// Conector de la cuenta de Pharos del usuario (Configuración → Cuentas conectadas). Al
+// emitir una póliza, Alma autentica contra Pharos con esta cuenta (trazabilidad). La
+// contraseña se cifra en el backend.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

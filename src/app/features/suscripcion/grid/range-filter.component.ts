@@ -1,6 +1,5 @@
-// Filtro de rango numérico (number/currency) embebido en el menú de columna.
-// Hidrata el operador/valores desde los filtros actuales (gte+lte ⇒ between).
-// Paridad RangeFilter.tsx.
+// Filtro de rango numérico (number/currency) embebido en el menú de columna. Hidrata el
+// operador/valores desde los filtros actuales (gte+lte ⇒ between).
 
 import { Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

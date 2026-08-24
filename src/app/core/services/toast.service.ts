@@ -1,5 +1,4 @@
-// Avisos flotantes (equivalente al hook use-toast del front React): cola de
-// mensajes con auto-cierre. El host <alma-toasts> los pinta en el shell.
+// Avisos flotantes: cola de mensajes con auto-cierre. El host <alma-toasts> los pinta en el shell.
 
 import { Injectable, signal } from '@angular/core';
 

@@ -1,6 +1,6 @@
-// Barra de la tabla en Métricas y Reportes: buscador (se aplica al pulsar
-// Buscar o Enter), filtro de mes, tamaño de página, descarga de Excel y el
-// resumen de periodo y total. Paridad InfoGerencialTableToolbar.tsx.
+// Barra de la tabla en Métricas y Reportes: buscador (se aplica al pulsar Buscar o
+// Enter), filtro de mes, tamaño de página, descarga de Excel y el resumen de periodo y
+// total.
 
 import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';

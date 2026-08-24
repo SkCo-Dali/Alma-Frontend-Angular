@@ -1,6 +1,6 @@
-// Filtro de columnas de fecha en cascada (año → mes → día). Emite la lista de
-// fechas concretas en dd/MM/yyyy que cumplen la selección, porque el filtrado
-// compara contra el texto que muestra la tabla. Paridad DateColumnFilter.tsx.
+// Filtro de columnas de fecha en cascada (año → mes → día). Emite la lista de fechas
+// concretas en dd/MM/yyyy que cumplen la selección, porque el filtrado compara contra el
+// texto que muestra la tabla.
 
 import {
   Component,

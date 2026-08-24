@@ -1,7 +1,6 @@
-// Tabla genérica de las pestañas de datos del motor: columnas dinámicas (las
-// que devuelve el API), numeración de fila, orden y filtro por columna en
-// cliente sobre la página cargada, y paginación del servidor.
-// Paridad MotorDataTableView.tsx.
+// Tabla genérica de las pestañas de datos del motor: columnas dinámicas (las que
+// devuelve el API), numeración de fila, orden y filtro por columna en cliente sobre la
+// página cargada, y paginación del servidor.
 
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

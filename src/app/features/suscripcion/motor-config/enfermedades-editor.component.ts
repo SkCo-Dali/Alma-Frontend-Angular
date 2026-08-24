@@ -1,8 +1,7 @@
-// Editor del parámetro "enfermedades_flujo": el conjunto FIJO de condiciones
-// del cuestionario médico con etiqueta legible y un check por cada una. Marcar
-// una condición significa que, si el asegurado la declara en "sí", la cotización
-// se enruta al flujo del suscriptor. Guarda la lista de claves (no texto libre).
-// Paridad EnfermedadesEditor.tsx.
+// Editor del parámetro "enfermedades_flujo": el conjunto FIJO de condiciones del
+// cuestionario médico con etiqueta legible y un check por cada una. Marcar una condición
+// significa que, si el asegurado la declara en "sí", la cotización se enruta al flujo
+// del suscriptor. Guarda la lista de claves (no texto libre).
 
 import { Component, computed, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

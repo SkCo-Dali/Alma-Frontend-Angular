@@ -1,4 +1,4 @@
-// Mi perfil (paridad con routes/profile.tsx).
+// Mi perfil.
 
 import { Component, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

@@ -1,5 +1,5 @@
-// Página de inicio de sesión (paridad LoginScreen.tsx). No pide credenciales:
-// el botón abre el flujo de Microsoft (Entra ID). La esfera Alma es el foco.
+// Página de inicio de sesión. No pide credenciales: el botón abre el flujo de Microsoft
+// (Entra ID). La esfera Alma es el foco.
 
 import { Component, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

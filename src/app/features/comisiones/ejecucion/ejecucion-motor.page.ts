@@ -1,7 +1,6 @@
-// Ejecución del motor de Comisiones: pestaña de procesos + 4 pestañas de datos
-// (pre-calculadas, finales, mantenimiento y distribución de correos) con sus
-// diálogos de confirmar ejecución, ver error, editar destinatario y excluir.
-// Paridad pages/EjecucionMotor.tsx.
+// Ejecución del motor de Comisiones: pestaña de procesos + 4 pestañas de datos (pre-
+// calculadas, finales, mantenimiento y distribución de correos) con sus diálogos de
+// confirmar ejecución, ver error, editar destinatario y excluir.
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';

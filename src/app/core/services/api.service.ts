@@ -1,5 +1,5 @@
-// Cliente HTTP base hacia alma-backend (paridad con lib/api.ts del React).
-// Todas las llamadas van autenticadas con el token de Entra (MSAL).
+// Cliente HTTP base hacia alma-backend. Todas las llamadas van autenticadas con el token
+// de Entra (MSAL).
 
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';

@@ -1,12 +1,10 @@
-// Host del panel del simulador (patrón "Tu Dali"): el contenido de la página va
-// dentro de un wrapper con margin-right animado cuando el panel está abierto, y
-// el panel es un hermano `fixed` SIN overlay en desktop — el usuario interactúa
-// con ambos a la vez. El botón flotante vive bajo el header (top-24) y se OCULTA
-// cuando la página monta su propio disparador en el toolbar (alma-simulador-boton).
-//
-// El estado abierto/cerrado persiste en sessionStorage para sobrevivir la
-// navegación bandeja ↔ detalle (cada ruta monta su propio host).
-// Paridad SimuladorHost.tsx.
+// Host del panel del simulador (patrón "Tu Dali"): el contenido de la página va dentro
+// de un wrapper con margin-right animado cuando el panel está abierto, y el panel es un
+// hermano `fixed` SIN overlay en desktop — el usuario interactúa con ambos a la vez. El
+// botón flotante vive bajo el header (top-24) y se OCULTA cuando la página monta su
+// propio disparador en el toolbar (alma-simulador-boton). El estado abierto/cerrado
+// persiste en sessionStorage para sobrevivir la navegación bandeja ↔ detalle (cada ruta
+// monta su propio host).
 
 import { Component, inject, input } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';

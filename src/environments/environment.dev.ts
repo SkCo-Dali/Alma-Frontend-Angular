@@ -1,5 +1,4 @@
 // Desarrollo — app registration Alma-Dev + backend dev (App Service).
-// Mismos valores que usa el front React (GitHub Environment "Development").
 export const environment = {
   production: false,
   name: 'dev',

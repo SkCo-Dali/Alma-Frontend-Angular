@@ -1,7 +1,7 @@
 // Tabla genérica de Parametrización: las 8 secciones tienen la misma mecánica
-// (encabezados ordenables, filtro por columna, interruptor de activo, menú de
-// acciones y paginación), así que se describen por columnas en vez de repetir
-// ocho tablas casi idénticas. Paridad AccountingTable y sus gemelas.
+// (encabezados ordenables, filtro por columna, interruptor de activo, menú de acciones y
+// paginación), así que se describen por columnas en vez de repetir ocho tablas casi
+// idénticas.
 
 import {
   Component,
