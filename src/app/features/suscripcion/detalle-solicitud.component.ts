@@ -4,7 +4,7 @@
 // de datos como listas de filas label→valor con separadores finos — en columnas tipo
 // masonry en desktop. El único estado visible es el de Pipeline (uw_status/sub_status).
 
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, effect, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
@@ -433,12 +433,24 @@ export class DetalleSolicitudComponent {
   });
 
   constructor() {
-    void this.cargar();
+    // El id llega por binding de la ruta y NO está disponible en el
+    // constructor (leerlo aquí lanza NG0950). El effect corre cuando los
+    // inputs ya están enlazados, y de paso recarga si se navega a otra
+    // cotización reutilizando el componente.
+    effect(() => {
+      const id = this.solicitudId();
+      untracked(() => void this.cargar(id));
+    });
   }
 
-  private async cargar(): Promise<void> {
+  private async cargar(id: string): Promise<void> {
+    this.cargando.set(true);
+    this.cargandoAfiliacion.set(true);
+    this.error.set(null);
+    this.tarea.set(null);
+    this.afiliacion.set(null);
     try {
-      const dto = await this.api.getSolicitud(this.solicitudId());
+      const dto = await this.api.getSolicitud(id);
       this.tarea.set(apiToTarea(dto));
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : String(e));
@@ -447,7 +459,7 @@ export class DetalleSolicitudComponent {
     }
     // El detalle de afiliación no bloquea: se pinta cuando llega.
     try {
-      this.afiliacion.set(await this.api.getAfiliacion(this.solicitudId()));
+      this.afiliacion.set(await this.api.getAfiliacion(id));
     } catch {
       this.afiliacion.set(null);
     } finally {
