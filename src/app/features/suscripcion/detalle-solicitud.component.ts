@@ -102,7 +102,7 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                   (click)="modal.set('estado')"
                   class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
                 >
-                  <lucide-icon name="git-pull-request-arrow" [size]="16" />
+                  <lucide-icon name="workflow" [size]="16" />
                   Actualizar en Pipeline
                 </button>
               }
