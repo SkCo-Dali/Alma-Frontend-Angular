@@ -1,10 +1,12 @@
-// Header del shell v2: transparente, logo dual claro/oscuro, toggle de tema y menú de
-// usuario.
+// Header del shell: barra de vidrio esmerilado con el logo, el lema de la
+// plataforma, el botón de cuadrícula (abre el Launchpad) y el chip de usuario
+// con su cargo. El cambio de tema vive dentro del menú del usuario.
 
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
+import { LaunchpadService } from '../../core/services/launchpad.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { shortName } from '../../core/utils/name';
 
@@ -12,7 +14,7 @@ import { shortName } from '../../core/utils/name';
   selector: 'alma-header',
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <header class="sticky top-0 z-30 flex h-20 items-center gap-4 bg-transparent px-4 md:px-6">
+    <header class="spk-bar sticky top-0 z-30 flex h-20 items-center gap-4 px-4 md:px-6">
       <a routerLink="/" class="flex shrink-0 items-center gap-3" aria-label="Inicio">
         <img src="alma-logo.png" alt="Alma Skandia" class="block h-[3.25rem] w-auto dark:hidden" />
         <img
@@ -20,36 +22,47 @@ import { shortName } from '../../core/utils/name';
           alt="Alma Skandia"
           class="hidden h-[3.25rem] w-auto dark:block"
         />
-        <span class="hidden text-[13px] font-medium text-muted-foreground sm:block">
-          Conecta - Orquesta - Impulsa
+        <span class="hidden h-8 w-px bg-border sm:block"></span>
+        <span class="hidden flex-col justify-center sm:flex">
+          <span class="text-[13px] font-semibold leading-tight text-foreground">
+            Conecta · Orquesta · Impulsa
+          </span>
+          <span class="text-[11px] leading-tight text-muted-foreground">
+            Suite Digital de Operaciones
+          </span>
         </span>
       </a>
 
-      <div class="ml-auto flex items-center gap-1">
+      <div class="ml-auto flex items-center gap-2">
         <button
           type="button"
-          (click)="prefs.toggleTheme()"
-          class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          [attr.aria-label]="dark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
-          [title]="dark() ? 'Modo claro' : 'Modo oscuro'"
+          (click)="launchpad.open.set(true)"
+          class="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/80 text-primary shadow-sm transition-all hover:-translate-y-px hover:shadow-md"
+          aria-label="Todas las aplicaciones"
+          title="Todas las aplicaciones"
         >
-          <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="18" />
+          <lucide-icon name="layout-grid" [size]="18" />
         </button>
 
         <div class="relative">
           <button
             type="button"
             (click)="toggleMenu($event)"
-            class="ml-1 flex items-center gap-2 rounded-md py-1 pl-1 pr-2 transition-colors hover:bg-accent"
+            class="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card/80 py-1 pl-1 pr-2.5 shadow-sm transition-all hover:shadow-md"
             [attr.aria-expanded]="menuOpen()"
           >
             <img
               [src]="user().foto"
               [alt]="user().nombre"
-              class="h-9 w-9 rounded-full border border-border"
+              class="h-9 w-9 rounded-full border border-border object-cover"
             />
-            <span class="hidden text-sm font-semibold text-foreground sm:block">
-              {{ displayName() }}
+            <span class="hidden flex-col items-start sm:flex">
+              <span class="text-sm font-semibold leading-tight text-foreground">
+                {{ displayName() }}
+              </span>
+              <span class="text-[11px] leading-tight text-muted-foreground">
+                {{ user().cargo }}
+              </span>
             </span>
             <lucide-icon
               name="chevron-down"
@@ -81,6 +94,14 @@ import { shortName } from '../../core/utils/name';
               >
                 <lucide-icon name="settings" [size]="16" /> Configuración
               </a>
+              <button
+                type="button"
+                (click)="$event.stopPropagation(); prefs.toggleTheme()"
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+              >
+                <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="16" />
+                {{ dark() ? 'Modo claro' : 'Modo oscuro' }}
+              </button>
               <div class="-mx-1 my-1 h-px bg-muted"></div>
               <button
                 type="button"
@@ -98,6 +119,7 @@ import { shortName } from '../../core/utils/name';
 })
 export class HeaderComponent {
   protected readonly prefs = inject(PreferencesService);
+  protected readonly launchpad = inject(LaunchpadService);
   private readonly auth = inject(AuthService);
 
   protected readonly user = this.auth.user;

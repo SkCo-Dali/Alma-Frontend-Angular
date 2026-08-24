@@ -22,7 +22,10 @@ const TEMAS: { id: Theme; label: string; icon: string }[] = [
 // Vista previa (aprox.) de cada fondo esmerilado; la paleta real vive en
 // styles.css (--wp-* por data-bg).
 const FONDOS: Record<Background, { label: string; preview: string }> = {
-  esmeralda: { label: 'Esmeralda', preview: 'linear-gradient(135deg,#38d878,#00c83c,#8fe0b0)' },
+  solarpunk: {
+    label: 'Solarpunk',
+    preview: 'linear-gradient(160deg,#fdf3d8 0%,#cdeecb 38%,#7fce96 68%,#2e7d52 100%)',
+  },
   oceano: { label: 'Océano', preview: 'linear-gradient(135deg,#4fb8ff,#02b1ff,#7ce0c0)' },
   aurora: { label: 'Aurora', preview: 'linear-gradient(135deg,#00c83c,#02b1ff,#ff9200)' },
   atardecer: { label: 'Atardecer', preview: 'linear-gradient(135deg,#ffb54d,#ff9200,#a0e070)' },

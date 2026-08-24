@@ -12,6 +12,7 @@ import { PreferencesService } from './core/services/preferences.service';
 import { AlmaLoaderComponent } from './shared/components/alma-loader.component';
 import { DockComponent } from './shared/components/dock.component';
 import { HeaderComponent } from './shared/components/header.component';
+import { SolarpunkSceneComponent } from './shared/components/solarpunk-scene.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
 import { LoginScreenComponent } from './shared/components/login-screen.component';
 import { ToastsComponent } from './shared/components/toasts.component';
@@ -30,12 +31,19 @@ const EXTRA_ICONS = [
     RouterOutlet,
     HeaderComponent,
     DockComponent,
+    SolarpunkSceneComponent,
     AlmaLoaderComponent,
     LoginScreenComponent,
     InactiveScreenComponent,
     ToastsComponent,
   ],
   template: `
+    <!-- Wallpaper ilustrado (fondo por defecto); los demás fondos usan el
+         degradado del body. Fijo y detrás de todo, en cualquier estado. -->
+    @if (prefs.background() === 'solarpunk') {
+      <alma-solarpunk-scene />
+    }
+
     @switch (auth.status()) {
       @case ('loading') {
         <div class="flex min-h-screen items-center justify-center bg-background">
@@ -71,7 +79,7 @@ const EXTRA_ICONS = [
 export class AppComponent {
   protected readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
-  private readonly prefs = inject(PreferencesService);
+  protected readonly prefs = inject(PreferencesService);
   private readonly apps = inject(ApplicationsService);
 
   constructor() {

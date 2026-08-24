@@ -97,11 +97,13 @@
   --table-stripe: oklch(0.988 0.001 286);
 
   /* Fondo por defecto ESMERALDA — verde Skandia protagonista + acento naranja */
-  --wp-base: oklch(0.93 0.04 150);
-  --wp-a: oklch(0.84 0.17 150 / 90%);
-  --wp-b: oklch(0.82 0.12 178 / 82%);
-  --wp-c: oklch(0.87 0.1 132 / 82%);
-  --wp-d: oklch(0.9 0.09 70 / 55%);
+  /* Respaldo del fondo por defecto (solarpunk): crema solar + salvia.
+     La escena ilustrada (alma-solarpunk-scene) se pinta encima. */
+  --wp-base: oklch(0.95 0.025 130);
+  --wp-a: oklch(0.94 0.06 95 / 90%);
+  --wp-b: oklch(0.88 0.08 150 / 80%);
+  --wp-c: oklch(0.9 0.07 165 / 70%);
+  --wp-d: oklch(0.96 0.05 85 / 60%);
 }
 
 .dark {
@@ -148,11 +150,11 @@
   --table-header: oklch(0.285 0.006 286);
   --table-stripe: oklch(0.25 0.005 286);
 
-  --wp-base: oklch(0.2 0.03 150);
-  --wp-a: oklch(0.44 0.14 150 / 78%);
-  --wp-b: oklch(0.4 0.1 178 / 68%);
-  --wp-c: oklch(0.42 0.09 132 / 62%);
-  --wp-d: oklch(0.36 0.08 70 / 42%);
+  --wp-base: oklch(0.24 0.035 185);
+  --wp-a: oklch(0.36 0.07 175 / 78%);
+  --wp-b: oklch(0.32 0.06 200 / 66%);
+  --wp-c: oklch(0.34 0.06 150 / 58%);
+  --wp-d: oklch(0.42 0.08 70 / 40%);
 }
 
 /* ── Fondos esmerilados alternativos (Configuración > Apariencia > Fondo) ──
@@ -461,12 +463,12 @@ html.dark[data-bg="cielo"] {
   height: 100%;
   border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(140deg, #2ee06a, #00c83c 52%, #007a28 100%);
+  background: linear-gradient(150deg, #d5ffe8, #3fe0a0 38%, #0cae7c 68%, #07705c 100%);
   box-shadow:
-    inset 0 0 0 1.2cqmin rgba(255, 255, 255, 0.18),
-    inset 5cqmin 4cqmin 12cqmin rgba(255, 255, 255, 0.16),
-    inset -7cqmin -9cqmin 26cqmin rgba(0, 0, 0, 0.5),
-    0 6cqmin 18cqmin rgba(60, 40, 120, 0.4);
+    inset 0 0 0 1.2cqmin rgba(255, 255, 255, 0.28),
+    inset 5cqmin 4cqmin 12cqmin rgba(255, 255, 255, 0.22),
+    inset -7cqmin -9cqmin 26cqmin rgba(4, 60, 48, 0.55),
+    0 6cqmin 20cqmin rgba(10, 130, 90, 0.38);
 }
 .almasph-field {
   position: absolute;
@@ -485,8 +487,8 @@ html.dark[data-bg="cielo"] {
 }
 .almasph .b1 { background: radial-gradient(circle, #00c83c 0%, transparent 70%); animation: blobA 6s ease-in-out infinite; }
 .almasph .b2 { background: radial-gradient(circle, #35e075 0%, transparent 70%); animation: blobB 7.5s ease-in-out infinite; }
-.almasph .b3 { background: radial-gradient(circle, #ff9200 0%, transparent 70%); animation: blobC 9s ease-in-out infinite; }
-.almasph .b4 { background: radial-gradient(circle, #02b1ff 0%, transparent 70%); animation: blobD 5.5s ease-in-out infinite; }
+.almasph .b3 { background: radial-gradient(circle, #14c9a8 0%, transparent 70%); animation: blobC 9s ease-in-out infinite; }
+.almasph .b4 { background: radial-gradient(circle, #63e6ff 0%, transparent 70%); animation: blobD 5.5s ease-in-out infinite; }
 .almasph .b5 { background: radial-gradient(circle, #eafff2 0%, transparent 70%); animation: blobE 8s ease-in-out infinite; }
 .almasph-gloss {
   position: absolute;
@@ -527,7 +529,9 @@ html.dark[data-bg="cielo"] {
 @keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 @keyframes almasph-blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(.12); } }
 
-/* ── Marco "vivo" de la esfera (AlmaHousing): aura + ondas + partículas ── */
+/* ── Marco "vivo" de la esfera (AlmaHousing): la esfera FLOTA sobre una
+   plataforma de anillos de luz de la que emanan ondas elípticas (perspectiva),
+   con aura que respira y motas flotando alrededor. ── */
 .almah {
   position: relative;
   display: grid;
@@ -543,23 +547,57 @@ html.dark[data-bg="cielo"] {
   height: 104%;
   border-radius: 50%;
   z-index: 0;
-  background: radial-gradient(circle, rgba(0, 200, 60, 0.72), rgba(255, 146, 0, 0.3) 44%, rgba(2, 177, 255, 0.2) 60%, rgba(0, 200, 60, 0) 76%);
+  background: radial-gradient(circle, rgba(0, 200, 60, 0.55), rgba(40, 220, 170, 0.3) 46%, rgba(255, 214, 120, 0.18) 62%, rgba(0, 200, 60, 0) 78%);
   filter: blur(9cqmin);
   animation: almah-aura 4s ease-in-out infinite;
 }
-.almah-ripple {
-  width: 64%;
-  height: 64%;
-  border-radius: 50%;
+/* Plataforma bajo la esfera: anillos concéntricos en perspectiva */
+.almah-pad {
+  align-self: end;
+  width: 100%;
+  height: 26%;
+  position: relative;
   z-index: 1;
-  border: 1.4cqmin solid rgba(120, 255, 170, 0.55);
-  animation: almah-ripple 3s ease-out infinite;
 }
-.almah-ripple.r2 { animation-delay: 1s; }
-.almah-ripple.r3 { animation-delay: 2s; }
+.almah-ring,
+.almah-wave {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.almah-ring {
+  border: 0.9cqmin solid rgba(120, 245, 180, 0.65);
+  box-shadow: 0 0 3cqmin rgba(120, 245, 180, 0.35);
+}
+.almah-ring.g1 { width: 34%; height: 24%; opacity: 0.9; }
+.almah-ring.g2 { width: 56%; height: 40%; opacity: 0.55; border-width: 0.7cqmin; }
+.almah-ring.g3 { width: 78%; height: 56%; opacity: 0.3; border-width: 0.55cqmin; }
+/* Ondas que emanan de la plataforma (elípticas, se expanden y desvanecen) */
+.almah-wave {
+  width: 40%;
+  height: 28%;
+  border: 1cqmin solid rgba(140, 255, 200, 0.6);
+  animation: almah-wave 3.6s ease-out infinite;
+}
+.almah-wave.w2 { animation-delay: 1.2s; }
+.almah-wave.w3 { animation-delay: 2.4s; }
+/* Columna de luz sutil entre la plataforma y la esfera */
+.almah-beam {
+  align-self: end;
+  width: 30%;
+  height: 46%;
+  z-index: 0;
+  background: linear-gradient(to top, rgba(120, 245, 180, 0.28), rgba(120, 245, 180, 0));
+  filter: blur(3cqmin);
+  clip-path: polygon(18% 100%, 82% 100%, 64% 0%, 36% 0%);
+}
 .almah-sphere {
   position: relative;
   z-index: 2;
+  transform: translateY(-6%);
+  animation: almah-bob 6s ease-in-out infinite;
 }
 .almah-p {
   z-index: 3;
@@ -571,12 +609,13 @@ html.dark[data-bg="cielo"] {
   align-self: center;
 }
 .almah .p1 { color: #00c83c; transform: translate(-30cqmin, -26cqmin); animation: almah-float 6s ease-in-out infinite; }
-.almah .p2 { color: #ff9200; transform: translate(30cqmin, -22cqmin); animation: almah-float 7.5s ease-in-out infinite reverse; }
-.almah .p3 { color: #02b1ff; transform: translate(-32cqmin, 24cqmin); animation: almah-float 8.5s ease-in-out infinite; }
+.almah .p2 { color: #ffd166; transform: translate(30cqmin, -22cqmin); animation: almah-float 7.5s ease-in-out infinite reverse; }
+.almah .p3 { color: #35e0b0; transform: translate(-32cqmin, 24cqmin); animation: almah-float 8.5s ease-in-out infinite; }
 .almah .p4 { color: #ffffff; transform: translate(30cqmin, 28cqmin); animation: almah-float 6.8s ease-in-out infinite reverse; }
-.almah .p5 { color: #c9d2da; transform: translate(-40cqmin, 2cqmin); animation: almah-float 9s ease-in-out infinite; }
+.almah .p5 { color: #bfe8cf; transform: translate(-40cqmin, 2cqmin); animation: almah-float 9s ease-in-out infinite; }
 @keyframes almah-aura { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.12); } }
-@keyframes almah-ripple { 0% { transform: scale(0.7); opacity: 0.55; } 100% { transform: scale(1.65); opacity: 0; } }
+@keyframes almah-wave { 0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(2.1); opacity: 0; } }
+@keyframes almah-bob { 0%,100% { transform: translateY(-6%); } 50% { transform: translateY(-10%); } }
 @keyframes almah-float { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
 
 /* Dock: transición suave de la magnificación (el tamaño lo calcula
@@ -723,4 +762,106 @@ html.dark[data-bg="cielo"] {
     top: 0 !important;
     left: unset !important;
   }
+}
+
+/* ── Materiales solarpunk ── vidrio esmerilado REAL sobre la escena ilustrada.
+   Solo aplican con el fondo por defecto (sin data-bg = solarpunk); los demás
+   fondos conservan las superficies opacas de siempre. */
+html:not([data-bg]) .glass {
+  background-color: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+html:not([data-bg]) .glass-strong {
+  background-color: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Tarjeta del inicio (widgets del "command center") */
+.spk-card {
+  background-color: color-mix(in srgb, var(--card) 74%, transparent);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(20, 45, 30, 0.06), 0 12px 32px -18px rgba(20, 45, 30, 0.25);
+}
+
+/* Chip de acción rápida bajo el buscador */
+.spk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.4rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background-color: color-mix(in srgb, var(--card) 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 45, 30, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.spk-chip:hover {
+  background-color: var(--card);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -6px rgba(20, 45, 30, 0.25);
+}
+
+/* Barra del header: vidrio blanco con línea de pelo */
+.spk-bar {
+  background-color: color-mix(in srgb, var(--card) 62%, transparent);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+/* Fila del buscador del inicio */
+.spk-prompt {
+  background-color: color-mix(in srgb, var(--card) 86%, transparent);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: 0 2px 6px rgba(20, 45, 30, 0.06), 0 18px 40px -24px rgba(20, 45, 30, 0.35);
+}
+.spk-prompt:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
+    0 18px 40px -24px rgba(20, 45, 30, 0.35);
+}
+
+/* Dock con etiquetas (estilo launcher): entrada activa resaltada */
+.dock-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 7px 5px;
+  border-radius: 16px;
+  transition: background-color 0.15s ease;
+}
+.dock-entry.activa {
+  background-color: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 1px 3px rgba(20, 45, 30, 0.12);
+}
+.dock-label {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--muted-foreground);
+}
+.dock-entry.activa .dock-label {
+  color: var(--primary);
+  font-weight: 600;
 }

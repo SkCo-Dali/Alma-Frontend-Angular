@@ -8,9 +8,10 @@ import { PreferenciasPortal } from '../models/platform.models';
 
 export type Theme = 'system' | 'light' | 'dark';
 
-/** Fondos esmerilados disponibles (paletas --wp-* en styles.css). */
+/** Fondos disponibles. 'solarpunk' es la escena ilustrada (ciudad-jardín con
+ *  luz cálida); el resto son paletas esmeriladas --wp-* en styles.css. */
 export const BACKGROUNDS = [
-  'esmeralda',
+  'solarpunk',
   'oceano',
   'aurora',
   'atardecer',
@@ -36,17 +37,29 @@ interface Persisted {
 
 const DEFAULTS: Persisted = {
   theme: 'system',
-  background: 'esmeralda',
+  background: 'solarpunk',
   appOrder: [],
   dockCount: 6,
   favorites: [],
   recentApps: [],
 };
 
+/** 'esmeralda' fue el fondo por defecto hasta ago-2026; 'solarpunk' lo releva
+ *  como el verde insignia, así que lo heredan quienes nunca cambiaron de fondo. */
+function migrarFondo(bg: unknown): Background {
+  if (bg === 'esmeralda') return 'solarpunk';
+  return (BACKGROUNDS as readonly string[]).includes(bg as string)
+    ? (bg as Background)
+    : DEFAULTS.background;
+}
+
 function load(): Persisted {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) } : DEFAULTS;
+    if (!raw) return DEFAULTS;
+    const p = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) };
+    p.background = migrarFondo(p.background);
+    return p;
   } catch {
     return DEFAULTS;
   }
@@ -83,7 +96,7 @@ export class PreferencesService {
     });
     effect(() => {
       const bg = this.background();
-      if (bg === 'esmeralda') delete document.documentElement.dataset['bg'];
+      if (bg === 'solarpunk') delete document.documentElement.dataset['bg'];
       else document.documentElement.dataset['bg'] = bg;
     });
     effect(() => {
@@ -123,8 +136,7 @@ export class PreferencesService {
       .then((p) => {
         this.aplicandoServidor = true;
         if (p.theme) this.theme.set(p.theme as Theme);
-        if (p.background && (BACKGROUNDS as readonly string[]).includes(p.background))
-          this.background.set(p.background as Background);
+        if (p.background) this.background.set(migrarFondo(p.background));
         if (Array.isArray(p.appOrder)) this.appOrder.set(p.appOrder);
         if (typeof p.dockCount === 'number') this.dockCount.set(clampDock(p.dockCount));
       })
