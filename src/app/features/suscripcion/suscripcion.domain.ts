@@ -12,6 +12,8 @@ export interface Alerta {
   condicion: string;
   mensaje: string;
   prioridad: 'alta' | 'media';
+  /** v3: qué pedirle al asesor, redactado por suscripción en el catálogo. */
+  requisito: string;
 }
 
 export interface Evaluacion {
@@ -148,6 +150,8 @@ export function evaluacionFromApi(
       condicion: a.condicion,
       mensaje: a.mensaje,
       prioridad: a.prioridad === 'Alta' ? 'alta' : 'media',
+      // Las evaluaciones anteriores a v3 no lo traen.
+      requisito: a.requisito ?? '',
     })),
     exclusiones: ev.exclusiones,
   };

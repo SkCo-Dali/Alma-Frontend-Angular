@@ -16,6 +16,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -27,6 +28,8 @@ import {
   Verificaciones,
 } from './suscripcion.api';
 import { DECISION_META, MedicoFlags, Tarea } from './suscripcion.domain';
+import { CatalogoComboboxComponent } from './simulador/catalogo-combobox.component';
+import { SimuladorApi } from './simulador/simulador.api';
 
 const MED_CHIPS: Array<{ key: keyof MedicoFlags & string; label: string }> = [
   { key: 'cardiovascular', label: 'Cardiovascular' },
@@ -66,7 +69,7 @@ function parseSumaTxt(s: string): number {
 
 @Component({
   selector: 'alma-evaluar-modal',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, CatalogoComboboxComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 sm:p-6"
@@ -168,6 +171,95 @@ function parseSumaTxt(s: string): number {
                     </span>
                     <input class="campo" [(ngModel)]="ocupacion" />
                   </label>
+                </div>
+              </div>
+
+              <!-- Catálogos de suscripción (v3): las mismas listas del
+                   Simulador, para que el motor decida con las reglas que ve
+                   el analista en el panel. -->
+              <div>
+                <div class="mb-2 flex flex-wrap items-baseline gap-x-2">
+                  <h3
+                    class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Catálogos de suscripción
+                  </h3>
+                  <span class="text-[11px] text-muted-foreground">
+                    No se guardan en la solicitud: solo alimentan esta evaluación.
+                  </span>
+                </div>
+                <div class="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
+                  <label class="flex min-w-0 flex-col gap-1">
+                    <span class="text-[11px] font-semibold text-muted-foreground">
+                      País de residencia
+                    </span>
+                    <alma-catalogo-combobox
+                      [value]="pais()"
+                      [opciones]="catalogos()?.paises ?? []"
+                      placeholder="Colombia"
+                      (valueChange)="pais.set($event)"
+                    />
+                  </label>
+                  <div class="flex min-w-0 flex-col gap-1">
+                    <span class="text-[11px] font-semibold text-muted-foreground">Hobbies</span>
+                    @if (hobbies().length > 0) {
+                      <div class="flex flex-wrap gap-1.5">
+                        @for (v of hobbies(); track v) {
+                          <span
+                            class="inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pl-2.5 pr-1 text-[11px] font-medium text-primary"
+                          >
+                            {{ v }}
+                            <button
+                              type="button"
+                              [attr.aria-label]="'Quitar ' + v"
+                              (click)="quitar(hobbies, v)"
+                              class="rounded-full p-0.5 text-primary/70 hover:bg-primary/15 hover:text-primary"
+                            >
+                              <lucide-icon name="x" [size]="12" />
+                            </button>
+                          </span>
+                        }
+                      </div>
+                    }
+                    <alma-catalogo-combobox
+                      [value]="null"
+                      [opciones]="disponibles(catalogos()?.hobbies, hobbies())"
+                      [clearable]="false"
+                      placeholder="Agregar hobby…"
+                      (valueChange)="agregar(hobbies, $event)"
+                    />
+                  </div>
+                  <div class="flex min-w-0 flex-col gap-1">
+                    <span class="text-[11px] font-semibold text-muted-foreground">
+                      Preexistencias
+                    </span>
+                    @if (preexistencias().length > 0) {
+                      <div class="flex flex-wrap gap-1.5">
+                        @for (v of preexistencias(); track v) {
+                          <span
+                            class="inline-flex items-center gap-1 rounded-full bg-primary/10 py-0.5 pl-2.5 pr-1 text-[11px] font-medium text-primary"
+                          >
+                            {{ v }}
+                            <button
+                              type="button"
+                              [attr.aria-label]="'Quitar ' + v"
+                              (click)="quitar(preexistencias, v)"
+                              class="rounded-full p-0.5 text-primary/70 hover:bg-primary/15 hover:text-primary"
+                            >
+                              <lucide-icon name="x" [size]="12" />
+                            </button>
+                          </span>
+                        }
+                      </div>
+                    }
+                    <alma-catalogo-combobox
+                      [value]="null"
+                      [opciones]="disponibles(catalogos()?.preexistencias, preexistencias())"
+                      [clearable]="false"
+                      placeholder="Agregar preexistencia…"
+                      (valueChange)="agregar(preexistencias, $event)"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -548,7 +640,16 @@ function parseSumaTxt(s: string): number {
                               a.prioridad === 'Alta' ? 'text-destructive' : 'text-amber-500'
                             "
                           />
-                          {{ a.mensaje }}
+                          <span class="min-w-0">
+                            {{ a.mensaje }}
+                            <!-- v3: el requisito lo redacta suscripción en el
+                                 catálogo; es lo que el analista le pide al asesor. -->
+                            @if (a.requisito) {
+                              <span class="mt-0.5 block text-[11px] text-muted-foreground">
+                                {{ a.requisito }}
+                              </span>
+                            }
+                          </span>
                         </li>
                       }
                     </ul>
@@ -628,6 +729,7 @@ function parseSumaTxt(s: string): number {
 })
 export class EvaluarModalComponent implements OnInit {
   private readonly api = inject(SuscripcionApi);
+  private readonly simulador = inject(SimuladorApi);
 
   readonly tarea = input.required<Tarea>();
   readonly closed = output<void>();
@@ -643,6 +745,17 @@ export class EvaluarModalComponent implements OnInit {
   protected genero: 'F' | 'M' = 'M';
   protected ciudad = '';
   protected ocupacion = '';
+  // v3: ítems de catálogo. Comparten los catálogos del Simulador, que es
+  // exactamente el punto de la homologación: una sola lista para las dos
+  // herramientas.
+  protected readonly pais = signal<string | null>('Colombia');
+  protected readonly hobbies = signal<string[]>([]);
+  protected readonly preexistencias = signal<string[]>([]);
+  protected readonly catalogos = signal<{
+    paises: string[];
+    hobbies: string[];
+    preexistencias: string[];
+  } | null>(null);
   protected sumaTxt = '';
   protected anios = 0;
   protected medico!: MedicoFlags;
@@ -686,6 +799,7 @@ export class EvaluarModalComponent implements OnInit {
     this.sumaTxt = fmtSumaTxt(t.producto.suma_asegurada);
     this.anios = t.producto.anios_vigencia;
     this.medico = { ...t.medico };
+    void this.cargarCatalogos();
   }
 
   @HostListener('document:keydown.escape')
@@ -718,6 +832,37 @@ export class EvaluarModalComponent implements OnInit {
     this.verif[key] = !this.verif[key];
   }
 
+  /** Opciones del catálogo que aún no se han elegido. */
+  protected disponibles(todas: string[] | undefined, elegidas: string[]): string[] {
+    return (todas ?? []).filter((x) => !elegidas.includes(x));
+  }
+
+  protected agregar(lista: WritableSignal<string[]>, valor: string | null): void {
+    const v = (valor ?? '').trim();
+    // Tope de 5: es el máximo que acepta el borde del backend.
+    if (!v || lista().includes(v) || lista().length >= 5) return;
+    lista.set([...lista(), v]);
+  }
+
+  protected quitar(lista: WritableSignal<string[]>, valor: string): void {
+    lista.set(lista().filter((x) => x !== valor));
+  }
+
+  private async cargarCatalogos(): Promise<void> {
+    try {
+      const c = await this.simulador.getCatalogos();
+      this.catalogos.set({
+        paises: c.paises,
+        hobbies: c.hobbies,
+        preexistencias: c.preexistencias,
+      });
+    } catch {
+      // Sin catálogos los combobox quedan vacíos: el analista evalúa igual y
+      // el motor cae a sus listas heredadas.
+      this.catalogos.set(null);
+    }
+  }
+
   private payload(): DatosEvaluables {
     const t = this.tarea();
     return {
@@ -725,6 +870,9 @@ export class EvaluarModalComponent implements OnInit {
       genero: this.genero,
       ciudad: this.ciudad,
       ocupacion: this.ocupacion,
+      pais_residencia: this.pais(),
+      hobbies: this.hobbies(),
+      preexistencias: this.preexistencias(),
       suma_asegurada: parseSumaTxt(this.sumaTxt),
       prima_mensual: t.producto.prima_mensual,
       anios_vigencia: Number(this.anios) || 0,

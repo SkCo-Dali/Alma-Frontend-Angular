@@ -17,6 +17,8 @@ export interface AlertaApi {
   condicion: string;
   mensaje: string;
   prioridad: 'Alta' | 'Media' | 'Baja';
+  /** v3: qué pedirle al asesor, redactado por suscripción en el catálogo. */
+  requisito?: string;
 }
 
 export interface EvaluacionApi {
@@ -285,6 +287,11 @@ export interface DatosEvaluables {
   discapacidad: boolean;
   medicacion: boolean;
   verificaciones?: Verificaciones;
+  // v3: ítems de catálogo que la bandeja no guarda como columna. Solo
+  // alimentan la evaluación; el backend no los persiste en la solicitud.
+  pais_residencia?: string | null;
+  hobbies?: string[];
+  preexistencias?: string[];
 }
 
 // ── Motor de Cúmulo (política POL-ADC-01-11-01 v13) ─────────────────────────
@@ -349,7 +356,10 @@ export interface EstadosCatalogosApi {
   estadoCobertura: Record<string, string>;
   unidadExamenes: Record<string, string>;
   paquetesExamen: string[];
+  /** Longitudes reales de las columnas de TrkApplications (el borde corta ahí). */
   observacionesMax: number;
+  numeroCitaMax: number;
+  direccionMax: number;
 }
 
 export interface EstadoAplicadoApi {

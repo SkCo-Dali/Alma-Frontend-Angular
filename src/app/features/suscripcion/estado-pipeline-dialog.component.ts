@@ -259,6 +259,7 @@ const CASOS: CasoDef[] = [
                     <input
                       type="text"
                       class="alma-input h-9 rounded-xl text-sm"
+                      [maxlength]="maxNumeroCita()"
                       [(ngModel)]="ex.numero_cita"
                       placeholder="9005000"
                     />
@@ -312,6 +313,7 @@ const CASOS: CasoDef[] = [
                   <input
                     type="text"
                     class="alma-input h-9 rounded-xl text-sm"
+                    [maxlength]="maxDireccion()"
                     [(ngModel)]="ex.direccion_domicilio"
                   />
                 </label>
@@ -447,9 +449,15 @@ export class EstadoPipelineDialogComponent {
     () => CASOS.find((c) => c.id === this.caso())?.titulo ?? '',
   );
 
+  // Cotas de longitud = columnas reales de TrkApplications; si los catálogos
+  // no cargan se usan los mismos valores como respaldo.
   protected readonly maxObservaciones = computed(
-    () => this.catalogos()?.observacionesMax ?? 500,
+    () => this.catalogos()?.observacionesMax ?? 2000,
   );
+  protected readonly maxNumeroCita = computed(
+    () => this.catalogos()?.numeroCitaMax ?? 10,
+  );
+  protected readonly maxDireccion = computed(() => this.catalogos()?.direccionMax ?? 1000);
 
   /** Lo que quedará escrito en Pipeline, en el lenguaje de la pantalla. */
   protected readonly efecto = computed(() => {

@@ -239,7 +239,14 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                       class="mt-0.5 shrink-0"
                       [class]="a.prioridad === 'alta' ? 'text-destructive' : 'text-amber-500'"
                     />
-                    {{ a.mensaje }}
+                    <span class="min-w-0">
+                      {{ a.mensaje }}
+                      @if (a.requisito) {
+                        <span class="mt-0.5 block text-[11px] text-muted-foreground">
+                          {{ a.requisito }}
+                        </span>
+                      }
+                    </span>
                   </li>
                 }
               </ul>
