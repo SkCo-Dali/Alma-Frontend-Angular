@@ -22,6 +22,7 @@ import {
 } from './suscripcion.domain';
 import { DeclaracionesDialogComponent } from './declaraciones-dialog.component';
 import { EmitirDialogComponent } from './emitir-dialog.component';
+import { EstadoPipelineDialogComponent } from './estado-pipeline-dialog.component';
 import { EvaluarModalComponent } from './evaluar-modal.component';
 import { SimuladorHostComponent } from './simulador/simulador-host.component';
 
@@ -35,6 +36,7 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
     CopyButtonComponent,
     DeclaracionesDialogComponent,
     EmitirDialogComponent,
+    EstadoPipelineDialogComponent,
     EvaluarModalComponent,
     SimuladorHostComponent,
   ],
@@ -92,6 +94,16 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                   class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
                 >
                   <lucide-icon name="stethoscope" [size]="16" /> Evaluar con el motor
+                </button>
+                <!-- Estados de Control y Emisión: escribe en Pipeline lo que el
+                     analista diligenciaría a mano allá. -->
+                <button
+                  type="button"
+                  (click)="modal.set('estado')"
+                  class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
+                >
+                  <lucide-icon name="git-pull-request-arrow" [size]="16" />
+                  Actualizar en Pipeline
                 </button>
               }
               <!-- Aprobar y emitir: solo con permiso emit; habilitado cuando la
@@ -227,7 +239,14 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                       class="mt-0.5 shrink-0"
                       [class]="a.prioridad === 'alta' ? 'text-destructive' : 'text-amber-500'"
                     />
-                    {{ a.mensaje }}
+                    <span class="min-w-0">
+                      {{ a.mensaje }}
+                      @if (a.requisito) {
+                        <span class="mt-0.5 block text-[11px] text-muted-foreground">
+                          {{ a.requisito }}
+                        </span>
+                      }
+                    </span>
                   </li>
                 }
               </ul>
@@ -360,6 +379,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
             (closed)="modal.set(null)"
           />
         }
+        @if (modal() === 'estado') {
+          <alma-estado-pipeline-dialog
+            [tarea]="sel"
+            (closed)="modal.set(null)"
+            (aplicadoOk)="recargar()"
+          />
+        }
         @if (modal() === 'emitir') {
           <alma-emitir-dialog
             [tarea]="sel"
@@ -395,7 +421,9 @@ export class DetalleSolicitudComponent {
   protected readonly cargandoAfiliacion = signal(true);
   protected readonly refrescando = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly modal = signal<null | 'evaluar' | 'declaraciones' | 'emitir'>(null);
+  protected readonly modal = signal<
+    null | 'evaluar' | 'declaraciones' | 'emitir' | 'estado'
+  >(null);
 
   // Permisos finos: manage = evaluar con el motor; emit = emitir en Pharos.
   protected readonly puedeVer = computed(() =>
