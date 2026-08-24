@@ -1,5 +1,12 @@
 /*
-  PROPUESTA (no ejecutada) — Estreno del fondo solarpunk, ago-2026.
+  EJECUTADA en PRD el 24-ago-2026 (14 filas). — Estreno del fondo solarpunk.
+
+  LECCIÓN (incidente del mismo día): la primera versión de este script dejaba el
+  COMMIT comentado "para verificar antes". La transacción quedó abierta en SSMS
+  con locks exclusivos sobre alma.UserPreferences y tumbó /me y /me/preferences
+  en PRD (gateway timeout) hasta que se ejecutó el COMMIT. Un script de cambio
+  NUNCA debe terminar con la transacción abierta: se valida con la condición del
+  propio UPDATE y @@ROWCOUNT, y se confirma o revierte EN EL MISMO lote.
 
   Alinea el fondo guardado en el servidor con el nuevo por defecto ('terraza'),
   para que el estreno también aplique en los otros navegadores/dispositivos del
@@ -33,7 +40,12 @@ FROM alma.UserPreferences
 WHERE ISJSON(Data) = 1
   AND ISNULL(JSON_VALUE(Data, '$.background'), '') <> 'terraza';
 
--- ── 3. El cambio ───────────────────────────────────────────────────────────
+-- ── 3. El cambio (auto-contenido: confirma o revierte en el mismo lote) ─────
+DECLARE @esperadas int = (
+  SELECT COUNT(*) FROM alma.UserPreferences
+  WHERE ISJSON(Data) = 1 AND ISNULL(JSON_VALUE(Data, '$.background'), '') <> 'terraza'
+);
+
 BEGIN TRANSACTION;
 
 UPDATE alma.UserPreferences
@@ -42,11 +54,16 @@ SET Data = JSON_MODIFY(Data, '$.background', 'terraza'),
 WHERE ISJSON(Data) = 1
   AND ISNULL(JSON_VALUE(Data, '$.background'), '') <> 'terraza';
 
--- Revisar el conteo afectado antes de confirmar:
-SELECT @@ROWCOUNT AS filas_actualizadas;
-
--- COMMIT TRANSACTION;   -- descomentar cuando el conteo sea el esperado
--- ROLLBACK TRANSACTION; -- si algo no cuadra
+IF @@ROWCOUNT = @esperadas
+BEGIN
+  COMMIT TRANSACTION;
+  PRINT CONCAT('OK: ', @esperadas, ' filas actualizadas y confirmadas.');
+END
+ELSE
+BEGIN
+  ROLLBACK TRANSACTION;
+  PRINT 'ROLLBACK: el conteo no coincidió con lo esperado.';
+END
 
 -- ── 4. Vuelta atrás (si hiciera falta) ─────────────────────────────────────
 /*
