@@ -12,6 +12,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
   Component,
+  DestroyRef,
   ElementRef,
   QueryList,
   ViewChildren,
@@ -55,15 +56,15 @@ interface DockEntry {
     @if (insideApp()) {
       <div
         class="fixed inset-x-0 bottom-0 z-30 flex items-end justify-center"
-        (dragenter)="summoned.set(true)"
-        (dragover)="$event.preventDefault(); summoned.set(true)"
+        (dragenter)="invocar()"
+        (dragover)="$event.preventDefault(); invocar()"
       >
         <button
           type="button"
           aria-label="Mostrar dock"
-          (mouseenter)="summoned.set(true)"
-          (click)="summoned.set(true)"
-          (focus)="summoned.set(true)"
+          (mouseenter)="invocar()"
+          (click)="invocar()"
+          (focus)="invocar()"
           class="flex cursor-pointer flex-col items-center px-3 pb-1.5 pt-3 transition-opacity duration-200"
           [style.opacity]="hidden() ? 1 : 0"
           [style.pointerEvents]="hidden() ? 'auto' : 'none'"
@@ -79,14 +80,15 @@ interface DockEntry {
       class="dock-panel pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-3"
       [style.transform]="hidden() ? 'translateY(130px)' : 'translateY(0)'"
       [style.opacity]="hidden() ? 0 : 1"
-      (mouseleave)="insideApp() && summoned.set(false)"
+      (mouseenter)="cancelarOcultar()"
+      (mouseleave)="alSalirDelPanel($event)"
     >
       <nav
         aria-label="Dock de navegación"
         class="glass-strong pointer-events-auto relative flex items-end gap-2 rounded-[24px] border border-border px-3 pb-1.5 pt-2 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
         (mouseleave)="onLeaveNav()"
-        (focusin)="insideApp() && summoned.set(true)"
+        (focusin)="insideApp() && invocar()"
       >
         @for (entry of entries(); track entry.key; let i = $index) {
           @if (entry.key === 'sep') {
@@ -231,6 +233,41 @@ export class DockComponent {
   });
   protected readonly hidden = computed(() => this.insideApp() && !this.summoned());
 
+  // Hover-intent: entre la línea invocadora (bottom-0) y el Dock (bottom-3) hay
+  // una franja muerta. Sin gracia, cruzarla dispara un ocultar→mostrar en cadena
+  // que se siente como rebote. Ocultamos con un retardo CANCELABLE: volver a
+  // entrar cancela el cierre en vez de reiniciar la animación.
+  private ocultarTimer: number | null = null;
+
+  protected cancelarOcultar(): void {
+    if (this.ocultarTimer !== null) {
+      clearTimeout(this.ocultarTimer);
+      this.ocultarTimer = null;
+    }
+  }
+
+  private programarOcultar(): void {
+    this.cancelarOcultar();
+    this.ocultarTimer = setTimeout(() => this.summoned.set(false), 300) as unknown as number;
+  }
+
+  protected invocar(): void {
+    this.cancelarOcultar();
+    this.summoned.set(true);
+  }
+
+  /**
+   * El Dock DESLIZA bajo el cursor al mostrarse/ocultarse, lo que dispara un
+   * mouseleave "fantasma" con el cursor quieto. Si el cursor sigue pegado al
+   * borde inferior (sobre la línea invocadora, por debajo del Dock) NO ocultamos:
+   * no se fue, es el Dock el que pasó por debajo.
+   */
+  protected alSalirDelPanel(e: MouseEvent): void {
+    if (!this.insideApp()) return;
+    if (window.innerHeight - e.clientY < 28) return;
+    this.programarOcultar();
+  }
+
   // Ancho de viewport reactivo (cuántas apps caben en el Dock)
   private readonly vw = signal(window.innerWidth);
   private readonly onResize = () => this.vw.set(window.innerWidth);
@@ -274,11 +311,13 @@ export class DockComponent {
   });
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.cancelarOcultar());
     window.addEventListener('resize', this.onResize);
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
         this.pathname.set(e.urlAfterRedirects);
+        this.cancelarOcultar();
         this.summoned.set(false);
       });
   }

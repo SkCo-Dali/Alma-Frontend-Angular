@@ -84,7 +84,7 @@ interface ItemVista {
     <aside
       aria-label="Simulador de asegurabilidad"
       [attr.aria-hidden]="!open()"
-      class="surface-solid fixed bottom-0 right-0 top-24 z-20 flex w-full max-w-[420px] flex-col border-l border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
+      class="surface-solid fixed bottom-4 right-0 top-24 z-20 flex w-full max-w-[420px] flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
       [class]="open() ? 'translate-x-0' : 'pointer-events-none translate-x-full'"
     >
       <!-- Cabecera -->

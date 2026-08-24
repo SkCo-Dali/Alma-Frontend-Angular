@@ -51,13 +51,10 @@ const EXTRA_ICONS = [
       @case ('ready') {
         <div class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">
           <alma-header />
-          <!-- El espacio del Dock se reserva como PADDING del área que scrollea,
-               no como una banda fija al final de la columna: así el contenido
-               siempre puede desplazarse por encima del Dock, pero sin robarle
-               6.5rem de alto visible a todas las páginas (efecto "footer"). -->
-          <main
-            class="min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-28"
-          >
+          <!-- Sin banda ni padding reservado para el Dock: es flotante y se
+               auto-oculta dentro de las apps, así que reservarle alto le robaba
+               ~104px a TODAS las páginas (se veía como un footer vacío). -->
+          <main class="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
             <!-- Las páginas que rinden un hijo con [data-full-bleed] (p. ej. la
                  bandeja de Suscripción) usan todo el ancho disponible. -->
             <div class="mx-auto w-full max-w-[1400px] has-[[data-full-bleed]]:max-w-none">

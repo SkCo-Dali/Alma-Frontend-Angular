@@ -12,7 +12,7 @@ import { shortName } from '../../core/utils/name';
   selector: 'alma-header',
   imports: [RouterLink, LucideAngularModule],
   template: `
-    <header class="sticky top-0 z-30 flex h-24 items-center gap-4 bg-transparent px-4 md:px-6">
+    <header class="sticky top-0 z-30 flex h-20 items-center gap-4 bg-transparent px-4 md:px-6">
       <a routerLink="/" class="flex shrink-0 items-center gap-3" aria-label="Inicio">
         <img src="alma-logo.png" alt="Alma Skandia" class="block h-[3.25rem] w-auto dark:hidden" />
         <img

@@ -66,13 +66,14 @@ interface CeldaRender {
     <div class="leads-table-container-scroll relative w-full bg-[var(--table-surface)]">
       <!-- Altura: crece hasta ~25 filas (tope 800px) en pantallas altas, con
            scroll interno para el resto; en pantallas bajas manda el
-           viewport-calc, que reserva header + journey + toolbar + paginación +
-           el colchón del Dock. Solo scrollea la tabla, nunca el <main>.
-           (Eran 500px cuando el shell reservaba una banda fija de 6.5rem para
-           el Dock; al quitarla, la tabla recupera ese alto.) -->
+           viewport-calc, que reserva el encabezado del portal + el toolbar en UNA
+           fila [búsqueda · filtro por etapa · Columnas] + la paginación + un
+           colchón inferior de aire. Bajó 500→415 (al quitar la banda del Dock),
+           415→355 (al fusionar journey y toolbar en una fila) y 355→340 (al
+           reducir el header h-24→h-20). Solo scrollea la tabla, nunca el <main>. -->
       <div
         class="leads-table-scroll-wrapper w-full"
-        style="height: min(calc(100dvh - 400px), 800px); min-height: 320px"
+        style="height: min(calc(100dvh - 340px), 800px); min-height: 320px"
       >
         <div class="leads-table-inner-scroll bg-[var(--table-surface)]">
           <table

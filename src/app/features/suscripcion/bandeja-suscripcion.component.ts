@@ -15,6 +15,7 @@ import { AlmaLoaderComponent } from '../../shared/components/alma-loader.compone
 import { GridPaginationComponent } from '../../shared/components/grid-pagination.component';
 import { ColumnSelectorComponent } from './grid/column-selector.component';
 import { GridSearchComponent } from './grid/grid-search.component';
+import { SimuladorBotonComponent } from './simulador/simulador-boton.component';
 import { SuscripcionGridApi, SuscripcionGridItem } from './grid/suscripcion-grid.api';
 import { STICKY_GRID_COLUMNS, SuscripcionGridStore } from './grid/suscripcion-grid.store';
 import { SuscripcionGridTableComponent } from './grid/suscripcion-grid-table.component';
@@ -94,6 +95,7 @@ const CAPSULE_HOVER: Record<FamiliaEtapa, string> = {
     AlmaLoaderComponent,
     GridPaginationComponent,
     GridSearchComponent,
+    SimuladorBotonComponent,
     ColumnSelectorComponent,
     SuscripcionGridTableComponent,
   ],
@@ -105,137 +107,150 @@ const CAPSULE_HOVER: Record<FamiliaEtapa, string> = {
       </div>
     } @else {
       <div data-full-bleed class="w-full space-y-3">
-        <!-- Filtros por etapa (conteos desde distincts, clic = filtro discreto) -->
-        <div class="flex justify-center overflow-x-auto px-2 py-2">
-          <div
-            class="glass flex w-max items-center gap-1.5 rounded-2xl px-3 py-2 shadow-[var(--shadow-md)]"
-          >
-            <span
-              class="mr-0.5 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground"
-            >
-              <lucide-icon name="filter" [size]="14" /> Filtrar por etapa
-            </span>
-            <div class="mx-0.5 h-6 w-px shrink-0 bg-border"></div>
-
-            @for (etapa of lineales; track etapa.clave) {
-              <button
-                type="button"
-                (click)="clickEtapa(etapa.clave)"
-                [title]="tituloChip(etapa)"
-                [attr.aria-pressed]="etapaSeleccionada() === etapa.clave"
-                class="flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 transition-colors"
-                [class]="
-                  etapaSeleccionada() === etapa.clave
-                    ? capsuleActive[etapa.familia] + ' shadow-sm'
-                    : 'border-border bg-card/70 text-foreground ' + capsuleHover[etapa.familia]
-                "
-              >
-                <span
-                  class="text-base font-bold leading-none tabular-nums"
-                  [class]="
-                    etapaSeleccionada() === etapa.clave ? '' : capsuleCount[etapa.familia]
-                  "
-                >
-                  {{ conteos()[etapa.clave] || 0 }}
-                </span>
-                <span
-                  class="text-xs font-semibold leading-none"
-                  [class]="
-                    etapaSeleccionada() === etapa.clave ? 'opacity-90' : 'text-muted-foreground'
-                  "
-                >
-                  {{ etapa.label }}
-                </span>
-              </button>
-            }
-
-            <div class="mx-0.5 h-6 w-px shrink-0 bg-border/70"></div>
-
-            @for (etapa of terminales; track etapa.clave) {
-              <button
-                type="button"
-                (click)="clickEtapa(etapa.clave)"
-                [title]="tituloChip(etapa)"
-                [attr.aria-pressed]="etapaSeleccionada() === etapa.clave"
-                class="flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 transition-colors"
-                [class]="
-                  etapaSeleccionada() === etapa.clave
-                    ? capsuleActive[etapa.familia] + ' shadow-sm'
-                    : 'border-border bg-card/70 text-foreground ' + capsuleHover[etapa.familia]
-                "
-              >
-                <span
-                  class="text-base font-bold leading-none tabular-nums"
-                  [class]="
-                    etapaSeleccionada() === etapa.clave ? '' : capsuleCount[etapa.familia]
-                  "
-                >
-                  {{ conteos()[etapa.clave] || 0 }}
-                </span>
-                <span
-                  class="text-xs font-semibold leading-none"
-                  [class]="
-                    etapaSeleccionada() === etapa.clave ? 'opacity-90' : 'text-muted-foreground'
-                  "
-                >
-                  {{ etapa.label }}
-                </span>
-              </button>
-            }
-
-            @if (etapaSeleccionada()) {
-              <div class="mx-0.5 h-6 w-px shrink-0 bg-border/70"></div>
-              <button
-                type="button"
-                (click)="grid.clearFieldFilter('EstadoPipeline')"
-                class="flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-              >
-                <lucide-icon name="x" [size]="14" /> Ver todas
-              </button>
+        <!-- Toolbar en UNA sola fila: búsqueda (izq) · filtro por etapa (centro) ·
+             Columnas + Simulador (der). Los grupos izq y der crecen por igual
+             (flex-1), así el filtro —de ancho natural— queda flanqueado por
+             espacios iguales = CENTRADO REAL, sin encoger el buscador. -->
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Izquierda: solo búsqueda + spinner de refresco -->
+          <div class="flex flex-1 items-center gap-2">
+            <alma-grid-search
+              [searchTerm]="grid.search()"
+              (searchChange)="grid.updateSearch($event)"
+            />
+            @if (grid.isFetching() && !grid.isLoading()) {
+              <lucide-icon
+                name="refresh-cw"
+                [size]="14"
+                class="animate-spin text-muted-foreground"
+              />
             }
           </div>
-        </div>
 
-        <!-- Toolbar: búsqueda + filtros activos + Columnas -->
-        <div class="flex flex-wrap items-center gap-2">
-          <alma-grid-search
-            [searchTerm]="grid.search()"
-            (searchChange)="grid.updateSearch($event)"
-          />
-          @if (grid.camposFiltrados() > 0 || grid.search()) {
-            <div class="flex items-center gap-1.5">
-              @if (grid.camposFiltrados() > 0) {
-                <span
-                  class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium tabular-nums text-primary"
+          <!-- Centro: filtro por etapa SIEMPRE centrado entre los grupos
+               laterales (ancho natural, sin flex-1). El botón "Limpiar" flota a
+               su derecha con posición ABSOLUTA (no ocupa espacio de layout), así
+               el filtro no se descentra al aparecer/desaparecer. -->
+          <div class="relative flex shrink-0 items-center justify-center">
+            <div
+              class="glass flex w-max items-center gap-1.5 rounded-2xl px-3 py-2 shadow-[var(--shadow-md)]"
+            >
+              <span
+                class="mr-0.5 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground"
+              >
+                <lucide-icon name="filter" [size]="14" /> Filtrar por etapa
+              </span>
+              <div class="mx-0.5 h-6 w-px shrink-0 bg-border"></div>
+
+              <!-- Etapas del flujo (unidas por flechas → que marcan el avance) -->
+              @for (etapa of lineales; track etapa.clave; let i = $index) {
+                <button
+                  type="button"
+                  (click)="clickEtapa(etapa.clave)"
+                  [title]="tituloChip(etapa)"
+                  [attr.aria-pressed]="etapaSeleccionada() === etapa.clave"
+                  class="flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 transition-colors"
+                  [class]="
+                    etapaSeleccionada() === etapa.clave
+                      ? capsuleActive[etapa.familia] + ' shadow-sm'
+                      : 'border-border bg-card/70 text-foreground ' + capsuleHover[etapa.familia]
+                  "
                 >
-                  {{ grid.camposFiltrados() }}
-                  {{ grid.camposFiltrados() === 1 ? 'columna filtrada' : 'columnas filtradas' }}
-                </span>
+                  <span
+                    class="text-base font-bold leading-none tabular-nums"
+                    [class]="
+                      etapaSeleccionada() === etapa.clave ? '' : capsuleCount[etapa.familia]
+                    "
+                  >
+                    {{ conteos()[etapa.clave] || 0 }}
+                  </span>
+                  <span
+                    class="text-xs font-semibold leading-none"
+                    [class]="
+                      etapaSeleccionada() === etapa.clave ? 'opacity-90' : 'text-muted-foreground'
+                    "
+                  >
+                    {{ etapa.label }}
+                  </span>
+                </button>
+                @if (i < lineales.length - 1) {
+                  <lucide-icon
+                    name="arrow-right"
+                    [size]="16"
+                    aria-hidden="true"
+                    class="shrink-0 text-muted-foreground/60"
+                  />
+                }
               }
+
+              <!-- Separador sutil hacia las salidas del flujo -->
+              <div class="mx-0.5 h-6 w-px shrink-0 bg-border/70"></div>
+
+              @for (etapa of terminales; track etapa.clave) {
+                <button
+                  type="button"
+                  (click)="clickEtapa(etapa.clave)"
+                  [title]="tituloChip(etapa)"
+                  [attr.aria-pressed]="etapaSeleccionada() === etapa.clave"
+                  class="flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 transition-colors"
+                  [class]="
+                    etapaSeleccionada() === etapa.clave
+                      ? capsuleActive[etapa.familia] + ' shadow-sm'
+                      : 'border-border bg-card/70 text-foreground ' + capsuleHover[etapa.familia]
+                  "
+                >
+                  <span
+                    class="text-base font-bold leading-none tabular-nums"
+                    [class]="
+                      etapaSeleccionada() === etapa.clave ? '' : capsuleCount[etapa.familia]
+                    "
+                  >
+                    {{ conteos()[etapa.clave] || 0 }}
+                  </span>
+                  <span
+                    class="text-xs font-semibold leading-none"
+                    [class]="
+                      etapaSeleccionada() === etapa.clave ? 'opacity-90' : 'text-muted-foreground'
+                    "
+                  >
+                    {{ etapa.label }}
+                  </span>
+                </button>
+              }
+
+              @if (etapaSeleccionada()) {
+                <div class="mx-0.5 h-6 w-px shrink-0 bg-border/70"></div>
+                <button
+                  type="button"
+                  (click)="grid.clearFieldFilter('EstadoPipeline')"
+                  class="flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  <lucide-icon name="x" [size]="14" /> Ver todas
+                </button>
+              }
+            </div>
+
+            @if (grid.camposFiltrados() > 0 || grid.search()) {
               <button
                 type="button"
                 (click)="limpiarTodo()"
-                class="flex h-7 items-center rounded-lg px-2 text-xs text-primary hover:bg-primary/10"
+                class="absolute left-full top-1/2 ml-2 flex h-7 -translate-y-1/2 items-center whitespace-nowrap rounded-lg px-2 text-xs text-primary hover:bg-primary/10"
               >
                 <lucide-icon name="x" [size]="14" class="mr-1" />
                 {{ etiquetaLimpiar() }}
               </button>
-            </div>
-          }
-          @if (grid.isFetching() && !grid.isLoading()) {
-            <lucide-icon
-              name="refresh-cw"
-              [size]="14"
-              class="animate-spin text-muted-foreground"
-            />
-          }
-          <div class="ml-auto">
+            }
+          </div>
+
+          <!-- Derecha: selector de columnas + disparador del simulador -->
+          <div class="flex flex-1 items-center justify-end gap-2">
             <alma-column-selector
               [columns]="grid.columns()"
               [requiredKeys]="stickyKeys"
               (columnsChange)="grid.setColumns($event)"
               (closed)="grid.persistColumns()"
             />
+            <alma-simulador-boton />
           </div>
         </div>
 
