@@ -79,11 +79,31 @@ interface ItemVista {
     CatalogoComboboxComponent,
   ],
   template: `
+    <!--
+      El desplazamiento va como ESTILO INLINE, no como clase, y con el valor
+      cerrado ya puesto en el atributo estático.
+
+      Con la app en zoneless, el binding [class] puede evaluarse un ciclo de
+      detección DESPUÉS de que el elemento se inserta en el DOM (medido en Dev:
+      1,8 s, mientras resuelven getSolicitud/getAfiliacion). En ese hueco el
+      panel se pintaba en su posición ABIERTA —porque el estado cerrado vivía
+      solo en el binding— y al llegar el binding «transition-transform» animaba
+      la corrección: el panel se abría solo y se cerraba a los dos segundos.
+      En Prd no se notaba porque el build optimizado cierra ese hueco.
+
+      El estilo estático garantiza que el primer pintado ya sea el cerrado, y
+      el binding gana cuando corre. No sirve poner el cerrado como clase
+      estática: entre «translate-x-full» y «translate-x-0» gana el primero (son
+      la misma especificidad y decide el orden de la hoja), así que el panel no
+      volvería a abrirse.
+    -->
     <aside
       aria-label="Simulador de asegurabilidad"
       [attr.aria-hidden]="!open()"
+      style="translate: 100%"
+      [style.translate]="open() ? '0' : '100%'"
       class="surface-solid fixed bottom-4 right-0 top-24 z-20 flex w-full max-w-[420px] flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
-      [class]="open() ? 'translate-x-0' : 'pointer-events-none translate-x-full'"
+      [class.pointer-events-none]="!open()"
     >
       <!-- Cabecera -->
       <div class="flex items-center gap-2 border-b border-border px-4 py-3">
