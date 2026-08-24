@@ -468,9 +468,9 @@ html.dark[data-bg="cielo"] {
   }
 }
 
-/* ── Esfera de Alma (AlmaSphere) ── burbuja holográfica de vidrio: volumen por
-   varios radial-gradient translúcidos, borde fino cian refractivo, glow interno
-   turquesa, reflejos difusos y energía en movimiento sutil. Sin negros. */
+/* ── Esfera de Alma (AlmaSphere) ── híbrida: el CUERPO es el asset renderizado
+   (alma-orb.webp, cristal sin ojos); el CSS solo aporta los ojos interactivos y
+   un remate de luz mínimo. Nada de gradientes/sombras que pinten la esfera. */
 .almasph {
   position: relative;
   width: 100%;
@@ -478,118 +478,33 @@ html.dark[data-bg="cielo"] {
   display: grid;
   place-items: center;
   container-type: size;
-  animation: almasph-breathe 5s ease-in-out infinite;
+  animation: almasph-breathe 6s ease-in-out infinite;
 }
-.almasph-core {
-  position: relative;
+.almasph-orb {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  /* Volumen del vidrio: luz arriba-izquierda casi blanca, aqua brillante al
-     centro, esmeralda profundo abajo-derecha, y base translúcida que deja
-     percibir el fondo a través de la burbuja. */
-  background:
-    radial-gradient(circle at 27% 18%, rgba(255, 255, 255, 0.92) 0%, rgba(225, 255, 244, 0.5) 11%, rgba(225, 255, 244, 0) 30%),
-    radial-gradient(circle at 46% 45%, rgba(92, 255, 226, 0.72) 0%, rgba(17, 226, 184, 0.42) 30%, rgba(17, 226, 184, 0) 62%),
-    radial-gradient(circle at 74% 78%, rgba(0, 140, 78, 0.88) 0%, rgba(0, 190, 108, 0.62) 38%, rgba(0, 190, 108, 0) 74%),
-    radial-gradient(circle at 24% 82%, rgba(80, 235, 190, 0.4) 0%, rgba(80, 235, 190, 0) 55%),
-    radial-gradient(circle at 50% 50%, rgba(110, 240, 200, 0.5), rgba(0, 165, 100, 0.6));
-  /* Borde de vidrio + volumen con sombras COLOREADAS (nada de negro) */
-  box-shadow:
-    inset 0 0 0 0.55cqmin rgba(200, 255, 240, 0.5),
-    inset 3cqmin 4cqmin 9cqmin rgba(255, 255, 255, 0.32),
-    inset -4cqmin -6cqmin 14cqmin rgba(0, 105, 72, 0.26),
-    0 0 3cqmin rgba(126, 255, 224, 0.45),
-    0 0 11cqmin rgba(41, 235, 169, 0.26),
-    0 6cqmin 14cqmin rgba(0, 150, 95, 0.16);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-}
-/* Energía interna: nubes de luz esmeralda/aqua moviéndose despacio bajo el vidrio */
-.almasph-field {
-  position: absolute;
-  inset: 0;
-  filter: blur(4cqmin) saturate(1.3);
-  opacity: 0.55;
-}
-.almasph-field .b {
-  position: absolute;
-  top: 19%;
-  left: 19%;
-  width: 62%;
-  height: 62%;
-  border-radius: 50%;
-  mix-blend-mode: screen;
-  will-change: transform;
-}
-.almasph .b1 { background: radial-gradient(circle, #16d15f 0%, transparent 70%); animation: blobA 9s ease-in-out infinite; }
-.almasph .b2 { background: radial-gradient(circle, #4beb9a 0%, transparent 70%); animation: blobB 11s ease-in-out infinite; }
-.almasph .b3 { background: radial-gradient(circle, #14c9a8 0%, transparent 70%); animation: blobC 13s ease-in-out infinite; }
-.almasph .b4 { background: radial-gradient(circle, #7df0e0 0%, transparent 70%); animation: blobD 8.5s ease-in-out infinite; }
-.almasph .b5 { background: radial-gradient(circle, #eafff2 0%, transparent 70%); animation: blobE 12s ease-in-out infinite; }
-/* Glow turquesa alrededor del centro, fundido con el verde */
-.almasph-glow {
-  position: absolute;
-  left: 26%;
-  top: 30%;
-  width: 52%;
-  height: 46%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(96, 250, 220, 0.75), rgba(96, 250, 220, 0) 70%);
-  filter: blur(3.5cqmin);
-  mix-blend-mode: screen;
-}
-/* Reflejos del vidrio */
-.almasph-hl {
-  position: absolute;
-  border-radius: 50%;
+  display: block;
+  object-fit: contain;
+  user-select: none;
   pointer-events: none;
+  /* Remate mínimo: el asset es la fuente de verdad visual */
+  filter: drop-shadow(0 3cqmin 5cqmin rgba(0, 150, 110, 0.12))
+    drop-shadow(0 0 4cqmin rgba(80, 255, 220, 0.1));
 }
-.almasph-hl-main {
-  /* highlight principal: grande, suave, arriba-izquierda (no una mancha plana) */
-  left: 10%;
-  top: 5%;
-  width: 46%;
-  height: 38%;
-  background: radial-gradient(circle at 45% 40%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.28) 55%, rgba(255, 255, 255, 0) 78%);
-  filter: blur(1.6cqmin);
-  transform: rotate(-18deg);
-}
-.almasph-hl-dot {
-  /* chispa especular pequeña dentro del highlight */
-  left: 24%;
-  top: 13%;
-  width: 9%;
-  height: 7%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0) 75%);
-  filter: blur(0.3cqmin);
-}
-.almasph-hl-sec {
-  /* reflejo secundario: media luna tenue abajo-derecha (luz rebotada) */
-  right: 8%;
-  bottom: 10%;
-  width: 34%;
-  height: 22%;
-  background: radial-gradient(ellipse at 55% 65%, rgba(190, 255, 235, 0.4), rgba(190, 255, 235, 0) 70%);
-  filter: blur(1.4cqmin);
-  transform: rotate(-24deg);
-}
-/* Borde refractivo: anillo de luz fino que solo existe en el perímetro */
-.almasph-rim {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0) 88%, rgba(210, 255, 242, 0.18) 94%, rgba(150, 255, 228, 0.42) 98%, rgba(255, 255, 255, 0.55) 100%);
-}
-/* Ojos: luces DENTRO del cristal (halo blanco/cian suave, sin sombra negra) */
+/* Ojos: luces blancas verticales DENTRO del cristal.
+   Posición base (eyes) → seguimiento del cursor (gaze) → parpadeo (eye). */
 .almasph-eyes {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 47%;
+  width: 34%;
+  height: 22%;
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  transform: translateY(-6%);
+  pointer-events: none;
 }
 .almasph-gaze {
   display: flex;
@@ -598,22 +513,23 @@ html.dark[data-bg="cielo"] {
   gap: 10cqmin;
   transition: transform 0.18s ease-out;
 }
+.almasph-socket {
+  display: grid;
+  place-items: center;
+}
 .almasph-eye {
-  width: 7.5cqmin;
-  height: 18cqmin;
+  width: 7cqmin;
+  height: 17cqmin;
   border-radius: 999px;
-  background: linear-gradient(to bottom, #ffffff, #eafffa);
+  background: rgba(255, 255, 255, 0.98);
   box-shadow:
-    0 0 2.5cqmin rgba(255, 255, 255, 0.9),
-    0 0 7cqmin rgba(140, 255, 230, 0.55);
+    0 0 1.5cqmin rgba(255, 255, 255, 0.95),
+    0 0 4cqmin rgba(195, 255, 245, 0.65),
+    0 0 7cqmin rgba(130, 255, 225, 0.22);
+  transform-origin: center;
   animation: almasph-blink 2.9s ease-in-out infinite;
 }
-@keyframes blobA { 0%{transform:translate(-40%,-30%) scale(1)} 25%{transform:translate(38%,-10%) scale(1.35)} 50%{transform:translate(16%,42%) scale(.9)} 75%{transform:translate(-34%,24%) scale(1.2)} 100%{transform:translate(-40%,-30%) scale(1)} }
-@keyframes blobB { 0%{transform:translate(42%,-34%) scale(1.15)} 30%{transform:translate(-28%,-12%) scale(.85)} 60%{transform:translate(-36%,36%) scale(1.35)} 100%{transform:translate(42%,-34%) scale(1.15)} }
-@keyframes blobC { 0%{transform:translate(-30%,40%) scale(1)} 35%{transform:translate(34%,30%) scale(1.3)} 70%{transform:translate(40%,-28%) scale(.9)} 100%{transform:translate(-30%,40%) scale(1)} }
-@keyframes blobD { 0%{transform:translate(34%,34%) scale(1.2)} 25%{transform:translate(-40%,16%) scale(.9)} 55%{transform:translate(-10%,-38%) scale(1.35)} 80%{transform:translate(30%,-8%) scale(1.05)} 100%{transform:translate(34%,34%) scale(1.2)} }
-@keyframes blobE { 0%{transform:translate(0%,-14%) scale(1.15)} 33%{transform:translate(40%,28%) scale(.85)} 66%{transform:translate(-40%,-22%) scale(1.4)} 100%{transform:translate(0%,-14%) scale(1.15)} }
-@keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
 @keyframes almasph-blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(.12); } }
 
 /* ── Marco "vivo" de la esfera (AlmaHousing): halo casi imperceptible, órbitas
@@ -629,32 +545,39 @@ html.dark[data-bg="cielo"] {
   grid-area: 1 / 1;
   place-self: center;
 }
-/* Halo exterior: pura luminosidad, prácticamente invisible */
+/* Halo exterior: pura luminosidad, prácticamente imperceptible (el material
+   del cristal ya viene en el asset; esto solo suma un aliento de luz). */
 .almah-aura {
-  width: 96%;
-  height: 96%;
+  width: 110%;
+  height: 110%;
   border-radius: 50%;
   z-index: 0;
-  background: radial-gradient(circle, rgba(90, 240, 190, 0.4), rgba(120, 235, 215, 0.18) 52%, rgba(90, 240, 190, 0) 74%);
-  filter: blur(10cqmin);
-  animation: almah-aura 5s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(80, 255, 215, 0.12) 0%, rgba(90, 240, 210, 0.05) 45%, rgba(90, 240, 210, 0) 72%);
+  filter: blur(5cqmin);
+  animation: almah-aura 6s ease-in-out infinite;
 }
 /* Órbitas holográficas: líneas finísimas alrededor de la esfera, giro lento */
 .almah-orbit {
-  width: 78%;
-  height: 78%;
+  width: 82%;
+  height: 82%;
   border-radius: 50%;
   z-index: 1;
-  border: 0.35cqmin solid rgba(185, 255, 235, 0.3);
-  transform: translateY(-6%) rotateX(70deg);
-  animation: almah-orbita 26s linear infinite;
+  border: 0.3cqmin solid rgba(185, 255, 235, 0.22);
+  transform: translateY(-6%) rotateX(72deg);
+  animation: almah-orbita 30s linear infinite;
   pointer-events: none;
 }
+.almah-orbit.o1f {
+  /* mitad frontal de la o1: misma geometría y misma animación (quedan en
+     fase), recortada a la franja inferior y por ENCIMA de la esfera */
+  z-index: 3;
+  clip-path: inset(58% 0 0 0);
+}
 .almah-orbit.o2 {
-  width: 88%;
-  height: 88%;
-  border-color: rgba(150, 245, 220, 0.18);
-  animation-duration: 38s;
+  width: 92%;
+  height: 92%;
+  border-color: rgba(150, 245, 220, 0.13);
+  animation-duration: 44s;
   animation-direction: reverse;
 }
 /* Base holográfica: elipses de luz muy suaves bajo la esfera (nada de bordes
@@ -728,6 +651,16 @@ html.dark[data-bg="cielo"] {
 @keyframes almah-wave { 0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.65; } 100% { transform: translate(-50%, -50%) scale(2.05); opacity: 0; } }
 @keyframes almah-bob { 0%,100% { transform: translateY(-6%); } 50% { transform: translateY(-9%); } }
 @keyframes almah-float { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .almah-sphere,
+  .almah-orbit,
+  .almah-wave,
+  .almah-aura,
+  .almasph {
+    animation: none;
+  }
+}
 
 /* Dock: transición suave de la magnificación (el tamaño lo calcula
    DockComponent en cada mousemove) */

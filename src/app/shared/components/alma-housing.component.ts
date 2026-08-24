@@ -12,6 +12,7 @@ import { AlmaSphereComponent } from './alma-sphere.component';
     <div class="almah" [style.width.px]="size()" [style.height.px]="size()">
       <div class="almah-aura"></div>
       <span class="almah-orbit o1"></span>
+      <span class="almah-orbit o1 o1f"></span>
       <span class="almah-orbit o2"></span>
 
       <div class="almah-pad">

@@ -1,8 +1,10 @@
-// Alma "viva": burbuja holográfica de vidrio translúcido — volumen por capas
-// (vidrio + energía en movimiento + glow interno + reflejos + borde refractivo)
-// con ojos de luz que parpadean. LLENA su contenedor. Con `interactive` los
-// ojos siguen el cursor y miran alrededor. Estilos globales en styles.css
-// (.almasph). La lógica de mirada/parpadeo no cambia; solo el vidrio.
+// Alma "viva" — implementación HÍBRIDA:
+//  - El CUERPO es un asset renderizado (public/alma/alma-orb.webp: la esfera de
+//    cristal sin ojos y sin fondo). El CSS no intenta pintar el vidrio.
+//  - Los OJOS son HTML sobre el asset y conservan toda la interacción: siguen
+//    el cursor (gaze), hacen sacadas y parpadean.
+// Capas independientes: img (material) / eyes (posición base) / gaze (cursor)
+// / eye (parpadeo). LLENA su contenedor. Estilos globales en styles.css (.almasph).
 
 import {
   Component,
@@ -18,28 +20,19 @@ import {
   selector: 'alma-sphere',
   template: `
     <div class="almasph" #root>
-      <div class="almasph-core">
-        <!-- Energía interna (se mueve lento, muy sutil, bajo el vidrio) -->
-        <div class="almasph-field">
-          <span class="b b1"></span>
-          <span class="b b2"></span>
-          <span class="b b3"></span>
-          <span class="b b4"></span>
-          <span class="b b5"></span>
-        </div>
-        <!-- Glow turquesa alrededor del centro -->
-        <div class="almasph-glow"></div>
-        <!-- Reflejos: luz principal arriba-izquierda + secundarios -->
-        <div class="almasph-hl almasph-hl-main"></div>
-        <div class="almasph-hl almasph-hl-dot"></div>
-        <div class="almasph-hl almasph-hl-sec"></div>
-        <!-- Borde refractivo del vidrio -->
-        <div class="almasph-rim"></div>
-        <div class="almasph-eyes">
-          <div class="almasph-gaze" #gaze>
-            <span class="almasph-eye"></span>
-            <span class="almasph-eye"></span>
-          </div>
+      <!-- El material del cuerpo viene del asset; el CSS no lo recrea. -->
+      <img
+        class="almasph-orb"
+        src="alma/alma-orb.webp"
+        alt=""
+        draggable="false"
+      />
+      <!-- Ojos de luz sobre el cristal: socket = posición base, gaze = cursor,
+           eye = parpadeo. Cada responsabilidad en su propia capa. -->
+      <div class="almasph-eyes">
+        <div class="almasph-gaze" #gaze>
+          <span class="almasph-socket"><span class="almasph-eye"></span></span>
+          <span class="almasph-socket"><span class="almasph-eye"></span></span>
         </div>
       </div>
     </div>
@@ -64,7 +57,7 @@ export class AlmaSphereComponent implements OnInit, OnDestroy {
     const dx = e.clientX - (r.left + r.width / 2);
     const dy = e.clientY - (r.top + r.height / 2);
     const dist = Math.hypot(dx, dy) || 1;
-    const max = size * 0.1;
+    const max = size * 0.06;
     const k = Math.min(1, dist / size);
     this.setGaze((dx / dist) * max * k, (dy / dist) * max * 1.05 * k);
     this.lastMove = Date.now();
@@ -81,7 +74,7 @@ export class AlmaSphereComponent implements OnInit, OnDestroy {
       if (Date.now() - this.lastMove < 1600) return;
       const size = this.root.nativeElement.getBoundingClientRect().width || 160;
       const a = Math.random() * Math.PI * 2;
-      const r = size * 0.09 * (0.4 + Math.random() * 0.6);
+      const r = size * 0.05 * (0.4 + Math.random() * 0.6);
       this.setGaze(Math.cos(a) * r, Math.sin(a) * r * 0.7);
     }, 1700);
   }
