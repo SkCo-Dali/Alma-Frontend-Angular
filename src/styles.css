@@ -912,9 +912,9 @@ html.dark[data-bg="cielo"] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 6px 7px 5px;
-  border-radius: 16px;
+  gap: 2px;
+  padding: 4px 6px 4px;
+  border-radius: 14px;
   transition: background-color 0.15s ease;
 }
 .dock-entry.activa {
@@ -922,11 +922,11 @@ html.dark[data-bg="cielo"] {
   box-shadow: 0 1px 3px rgba(20, 45, 30, 0.12);
 }
 .dock-label {
-  max-width: 76px;
+  max-width: 68px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--muted-foreground);

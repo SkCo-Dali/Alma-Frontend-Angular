@@ -34,8 +34,8 @@ import { AppIconArtComponent } from './app-icon-art.component';
 import { DockLaunchpadComponent } from './dock-launchpad.component';
 import { TouchDrag, setCloneDragImage } from '../drag-utils';
 
-const BASE = 48; // icono en reposo (px)
-const PEAK = 76; // icono bajo el cursor (px)
+const BASE = 40; // icono en reposo (px)
+const PEAK = 60; // icono bajo el cursor (px)
 const RADIUS = 140; // radio de influencia (px)
 
 interface DockEntry {
@@ -86,7 +86,7 @@ interface DockEntry {
     >
       <nav
         aria-label="Dock de navegación"
-        class="glass-strong pointer-events-auto relative flex items-end gap-2 rounded-[24px] border border-border px-3 pb-1.5 pt-2 shadow-[var(--shadow-lg)]"
+        class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-full border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
         (mouseleave)="onLeaveNav()"
         (focusin)="insideApp() && invocar()"
@@ -330,7 +330,7 @@ export class DockComponent {
     const vw = this.vw();
     const esMovil = vw < 768;
     const disponible = vw - (esMovil ? 150 : 260);
-    const caben = Math.max(1, Math.floor(disponible / 56));
+    const caben = Math.max(1, Math.floor(disponible / 50));
     const topeVista = Math.min(caben, esMovil ? 8 : MAX_DOCK);
     const anclas = clampDock(Math.min(this.prefs.dockCount(), orderIds.length));
     const visibles = Math.min(anclas, topeVista);

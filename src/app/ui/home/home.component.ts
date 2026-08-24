@@ -91,6 +91,11 @@ const SPARK = [4, 6, 5, 8, 7, 10, 9, 12];
 /** Widgets del command center: ocultos hasta tener datos reales que mostrar. */
 const MOSTRAR_WIDGETS = false;
 
+/** El Agente aún no está habilitado para el público: la barra y los chips que
+ *  dependen de él se ven (misma UI) pero deshabilitados y marcados "Muy pronto".
+ *  Los chips que NO dependen del Agente (Cheques, Más acciones) siguen vivos. */
+const AGENTE_LISTO = false;
+
 @Component({
   selector: 'alma-home',
   imports: [RouterLink, FormsModule, LucideAngularModule, AlmaHousingComponent, AppIconArtComponent],
@@ -110,9 +115,10 @@ const MOSTRAR_WIDGETS = false;
         <alma-housing [size]="210" [interactive]="true" class="-my-2" />
       </div>
 
-      <!-- Pídeselo a Alma -->
+      <!-- Pídeselo a Alma (deshabilitada mientras el Agente no esté listo) -->
       <form
         class="spk-prompt flex w-full max-w-2xl items-center gap-2 rounded-full py-1.5 pl-4 pr-1.5"
+        [class.opacity-85]="!agenteListo"
         (submit)="$event.preventDefault(); enviarPrompt()"
       >
         <lucide-icon name="sparkles" [size]="17" class="shrink-0 text-primary" />
@@ -120,23 +126,40 @@ const MOSTRAR_WIDGETS = false;
           type="text"
           name="prompt"
           [(ngModel)]="prompt"
+          [disabled]="!agenteListo"
           placeholder="Pregúntale o pídele algo a Alma…"
           autocomplete="off"
-          class="h-9 w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          class="h-9 w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
+        @if (!agenteListo) {
+          <span
+            class="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary"
+          >
+            Muy pronto
+          </span>
+        }
         <button
           type="submit"
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+          [disabled]="!agenteListo"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Enviar a Alma"
         >
           <lucide-icon name="arrow-up-right" [size]="17" />
         </button>
       </form>
 
-      <!-- Acciones frecuentes -->
+      <!-- Acciones frecuentes: las que dependen del Agente se ven pero esperan -->
       <div class="mt-4 flex flex-wrap items-center justify-center gap-2.5">
         @for (chip of chips; track chip.label) {
-          <button type="button" class="spk-chip" (click)="accionChip(chip)">
+          <button
+            type="button"
+            class="spk-chip"
+            [disabled]="esDelAgente(chip) && !agenteListo"
+            [class.opacity-65]="esDelAgente(chip) && !agenteListo"
+            [class.cursor-not-allowed]="esDelAgente(chip) && !agenteListo"
+            [title]="esDelAgente(chip) && !agenteListo ? 'Disponible muy pronto con el Agente Alma' : ''"
+            (click)="accionChip(chip)"
+          >
             <lucide-icon [name]="chip.icon" [size]="15" class="text-primary" />
             {{ chip.label }}
           </button>
@@ -146,6 +169,13 @@ const MOSTRAR_WIDGETS = false;
           Más acciones
         </button>
       </div>
+
+      @if (!agenteListo) {
+        <p class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <lucide-icon name="sparkles" [size]="13" class="text-primary" />
+          El Agente Alma se activará muy pronto: desde aquí podrás pedirle todo esto.
+        </p>
+      }
 
       <!-- Widgets (listos, a la espera del API de resúmenes) -->
       @if (mostrarWidgets) {
@@ -328,6 +358,12 @@ export class HomeComponent {
 
   protected prompt = '';
   protected readonly mostrarWidgets = MOSTRAR_WIDGETS;
+  protected readonly agenteListo = AGENTE_LISTO;
+
+  /** Un chip "es del Agente" cuando su acción es un prompt (empieza con '>'). */
+  protected esDelAgente(chip: Chip): boolean {
+    return chip.action.startsWith('>');
+  }
   protected readonly chips = CHIPS;
   protected readonly novedades = NOVEDADES;
   protected readonly pendientes = PENDIENTES;
@@ -356,13 +392,17 @@ export class HomeComponent {
   protected readonly sparkArea = sparkPath(true);
 
   protected enviarPrompt(): void {
+    if (!this.agenteListo) return;
     const texto = this.prompt.trim();
     this.irAlAgente(texto || undefined);
   }
 
   protected accionChip(chip: Chip): void {
-    if (chip.action.startsWith('>')) this.irAlAgente(chip.action.slice(1));
-    else void this.router.navigateByUrl(chip.action);
+    if (this.esDelAgente(chip)) {
+      if (this.agenteListo) this.irAlAgente(chip.action.slice(1));
+      return; // deshabilitado: el botón ya lo comunica
+    }
+    void this.router.navigateByUrl(chip.action);
   }
 
   protected accionRapida(a: AccionRapida): void {

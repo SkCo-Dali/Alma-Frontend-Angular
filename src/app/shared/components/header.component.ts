@@ -57,7 +57,7 @@ import { shortName } from '../../core/utils/name';
           <button
             type="button"
             (click)="toggleMenu($event)"
-            class="flex items-center gap-2.5 rounded-full bg-card/70 p-[3px] pr-3 shadow-sm backdrop-blur-md transition-all hover:bg-card/90 hover:shadow-md"
+            class="flex items-center gap-2.5 rounded-full bg-card/45 p-[3px] pr-2.5 shadow-sm backdrop-blur-md transition-all hover:bg-card/75 hover:shadow-md"
             [attr.aria-expanded]="menuOpen()"
           >
             <img
@@ -65,13 +65,8 @@ import { shortName } from '../../core/utils/name';
               [alt]="user().nombre"
               class="h-9 w-9 rounded-full object-cover"
             />
-            <span class="hidden flex-col items-start sm:flex">
-              <span class="text-sm font-semibold leading-tight text-foreground">
-                {{ displayName() }}
-              </span>
-              <span class="text-[11px] leading-tight text-muted-foreground">
-                {{ user().cargo }}
-              </span>
+            <span class="hidden text-sm font-semibold text-foreground sm:block">
+              {{ displayName() }}
             </span>
             <lucide-icon
               name="chevron-down"
