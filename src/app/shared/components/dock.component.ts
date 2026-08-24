@@ -10,6 +10,7 @@
 //   inferior lo invoca.
 
 import { NgTemplateOutlet } from '@angular/common';
+import { LaunchpadService } from '../../core/services/launchpad.service';
 import {
   Component,
   DestroyRef,
@@ -33,8 +34,8 @@ import { AppIconArtComponent } from './app-icon-art.component';
 import { DockLaunchpadComponent } from './dock-launchpad.component';
 import { TouchDrag, setCloneDragImage } from '../drag-utils';
 
-const BASE = 48; // icono en reposo (px)
-const PEAK = 76; // icono bajo el cursor (px)
+const BASE = 40; // icono en reposo (px)
+const PEAK = 60; // icono bajo el cursor (px)
 const RADIUS = 140; // radio de influencia (px)
 
 interface DockEntry {
@@ -85,7 +86,7 @@ interface DockEntry {
     >
       <nav
         aria-label="Dock de navegación"
-        class="glass-strong pointer-events-auto relative flex items-end gap-2 rounded-[24px] border border-border px-3 pb-1.5 pt-2 shadow-[var(--shadow-lg)]"
+        class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-full border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
         (mouseleave)="onLeaveNav()"
         (focusin)="insideApp() && invocar()"
@@ -98,7 +99,7 @@ interface DockEntry {
               type="button"
               class="flex items-end rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
               [attr.aria-label]="entry.label"
-              (click)="launchpadOpen.set(true)"
+              (click)="launchpad.open.set(true)"
             >
               <ng-container *ngTemplateOutlet="tile; context: { entry, i }" />
             </button>
@@ -153,12 +154,10 @@ interface DockEntry {
     </div>
 
     <ng-template #tile let-entry="entry" let-i="i">
-      <div class="group relative flex flex-col items-center" #iconEl>
-        <span
-          class="dock-tooltip pointer-events-none absolute -top-10 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1 text-xs font-medium text-popover-foreground opacity-0 shadow-[var(--shadow-md)] group-hover:opacity-100"
-        >
-          {{ entry.label }}
-        </span>
+      <!-- Tile con etiqueta SIEMPRE visible (estilo launcher); la entrada activa
+           se resalta con una pastilla clara. La magnificación solo escala el
+           ícono, la etiqueta queda quieta para que la fila no "salte". -->
+      <div class="dock-entry" [class.activa]="entry.active" #iconEl>
         <div
           class="dock-tile flex items-center justify-center overflow-hidden rounded-[26%] shadow-[0_4px_10px_rgba(0,0,0,.18)]"
           [style.width.px]="sizeAt(i)"
@@ -171,11 +170,7 @@ interface DockEntry {
             <img [src]="entry.img" alt="" draggable="false" class="h-full w-full object-cover" />
           }
         </div>
-        <span
-          class="mt-1 h-1 w-1 rounded-full"
-          [class.bg-foreground/60]="entry.active"
-          [class.bg-transparent]="!entry.active"
-        ></span>
+        <span class="dock-label">{{ entry.label }}</span>
       </div>
     </ng-template>
 
@@ -209,7 +204,7 @@ interface DockEntry {
       </div>
     }
 
-    <alma-dock-launchpad [open]="launchpadOpen()" (closed)="launchpadOpen.set(false)" />
+    <alma-dock-launchpad [open]="launchpad.open()" (closed)="launchpad.open.set(false)" />
   `,
 })
 export class DockComponent {
@@ -219,9 +214,9 @@ export class DockComponent {
 
   @ViewChildren('iconEl') private iconEls!: QueryList<ElementRef<HTMLElement>>;
 
+  protected readonly launchpad = inject(LaunchpadService);
   protected readonly pathname = signal(this.router.url);
   protected readonly summoned = signal(false);
-  protected readonly launchpadOpen = signal(false);
   protected readonly insideApp = computed(() => {
     const p = this.pathname();
     return (
@@ -335,7 +330,7 @@ export class DockComponent {
     const vw = this.vw();
     const esMovil = vw < 768;
     const disponible = vw - (esMovil ? 150 : 260);
-    const caben = Math.max(1, Math.floor(disponible / 56));
+    const caben = Math.max(1, Math.floor(disponible / 50));
     const topeVista = Math.min(caben, esMovil ? 8 : MAX_DOCK);
     const anclas = clampDock(Math.min(this.prefs.dockCount(), orderIds.length));
     const visibles = Math.min(anclas, topeVista);
@@ -366,8 +361,8 @@ export class DockComponent {
       },
       {
         key: 'apps',
-        label: 'Ver todas las aplicaciones',
-        active: this.launchpadOpen(),
+        label: 'Todas las apps',
+        active: this.launchpad.open(),
         kind: 'nav-action',
         img: '/app-icons/nav-todas.png',
       },

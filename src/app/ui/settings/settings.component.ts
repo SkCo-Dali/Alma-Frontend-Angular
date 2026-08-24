@@ -22,7 +22,11 @@ const TEMAS: { id: Theme; label: string; icon: string }[] = [
 // Vista previa (aprox.) de cada fondo esmerilado; la paleta real vive en
 // styles.css (--wp-* por data-bg).
 const FONDOS: Record<Background, { label: string; preview: string }> = {
-  esmeralda: { label: 'Esmeralda', preview: 'linear-gradient(135deg,#38d878,#00c83c,#8fe0b0)' },
+  terraza: { label: 'Terraza', preview: 'url(/wallpapers/terraza.jpg) center/cover' },
+  mirador: { label: 'Mirador', preview: 'url(/wallpapers/mirador.jpg) center/cover' },
+  lago: { label: 'Lago', preview: 'url(/wallpapers/lago.jpg) center/cover' },
+  balcon: { label: 'Balcón', preview: 'url(/wallpapers/balcon.jpg) center/cover' },
+  dorado: { label: 'Dorado', preview: 'url(/wallpapers/dorado.jpg) center/cover' },
   oceano: { label: 'Océano', preview: 'linear-gradient(135deg,#4fb8ff,#02b1ff,#7ce0c0)' },
   aurora: { label: 'Aurora', preview: 'linear-gradient(135deg,#00c83c,#02b1ff,#ff9200)' },
   atardecer: { label: 'Atardecer', preview: 'linear-gradient(135deg,#ffb54d,#ff9200,#a0e070)' },

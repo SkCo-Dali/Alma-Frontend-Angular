@@ -210,6 +210,18 @@ export class ChatAgenteComponent implements AfterViewChecked {
 
   constructor() {
     void this.cargarConversaciones();
+
+    // Mensaje escrito desde el Inicio ("Pregúntale o pídele algo a Alma…"):
+    // se recoge una sola vez y se envía apenas monta el chat.
+    try {
+      const borrador = sessionStorage.getItem('alma-agente-borrador');
+      if (borrador) {
+        sessionStorage.removeItem('alma-agente-borrador');
+        setTimeout(() => void this.enviar(borrador));
+      }
+    } catch {
+      // sin sessionStorage no hay borrador que recoger
+    }
   }
 
   ngAfterViewChecked(): void {

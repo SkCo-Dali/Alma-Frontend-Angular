@@ -71,7 +71,7 @@ const EXTRA_ICONS = [
 export class AppComponent {
   protected readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
-  private readonly prefs = inject(PreferencesService);
+  protected readonly prefs = inject(PreferencesService);
   private readonly apps = inject(ApplicationsService);
 
   constructor() {
