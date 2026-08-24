@@ -97,11 +97,13 @@
   --table-stripe: oklch(0.988 0.001 286);
 
   /* Fondo por defecto ESMERALDA — verde Skandia protagonista + acento naranja */
-  --wp-base: oklch(0.93 0.04 150);
-  --wp-a: oklch(0.84 0.17 150 / 90%);
-  --wp-b: oklch(0.82 0.12 178 / 82%);
-  --wp-c: oklch(0.87 0.1 132 / 82%);
-  --wp-d: oklch(0.9 0.09 70 / 55%);
+  /* Respaldo del fondo por defecto (solarpunk): crema solar + salvia.
+     La escena ilustrada (alma-solarpunk-scene) se pinta encima. */
+  --wp-base: oklch(0.95 0.025 130);
+  --wp-a: oklch(0.94 0.06 95 / 90%);
+  --wp-b: oklch(0.88 0.08 150 / 80%);
+  --wp-c: oklch(0.9 0.07 165 / 70%);
+  --wp-d: oklch(0.96 0.05 85 / 60%);
 }
 
 .dark {
@@ -148,15 +150,37 @@
   --table-header: oklch(0.285 0.006 286);
   --table-stripe: oklch(0.25 0.005 286);
 
-  --wp-base: oklch(0.2 0.03 150);
-  --wp-a: oklch(0.44 0.14 150 / 78%);
-  --wp-b: oklch(0.4 0.1 178 / 68%);
-  --wp-c: oklch(0.42 0.09 132 / 62%);
-  --wp-d: oklch(0.36 0.08 70 / 42%);
+  --wp-base: oklch(0.24 0.035 185);
+  --wp-a: oklch(0.36 0.07 175 / 78%);
+  --wp-b: oklch(0.32 0.06 200 / 66%);
+  --wp-c: oklch(0.34 0.06 150 / 58%);
+  --wp-d: oklch(0.42 0.08 70 / 40%);
 }
 
 /* ── Fondos esmerilados alternativos (Configuración > Apariencia > Fondo) ──
    Paleta Skandia (#00C83C verde, #FF9200 naranja, #02B1FF azul, gris). */
+
+/* ── Wallpapers solarpunk (imagen a pantalla completa; 'terraza' es el
+   por defecto = sin data-bg). En modo oscuro se les baja la luz con un velo. ── */
+html:not([data-bg]) body { background-image: url('/wallpapers/terraza.jpg'); }
+html[data-bg='mirador'] body { background-image: url('/wallpapers/mirador.jpg'); }
+html[data-bg='lago'] body { background-image: url('/wallpapers/lago.jpg'); }
+html[data-bg='balcon'] body { background-image: url('/wallpapers/balcon.jpg'); }
+html[data-bg='dorado'] body { background-image: url('/wallpapers/dorado.jpg'); }
+html:not([data-bg]) body,
+html[data-bg='mirador'] body,
+html[data-bg='lago'] body,
+html[data-bg='balcon'] body,
+html[data-bg='dorado'] body {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+html.dark:not([data-bg]) body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/terraza.jpg'); }
+html.dark[data-bg='mirador'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/mirador.jpg'); }
+html.dark[data-bg='lago'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/lago.jpg'); }
+html.dark[data-bg='balcon'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/balcon.jpg'); }
+html.dark[data-bg='dorado'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/dorado.jpg'); }
 
 /* OCÉANO ─ azul Skandia protagonista (+ acento verde) */
 html[data-bg="oceano"] {
@@ -444,8 +468,9 @@ html.dark[data-bg="cielo"] {
   }
 }
 
-/* ── Esfera de Alma (AlmaSphere) ── técnica aurora/metaballs en CSS: blobs con
-   blur + mix-blend-mode:screen sobre base vívida, con ojos que parpadean. */
+/* ── Esfera de Alma (AlmaSphere) ── híbrida: el CUERPO es el asset renderizado
+   (alma-orb.webp, cristal sin ojos); el CSS solo aporta los ojos interactivos y
+   un remate de luz mínimo. Nada de gradientes/sombras que pinten la esfera. */
 .almasph {
   position: relative;
   width: 100%;
@@ -453,56 +478,33 @@ html.dark[data-bg="cielo"] {
   display: grid;
   place-items: center;
   container-type: size;
-  animation: almasph-breathe 5s ease-in-out infinite;
+  animation: almasph-breathe 6s ease-in-out infinite;
 }
-.almasph-core {
-  position: relative;
+.almasph-orb {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  background: linear-gradient(140deg, #2ee06a, #00c83c 52%, #007a28 100%);
-  box-shadow:
-    inset 0 0 0 1.2cqmin rgba(255, 255, 255, 0.18),
-    inset 5cqmin 4cqmin 12cqmin rgba(255, 255, 255, 0.16),
-    inset -7cqmin -9cqmin 26cqmin rgba(0, 0, 0, 0.5),
-    0 6cqmin 18cqmin rgba(60, 40, 120, 0.4);
-}
-.almasph-field {
-  position: absolute;
-  inset: 0;
-  filter: blur(3.5cqmin) saturate(1.5);
-}
-.almasph-field .b {
-  position: absolute;
-  top: 19%;
-  left: 19%;
-  width: 62%;
-  height: 62%;
-  border-radius: 50%;
-  mix-blend-mode: screen;
-  will-change: transform;
-}
-.almasph .b1 { background: radial-gradient(circle, #00c83c 0%, transparent 70%); animation: blobA 6s ease-in-out infinite; }
-.almasph .b2 { background: radial-gradient(circle, #35e075 0%, transparent 70%); animation: blobB 7.5s ease-in-out infinite; }
-.almasph .b3 { background: radial-gradient(circle, #ff9200 0%, transparent 70%); animation: blobC 9s ease-in-out infinite; }
-.almasph .b4 { background: radial-gradient(circle, #02b1ff 0%, transparent 70%); animation: blobD 5.5s ease-in-out infinite; }
-.almasph .b5 { background: radial-gradient(circle, #eafff2 0%, transparent 70%); animation: blobE 8s ease-in-out infinite; }
-.almasph-gloss {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
+  display: block;
+  object-fit: contain;
+  user-select: none;
   pointer-events: none;
-  background:
-    radial-gradient(34% 28% at 32% 22%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(10% 8% at 28% 18%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+  /* Remate mínimo: el asset es la fuente de verdad visual */
+  filter: drop-shadow(0 3cqmin 5cqmin rgba(0, 150, 110, 0.12))
+    drop-shadow(0 0 4cqmin rgba(80, 255, 220, 0.1));
 }
+/* Ojos: luces blancas verticales DENTRO del cristal.
+   Posición base (eyes) → seguimiento del cursor (gaze) → parpadeo (eye). */
 .almasph-eyes {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 47%;
+  width: 34%;
+  height: 22%;
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  transform: translateY(-6%);
+  pointer-events: none;
 }
 .almasph-gaze {
   display: flex;
@@ -511,23 +513,29 @@ html.dark[data-bg="cielo"] {
   gap: 10cqmin;
   transition: transform 0.18s ease-out;
 }
+.almasph-socket {
+  display: grid;
+  place-items: center;
+}
 .almasph-eye {
-  width: 7.5cqmin;
-  height: 18cqmin;
+  width: 7cqmin;
+  height: 17cqmin;
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 0 3cqmin rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 0 1.5cqmin rgba(255, 255, 255, 0.95),
+    0 0 4cqmin rgba(195, 255, 245, 0.65),
+    0 0 7cqmin rgba(130, 255, 225, 0.22);
+  transform-origin: center;
   animation: almasph-blink 2.9s ease-in-out infinite;
 }
-@keyframes blobA { 0%{transform:translate(-40%,-30%) scale(1)} 25%{transform:translate(38%,-10%) scale(1.35)} 50%{transform:translate(16%,42%) scale(.9)} 75%{transform:translate(-34%,24%) scale(1.2)} 100%{transform:translate(-40%,-30%) scale(1)} }
-@keyframes blobB { 0%{transform:translate(42%,-34%) scale(1.15)} 30%{transform:translate(-28%,-12%) scale(.85)} 60%{transform:translate(-36%,36%) scale(1.35)} 100%{transform:translate(42%,-34%) scale(1.15)} }
-@keyframes blobC { 0%{transform:translate(-30%,40%) scale(1)} 35%{transform:translate(34%,30%) scale(1.3)} 70%{transform:translate(40%,-28%) scale(.9)} 100%{transform:translate(-30%,40%) scale(1)} }
-@keyframes blobD { 0%{transform:translate(34%,34%) scale(1.2)} 25%{transform:translate(-40%,16%) scale(.9)} 55%{transform:translate(-10%,-38%) scale(1.35)} 80%{transform:translate(30%,-8%) scale(1.05)} 100%{transform:translate(34%,34%) scale(1.2)} }
-@keyframes blobE { 0%{transform:translate(0%,-14%) scale(1.15)} 33%{transform:translate(40%,28%) scale(.85)} 66%{transform:translate(-40%,-22%) scale(1.4)} 100%{transform:translate(0%,-14%) scale(1.15)} }
-@keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
 @keyframes almasph-blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(.12); } }
 
-/* ── Marco "vivo" de la esfera (AlmaHousing): aura + ondas + partículas ── */
+/* ── Marco "vivo" de la esfera (AlmaHousing): la energía alrededor del orbe.
+   El cuerpo es el asset; aquí viven el halo que respira, las órbitas
+   holográficas (mitad detrás, mitad delante), los anillos de luz de la base
+   que acompañan la flotación y las motas ambientales. Todo sutil. ── */
 .almah {
   position: relative;
   display: grid;
@@ -538,46 +546,157 @@ html.dark[data-bg="cielo"] {
   grid-area: 1 / 1;
   place-self: center;
 }
+/* Halo: energía luminosa que acompaña al orbe sin borrar su borde */
 .almah-aura {
-  width: 104%;
-  height: 104%;
+  width: 84%;
+  height: 84%;
   border-radius: 50%;
   z-index: 0;
-  background: radial-gradient(circle, rgba(0, 200, 60, 0.72), rgba(255, 146, 0, 0.3) 44%, rgba(2, 177, 255, 0.2) 60%, rgba(0, 200, 60, 0) 76%);
-  filter: blur(9cqmin);
-  animation: almah-aura 4s ease-in-out infinite;
+  transform: translateY(-4%);
+  background: radial-gradient(circle, rgba(90, 255, 220, 0.16) 0%, rgba(90, 255, 220, 0.09) 38%, rgba(90, 255, 220, 0.035) 58%, rgba(90, 255, 220, 0) 74%);
+  filter: blur(4cqmin);
+  animation: almah-halo 5s ease-in-out infinite;
 }
-.almah-ripple {
-  width: 64%;
-  height: 64%;
+/* Órbitas holográficas: elipses finísimas que rodean el orbe. Cada una existe
+   dos veces con la MISMA geometría y animación (quedan en fase): la copia
+   trasera completa y tenue, y la frontal recortada a la franja inferior y un
+   poco más visible → la energía pasa por detrás arriba y por delante abajo. */
+.almah-orbit {
+  pointer-events: none;
+  position: relative;
+  mix-blend-mode: screen;
+}
+.almah-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  z-index: 1;
-  border: 1.4cqmin solid rgba(120, 255, 170, 0.55);
-  animation: almah-ripple 3s ease-out infinite;
+  border: 0.35cqmin solid rgba(170, 255, 240, 0.3);
+  box-shadow: 0 0 3cqmin rgba(140, 255, 230, 0.14), inset 0 0 2cqmin rgba(140, 255, 230, 0.1);
 }
-.almah-ripple.r2 { animation-delay: 1s; }
-.almah-ripple.r3 { animation-delay: 2s; }
+.almah-orbit.o1 {
+  width: 82%;
+  height: 34%;
+  transform: translateY(-11%);
+}
+.almah-orbit.o1::before {
+  animation: almah-orbita1 12s ease-in-out infinite;
+}
+.almah-orbit.o2 {
+  width: 74%;
+  height: 25%;
+  transform: translateY(-16%);
+}
+.almah-orbit.o2::before {
+  animation: almah-orbita2 16s ease-in-out infinite;
+}
+.almah-orbit.back {
+  z-index: 1;
+  opacity: 0.5;
+}
+.almah-orbit.front {
+  z-index: 3;
+  opacity: 0.95;
+  clip-path: inset(52% 0 0 0);
+}
+/* Anillos de luz de la base: interfaz holográfica proyectada bajo el orbe.
+   El conjunto (pad) respira y flota EN FASE con la esfera (misma duración). */
+.almah-pad {
+  align-self: end;
+  width: 100%;
+  height: 24%;
+  position: relative;
+  z-index: 1;
+  filter: blur(0.4cqmin);
+  animation: almah-pad-flota 7s ease-in-out infinite;
+}
+.almah-ring,
+.almah-wave {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.almah-ring {
+  border: 0.4cqmin solid rgba(120, 255, 220, 0.5);
+  box-shadow: 0 0 4cqmin rgba(100, 255, 220, 0.16);
+  animation: almah-respira 5s ease-in-out infinite;
+}
+.almah-ring.g1 { width: 34%; height: 24%; opacity: 0.75; }
+.almah-ring.g2 { width: 58%; height: 42%; opacity: 0.45; animation-delay: 0.6s; }
+.almah-ring.g3 { width: 82%; height: 58%; opacity: 0.24; animation-delay: 1.2s; }
+/* Resplandor del "suelo" bajo la esfera */
+.almah-pad::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 48%;
+  height: 34%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgba(100, 240, 195, 0.4), rgba(100, 240, 195, 0) 70%);
+  filter: blur(1.5cqmin);
+  animation: almah-respira 5s ease-in-out infinite;
+}
+/* Ondas que emanan de la base (elípticas, se expanden y desvanecen) */
+.almah-wave {
+  width: 38%;
+  height: 26%;
+  border: 0.45cqmin solid rgba(140, 255, 215, 0.5);
+  animation: almah-wave 4s ease-out infinite;
+}
+.almah-wave.w2 { animation-delay: 1.35s; }
+.almah-wave.w3 { animation-delay: 2.7s; }
+/* Flotación orgánica: sube-baja asimétrico con una deriva mínima de rotación */
 .almah-sphere {
   position: relative;
   z-index: 2;
+  transform: translateY(-6%);
+  animation: almah-bob 7s ease-in-out infinite;
 }
+/* Motas ambientales: destellos mínimos que titilan y derivan hacia arriba */
 .almah-p {
   z-index: 3;
   border-radius: 50%;
-  width: 2.4cqmin;
-  height: 2.4cqmin;
+  width: 1.8cqmin;
+  height: 1.8cqmin;
   filter: blur(0.3cqmin);
-  box-shadow: 0 0 4cqmin currentColor;
+  box-shadow: 0 0 3.5cqmin currentColor;
   align-self: center;
 }
-.almah .p1 { color: #00c83c; transform: translate(-30cqmin, -26cqmin); animation: almah-float 6s ease-in-out infinite; }
-.almah .p2 { color: #ff9200; transform: translate(30cqmin, -22cqmin); animation: almah-float 7.5s ease-in-out infinite reverse; }
-.almah .p3 { color: #02b1ff; transform: translate(-32cqmin, 24cqmin); animation: almah-float 8.5s ease-in-out infinite; }
-.almah .p4 { color: #ffffff; transform: translate(30cqmin, 28cqmin); animation: almah-float 6.8s ease-in-out infinite reverse; }
-.almah .p5 { color: #c9d2da; transform: translate(-40cqmin, 2cqmin); animation: almah-float 9s ease-in-out infinite; }
-@keyframes almah-aura { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.12); } }
-@keyframes almah-ripple { 0% { transform: scale(0.7); opacity: 0.55; } 100% { transform: scale(1.65); opacity: 0; } }
-@keyframes almah-float { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+.almah .p1 { color: #2fe08a; transform: translate(-30cqmin, -24cqmin); animation: almah-titila 6s ease-in-out infinite, almah-deriva 11s ease-in-out infinite; }
+.almah .p2 { color: #b8ffe8; transform: translate(31cqmin, -20cqmin); animation: almah-titila 7.5s ease-in-out infinite reverse, almah-deriva 13s ease-in-out infinite; }
+.almah .p3 { color: #35e0c8; transform: translate(-33cqmin, 20cqmin); animation: almah-titila 8.5s ease-in-out infinite, almah-deriva 10s ease-in-out 2s infinite; }
+.almah .p4 { color: #ffffff; transform: translate(30cqmin, 26cqmin); animation: almah-titila 6.8s ease-in-out infinite reverse, almah-deriva 12s ease-in-out 1s infinite; }
+.almah .p5 { color: #8ff0cd; transform: translate(-40cqmin, 0cqmin); animation: almah-titila 9s ease-in-out infinite, almah-deriva 14s ease-in-out infinite; }
+@keyframes almah-halo { 0%, 100% { opacity: 0.75; transform: translateY(-4%) scale(1); } 50% { opacity: 1; transform: translateY(-4%) scale(1.03); } }
+@keyframes almah-orbita1 { 0%, 100% { transform: rotate(-9deg); opacity: 0.8; } 50% { transform: rotate(7deg); opacity: 1; } }
+@keyframes almah-orbita2 { 0%, 100% { transform: rotate(12deg); opacity: 0.7; } 50% { transform: rotate(-6deg); opacity: 1; } }
+@keyframes almah-respira { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes almah-pad-flota { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-1.2%); } 70% { transform: translateY(-0.6%); } }
+@keyframes almah-wave { 0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(2.05); opacity: 0; } }
+@keyframes almah-bob { 0%, 100% { transform: translateY(-6%) rotate(0deg); } 42% { transform: translateY(-9.4%) rotate(0.5deg); } 68% { transform: translateY(-8.2%) rotate(-0.35deg); } }
+@keyframes almah-titila { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+@keyframes almah-deriva { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2.4cqmin; } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Los selectores duplican la clase raíz para EMPATAR o superar la
+     especificidad de las reglas que animan (p. ej. `.almah .p1`,
+     `.almah-orbit.o1::before`): al ir después en el archivo, ganan. */
+  .almah .almah-sphere,
+  .almah .almah-aura,
+  .almah .almah-pad,
+  .almah .almah-pad::before,
+  .almah .almah-ring,
+  .almah .almah-wave,
+  .almah .almah-orbit::before,
+  .almah .almah-p,
+  .almasph {
+    animation: none;
+  }
+}
 
 /* Dock: transición suave de la magnificación (el tamaño lo calcula
    DockComponent en cada mousemove) */
@@ -723,4 +842,96 @@ html.dark[data-bg="cielo"] {
     top: 0 !important;
     left: unset !important;
   }
+}
+
+/* ── Materiales solarpunk ── vidrio esmerilado REAL sobre el wallpaper. */
+.glass {
+  background-color: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+.glass-strong {
+  background-color: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Tarjeta del inicio (widgets del "command center") */
+.spk-card {
+  background-color: color-mix(in srgb, var(--card) 74%, transparent);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(20, 45, 30, 0.06), 0 12px 32px -18px rgba(20, 45, 30, 0.25);
+}
+
+/* Chip de acción rápida bajo el buscador */
+.spk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.4rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background-color: color-mix(in srgb, var(--card) 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 45, 30, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.spk-chip:hover {
+  background-color: var(--card);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -6px rgba(20, 45, 30, 0.25);
+}
+
+/* Fila del buscador del inicio */
+.spk-prompt {
+  background-color: color-mix(in srgb, var(--card) 86%, transparent);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: 0 2px 6px rgba(20, 45, 30, 0.06), 0 18px 40px -24px rgba(20, 45, 30, 0.35);
+}
+.spk-prompt:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
+    0 18px 40px -24px rgba(20, 45, 30, 0.35);
+}
+
+/* Dock con etiquetas (estilo launcher): entrada activa resaltada */
+.dock-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px;
+  border-radius: 14px;
+  transition: background-color 0.15s ease;
+}
+.dock-entry.activa {
+  background-color: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow: 0 1px 3px rgba(20, 45, 30, 0.12);
+}
+.dock-label {
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--muted-foreground);
+}
+.dock-entry.activa .dock-label {
+  color: var(--primary);
+  font-weight: 600;
 }
