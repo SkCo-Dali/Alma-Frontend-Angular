@@ -1,13 +1,10 @@
 name: ALMA Angular Static Web App
 
 on:
+  # Un solo deploy por merge: solo el push a la rama del ambiente dispara el
+  # build+deploy (misma lógica que tenía el front React; sin trigger de
+  # pull_request, que generaba corridas extra al abrir y al cerrar el PR).
   push:
-    branches:
-      - develop
-      - staging
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
     branches:
       - develop
       - staging
@@ -26,13 +23,18 @@ on:
 
 jobs:
   build_and_deploy_job:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Build and Deploy Job
-    # Rama -> GitHub Environment -> Static Web App (mismo esquema del front React):
-    #   main    -> Production  -> (pendiente crear)
-    #   staging -> UAT         -> (pendiente crear)
-    #   develop -> Development -> SkCoAlmaAngularDev
-    environment: ${{ github.event.inputs.environment != '' && github.event.inputs.environment || (github.base_ref || github.ref_name) == 'main' && 'Production' || (github.base_ref || github.ref_name) == 'staging' && 'UAT' || 'Development' }}
+    # Rama -> GitHub Environment -> Static Web App -> secreto con su token:
+    #   main    -> Production  -> SkCoAlma     (yellow-coast)    -> AZURE_SWA_TOKEN_PRD
+    #   staging -> UAT         -> SkCoAlmaUat  (uatalma)         -> AZURE_SWA_TOKEN_UAT
+    #   develop -> Development -> SkCoAlmaDev  (devalma)         -> AZURE_SWA_TOKEN_DEV
+    # Los tokens son secretos de REPOSITORIO (no de Environment) para no
+    # depender de permisos de admin; el Environment se mantiene por trazabilidad.
+    environment: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'UAT' || 'Development') }}
+    env:
+      AMBIENTE: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'UAT' || 'Development') }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -43,10 +45,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build
-        # La configuración de Angular se elige por environment (fileReplacements
-        # inyecta clientId/tenant/apiUrl; no hay variables de build).
+        # La configuración de Angular se elige por ambiente: fileReplacements
+        # inyecta clientId / tenantId / apiUrl, así que no hay variables de build.
         run: |
-          case "${{ github.event.inputs.environment != '' && github.event.inputs.environment || (github.base_ref || github.ref_name) == 'main' && 'Production' || (github.base_ref || github.ref_name) == 'staging' && 'UAT' || 'Development' }}" in
+          echo "Ambiente: $AMBIENTE"
+          case "$AMBIENTE" in
             Production) npm run build:prd ;;
             UAT)        npm run build:stg ;;
             *)          npm run build:dev ;;
@@ -60,10 +63,10 @@ jobs:
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          azure_static_web_apps_api_token: ${{ env.AMBIENTE == 'Production' && secrets.AZURE_SWA_TOKEN_PRD || env.AMBIENTE == 'UAT' && secrets.AZURE_SWA_TOKEN_UAT || secrets.AZURE_SWA_TOKEN_DEV }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
-          app_location: "_deploy"
-          api_location: ""
-          output_location: ""
+          app_location: "_deploy" # App source code path
+          api_location: "" # Api source code path - optional
+          output_location: "" # Built app content directory - optional
           skip_app_build: true
