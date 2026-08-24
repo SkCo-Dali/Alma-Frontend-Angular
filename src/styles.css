@@ -532,9 +532,10 @@ html.dark[data-bg="cielo"] {
 @keyframes almasph-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
 @keyframes almasph-blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(.12); } }
 
-/* ── Marco "vivo" de la esfera (AlmaHousing): halo casi imperceptible, órbitas
-   holográficas lentas, flotación suave y base de elipses de luz verde/cian muy
-   tenues (interfaz holográfica), con motas alrededor. ── */
+/* ── Marco "vivo" de la esfera (AlmaHousing): la energía alrededor del orbe.
+   El cuerpo es el asset; aquí viven el halo que respira, las órbitas
+   holográficas (mitad detrás, mitad delante), los anillos de luz de la base
+   que acompañan la flotación y las motas ambientales. Todo sutil. ── */
 .almah {
   position: relative;
   display: grid;
@@ -545,50 +546,69 @@ html.dark[data-bg="cielo"] {
   grid-area: 1 / 1;
   place-self: center;
 }
-/* Halo exterior: pura luminosidad, prácticamente imperceptible (el material
-   del cristal ya viene en el asset; esto solo suma un aliento de luz). */
+/* Halo: energía luminosa que acompaña al orbe sin borrar su borde */
 .almah-aura {
-  width: 110%;
-  height: 110%;
+  width: 84%;
+  height: 84%;
   border-radius: 50%;
   z-index: 0;
-  background: radial-gradient(circle, rgba(80, 255, 215, 0.12) 0%, rgba(90, 240, 210, 0.05) 45%, rgba(90, 240, 210, 0) 72%);
-  filter: blur(5cqmin);
-  animation: almah-aura 6s ease-in-out infinite;
+  transform: translateY(-4%);
+  background: radial-gradient(circle, rgba(90, 255, 220, 0.16) 0%, rgba(90, 255, 220, 0.09) 38%, rgba(90, 255, 220, 0.035) 58%, rgba(90, 255, 220, 0) 74%);
+  filter: blur(4cqmin);
+  animation: almah-halo 5s ease-in-out infinite;
 }
-/* Órbitas holográficas: líneas finísimas alrededor de la esfera, giro lento */
+/* Órbitas holográficas: elipses finísimas que rodean el orbe. Cada una existe
+   dos veces con la MISMA geometría y animación (quedan en fase): la copia
+   trasera completa y tenue, y la frontal recortada a la franja inferior y un
+   poco más visible → la energía pasa por detrás arriba y por delante abajo. */
 .almah-orbit {
-  width: 82%;
-  height: 82%;
-  border-radius: 50%;
-  z-index: 1;
-  border: 0.3cqmin solid rgba(185, 255, 235, 0.22);
-  transform: translateY(-6%) rotateX(72deg);
-  animation: almah-orbita 30s linear infinite;
   pointer-events: none;
+  position: relative;
+  mix-blend-mode: screen;
 }
-.almah-orbit.o1f {
-  /* mitad frontal de la o1: misma geometría y misma animación (quedan en
-     fase), recortada a la franja inferior y por ENCIMA de la esfera */
-  z-index: 3;
-  clip-path: inset(58% 0 0 0);
+.almah-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.35cqmin solid rgba(170, 255, 240, 0.3);
+  box-shadow: 0 0 3cqmin rgba(140, 255, 230, 0.14), inset 0 0 2cqmin rgba(140, 255, 230, 0.1);
+}
+.almah-orbit.o1 {
+  width: 82%;
+  height: 34%;
+  transform: translateY(-11%);
+}
+.almah-orbit.o1::before {
+  animation: almah-orbita1 12s ease-in-out infinite;
 }
 .almah-orbit.o2 {
-  width: 92%;
-  height: 92%;
-  border-color: rgba(150, 245, 220, 0.13);
-  animation-duration: 44s;
-  animation-direction: reverse;
+  width: 74%;
+  height: 25%;
+  transform: translateY(-16%);
 }
-/* Base holográfica: elipses de luz muy suaves bajo la esfera (nada de bordes
-   evidentes: trazo fino + blur + poca opacidad) */
+.almah-orbit.o2::before {
+  animation: almah-orbita2 16s ease-in-out infinite;
+}
+.almah-orbit.back {
+  z-index: 1;
+  opacity: 0.5;
+}
+.almah-orbit.front {
+  z-index: 3;
+  opacity: 0.95;
+  clip-path: inset(52% 0 0 0);
+}
+/* Anillos de luz de la base: interfaz holográfica proyectada bajo el orbe.
+   El conjunto (pad) respira y flota EN FASE con la esfera (misma duración). */
 .almah-pad {
   align-self: end;
   width: 100%;
   height: 24%;
   position: relative;
   z-index: 1;
-  filter: blur(0.5cqmin);
+  filter: blur(0.4cqmin);
+  animation: almah-pad-flota 7s ease-in-out infinite;
 }
 .almah-ring,
 .almah-wave {
@@ -599,64 +619,80 @@ html.dark[data-bg="cielo"] {
   transform: translate(-50%, -50%);
 }
 .almah-ring {
-  border: 0.4cqmin solid rgba(120, 245, 190, 0.4);
+  border: 0.4cqmin solid rgba(120, 255, 220, 0.5);
+  box-shadow: 0 0 4cqmin rgba(100, 255, 220, 0.16);
+  animation: almah-respira 5s ease-in-out infinite;
 }
-.almah-ring.g1 { width: 32%; height: 22%; opacity: 0.55; }
-.almah-ring.g2 { width: 54%; height: 38%; opacity: 0.3; }
-.almah-ring.g3 { width: 76%; height: 54%; opacity: 0.16; }
+.almah-ring.g1 { width: 34%; height: 24%; opacity: 0.75; }
+.almah-ring.g2 { width: 58%; height: 42%; opacity: 0.45; animation-delay: 0.6s; }
+.almah-ring.g3 { width: 82%; height: 58%; opacity: 0.24; animation-delay: 1.2s; }
 /* Resplandor del "suelo" bajo la esfera */
 .almah-pad::before {
   content: '';
   position: absolute;
   left: 50%;
   top: 52%;
-  width: 44%;
-  height: 30%;
+  width: 48%;
+  height: 34%;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse, rgba(100, 240, 195, 0.32), rgba(100, 240, 195, 0) 70%);
+  background: radial-gradient(ellipse, rgba(100, 240, 195, 0.4), rgba(100, 240, 195, 0) 70%);
   filter: blur(1.5cqmin);
+  animation: almah-respira 5s ease-in-out infinite;
 }
 /* Ondas que emanan de la base (elípticas, se expanden y desvanecen) */
 .almah-wave {
   width: 38%;
   height: 26%;
-  border: 0.5cqmin solid rgba(140, 255, 210, 0.4);
+  border: 0.45cqmin solid rgba(140, 255, 215, 0.5);
   animation: almah-wave 4s ease-out infinite;
 }
 .almah-wave.w2 { animation-delay: 1.35s; }
 .almah-wave.w3 { animation-delay: 2.7s; }
+/* Flotación orgánica: sube-baja asimétrico con una deriva mínima de rotación */
 .almah-sphere {
   position: relative;
   z-index: 2;
   transform: translateY(-6%);
-  animation: almah-bob 6s ease-in-out infinite;
+  animation: almah-bob 7s ease-in-out infinite;
 }
+/* Motas ambientales: destellos mínimos que titilan y derivan hacia arriba */
 .almah-p {
   z-index: 3;
   border-radius: 50%;
-  width: 2.2cqmin;
-  height: 2.2cqmin;
+  width: 1.8cqmin;
+  height: 1.8cqmin;
   filter: blur(0.3cqmin);
-  box-shadow: 0 0 4cqmin currentColor;
+  box-shadow: 0 0 3.5cqmin currentColor;
   align-self: center;
 }
-.almah .p1 { color: #2fe08a; transform: translate(-30cqmin, -26cqmin); animation: almah-float 6s ease-in-out infinite; }
-.almah .p2 { color: #b8ffe8; transform: translate(30cqmin, -22cqmin); animation: almah-float 7.5s ease-in-out infinite reverse; }
-.almah .p3 { color: #35e0c8; transform: translate(-32cqmin, 24cqmin); animation: almah-float 8.5s ease-in-out infinite; }
-.almah .p4 { color: #ffffff; transform: translate(30cqmin, 28cqmin); animation: almah-float 6.8s ease-in-out infinite reverse; }
-.almah .p5 { color: #8ff0cd; transform: translate(-40cqmin, 2cqmin); animation: almah-float 9s ease-in-out infinite; }
-@keyframes almah-aura { 0%,100% { opacity: 0.45; transform: scale(1); } 50% { opacity: 0.75; transform: scale(1.08); } }
-@keyframes almah-orbita { from { transform: translateY(-6%) rotateX(70deg) rotate(0deg); } to { transform: translateY(-6%) rotateX(70deg) rotate(360deg); } }
-@keyframes almah-wave { 0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.65; } 100% { transform: translate(-50%, -50%) scale(2.05); opacity: 0; } }
-@keyframes almah-bob { 0%,100% { transform: translateY(-6%); } 50% { transform: translateY(-9%); } }
-@keyframes almah-float { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+.almah .p1 { color: #2fe08a; transform: translate(-30cqmin, -24cqmin); animation: almah-titila 6s ease-in-out infinite, almah-deriva 11s ease-in-out infinite; }
+.almah .p2 { color: #b8ffe8; transform: translate(31cqmin, -20cqmin); animation: almah-titila 7.5s ease-in-out infinite reverse, almah-deriva 13s ease-in-out infinite; }
+.almah .p3 { color: #35e0c8; transform: translate(-33cqmin, 20cqmin); animation: almah-titila 8.5s ease-in-out infinite, almah-deriva 10s ease-in-out 2s infinite; }
+.almah .p4 { color: #ffffff; transform: translate(30cqmin, 26cqmin); animation: almah-titila 6.8s ease-in-out infinite reverse, almah-deriva 12s ease-in-out 1s infinite; }
+.almah .p5 { color: #8ff0cd; transform: translate(-40cqmin, 0cqmin); animation: almah-titila 9s ease-in-out infinite, almah-deriva 14s ease-in-out infinite; }
+@keyframes almah-halo { 0%, 100% { opacity: 0.75; transform: translateY(-4%) scale(1); } 50% { opacity: 1; transform: translateY(-4%) scale(1.03); } }
+@keyframes almah-orbita1 { 0%, 100% { transform: rotate(-9deg); opacity: 0.8; } 50% { transform: rotate(7deg); opacity: 1; } }
+@keyframes almah-orbita2 { 0%, 100% { transform: rotate(12deg); opacity: 0.7; } 50% { transform: rotate(-6deg); opacity: 1; } }
+@keyframes almah-respira { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes almah-pad-flota { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-1.2%); } 70% { transform: translateY(-0.6%); } }
+@keyframes almah-wave { 0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(2.05); opacity: 0; } }
+@keyframes almah-bob { 0%, 100% { transform: translateY(-6%) rotate(0deg); } 42% { transform: translateY(-9.4%) rotate(0.5deg); } 68% { transform: translateY(-8.2%) rotate(-0.35deg); } }
+@keyframes almah-titila { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+@keyframes almah-deriva { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2.4cqmin; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .almah-sphere,
-  .almah-orbit,
-  .almah-wave,
-  .almah-aura,
+  /* Los selectores duplican la clase raíz para EMPATAR o superar la
+     especificidad de las reglas que animan (p. ej. `.almah .p1`,
+     `.almah-orbit.o1::before`): al ir después en el archivo, ganan. */
+  .almah .almah-sphere,
+  .almah .almah-aura,
+  .almah .almah-pad,
+  .almah .almah-pad::before,
+  .almah .almah-ring,
+  .almah .almah-wave,
+  .almah .almah-orbit::before,
+  .almah .almah-p,
   .almasph {
     animation: none;
   }
