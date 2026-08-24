@@ -30,6 +30,28 @@ export const clampDock = (n: number) => Math.max(1, Math.min(MAX_DOCK, n));
 
 const STORAGE_KEY = 'alma-ui-v2';
 
+/**
+ * Estreno del fondo solarpunk (ago-2026): la PRIMERA vez que alguien abre ALMA
+ * después de este cambio, ve el fondo nuevo aunque tuviera otro guardado —
+ * queremos que todos noten el rediseño. A partir de ahí su elección se respeta.
+ *
+ * El sello va aparte del snapshot de preferencias: así se puede volver a
+ * estrenar un fondo en el futuro subiendo la versión, sin resetear nada más.
+ */
+const ESTRENO_FONDO_KEY = 'alma-estreno-fondo-v1';
+
+function consumirEstrenoFondo(): boolean {
+  try {
+    if (localStorage.getItem(ESTRENO_FONDO_KEY)) return false;
+    localStorage.setItem(ESTRENO_FONDO_KEY, '1');
+    return true;
+  } catch {
+    // Sin localStorage no hay dónde recordarlo; se respeta lo del servidor
+    // (forzarlo en cada carga le quitaría al usuario su elección).
+    return false;
+  }
+}
+
 interface Persisted {
   theme: Theme;
   background: Background;
@@ -57,12 +79,12 @@ function migrarFondo(bg: unknown): Background {
     : DEFAULTS.background;
 }
 
-function load(): Persisted {
+function load(estrenarFondo: boolean): Persisted {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
     const p = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) };
-    p.background = migrarFondo(p.background);
+    p.background = estrenarFondo ? DEFAULTS.background : migrarFondo(p.background);
     return p;
   } catch {
     return DEFAULTS;
@@ -76,7 +98,9 @@ export function resolveTheme(theme: Theme): 'light' | 'dark' {
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
-  private readonly inicial = load();
+  /** true solo en la primera carga tras el estreno del fondo (ver arriba). */
+  private readonly estrenoFondo = consumirEstrenoFondo();
+  private readonly inicial = load(this.estrenoFondo);
 
   readonly theme = signal<Theme>(this.inicial.theme);
   readonly background = signal<Background>(this.inicial.background);
@@ -140,15 +164,30 @@ export class PreferencesService {
       .then((p) => {
         this.aplicandoServidor = true;
         if (p.theme) this.theme.set(p.theme as Theme);
-        if (p.background) this.background.set(migrarFondo(p.background));
+        // Durante el estreno se ignora el fondo guardado (abajo se persiste el
+        // nuevo, para que también lo vea en sus otros dispositivos).
+        if (p.background && !this.estrenoFondo) this.background.set(migrarFondo(p.background));
         if (Array.isArray(p.appOrder)) this.appOrder.set(p.appOrder);
         if (typeof p.dockCount === 'number') this.dockCount.set(clampDock(p.dockCount));
       })
       .catch((e) => console.error('[prefs] no se pudieron cargar', e))
       .finally(() => {
         this.hidratado = true;
-        setTimeout(() => (this.aplicandoServidor = false), 0);
+        setTimeout(() => {
+          this.aplicandoServidor = false;
+          if (this.estrenoFondo) this.empujarRemoto();
+        }, 0);
       });
+  }
+
+  /** Guarda el estado actual en el servidor de inmediato (sin debounce). */
+  private empujarRemoto(): void {
+    void this.saveRemote?.({
+      theme: this.theme(),
+      background: this.background(),
+      appOrder: this.appOrder(),
+      dockCount: this.dockCount(),
+    }).catch((e) => console.error('[prefs] no se pudo guardar', e));
   }
 
   resolved(): 'light' | 'dark' {
