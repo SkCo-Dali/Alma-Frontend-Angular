@@ -33,7 +33,7 @@ const CASOS: CasoDef[] = [
     id: 'informacion_adicional',
     titulo: 'Información adicional',
     detalle: 'Se le pide algo al asesor (ocupación, historia clínica…).',
-    icon: 'mail-question',
+    icon: 'help-circle',
   },
   {
     id: 'examen_medico',
@@ -57,7 +57,7 @@ const CASOS: CasoDef[] = [
     id: 'reaseguro_seguimiento',
     titulo: 'Respuesta de reaseguro',
     detalle: 'Fechas de envío y recibido, y su concepto.',
-    icon: 'mail-check',
+    icon: 'inbox',
   },
   {
     id: 'pendiente_fondeo',
@@ -90,7 +90,7 @@ const CASOS: CasoDef[] = [
           <div
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
           >
-            <lucide-icon name="git-pull-request-arrow" [size]="18" />
+            <lucide-icon name="workflow" [size]="18" />
           </div>
           <div class="min-w-0 flex-1">
             <h2 class="text-base font-bold leading-tight">Actualizar en Pipeline</h2>

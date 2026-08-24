@@ -8,7 +8,8 @@
     "build:prd": "ng build --configuration production --output-hashing all",
     "build:stg": "ng build --configuration staging --output-hashing all",
     "build:dev": "ng build --configuration development --output-hashing all",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "check:icons": "node scripts/check-icons.mjs"
   },
   "private": true,
   "dependencies": {
