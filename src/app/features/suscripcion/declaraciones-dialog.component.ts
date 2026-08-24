@@ -1,7 +1,7 @@
 // Cuestionario de asegurabilidad de la cotización, leído de la BD de Pharos (snapshot
 // sincronizado por el worker).
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { DeclaracionItemApi, DeclaracionesApi, SuscripcionApi } from './suscripcion.api';
@@ -314,12 +314,17 @@ export class DeclaracionesDialogComponent {
   });
 
   constructor() {
-    void this.cargar();
+    // Los inputs requeridos NO están disponibles en el constructor (leerlos
+    // ahí lanza NG0950). El effect corre cuando ya están enlazados.
+    effect(() => {
+      const id = this.solicitudId();
+      untracked(() => void this.cargar(id));
+    });
   }
 
-  private async cargar(): Promise<void> {
+  private async cargar(id: string): Promise<void> {
     try {
-      this.data.set(await this.api.getDeclaraciones(this.solicitudId()));
+      this.data.set(await this.api.getDeclaraciones(id));
     } catch (e) {
       this.error.set(
         e instanceof Error
