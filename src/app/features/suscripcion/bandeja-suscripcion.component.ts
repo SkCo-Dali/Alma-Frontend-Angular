@@ -259,9 +259,9 @@ const CAPSULE_HOVER: Record<FamiliaEtapa, string> = {
           </div>
         }
 
-        <!-- Shell de la tabla + paginación -->
+        <!-- Shell de la tabla + paginación (vidrio esmerilado, como la config del motor) -->
         <div
-          class="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-[var(--table-surface)] shadow-[var(--shadow-md)]"
+          class="glass flex w-full min-w-0 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-md)]"
         >
           <alma-suscripcion-grid-table
             [data]="grid.data()"
@@ -286,13 +286,14 @@ const CAPSULE_HOVER: Record<FamiliaEtapa, string> = {
             (dateFilterChange)="grid.setDateFilter($event.field, $event.from, $event.to)"
             (clearFilter)="grid.clearFieldFilter($event)"
           />
-          <div class="mt-auto border-t bg-[var(--table-surface)] px-4">
+          <div class="mt-auto">
             <alma-grid-pagination
               [currentPage]="grid.page()"
               [totalPages]="grid.totalPages() || 1"
               [total]="grid.total()"
               [itemsPerPage]="grid.pageSize()"
               [pageSizeOptions]="pageSizes"
+              surfaceClass="bg-transparent"
               (pageChange)="grid.setPage($event)"
               (itemsPerPageChange)="grid.setPageSize($event)"
             />

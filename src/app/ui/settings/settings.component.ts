@@ -2,11 +2,14 @@
 // Agente (próximamente), ayuda y sesión. La Ayuda se integró aquí (/help redirige).
 
 import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   BACKGROUNDS,
   Background,
+  BackgroundBlur,
+  isImageBackground,
   PreferencesService,
   Theme,
 } from '../../core/services/preferences.service';
@@ -34,6 +37,13 @@ const FONDOS: Record<Background, { label: string; preview: string }> = {
   cielo: { label: 'Cielo', preview: 'linear-gradient(135deg,#bfe6ff,#8fd6f0,#dff0e6)' },
 };
 
+const NIVELES_DESENFOQUE: { id: BackgroundBlur; label: string }[] = [
+  { id: 'off', label: 'Ninguno' },
+  { id: 'suave', label: 'Suave' },
+  { id: 'medio', label: 'Medio' },
+  { id: 'fuerte', label: 'Fuerte' },
+];
+
 const AYUDA = [
   { icon: 'book-open', title: 'Documentación', desc: 'Guías de uso y preguntas frecuentes.' },
   { icon: 'life-buoy', title: 'Soporte técnico', desc: 'Contacta a Operaciones Digitales.' },
@@ -42,13 +52,22 @@ const AYUDA = [
 
 @Component({
   selector: 'alma-settings',
-  imports: [LucideAngularModule, PageHeaderComponent, CuentaPharosComponent],
+  imports: [RouterLink, LucideAngularModule, PageHeaderComponent, CuentaPharosComponent],
   template: `
-    <alma-page-header title="Configuración" description="Preferencias personales del portal." />
+    <div class="mx-auto max-w-3xl">
+      <a
+        routerLink="/"
+        class="glass mb-4 inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+      >
+        <lucide-icon name="arrow-left" [size]="16" />
+        Inicio
+      </a>
 
-    <div class="flex max-w-3xl flex-col gap-5">
+      <alma-page-header title="Configuración" description="Preferencias personales del portal." />
+
+      <div class="flex flex-col gap-5">
       <!-- ── Apariencia ── -->
-      <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+      <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
         <h2 class="text-sm font-semibold text-foreground">Apariencia</h2>
         <p class="mb-4 text-xs text-muted-foreground">
           El tema y el fondo se guardan en tu cuenta.
@@ -110,6 +129,31 @@ const AYUDA = [
             </button>
           }
         </div>
+
+        <!-- Desenfoque: solo tiene sentido con fondos de imagen. -->
+        @if (esFondoImagen()) {
+          <div class="mt-5">
+            <p class="mb-1 text-xs font-medium text-muted-foreground">Desenfoque</p>
+            <p class="mb-2 text-xs text-muted-foreground">
+              Difumina la imagen para dar más protagonismo al contenido.
+            </p>
+            <div class="flex flex-wrap gap-2">
+              @for (n of nivelesDesenfoque; track n.id) {
+                <button
+                  (click)="prefs.backgroundBlur.set(n.id)"
+                  class="rounded-lg border px-3 py-2 text-sm transition-colors"
+                  [class]="
+                    prefs.backgroundBlur() === n.id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:text-foreground'
+                  "
+                >
+                  {{ n.label }}
+                </button>
+              }
+            </div>
+          </div>
+        }
       </section>
 
       <!-- ── Cuentas conectadas (Pharos, para usuarios de Suscripción) ── -->
@@ -118,7 +162,7 @@ const AYUDA = [
       }
 
       <!-- ── Conexiones para el Agente Alma (próximamente) ── -->
-      <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+      <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
         <div class="flex items-center gap-2">
           <h2 class="text-sm font-semibold text-foreground">Conexiones para el Agente Alma</h2>
           <span class="alma-badge bg-primary/10 text-primary">Próximamente</span>
@@ -159,7 +203,7 @@ const AYUDA = [
       </section>
 
       <!-- ── Ayuda ── -->
-      <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+      <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
         <h2 class="text-sm font-semibold text-foreground">Ayuda y soporte</h2>
         <p class="mb-4 text-xs text-muted-foreground">
           Recursos y contacto del equipo de Operaciones Digitales.
@@ -180,7 +224,7 @@ const AYUDA = [
       </section>
 
       <!-- ── Sesión ── -->
-      <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+      <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
         <h2 class="text-sm font-semibold text-foreground">Sesión</h2>
         <p class="mb-3 text-xs text-muted-foreground">
           Sesión iniciada como {{ user().correo }}.
@@ -190,6 +234,7 @@ const AYUDA = [
           Cerrar sesión
         </button>
       </section>
+      </div>
     </div>
   `,
 })
@@ -200,6 +245,9 @@ export class SettingsComponent {
   protected readonly temas = TEMAS;
   protected readonly fondos = BACKGROUNDS;
   protected readonly fondosMeta = FONDOS;
+  protected readonly nivelesDesenfoque = NIVELES_DESENFOQUE;
+  /** El desenfoque solo aplica (y se ofrece) cuando el fondo es una imagen. */
+  protected readonly esFondoImagen = computed(() => isImageBackground(this.prefs.background()));
   protected readonly ayuda = AYUDA;
   protected readonly user = this.auth.user;
   protected readonly puedeSuscripcion = computed(() =>

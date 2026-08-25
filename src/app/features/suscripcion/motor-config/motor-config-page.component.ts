@@ -166,7 +166,7 @@ interface GrupoVista {
         <div class="flex items-center gap-3">
           <a
             routerLink="/apps/suscripcion"
-            class="flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
           >
             <lucide-icon name="arrow-left" [size]="16" />
             Suscripción de Seguros
@@ -174,10 +174,10 @@ interface GrupoVista {
         </div>
 
         <div>
-          <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Configuración del motor de reglas
           </h1>
-          <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
+          <p class="text-on-wallpaper mt-1 max-w-2xl text-sm text-foreground/80">
             Parámetros vigentes del motor de suscripción: edítalos sin depender de
             despliegues.
           </p>

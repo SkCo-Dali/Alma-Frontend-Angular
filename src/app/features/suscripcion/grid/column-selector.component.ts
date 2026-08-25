@@ -22,19 +22,32 @@ import { ColumnConfig } from './suscripcion-grid.api';
     <button
       type="button"
       (click)="abrir()"
-      class="alma-btn alma-btn-outline h-9 rounded-xl bg-card px-3 text-xs font-medium"
+      class="alma-btn alma-btn-outline glass h-9 rounded-xl px-3 text-xs font-medium"
     >
       <lucide-icon name="columns-3" [size]="16" class="text-primary" />
       Columnas
     </button>
 
-    @if (abierto()) {
-      <!-- Overlay -->
-      <div class="fixed inset-0 z-[60] bg-black/30" (click)="cerrar()"></div>
-      <!-- Sheet lateral derecho -->
-      <div
-        class="surface-solid fixed right-0 top-0 z-[61] flex h-full w-72 flex-col overflow-hidden border-l border-border shadow-[var(--shadow-lg)] sm:w-80"
-      >
+    <!-- Overlay: se desvanece al abrir/cerrar. -->
+    <div
+      class="fixed inset-0 z-[60] bg-black/30 transition-opacity duration-300"
+      [class.opacity-0]="!abierto()"
+      [class.pointer-events-none]="!abierto()"
+      (click)="cerrar()"
+    ></div>
+    <!--
+      Sheet lateral derecho. Mismo patrón del simulador: panel flotante con
+      esquinas redondeadas y animación de deslizamiento. El estado cerrado va
+      como estilo inline estático (translate:100%) para que el primer pintado
+      sea el cerrado con la app zoneless; el binding gana cuando corre.
+    -->
+    <div
+      style="translate: 100%"
+      [style.translate]="abierto() ? '0' : '100%'"
+      [attr.aria-hidden]="!abierto()"
+      class="surface-solid fixed bottom-4 right-0 top-24 z-[61] flex w-72 flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 sm:w-80"
+      [class.pointer-events-none]="!abierto()"
+    >
         <!-- Header -->
         <div
           class="shrink-0 border-b border-border/60 bg-[var(--table-header)] px-4 pb-4 pt-5"
@@ -160,7 +173,6 @@ import { ColumnConfig } from './suscripcion-grid.api';
           </div>
         </div>
       </div>
-    }
   `,
 })
 export class ColumnSelectorComponent {

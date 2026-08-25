@@ -28,10 +28,10 @@ interface MotorModule {
       <div class="mx-auto w-full max-w-5xl space-y-8 px-4 py-4 sm:px-6 sm:py-6">
         <!-- Large Title estilo Apple -->
         <div>
-          <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h1 class="text-on-wallpaper text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Motor de Comisiones
           </h1>
-          <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
+          <p class="text-on-wallpaper mt-2 max-w-2xl text-sm text-foreground/80">
             Planes de comisiones, catálogos, reglas y parametrización.
           </p>
         </div>

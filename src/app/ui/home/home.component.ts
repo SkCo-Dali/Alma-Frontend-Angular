@@ -104,14 +104,14 @@ const AGENTE_LISTO = false;
       class="mx-auto flex min-h-[72vh] w-full max-w-[1480px] flex-col items-center justify-center"
     >
       <!-- Saludo + esfera -->
-      <div class="flex w-full flex-col items-center pt-2 text-center">
+      <div class="text-on-wallpaper flex w-full flex-col items-center pt-2 text-center">
         <h1
           class="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
         >
           {{ greeting() }}
           <lucide-icon name="sprout" [size]="26" class="text-primary" />
         </h1>
-        <p class="mt-1.5 text-sm text-muted-foreground sm:text-base">¿Qué quieres lograr hoy?</p>
+        <p class="mt-1.5 text-sm text-foreground/80 sm:text-base">¿Qué quieres lograr hoy?</p>
         <alma-housing [size]="210" [interactive]="true" class="-my-2" />
       </div>
 
@@ -171,7 +171,7 @@ const AGENTE_LISTO = false;
       </div>
 
       @if (!agenteListo) {
-        <p class="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <p class="text-on-wallpaper mt-3 flex items-center gap-1.5 text-xs text-foreground/80">
           <lucide-icon name="sparkles" [size]="13" class="text-primary" />
           El Agente Alma se activará muy pronto: desde aquí podrás pedirle todo esto.
         </p>
