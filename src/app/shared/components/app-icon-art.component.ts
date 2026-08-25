@@ -16,6 +16,14 @@ import { AlmaSphereComponent } from './alma-sphere.component';
       <alma-sphere />
     } @else if (app().iconUrl; as url) {
       <img [src]="url" alt="" draggable="false" class="h-full w-full object-cover" />
+    } @else if (flat()) {
+      <!-- Glifo de color, sin cuadro (para el Dock aligerado). -->
+      <lucide-icon
+        [name]="app().icono"
+        class="h-[80%] w-[80%]"
+        [style.color]="app().color"
+        [strokeWidth]="1.9"
+      />
     } @else {
       <div
         class="flex h-full w-full items-center justify-center text-white"
@@ -38,4 +46,6 @@ import { AlmaSphereComponent } from './alma-sphere.component';
 export class AppIconArtComponent {
   readonly app = input.required<Application>();
   readonly iconClassName = input('h-[55%] w-[55%]');
+  /** true ⇒ glifo de color sin cuadro (Dock aligerado); false ⇒ tile clásico. */
+  readonly flat = input(false);
 }

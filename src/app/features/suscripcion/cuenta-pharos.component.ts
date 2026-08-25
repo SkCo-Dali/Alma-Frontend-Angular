@@ -18,7 +18,7 @@ export interface CuentaPharosApi {
   selector: 'alma-cuenta-pharos',
   imports: [FormsModule, LucideAngularModule],
   template: `
-    <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
+    <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
       <h2 class="text-sm font-semibold text-foreground">Cuentas conectadas</h2>
       <p class="mb-4 mt-1 text-xs text-muted-foreground">
         Conecta tu cuenta de Pharos para que las pólizas que emitas queden a tu nombre en

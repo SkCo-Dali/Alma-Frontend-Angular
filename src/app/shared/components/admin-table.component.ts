@@ -13,7 +13,7 @@ const TAMANOS = [10, 25, 50] as const;
   imports: [NgTemplateOutlet, LucideAngularModule],
   template: `
     <div
-      class="flex flex-col overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-sm)]"
+      class="glass flex flex-col overflow-hidden rounded-lg shadow-[var(--shadow-sm)]"
     >
       <div class="overflow-auto" [style.maxHeight]="maxHeight()">
         <table class="w-full text-sm">

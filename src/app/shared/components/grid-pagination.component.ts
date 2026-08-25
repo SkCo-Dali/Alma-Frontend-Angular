@@ -9,7 +9,7 @@ import { LucideAngularModule } from 'lucide-angular';
   imports: [LucideAngularModule],
   template: `
     <div
-      class="flex flex-col items-center justify-between gap-4 border-t bg-card px-4 py-3 sm:flex-row"
+      class="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 sm:flex-row {{ surfaceClass() }}"
     >
       <div class="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row sm:gap-4">
         <div
@@ -96,6 +96,10 @@ export class GridPaginationComponent {
   readonly total = input.required<number>();
   readonly itemsPerPage = input.required<number>();
   readonly pageSizeOptions = input<readonly number[]>([10, 25, 50, 100]);
+  /** Clase de fondo del contenedor. Por defecto 'bg-card' (opaco); las vistas
+   *  con superficie esmerilada pueden pasar '' o 'bg-transparent' para verse a
+   *  través del shell. */
+  readonly surfaceClass = input('bg-card');
 
   readonly pageChange = output<number>();
   readonly itemsPerPageChange = output<number>();

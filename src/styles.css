@@ -161,26 +161,51 @@
    Paleta Skandia (#00C83C verde, #FF9200 naranja, #02B1FF azul, gris). */
 
 /* ── Wallpapers solarpunk (imagen a pantalla completa; 'terraza' es el
-   por defecto = sin data-bg). En modo oscuro se les baja la luz con un velo. ── */
-html:not([data-bg]) body { background-image: url('/wallpapers/terraza.jpg'); }
-html[data-bg='mirador'] body { background-image: url('/wallpapers/mirador.jpg'); }
-html[data-bg='lago'] body { background-image: url('/wallpapers/lago.jpg'); }
-html[data-bg='balcon'] body { background-image: url('/wallpapers/balcon.jpg'); }
-html[data-bg='dorado'] body { background-image: url('/wallpapers/dorado.jpg'); }
-html:not([data-bg]) body,
-html[data-bg='mirador'] body,
-html[data-bg='lago'] body,
-html[data-bg='balcon'] body,
-html[data-bg='dorado'] body {
+   por defecto = sin data-bg). Se pintan en una capa fija propia (body::before,
+   z-index -1) para poder desenfocar SOLO la imagen —no el contenido— cuando el
+   usuario activa el desenfoque. En modo oscuro se les baja la luz con un velo. ── */
+html:not([data-bg]) body::before,
+html[data-bg='mirador'] body::before,
+html[data-bg='lago'] body::before,
+html[data-bg='balcon'] body::before,
+html[data-bg='dorado'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  /* Suaviza el encendido/apagado del desenfoque (filtro) y su leve escalado. */
+  transition: filter 0.4s ease, transform 0.4s ease;
 }
-html.dark:not([data-bg]) body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/terraza.jpg'); }
-html.dark[data-bg='mirador'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/mirador.jpg'); }
-html.dark[data-bg='lago'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/lago.jpg'); }
-html.dark[data-bg='balcon'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/balcon.jpg'); }
-html.dark[data-bg='dorado'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/dorado.jpg'); }
+html:not([data-bg]) body::before { background-image: url('/wallpapers/terraza.jpg'); }
+html[data-bg='mirador'] body::before { background-image: url('/wallpapers/mirador.jpg'); }
+html[data-bg='lago'] body::before { background-image: url('/wallpapers/lago.jpg'); }
+html[data-bg='balcon'] body::before { background-image: url('/wallpapers/balcon.jpg'); }
+html[data-bg='dorado'] body::before { background-image: url('/wallpapers/dorado.jpg'); }
+html.dark:not([data-bg]) body::before { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/terraza.jpg'); }
+html.dark[data-bg='mirador'] body::before { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/mirador.jpg'); }
+html.dark[data-bg='lago'] body::before { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/lago.jpg'); }
+html.dark[data-bg='balcon'] body::before { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/balcon.jpg'); }
+html.dark[data-bg='dorado'] body::before { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/dorado.jpg'); }
+
+/* Desenfoque del fondo de imagen por niveles (Configuración > Apariencia > Fondo).
+   Como los degradados no generan la capa ::before, esto solo afecta a los fondos
+   de imagen. Escalamos la capa —más cuanto mayor el desenfoque— para que los
+   bordes difuminados no descubran el lienzo de detrás. */
+html[data-bg-blur='suave'] body::before {
+  filter: blur(6px);
+  transform: scale(1.04);
+}
+html[data-bg-blur='medio'] body::before {
+  filter: blur(14px);
+  transform: scale(1.07);
+}
+html[data-bg-blur='fuerte'] body::before {
+  filter: blur(26px);
+  transform: scale(1.1);
+}
 
 /* OCÉANO ─ azul Skandia protagonista (+ acento verde) */
 html[data-bg="oceano"] {
@@ -701,11 +726,19 @@ html.dark[data-bg="cielo"] {
 /* Dock: transición suave de la magnificación (el tamaño lo calcula
    DockComponent en cada mousemove) */
 .dock-tile {
-  transition:
-    width 0.09s ease-out,
-    height 0.09s ease-out,
-    transform 0.09s ease-out;
-  will-change: width, height, transform;
+  /* La magnificación es transform:scale con origen ABAJO: el ícono crece hacia
+     arriba (sale por encima de la barra) sin alterar el layout del dock. */
+  transform-origin: bottom center;
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+/* Cuadro (squircle + sombra) SOLO para íconos de imagen a sangre completa
+   (PNG de app/nav). El orbe y los glifos de color van sin cuadro. */
+.dock-tile--boxed {
+  overflow: hidden;
+  border-radius: 26%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 .dock-panel {
   /* Curva sobreamortiguada: sin rebote y sin prisa, para que mostrar/ocultar
@@ -808,12 +841,25 @@ html.dark[data-bg="cielo"] {
   .susc-col2-sticky {
     position: sticky !important;
     z-index: 10 !important;
-    background: var(--table-surface) !important;
+    /* Panel fijo "elevado": superficie casi sólida (96%) que igual deja un hilo
+       del tono del wallpaper para no ser un bloque blanco duro, pero enmascara
+       el contenido que pasa por detrás al hacer scroll (sin texto fantasma).
+       La sensación de panel la da la sombra reactiva al scroll (más abajo). */
+    background: color-mix(in srgb, var(--table-surface) 96%, transparent) !important;
   }
 
   .susc-col2-sticky {
     border-right: 1px solid var(--border) !important;
-    box-shadow: 2px 0 4px oklch(0 0 0 / 0.06) !important;
+    box-shadow: none !important;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 220ms ease;
+  }
+  /* Panel fijo elevado: la sombra aparece/crece SOLO al desplazar en horizontal,
+     señalando que hay contenido oculto tras el borde de las columnas fijas. */
+  .susc-scrolled-x .susc-col2-sticky {
+    box-shadow: 10px 0 14px -6px oklch(0 0 0 / 0.22) !important;
   }
 
   .susc-grid-header-sticky .susc-col1-sticky,
@@ -824,7 +870,11 @@ html.dark[data-bg="cielo"] {
 
   tr:hover .susc-col1-sticky,
   tr:hover .susc-col2-sticky {
-    background: color-mix(in oklch, var(--primary) 6%, var(--table-surface)) !important;
+    background: color-mix(
+      in srgb,
+      var(--primary) 6%,
+      color-mix(in srgb, var(--table-surface) 96%, transparent)
+    ) !important;
     color: inherit !important;
   }
 
@@ -856,6 +906,20 @@ html.dark[data-bg="cielo"] {
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border-color: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Texto que va directamente SOBRE el wallpaper (sin pastilla). Una sombra muy
+   sutil del color del lienzo lo separa del fondo aunque el wallpaper sea claro
+   o cargado. Theme-aware: halo claro en modo claro, oscuro en oscuro. Se hereda,
+   así que puede ponerse en el contenedor. */
+.text-on-wallpaper {
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--background) 65%, transparent);
+}
+
+/* Equivalente para íconos SVG (text-shadow no los afecta): un drop-shadow sutil
+   del color del lienzo los separa del wallpaper. */
+.icon-on-wallpaper {
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--background) 65%, transparent));
 }
 
 /* Tarjeta del inicio (widgets del "command center") */

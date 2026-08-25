@@ -22,6 +22,7 @@ import {
   signal,
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { filter } from 'rxjs/operators';
 import { Application } from '../../core/models/platform.models';
 import {
@@ -34,9 +35,9 @@ import { AppIconArtComponent } from './app-icon-art.component';
 import { DockLaunchpadComponent } from './dock-launchpad.component';
 import { TouchDrag, setCloneDragImage } from '../drag-utils';
 
-const BASE = 40; // icono en reposo (px)
-const PEAK = 60; // icono bajo el cursor (px)
-const RADIUS = 140; // radio de influencia (px)
+const BASE = 44; // icono en reposo (px)
+const PEAK = 54; // icono bajo el cursor (px) — zoom sutil (+23%)
+const RADIUS = 110; // radio de influencia (px) — magnificación más contenida
 
 interface DockEntry {
   key: string;
@@ -45,13 +46,21 @@ interface DockEntry {
   kind: 'app' | 'nav-img' | 'nav-action';
   app?: Application;
   img?: string;
+  /** Glifo lucide (se pinta SIN cuadro). Tiene prioridad sobre `img`. */
+  icon?: string;
   to?: string;
   href?: string;
 }
 
 @Component({
   selector: 'alma-dock',
-  imports: [NgTemplateOutlet, RouterLink, AppIconArtComponent, DockLaunchpadComponent],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    LucideAngularModule,
+    AppIconArtComponent,
+    DockLaunchpadComponent,
+  ],
   template: `
     <!-- Asa tipo indicador de iPhone -->
     @if (insideApp()) {
@@ -86,7 +95,7 @@ interface DockEntry {
     >
       <nav
         aria-label="Dock de navegación"
-        class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-full border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
+        class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-3xl border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
         (mouseleave)="onLeaveNav()"
         (focusin)="insideApp() && invocar()"
@@ -157,15 +166,22 @@ interface DockEntry {
       <!-- Tile con etiqueta SIEMPRE visible (estilo launcher); la entrada activa
            se resalta con una pastilla clara. La magnificación solo escala el
            ícono, la etiqueta queda quieta para que la fila no "salte". -->
-      <div class="dock-entry" [class.activa]="entry.active" #iconEl>
+      <div class="dock-entry" [class.activa]="entry.active" [attr.data-i]="i" #iconEl>
         <div
-          class="dock-tile flex items-center justify-center overflow-hidden rounded-[26%] shadow-[0_4px_10px_rgba(0,0,0,.18)]"
-          [style.width.px]="sizeAt(i)"
-          [style.height.px]="sizeAt(i)"
-          [style.transform]="'translateY(' + liftAt(i) + 'px)'"
+          class="dock-tile flex items-center justify-center"
+          [class.dock-tile--boxed]="esTile(entry)"
+          [style.width.px]="baseSize"
+          [style.height.px]="baseSize"
+          [style.transform]="'translateY(' + liftAt(i) + 'px) scale(' + scaleAt(i) + ')'"
         >
           @if (entry.kind === 'app') {
-            <alma-app-icon-art [app]="entry.app" />
+            <alma-app-icon-art [app]="entry.app" [flat]="!esTile(entry)" />
+          } @else if (entry.icon) {
+            <lucide-icon
+              [name]="entry.icon"
+              class="h-[78%] w-[78%] text-foreground/70"
+              [strokeWidth]="1.9"
+            />
           } @else {
             <img [src]="entry.img" alt="" draggable="false" class="h-full w-full object-cover" />
           }
@@ -364,7 +380,7 @@ export class DockComponent {
         label: 'Todas las apps',
         active: this.launchpad.open(),
         kind: 'nav-action',
-        img: '/app-icons/nav-todas.png',
+        icon: 'layout-grid',
       },
       { key: 'sep', label: '', active: false, kind: 'nav-img' },
       ...apps,
@@ -375,28 +391,51 @@ export class DockComponent {
     return this.sizes()?.[i] ?? BASE;
   }
 
+  protected readonly baseSize = BASE;
+
+  /** Escala visual del ícono bajo el cursor. Usamos transform:scale (no width/
+   *  height) para que la magnificación NO cambie el layout: el dock se queda
+   *  quieto y solo "crece" el ícono, saliendo por encima de la barra. */
+  protected scaleAt(i: number): number {
+    return this.sizeAt(i) / BASE;
+  }
+
+  /** Pequeño empuje hacia arriba (además de la escala) para que el ícono
+   *  sobresalga un poco de la barra, estilo macOS. Es transform ⇒ no toca layout. */
   protected liftAt(i: number): number {
-    const size = this.sizeAt(i);
-    return (-12 * (size - BASE)) / (PEAK - BASE);
+    const t = (this.sizeAt(i) - BASE) / (PEAK - BASE);
+    return -12 * t;
+  }
+
+  /** ¿Este ícono se pinta como "tile" con cuadro (squircle + sombra)? Sí para
+   *  imágenes a sangre completa (PNG que traen su propio fondo); no para glifos
+   *  lucide, el orbe de Alma ni las apps sin iconUrl (glifo de color). */
+  protected esTile(entry: DockEntry): boolean {
+    if (entry.icon) return false;
+    if (entry.kind === 'app') {
+      const a = entry.app;
+      if (!a || a.id === 'app-agente-alma') return false;
+      return Boolean(a.iconUrl);
+    }
+    return true;
   }
 
   protected onMove(event: MouseEvent): void {
     if (this.dragAppId()) return; // sin magnificar al arrastrar
-    const els = this.iconEls?.toArray() ?? [];
-    const entries = this.entries();
-    const next = entries.map(() => BASE);
-    const tileIdxs = entries
-      .map((e, idx) => ({ e, idx }))
-      .filter(({ e }) => e.key !== 'sep')
-      .map(({ idx }) => idx);
-    tileIdxs.forEach((entryIdx, tileIdx) => {
-      const el = els[tileIdx]?.nativeElement;
-      if (!el) return;
+    const next = this.entries().map(() => BASE);
+    // Cada #iconEl lleva su índice real en data-i: aplicamos el tamaño a ESE
+    // índice y medimos su propio rect. Así no dependemos de que el orden del
+    // QueryList coincida con el de entries() (fuente del bug: se magnificaba el
+    // ícono vecino).
+    for (const ref of this.iconEls?.toArray() ?? []) {
+      const el = ref.nativeElement;
+      const i = Number(el.dataset['i']);
+      if (Number.isNaN(i)) continue;
       const r = el.getBoundingClientRect();
       const d = Math.min(Math.abs(event.clientX - (r.left + r.width / 2)), RADIUS);
       const t = 1 - d / RADIUS;
-      next[entryIdx] = BASE + (PEAK - BASE) * t * t;
-    });
+      next[i] = BASE + (PEAK - BASE) * t * t;
+    }
     this.sizes.set(next);
   }
 
