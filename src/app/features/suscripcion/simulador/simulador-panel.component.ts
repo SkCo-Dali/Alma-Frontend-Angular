@@ -1,6 +1,6 @@
 // Panel lateral del Simulador de asegurabilidad (réplica del Excel del equipo
-// operativo). Patrón "Tu Dali": panel fixed a la derecha SIN overlay en desktop — el
-// usuario interactúa con el panel y con la página al mismo tiempo. Precarga: con
+// operativo). Panel fixed a la derecha, flotante por encima de la página con un backdrop
+// atenuado; clic fuera lo cierra (el backdrop lo pone el host). Precarga: con
 // `solicitudId` (subpágina de detalle) trae la entrada precargada + la pre-simulación
 // automática del worker; en la bandeja permite buscar una cotización por
 // número/asegurado y precargarla.
@@ -102,7 +102,7 @@ interface ItemVista {
       [attr.aria-hidden]="!open()"
       style="translate: 100%"
       [style.translate]="open() ? '0' : '100%'"
-      class="surface-solid fixed bottom-4 right-0 top-24 z-20 flex w-full max-w-[420px] flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
+      class="surface-solid fixed bottom-4 right-0 top-24 z-50 flex w-full max-w-[420px] flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
       [class.pointer-events-none]="!open()"
     >
       <!-- Cabecera -->

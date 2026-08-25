@@ -14,8 +14,8 @@ import { SimuladorStore } from './simulador.store';
       (click)="simulador.alternar(!simulador.abierto())"
       [attr.aria-pressed]="simulador.abierto()"
       title="Simulador de asegurabilidad"
-      class="alma-btn alma-btn-outline h-9 rounded-xl bg-card px-3 text-xs font-medium"
-      [class]="simulador.abierto() ? 'border-primary/50 bg-primary/10' : ''"
+      class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-xs font-medium"
+      [class]="simulador.abierto() ? 'border-primary/50 bg-primary/10' : 'glass'"
     >
       <lucide-icon name="calculator" [size]="16" class="text-primary" />
       Simulador

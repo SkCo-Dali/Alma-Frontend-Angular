@@ -79,6 +79,16 @@
             "local": {
               "optimization": false,
               "sourceMap": true
+            },
+            "local-dev": {
+              "optimization": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.dev.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "local"
@@ -91,6 +101,9 @@
             },
             "development": {
               "buildTarget": "almaShell:build:local"
+            },
+            "dev": {
+              "buildTarget": "almaShell:build:local-dev"
             }
           },
           "defaultConfiguration": "development"

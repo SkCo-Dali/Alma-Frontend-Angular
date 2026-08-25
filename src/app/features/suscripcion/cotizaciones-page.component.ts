@@ -28,7 +28,7 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
           <div class="flex items-center gap-3">
             <a
               routerLink="/apps/suscripcion"
-              class="flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
             >
               <lucide-icon name="arrow-left" [size]="16" />
               Suscripción de Seguros

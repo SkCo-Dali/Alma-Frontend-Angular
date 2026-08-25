@@ -2,7 +2,7 @@
 // Usuarios, Roles, Auditoría y Métricas.
 
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { APP_CATALOG } from '../../core/constants/app-catalog';
@@ -18,6 +18,7 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
 @Component({
   selector: 'alma-admin',
   imports: [
+    RouterLink,
     LucideAngularModule,
     PageHeaderComponent,
     AdminTableComponent,
@@ -26,13 +27,21 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
     MetricasUsoComponent,
   ],
   template: `
+    <a
+      routerLink="/"
+      class="glass mb-4 inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+    >
+      <lucide-icon name="arrow-left" [size]="16" />
+      Inicio
+    </a>
+
     <alma-page-header
       title="Accesos"
       description="Usuarios, roles, auditoría y métricas de la plataforma."
     />
 
     <div
-      class="mb-5 flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1 shadow-[var(--shadow-sm)]"
+      class="glass mb-5 flex flex-wrap gap-1 rounded-lg p-1 shadow-[var(--shadow-sm)]"
     >
       @for (t of visiblesTabs(); track t.id) {
         <button
