@@ -10,7 +10,7 @@ import { LucideAngularModule } from 'lucide-angular';
   imports: [FormsModule, LucideAngularModule],
   template: `
     <div
-      class="flex h-9 w-full min-w-[260px] max-w-md overflow-hidden rounded-xl border border-input bg-card focus-within:ring-2 focus-within:ring-ring"
+      class="glass flex h-9 w-full min-w-[260px] max-w-md overflow-hidden rounded-xl focus-within:ring-2 focus-within:ring-ring"
     >
       <input
         type="text"

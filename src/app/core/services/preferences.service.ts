@@ -24,6 +24,22 @@ export const BACKGROUNDS = [
 ] as const;
 export type Background = (typeof BACKGROUNDS)[number];
 
+/** Fondos que son imagen (wallpaper); el resto son paletas de degradado --wp-*.
+ *  El desenfoque solo aplica a estos. */
+export const IMAGE_BACKGROUNDS: readonly Background[] = [
+  'terraza',
+  'mirador',
+  'lago',
+  'balcon',
+  'dorado',
+];
+export const isImageBackground = (bg: Background): boolean =>
+  IMAGE_BACKGROUNDS.includes(bg);
+
+/** Intensidad del desenfoque del fondo de imagen ('off' = sin desenfoque). */
+export const BLUR_LEVELS = ['off', 'suave', 'medio', 'fuerte'] as const;
+export type BackgroundBlur = (typeof BLUR_LEVELS)[number];
+
 /** Máximo de Apps que el usuario puede anclar al Dock. */
 export const MAX_DOCK = 10;
 export const clampDock = (n: number) => Math.max(1, Math.min(MAX_DOCK, n));
@@ -55,6 +71,8 @@ function consumirEstrenoFondo(): boolean {
 interface Persisted {
   theme: Theme;
   background: Background;
+  /** Intensidad del desenfoque de la imagen de fondo (solo aplica a imágenes). */
+  backgroundBlur: BackgroundBlur;
   appOrder: string[];
   dockCount: number;
   favorites: string[];
@@ -64,6 +82,7 @@ interface Persisted {
 const DEFAULTS: Persisted = {
   theme: 'system',
   background: 'terraza',
+  backgroundBlur: 'off',
   appOrder: [],
   dockCount: 6,
   favorites: [],
@@ -79,12 +98,23 @@ function migrarFondo(bg: unknown): Background {
     : DEFAULTS.background;
 }
 
+/** Normaliza el desenfoque persistido. El campo fue booleano hasta ago-2026,
+ *  cuando pasó a tener niveles: el `true` de entonces equivale a 'medio'. */
+function migrarBlur(v: unknown): BackgroundBlur {
+  if (v === true) return 'medio';
+  if (v === false || v == null) return 'off';
+  return (BLUR_LEVELS as readonly string[]).includes(v as string)
+    ? (v as BackgroundBlur)
+    : 'off';
+}
+
 function load(estrenarFondo: boolean): Persisted {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
     const p = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Persisted>) };
     p.background = estrenarFondo ? DEFAULTS.background : migrarFondo(p.background);
+    p.backgroundBlur = migrarBlur(p.backgroundBlur);
     return p;
   } catch {
     return DEFAULTS;
@@ -104,6 +134,7 @@ export class PreferencesService {
 
   readonly theme = signal<Theme>(this.inicial.theme);
   readonly background = signal<Background>(this.inicial.background);
+  readonly backgroundBlur = signal<BackgroundBlur>(this.inicial.backgroundBlur);
   readonly appOrder = signal<string[]>(this.inicial.appOrder);
   readonly dockCount = signal<number>(clampDock(this.inicial.dockCount));
   readonly favorites = signal<string[]>(this.inicial.favorites);
@@ -127,10 +158,18 @@ export class PreferencesService {
       if (bg === 'terraza') delete document.documentElement.dataset['bg'];
       else document.documentElement.dataset['bg'] = bg;
     });
+    // El CSS solo desenfoca la capa de imagen (body::before), así que el
+    // atributo es inofensivo con degradados: no hay imagen que desenfocar.
+    effect(() => {
+      const nivel = this.backgroundBlur();
+      if (nivel === 'off') delete document.documentElement.dataset['bgBlur'];
+      else document.documentElement.dataset['bgBlur'] = nivel;
+    });
     effect(() => {
       const snap: Persisted = {
         theme: this.theme(),
         background: this.background(),
+        backgroundBlur: this.backgroundBlur(),
         appOrder: this.appOrder(),
         dockCount: this.dockCount(),
         favorites: this.favorites(),
@@ -142,6 +181,7 @@ export class PreferencesService {
         const remoto: PreferenciasPortal = {
           theme: snap.theme,
           background: snap.background,
+          backgroundBlur: snap.backgroundBlur,
           appOrder: snap.appOrder,
           dockCount: snap.dockCount,
         };
@@ -167,6 +207,7 @@ export class PreferencesService {
         // Durante el estreno se ignora el fondo guardado (abajo se persiste el
         // nuevo, para que también lo vea en sus otros dispositivos).
         if (p.background && !this.estrenoFondo) this.background.set(migrarFondo(p.background));
+        if (p.backgroundBlur != null) this.backgroundBlur.set(migrarBlur(p.backgroundBlur));
         if (Array.isArray(p.appOrder)) this.appOrder.set(p.appOrder);
         if (typeof p.dockCount === 'number') this.dockCount.set(clampDock(p.dockCount));
       })
@@ -185,6 +226,7 @@ export class PreferencesService {
     void this.saveRemote?.({
       theme: this.theme(),
       background: this.background(),
+      backgroundBlur: this.backgroundBlur(),
       appOrder: this.appOrder(),
       dockCount: this.dockCount(),
     }).catch((e) => console.error('[prefs] no se pudo guardar', e));

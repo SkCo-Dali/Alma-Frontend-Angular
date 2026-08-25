@@ -123,6 +123,9 @@ export interface MeApi {
 export interface PreferenciasPortal {
   theme?: string;
   background?: string;
+  /** Nivel de desenfoque de la imagen de fondo: 'off' | 'suave' | 'medio' | 'fuerte'.
+   *  (Fue booleano hasta ago-2026; el cliente migra el valor heredado.) */
+  backgroundBlur?: string;
   appOrder?: string[];
   dockCount?: number;
 }

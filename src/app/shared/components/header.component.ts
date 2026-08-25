@@ -32,11 +32,11 @@ import { shortName } from '../../core/utils/name';
           class="hidden h-[3.25rem] w-auto dark:block"
         />
         <span class="hidden h-8 w-px bg-border sm:block"></span>
-        <span class="hidden flex-col justify-center sm:flex">
+        <span class="text-on-wallpaper hidden flex-col justify-center sm:flex">
           <span class="text-[13px] font-semibold leading-tight text-foreground">
             Conecta · Orquesta · Impulsa
           </span>
-          <span class="text-[11px] leading-tight text-muted-foreground">
+          <span class="text-[11px] leading-tight text-foreground/70">
             Suite Digital de Operaciones
           </span>
         </span>
@@ -46,11 +46,11 @@ import { shortName } from '../../core/utils/name';
         <button
           type="button"
           (click)="prefs.toggleTheme()"
-          class="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          class="rounded-md p-2 text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
           [attr.aria-label]="dark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
           [title]="dark() ? 'Modo claro' : 'Modo oscuro'"
         >
-          <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="18" />
+          <lucide-icon [name]="dark() ? 'sun' : 'moon'" [size]="18" class="icon-on-wallpaper" />
         </button>
 
         <div class="relative">

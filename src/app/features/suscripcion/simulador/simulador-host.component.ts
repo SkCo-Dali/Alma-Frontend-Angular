@@ -1,10 +1,9 @@
-// Host del panel del simulador (patrón "Tu Dali"): el contenido de la página va dentro
-// de un wrapper con margin-right animado cuando el panel está abierto, y el panel es un
-// hermano `fixed` SIN overlay en desktop — el usuario interactúa con ambos a la vez. El
-// botón flotante vive bajo el header (top-24) y se OCULTA cuando la página monta su
-// propio disparador en el toolbar (alma-simulador-boton). El estado abierto/cerrado
-// persiste en sessionStorage para sobrevivir la navegación bandeja ↔ detalle (cada ruta
-// monta su propio host).
+// Host del panel del simulador: el panel es un hermano `fixed` que flota POR ENCIMA del
+// contenido (overlay) SIN mover la tabla, con un backdrop atenuado detrás — clic fuera
+// del panel lo cierra (igual que el panel de Columnas). El botón flotante vive bajo el
+// header (top-24) y se OCULTA cuando la página monta su propio disparador en el toolbar
+// (alma-simulador-boton). El estado abierto/cerrado persiste en sessionStorage para
+// sobrevivir la navegación bandeja ↔ detalle (cada ruta monta su propio host).
 
 import { Component, inject, input } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
@@ -15,10 +14,8 @@ import { SimuladorStore } from './simulador.store';
   selector: 'alma-simulador-host',
   imports: [LucideAngularModule, SimuladorPanelComponent],
   template: `
-    <!-- El contenido se comprime para hacerle espacio al panel (desktop). -->
-    <div class="transition-[margin-right] duration-300" [class.md:mr-[420px]]="simulador.abierto()">
-      <ng-content />
-    </div>
+    <!-- El panel flota por ENCIMA del contenido (overlay); la tabla no se mueve. -->
+    <ng-content />
 
     <!-- Botón flotante: esquina superior derecha, debajo del header. -->
     @if (simulador.mostrarFlotante()) {
@@ -32,6 +29,20 @@ import { SimuladorStore } from './simulador.store';
         <lucide-icon name="calculator" [size]="18" />
       </button>
     }
+
+    <!--
+      Backdrop: se desvanece y, al hacer clic fuera del panel, lo cierra. La opacidad
+      va como estilo inline (estático cerrado + binding), mismo patrón que el translate
+      del panel: gana sobre cualquier utilidad de la hoja y evita el parpadeo zoneless.
+    -->
+    <div
+      style="opacity: 0"
+      [style.opacity]="simulador.abierto() ? '1' : '0'"
+      class="fixed inset-0 z-40 bg-black/30 transition-opacity duration-300"
+      [class.pointer-events-none]="!simulador.abierto()"
+      (click)="simulador.alternar(false)"
+      aria-hidden="true"
+    ></div>
 
     <alma-simulador-panel
       [open]="simulador.abierto()"

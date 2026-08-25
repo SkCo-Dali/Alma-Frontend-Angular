@@ -63,7 +63,7 @@ interface CeldaRender {
     TooltipDirective,
   ],
   template: `
-    <div class="leads-table-container-scroll relative w-full bg-[var(--table-surface)]">
+    <div class="leads-table-container-scroll relative w-full">
       <!-- Altura: crece hasta ~25 filas (tope 800px) en pantallas altas, con
            scroll interno para el resto; en pantallas bajas manda el
            viewport-calc, que reserva el encabezado del portal + el toolbar en UNA
@@ -73,9 +73,11 @@ interface CeldaRender {
            reducir el header h-24→h-20). Solo scrollea la tabla, nunca el <main>. -->
       <div
         class="leads-table-scroll-wrapper w-full"
+        [class.susc-scrolled-x]="scrolledX()"
+        (scroll)="onHScroll($event)"
         style="height: min(calc(100dvh - 340px), 800px); min-height: 320px"
       >
-        <div class="leads-table-inner-scroll bg-[var(--table-surface)]">
+        <div class="leads-table-inner-scroll">
           <table
             class="w-full table-fixed border-separate border-spacing-0"
             [style.width.px]="tableWidth()"
@@ -341,6 +343,12 @@ export class SuscripcionGridTableComponent {
   /** Anchos por columna (redimensionables). */
   private readonly widths = signal<Record<string, number>>({});
   protected readonly arrastrando = signal<string | null>(null);
+  /** true cuando la tabla está desplazada en horizontal: activa la sombra del
+   *  panel de columnas fijas (señala que hay contenido oculto tras el borde). */
+  protected readonly scrolledX = signal(false);
+  protected onHScroll(ev: Event): void {
+    this.scrolledX.set((ev.target as HTMLElement).scrollLeft > 0);
+  }
   private dragKey: string | null = null;
   /** Columnas ya auto-ajustadas (no re-ajustar en cada refetch). */
   private readonly autoFitted = new Set<string>();
