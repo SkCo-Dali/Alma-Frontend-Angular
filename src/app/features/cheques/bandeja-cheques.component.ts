@@ -5,11 +5,17 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkTagComponent,
+} from '@skandia/ui';
+import {
   Cheque,
   ChequeInput,
   ChequesApi,
   ESTADOS,
-  ESTADO_COLOR,
+  ESTADO_SEVERITY,
   FONDOS,
   TIPOS_RETIRO,
   chequeVacio,
@@ -18,7 +24,14 @@ import {
 
 @Component({
   selector: 'alma-bandeja-cheques',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkTagComponent,
+    SkInputComponent,
+    SkDropdownComponent,
+  ],
   template: `
     <div class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
       <!-- Encabezado -->
@@ -30,26 +43,25 @@ import {
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <div class="relative">
-            <lucide-icon
-              name="search"
-              [size]="16"
-              class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <input
-              class="alma-input w-72 pl-8"
-              [(ngModel)]="busqueda"
-              (keydown.enter)="buscar()"
-              placeholder="Buscar por contrato, cuenta, documento o nombre…"
-            />
-          </div>
-          <button type="button" class="alma-btn alma-btn-outline" (click)="buscar()">
-            Buscar
-          </button>
-          <button type="button" class="alma-btn alma-btn-primary" (click)="abrirNuevo()">
-            <lucide-icon name="plus" [size]="16" />
-            Nuevo cheque
-          </button>
+          <sk-input
+            class="w-72"
+            iconLeft="search"
+            [(ngModel)]="busqueda"
+            (keydown.enter)="buscar()"
+            placeholder="Buscar por contrato, cuenta, documento o nombre…"
+          />
+          <sk-button
+            variant="secondary"
+            type="button"
+            label="Buscar"
+            (clicked)="buscar()"
+          />
+          <sk-button
+            variant="primary"
+            type="button"
+            label="Nuevo cheque"
+            (clicked)="abrirNuevo()"
+          />
         </div>
       </div>
 
@@ -91,29 +103,28 @@ import {
                   </td>
                   <td>{{ c.fondo }}</td>
                   <td>
-                    <span class="alma-badge" [class]="'alma-badge ' + estadoColor[c.estado]">
-                      {{ c.estado }}
-                    </span>
+                    <sk-tag [value]="c.estado" [severity]="estadoSeverity[c.estado]" />
                   </td>
                   <td class="text-right">
                     <div class="flex justify-end gap-1">
-                      <button
+                      <sk-button
+                        variant="tertiary"
                         type="button"
-                        class="alma-btn alma-btn-ghost"
-                        (click)="abrirEdicion(c)"
-                        title="Editar"
-                      >
-                        <lucide-icon name="pencil" [size]="16" />
-                      </button>
-                      <button
+                        iconOnly
+                        icon="pencil"
+                        ariaLabel="Editar"
+                        (clicked)="abrirEdicion(c)"
+                      />
+                      <sk-button
+                        variant="tertiary"
+                        severity="danger"
                         type="button"
-                        class="alma-btn alma-btn-ghost text-destructive"
+                        iconOnly
+                        icon="trash"
+                        ariaLabel="Eliminar"
                         [disabled]="eliminando()"
-                        (click)="eliminar(c)"
-                        title="Eliminar"
-                      >
-                        <lucide-icon name="trash-2" [size]="16" />
-                      </button>
+                        (clicked)="eliminar(c)"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -133,80 +144,38 @@ import {
               <h2 class="text-sm font-semibold text-foreground">
                 {{ editando() ? 'Editar cheque' : 'Nuevo cheque' }}
               </h2>
-              <button type="button" class="alma-btn alma-btn-ghost" (click)="cerrarForm()">
-                <lucide-icon name="x" [size]="16" />
-              </button>
+              <sk-button
+                variant="tertiary"
+                type="button"
+                iconOnly
+                icon="times"
+                ariaLabel="Cerrar"
+                (clicked)="cerrarForm()"
+              />
             </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Fecha *</label>
-                <input type="date" class="alma-input" [(ngModel)]="form.fecha" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Valor *</label>
-                <input type="number" min="0" class="alma-input" [(ngModel)]="form.valor" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Contrato *</label>
-                <input class="alma-input" [(ngModel)]="form.contrato" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Cuenta</label>
-                <input class="alma-input" [(ngModel)]="form.cuenta" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Documento titular *</label>
-                <input class="alma-input" [(ngModel)]="form.documento_titular" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Titular *</label>
-                <input class="alma-input" [(ngModel)]="form.titular" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Documento beneficiario</label>
-                <input class="alma-input" [(ngModel)]="form.documento_beneficiario" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Beneficiario</label>
-                <input class="alma-input" [(ngModel)]="form.beneficiario" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Fondo *</label>
-                <select class="alma-input" [(ngModel)]="form.fondo">
-                  @for (f of fondos; track f) {
-                    <option [value]="f">{{ f }}</option>
-                  }
-                </select>
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Tipo de retiro</label>
-                <select class="alma-input" [(ngModel)]="form.tipo_retiro">
-                  @for (t of tiposRetiro; track t) {
-                    <option [value]="t">{{ t }}</option>
-                  }
-                </select>
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Ciudad</label>
-                <input class="alma-input" [(ngModel)]="form.ciudad" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Oficina</label>
-                <input class="alma-input" [(ngModel)]="form.oficina" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Persona autorizada</label>
-                <input class="alma-input" [(ngModel)]="form.persona_autorizada" />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Estado</label>
-                <select class="alma-input" [(ngModel)]="form.estado">
-                  @for (s of estados; track s) {
-                    <option [value]="s">{{ s }}</option>
-                  }
-                </select>
-              </div>
+              <sk-input type="date" label="Fecha *" [(ngModel)]="form.fecha" />
+              <sk-input type="number" label="Valor *" [(ngModel)]="form.valor" />
+              <sk-input label="Contrato *" [(ngModel)]="form.contrato" />
+              <sk-input label="Cuenta" [(ngModel)]="form.cuenta" />
+              <sk-input label="Documento titular *" [(ngModel)]="form.documento_titular" />
+              <sk-input label="Titular *" [(ngModel)]="form.titular" />
+              <sk-input
+                label="Documento beneficiario"
+                [(ngModel)]="form.documento_beneficiario"
+              />
+              <sk-input label="Beneficiario" [(ngModel)]="form.beneficiario" />
+              <sk-dropdown label="Fondo *" [options]="fondoOptions" [(ngModel)]="form.fondo" />
+              <sk-dropdown
+                label="Tipo de retiro"
+                [options]="tipoRetiroOptions"
+                [(ngModel)]="form.tipo_retiro"
+              />
+              <sk-input label="Ciudad" [(ngModel)]="form.ciudad" />
+              <sk-input label="Oficina" [(ngModel)]="form.oficina" />
+              <sk-input label="Persona autorizada" [(ngModel)]="form.persona_autorizada" />
+              <sk-dropdown label="Estado" [options]="estadoOptions" [(ngModel)]="form.estado" />
             </div>
 
             @if (errorGuardado(); as err) {
@@ -214,22 +183,20 @@ import {
             }
 
             <div class="mt-5 flex justify-end gap-2">
-              <button type="button" class="alma-btn alma-btn-outline" (click)="cerrarForm()">
-                Cancelar
-              </button>
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                class="alma-btn alma-btn-primary"
+                label="Cancelar"
+                (clicked)="cerrarForm()"
+              />
+              <sk-button
+                variant="primary"
+                type="button"
+                label="Guardar"
+                [loading]="guardando()"
                 [disabled]="!valido() || guardando()"
-                (click)="guardar()"
-              >
-                @if (guardando()) {
-                  <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-                } @else {
-                  <lucide-icon name="save" [size]="16" />
-                }
-                Guardar
-              </button>
+                (clicked)="guardar()"
+              />
             </div>
           </div>
         </div>
@@ -240,11 +207,12 @@ import {
 export class BandejaChequesComponent {
   private readonly api = inject(ChequesApi);
 
-  protected readonly estados = ESTADOS;
-  protected readonly fondos = FONDOS;
-  protected readonly tiposRetiro = TIPOS_RETIRO;
-  protected readonly estadoColor = ESTADO_COLOR;
+  protected readonly estadoSeverity = ESTADO_SEVERITY;
   protected readonly valor = formatoValor;
+
+  protected readonly estadoOptions = ESTADOS.map((s) => ({ label: s, value: s }));
+  protected readonly fondoOptions = FONDOS.map((f) => ({ label: f, value: f }));
+  protected readonly tipoRetiroOptions = TIPOS_RETIRO.map((t) => ({ label: t, value: t }));
 
   protected busqueda = '';
   private aplicada = '';

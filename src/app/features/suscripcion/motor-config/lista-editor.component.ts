@@ -5,29 +5,30 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent } from '@skandia/ui';
 
 @Component({
   selector: 'alma-lista-editor',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkInputComponent],
   template: `
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap items-center gap-2">
-        <input
-          class="alma-input h-8 w-48 rounded-lg text-xs"
+        <sk-input
+          class="w-48"
           [disabled]="disabled()"
           [(ngModel)]="nuevo"
           (ngModelChange)="nuevoSig.set($event)"
           (keydown.enter)="agregar($event)"
           placeholder="Agregar valor…"
         />
-        <button
+        <sk-button
+          variant="secondary"
           type="button"
-          class="alma-btn alma-btn-outline h-8 rounded-lg text-xs"
+          size="small"
+          label="Agregar"
           [disabled]="disabled() || !normalizado() || yaExiste()"
-          (click)="agregar()"
-        >
-          <lucide-icon name="plus" [size]="14" /> Agregar
-        </button>
+          (clicked)="agregar()"
+        />
         @if (yaExiste()) {
           <span class="text-[11px] text-amber-600 dark:text-amber-400">
             Ya está en la lista.
@@ -39,19 +40,13 @@ import { LucideAngularModule } from 'lucide-angular';
       </div>
 
       @if (value().length > 20) {
-        <div class="relative">
-          <lucide-icon
-            name="search"
-            [size]="14"
-            class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            class="alma-input h-8 rounded-lg pl-8 text-xs"
-            [(ngModel)]="busqueda"
-            (ngModelChange)="busquedaSig.set($event)"
-            placeholder="Buscar en la lista…"
-          />
-        </div>
+        <sk-input
+          fluid
+          iconLeft="search"
+          [(ngModel)]="busqueda"
+          (ngModelChange)="busquedaSig.set($event)"
+          placeholder="Buscar en la lista…"
+        />
       }
 
       <div

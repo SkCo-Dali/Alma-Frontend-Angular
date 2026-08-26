@@ -15,19 +15,27 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent } from '@skandia/ui';
 import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 
 @Component({
   selector: 'alma-column-filter',
-  imports: [FormsModule, LucideAngularModule, AlmaCheckboxComponent, PortalDirective],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkInputComponent,
+    AlmaCheckboxComponent,
+    PortalDirective,
+  ],
   template: `
     <button
       #boton
       type="button"
       (click)="abrir($event)"
-      class="flex h-6 w-6 items-center justify-center rounded p-0 hover:bg-accent"
+      class="flex h-8 w-8 items-center justify-center rounded p-0 hover:bg-accent"
       [class]="tieneFiltros() ? 'text-primary' : 'text-muted-foreground/60'"
       [title]="'Filtrar por ' + label()"
     >
@@ -44,12 +52,9 @@ import { colocarPanel } from '../../../shared/popover-position';
       >
         <h3 class="mb-4 text-sm font-medium">Filtrar por {{ label() }}</h3>
 
-        <div class="relative mb-4 flex items-center">
-          <span class="pointer-events-none absolute left-3 z-20 flex items-center">
-            <lucide-icon name="search" [size]="14" class="text-muted-foreground" />
-          </span>
-          <input
-            class="alma-input h-9 pl-9 text-sm"
+        <div class="mb-4">
+          <sk-input
+            iconLeft="search"
             placeholder="Buscar valores..."
             [(ngModel)]="termino"
             (ngModelChange)="terminoSig.set($event)"
@@ -95,28 +100,28 @@ import { colocarPanel } from '../../../shared/popover-position';
         </div>
 
         <div class="mt-4 flex justify-between border-t border-border pt-4">
-          <button
+          <sk-button
             type="button"
-            (click)="limpiar()"
-            class="alma-btn alma-btn-outline h-8 text-xs text-muted-foreground"
-          >
-            Limpiar
-          </button>
+            variant="secondary"
+            size="small"
+            label="Limpiar"
+            (clicked)="limpiar()"
+          />
           <div class="flex gap-2">
-            <button
+            <sk-button
               type="button"
-              (click)="cancelar()"
-              class="alma-btn alma-btn-outline h-8 text-xs text-muted-foreground"
-            >
-              Cancelar
-            </button>
-            <button
+              variant="secondary"
+              size="small"
+              label="Cancelar"
+              (clicked)="cancelar()"
+            />
+            <sk-button
               type="button"
-              (click)="aplicar()"
-              class="alma-btn alma-btn-primary h-8 text-xs"
-            >
-              Aplicar
-            </button>
+              variant="primary"
+              size="small"
+              label="Aplicar"
+              (clicked)="aplicar()"
+            />
           </div>
         </div>
       </div>

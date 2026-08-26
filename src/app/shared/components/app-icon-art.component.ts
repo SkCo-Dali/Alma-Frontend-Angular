@@ -33,9 +33,19 @@ import { AlmaSphereComponent } from './alma-sphere.component';
   `,
   styles: `
     :host { display: block; width: 100%; height: 100%; }
+    /* lucide-icon no tiene tamaño propio (encoge al contenido): sin esto, el
+       % del glyph se resuelve contra su svg (24px) en vez del tile, y al no
+       centrarse por sí solo queda pegado arriba a la izquierda. */
+    lucide-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
   `,
 })
 export class AppIconArtComponent {
   readonly app = input.required<Application>();
-  readonly iconClassName = input('h-[55%] w-[55%]');
+  readonly iconClassName = input('h-[62%] w-[62%]');
 }

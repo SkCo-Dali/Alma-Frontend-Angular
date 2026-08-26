@@ -128,9 +128,9 @@ const CAPSULE_HOVER: Record<FamiliaEtapa, string> = {
                laterales (ancho natural, sin flex-1). El botón "Limpiar" flota a
                su derecha con posición ABSOLUTA (no ocupa espacio de layout), así
                el filtro no se descentra al aparecer/desaparecer. -->
-          <div class="relative flex shrink-0 items-center justify-center">
+          <div class="relative flex max-w-full shrink-0 items-center justify-center">
             <div
-              class="glass flex w-max items-center gap-1.5 rounded-2xl px-3 py-2 shadow-[var(--shadow-md)]"
+              class="glass flex max-w-full items-center gap-1.5 overflow-x-auto rounded-2xl px-3 py-2 shadow-[var(--shadow-md)]"
             >
               <span
                 class="mr-0.5 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-muted-foreground"

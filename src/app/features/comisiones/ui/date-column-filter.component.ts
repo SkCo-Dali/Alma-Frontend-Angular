@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent } from '@skandia/ui';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 
@@ -42,13 +43,13 @@ function fmt(d: Date): string {
 
 @Component({
   selector: 'alma-date-column-filter',
-  imports: [FormsModule, LucideAngularModule, PortalDirective],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkDropdownComponent, PortalDirective],
   template: `
     <button
       #boton
       type="button"
       (click)="abrir($event)"
-      class="flex h-6 w-6 items-center justify-center rounded p-0 transition-colors hover:bg-accent"
+      class="flex h-8 w-8 items-center justify-center rounded p-0 transition-colors hover:bg-accent"
       [class]="tieneFiltros() ? 'text-primary' : 'text-muted-foreground/60'"
       [title]="'Filtrar por ' + label()"
     >
@@ -76,53 +77,38 @@ function fmt(d: Date): string {
 
         <div class="min-h-[220px] space-y-4">
           <div class="space-y-1.5">
-            <label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Año
-            </label>
-            <select
-              class="alma-input h-9"
+            <sk-dropdown
+              label="Año"
+              [options]="anioOpciones()"
+              optionLabel="label"
+              optionValue="value"
               [ngModel]="anio()"
               (ngModelChange)="cambiarAnio($event)"
-            >
-              <option [value]="TODOS">Todos los años</option>
-              @for (a of anios(); track a) {
-                <option [value]="a">{{ a }}</option>
-              }
-            </select>
+            />
           </div>
 
           <div class="space-y-1.5">
-            <label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Mes
-            </label>
-            <select
-              class="alma-input h-9"
+            <sk-dropdown
+              label="Mes"
               [disabled]="anio() === TODOS"
+              [options]="mesOpciones()"
+              optionLabel="label"
+              optionValue="value"
               [ngModel]="mes()"
               (ngModelChange)="cambiarMes($event)"
-            >
-              <option [value]="TODOS">Todos los meses</option>
-              @for (m of meses(); track m) {
-                <option [value]="m">{{ nombreMes(m) }}</option>
-              }
-            </select>
+            />
           </div>
 
           <div class="space-y-1.5">
-            <label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Día
-            </label>
-            <select
-              class="alma-input h-9"
+            <sk-dropdown
+              label="Día"
               [disabled]="mes() === TODOS"
+              [options]="diaOpciones()"
+              optionLabel="label"
+              optionValue="value"
               [ngModel]="dia()"
               (ngModelChange)="dia.set($event)"
-            >
-              <option [value]="TODOS">Todos los días</option>
-              @for (d of dias(); track d) {
-                <option [value]="d">{{ d }}</option>
-              }
-            </select>
+            />
           </div>
 
           @if (anio() === TODOS) {
@@ -133,28 +119,28 @@ function fmt(d: Date): string {
         </div>
 
         <div class="mt-6 flex justify-between border-t border-border pt-4">
-          <button
+          <sk-button
             type="button"
-            (click)="limpiar()"
-            class="alma-btn alma-btn-outline h-8 px-3 text-xs text-muted-foreground"
-          >
-            Limpiar
-          </button>
+            variant="secondary"
+            size="small"
+            label="Limpiar"
+            (clicked)="limpiar()"
+          />
           <div class="flex gap-2">
-            <button
+            <sk-button
               type="button"
-              (click)="abierto.set(false)"
-              class="alma-btn alma-btn-outline h-8 px-3 text-xs text-muted-foreground"
-            >
-              Cancelar
-            </button>
-            <button
+              variant="secondary"
+              size="small"
+              label="Cancelar"
+              (clicked)="abierto.set(false)"
+            />
+            <sk-button
               type="button"
-              (click)="aplicar()"
-              class="alma-btn alma-btn-primary h-8 px-4 text-xs"
-            >
-              Aplicar
-            </button>
+              variant="primary"
+              size="small"
+              label="Aplicar"
+              (clicked)="aplicar()"
+            />
           </div>
         </div>
       </div>
@@ -218,6 +204,22 @@ export class DateColumnFilterComponent {
       .map((f) => String(f.getDate()));
     return Array.from(new Set(d)).sort((a, b) => Number(a) - Number(b));
   });
+
+  /** Opciones {label, value} para los sk-dropdown de año/mes/día. */
+  protected readonly anioOpciones = computed(() => [
+    { label: 'Todos los años', value: TODOS },
+    ...this.anios().map((a) => ({ label: a, value: a })),
+  ]);
+
+  protected readonly mesOpciones = computed(() => [
+    { label: 'Todos los meses', value: TODOS },
+    ...this.meses().map((m) => ({ label: this.nombreMes(m), value: m })),
+  ]);
+
+  protected readonly diaOpciones = computed(() => [
+    { label: 'Todos los días', value: TODOS },
+    ...this.dias().map((d) => ({ label: d, value: d })),
+  ]);
 
   constructor() {
     // Al abrirse, la cascada refleja lo que ya está filtrado.

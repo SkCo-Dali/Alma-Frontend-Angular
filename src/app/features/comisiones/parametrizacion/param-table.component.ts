@@ -13,7 +13,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import { SkSwitchComponent } from '@skandia/ui';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
@@ -60,7 +60,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
   selector: 'alma-param-table',
   imports: [
     LucideAngularModule,
-    AlmaSwitchComponent,
+    SkSwitchComponent,
     PortalDirective,
     GridPaginationComponent,
     ColumnFilterComponent,
@@ -137,7 +137,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                       >
                         @switch (col.tipo) {
                           @case ('switch') {
-                            <div class="flex items-center justify-center gap-2">
+                            <label class="flex items-center justify-center gap-2">
                               <span
                                 class="rounded-full px-2 py-0.5 text-[11px] font-medium"
                                 [class]="
@@ -148,12 +148,12 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                               >
                                 {{ verdadero(row, col.key) ? 'Activo' : 'Inactivo' }}
                               </span>
-                              <alma-switch
+                              <sk-switch
                                 [checked]="verdadero(row, col.key)"
-                                (checkedChange)="alternar.emit({ row: row, activo: $event })"
-                                ariaLabel="Activar o desactivar"
+                                [label]="''"
+                                (valueChange)="alternar.emit({ row: row, activo: $any($event).checked })"
                               />
-                            </div>
+                            </label>
                           }
                           @case ('chipPrimario') {
                             <span class="rounded-md bg-primary/10 px-2 py-1 text-primary">

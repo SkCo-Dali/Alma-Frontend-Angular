@@ -6,8 +6,9 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent, SkTextareaComponent } from '@skandia/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
@@ -118,6 +119,9 @@ interface GrupoVista {
     LucideAngularModule,
     AccessDeniedComponent,
     AlmaLoaderComponent,
+    SkButtonComponent,
+    SkInputComponent,
+    SkTextareaComponent,
     HistorialCambiosComponent,
     ListaTextoEditorComponent,
     SegmentosEditorComponent,
@@ -142,12 +146,13 @@ interface GrupoVista {
         </p>
         <p class="mt-1 text-sm text-muted-foreground">{{ err }}</p>
         <div class="mt-4 flex justify-center gap-2">
-          <a routerLink="/apps/suscripcion" class="alma-btn alma-btn-outline">
-            <lucide-icon name="arrow-left" [size]="16" /> Volver
-          </a>
-          <button type="button" (click)="cargar()" class="alma-btn alma-btn-outline">
-            <lucide-icon name="refresh-cw" [size]="16" /> Reintentar
-          </button>
+          <sk-button variant="secondary" type="button" label="Volver" (clicked)="volver()" />
+          <sk-button
+            variant="secondary"
+            type="button"
+            label="Reintentar"
+            (clicked)="cargar()"
+          />
         </div>
       </div>
     } @else {
@@ -214,14 +219,12 @@ interface GrupoVista {
                         </p>
                       }
                     </div>
-                    <input
+                    <sk-input
                       type="number"
-                      [step]="p.param.tipo === 'entero' ? 1 : 'any'"
-                      [value]="p.valor"
-                      (input)="cambiarNumero(g.grupo, p.param, $any($event.target).value)"
-                      class="alma-input h-9 rounded-xl text-sm"
-                      [class.border-amber-500/60]="p.dirty"
-                      [class.border-destructive]="p.invalido"
+                      [ngModel]="p.valor"
+                      (ngModelChange)="cambiarNumero(g.grupo, p.param, $event)"
+                      [invalid]="p.invalido"
+                      fluid
                     />
                   </div>
                 }
@@ -247,11 +250,11 @@ interface GrupoVista {
 
                 @switch (p.param.tipo) {
                   @case ('texto') {
-                    <textarea
-                      class="alma-input min-h-16 rounded-xl py-2 text-xs"
-                      [value]="$any(p.valor)"
-                      (input)="setValor(g.grupo, p.param, $any($event.target).value)"
-                    ></textarea>
+                    <sk-textarea
+                      [ngModel]="$any(p.valor)"
+                      (ngModelChange)="setValor(g.grupo, p.param, $event)"
+                      fluid
+                    />
                   }
                   @case ('lista_texto') {
                     <alma-lista-texto-editor
@@ -308,21 +311,22 @@ interface GrupoVista {
                   {{ cambios().length === 1 ? 'cambio sin guardar' : 'cambios sin guardar' }}
                 </p>
                 <div class="ml-auto flex items-center gap-2">
-                  <button
+                  <sk-button
+                    variant="tertiary"
                     type="button"
-                    (click)="descartar()"
-                    class="alma-btn h-8 rounded-xl text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <lucide-icon name="rotate-ccw" [size]="14" /> Descartar
-                  </button>
-                  <button
+                    size="small"
+                    icon="undo"
+                    label="Descartar"
+                    (clicked)="descartar()"
+                  />
+                  <sk-button
+                    variant="primary"
                     type="button"
+                    size="small"
+                    label="Guardar cambios"
                     [disabled]="errores().length > 0"
-                    (click)="confirmOpen.set(true)"
-                    class="alma-btn alma-btn-primary h-8 rounded-xl text-xs"
-                  >
-                    <lucide-icon name="save" [size]="14" /> Guardar cambios
-                  </button>
+                    (clicked)="confirmOpen.set(true)"
+                  />
                 </div>
               </div>
               @if (errores().length > 0) {
@@ -379,40 +383,30 @@ interface GrupoVista {
               </ul>
 
               <div class="mt-3">
-                <label
-                  class="text-xs font-medium text-foreground"
-                  for="comentario-sim-config"
-                >
-                  Comentario (opcional)
-                </label>
-                <textarea
-                  id="comentario-sim-config"
+                <sk-textarea
+                  label="Comentario (opcional)"
                   [(ngModel)]="comentario"
                   placeholder="Por qué se hace este cambio (queda en el historial)…"
-                  class="alma-input mt-1 min-h-20 rounded-xl py-2 text-sm"
-                ></textarea>
+                  fluid
+                />
               </div>
 
               <div class="mt-4 flex justify-end gap-2">
-                <button
+                <sk-button
+                  variant="secondary"
                   type="button"
+                  label="Cancelar"
                   [disabled]="guardando()"
-                  (click)="confirmOpen.set(false)"
-                  class="alma-btn alma-btn-outline rounded-xl"
-                >
-                  Cancelar
-                </button>
-                <button
+                  (clicked)="confirmOpen.set(false)"
+                />
+                <sk-button
+                  variant="primary"
                   type="button"
+                  label="Guardar cambios"
+                  [loading]="guardando()"
                   [disabled]="guardando()"
-                  (click)="guardar()"
-                  class="alma-btn alma-btn-primary rounded-xl"
-                >
-                  @if (guardando()) {
-                    <lucide-icon name="refresh-cw" [size]="14" class="animate-spin" />
-                  }
-                  Guardar cambios
-                </button>
+                  (clicked)="guardar()"
+                />
               </div>
             </div>
           </div>
@@ -425,6 +419,11 @@ export class SimuladorConfigPageComponent {
   private readonly api = inject(SimuladorConfigApiService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+
+  protected volver(): void {
+    this.router.navigateByUrl('/apps/suscripcion');
+  }
 
   protected readonly puedeConfigurar = computed(() =>
     this.auth.hasPermission('app.suscripcion.simulador.config'),

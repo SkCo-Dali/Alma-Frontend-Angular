@@ -62,11 +62,12 @@ export function formatoValor(v: number): string {
   return COP.format(v);
 }
 
-export const ESTADO_COLOR: Record<EstadoCheque, string> = {
-  emitido: 'bg-primary/10 text-primary',
-  entregado: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  devuelto: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  anulado: 'bg-muted text-muted-foreground',
+// severity de `sk-tag` (@skandia/ui) por estado del cheque.
+export const ESTADO_SEVERITY: Record<EstadoCheque, 'success' | 'info' | 'warn' | 'secondary'> = {
+  emitido: 'success',
+  entregado: 'info',
+  devuelto: 'warn',
+  anulado: 'secondary',
 };
 
 @Injectable({ providedIn: 'root' })

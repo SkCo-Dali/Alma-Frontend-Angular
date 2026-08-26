@@ -2,11 +2,12 @@
 // números con elipsis.
 
 import { Component, computed, input, output } from '@angular/core';
-import { LucideAngularModule } from 'lucide-angular';
+import { FormsModule } from '@angular/forms';
+import { SkDropdownComponent, SkPaginatorComponent } from '@skandia/ui';
 
 @Component({
   selector: 'alma-grid-pagination',
-  imports: [LucideAngularModule],
+  imports: [FormsModule, SkDropdownComponent, SkPaginatorComponent],
   template: `
     <div
       class="flex flex-col items-center justify-between gap-4 border-t bg-card px-4 py-3 sm:flex-row"
@@ -16,15 +17,12 @@ import { LucideAngularModule } from 'lucide-angular';
           class="flex w-full items-center justify-center gap-2 border-b pb-2 sm:w-auto sm:justify-start sm:border-none sm:pb-0"
         >
           <span class="text-xs font-medium text-muted-foreground sm:text-sm">Mostrar:</span>
-          <select
-            class="alma-input h-8 w-16 rounded-lg px-[10px] sm:w-20"
-            [value]="itemsPerPage()"
-            (change)="itemsPerPageChange.emit(+$any($event.target).value)"
-          >
-            @for (size of pageSizeOptions(); track size) {
-              <option [value]="size">{{ size }}</option>
-            }
-          </select>
+          <sk-dropdown
+            class="w-16 sm:w-20"
+            [options]="sizeOptions()"
+            [ngModel]="selectedSize()"
+            (valueChange)="onSizeChange($event)"
+          />
         </div>
 
         <span
@@ -37,55 +35,15 @@ import { LucideAngularModule } from 'lucide-angular';
       </div>
 
       @if (totalPages() > 1) {
-        <div class="flex items-center gap-1 rounded-full bg-muted/30 p-1">
-          <button
-            class="flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-all"
-            [class]="
-              currentPage() === 1
-                ? 'cursor-not-allowed bg-muted text-muted-foreground'
-                : 'bg-primary text-white hover:opacity-90 active:scale-95'
-            "
-            [disabled]="currentPage() === 1"
-            (click)="pageChange.emit(currentPage() - 1)"
-            aria-label="Página anterior"
-          >
-            <lucide-icon name="chevron-left" [size]="16" />
-          </button>
-
-          <div class="flex items-center gap-0.5 px-1">
-            @for (p of paginas(); track $index) {
-              @if (p === null) {
-                <span class="px-1.5 py-1 text-[10px] text-muted-foreground">...</span>
-              } @else {
-                <button
-                  class="h-7 min-w-[1.75rem] rounded-lg px-1 text-xs transition-all"
-                  [class]="
-                    currentPage() === p
-                      ? 'bg-primary/10 font-bold text-primary'
-                      : 'font-medium text-muted-foreground hover:bg-muted active:scale-90'
-                  "
-                  (click)="pageChange.emit(p)"
-                >
-                  {{ p }}
-                </button>
-              }
-            }
-          </div>
-
-          <button
-            class="flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-all"
-            [class]="
-              currentPage() === totalPages()
-                ? 'cursor-not-allowed bg-muted text-muted-foreground'
-                : 'bg-primary text-white hover:opacity-90 active:scale-95'
-            "
-            [disabled]="currentPage() === totalPages()"
-            (click)="pageChange.emit(currentPage() + 1)"
-            aria-label="Página siguiente"
-          >
-            <lucide-icon name="chevron-right" [size]="16" />
-          </button>
-        </div>
+        <sk-paginator
+          [first]="(currentPage() - 1) * itemsPerPage()"
+          [rows]="itemsPerPage()"
+          [totalRecords]="total()"
+          [rowsPerPageOptions]="[]"
+          [showFirstLastIcon]="false"
+          [showCurrentPageReport]="false"
+          (pageChange)="onSkPageChange($any($event))"
+        />
       }
     </div>
   `,
@@ -100,6 +58,15 @@ export class GridPaginationComponent {
   readonly pageChange = output<number>();
   readonly itemsPerPageChange = output<number>();
 
+  protected readonly sizeOptions = computed(() =>
+    this.pageSizeOptions().map((size) => ({ label: String(size), value: String(size) })),
+  );
+  protected readonly selectedSize = computed(() => String(this.itemsPerPage()));
+
+  protected onSizeChange(value: unknown): void {
+    this.itemsPerPageChange.emit(Number(value));
+  }
+
   protected readonly desde = computed(
     () => (this.currentPage() - 1) * this.itemsPerPage() + 1,
   );
@@ -107,30 +74,7 @@ export class GridPaginationComponent {
     Math.min(this.currentPage() * this.itemsPerPage(), this.total()),
   );
 
-  /** Números de página con elipsis (null) — misma lógica del original. */
-  protected readonly paginas = computed<(number | null)[]>(() => {
-    const total = this.totalPages();
-    const actual = this.currentPage();
-    const pages: (number | null)[] = [];
-    const maxVisible = 5;
-
-    if (total <= maxVisible) {
-      for (let i = 1; i <= total; i++) pages.push(i);
-      return pages;
-    }
-    if (actual <= 3) {
-      for (let i = 1; i <= 4; i++) pages.push(i);
-      pages.push(null, total);
-      return pages;
-    }
-    if (actual >= total - 2) {
-      pages.push(1, null);
-      for (let i = total - 3; i <= total; i++) pages.push(i);
-      return pages;
-    }
-    pages.push(1, null);
-    for (let i = actual - 1; i <= actual + 1; i++) pages.push(i);
-    pages.push(null, total);
-    return pages;
-  });
+  protected onSkPageChange(state: { page?: number }): void {
+    this.pageChange.emit((state.page ?? 0) + 1);
+  }
 }

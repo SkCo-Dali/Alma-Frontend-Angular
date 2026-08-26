@@ -5,6 +5,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent, SkTagComponent } from '@skandia/ui';
 import { ApiService } from '../../core/services/api.service';
 
 export interface CuentaPharosApi {
@@ -16,7 +17,7 @@ export interface CuentaPharosApi {
 
 @Component({
   selector: 'alma-cuenta-pharos',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkInputComponent, SkTagComponent],
   template: `
     <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
       <h2 class="text-sm font-semibold text-foreground">Cuentas conectadas</h2>
@@ -36,19 +37,11 @@ export interface CuentaPharosApi {
                 <p class="text-sm font-medium text-foreground">Pharos</p>
                 @if (!cargando()) {
                   @if (requiereRefresco()) {
-                    <span
-                      class="alma-badge bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-                    >
-                      Requiere actualizar
-                    </span>
+                    <sk-tag value="Requiere actualizar" severity="warn" />
                   } @else if (conectada()) {
-                    <span
-                      class="alma-badge bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    >
-                      Conectada
-                    </span>
+                    <sk-tag value="Conectada" severity="success" />
                   } @else {
-                    <span class="alma-badge bg-muted text-muted-foreground">No conectada</span>
+                    <sk-tag value="No conectada" severity="secondary" />
                   }
                 }
               </div>
@@ -64,23 +57,22 @@ export interface CuentaPharosApi {
 
           @if (!mostrarForm()) {
             <div class="flex shrink-0 gap-2">
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                class="alma-btn alma-btn-outline h-8 text-xs"
-                (click)="editando.set(true)"
-              >
-                <lucide-icon name="key-round" [size]="14" />
-                {{ conectada() || requiereRefresco() ? 'Actualizar' : 'Conectar' }}
-              </button>
+                [label]="conectada() || requiereRefresco() ? 'Actualizar' : 'Conectar'"
+                (clicked)="editando.set(true)"
+              />
               @if (conectada() || requiereRefresco()) {
-                <button
+                <sk-button
+                  variant="tertiary"
+                  severity="danger"
                   type="button"
-                  class="alma-btn alma-btn-ghost h-8 w-auto px-2 text-xs text-muted-foreground hover:text-destructive"
+                  icon="times"
+                  label="Desconectar"
                   [disabled]="desconectando()"
-                  (click)="desconectar()"
-                >
-                  <lucide-icon name="x" [size]="14" /> Desconectar
-                </button>
+                  (clicked)="desconectar()"
+                />
               }
             </div>
           }
@@ -100,19 +92,17 @@ export interface CuentaPharosApi {
           <div class="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-foreground">Usuario Pharos</label>
-                <input
-                  class="alma-input"
+                <sk-input
+                  label="Usuario Pharos"
                   [(ngModel)]="usuario"
                   placeholder="usuario"
                   autocomplete="off"
                 />
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-medium text-foreground">Contraseña</label>
-                <input
+                <sk-input
                   type="password"
-                  class="alma-input"
+                  label="Contraseña"
                   [(ngModel)]="password"
                   placeholder="••••••••"
                   autocomplete="new-password"
@@ -135,25 +125,21 @@ export interface CuentaPharosApi {
             }
             <div class="flex justify-end gap-2">
               @if (conectada() || requiereRefresco() || editando()) {
-                <button
+                <sk-button
+                  variant="tertiary"
                   type="button"
-                  class="alma-btn alma-btn-ghost h-8 w-auto px-3 text-xs"
-                  (click)="cancelar()"
-                >
-                  Cancelar
-                </button>
+                  label="Cancelar"
+                  (clicked)="cancelar()"
+                />
               }
-              <button
+              <sk-button
+                variant="primary"
                 type="button"
-                class="alma-btn alma-btn-primary h-8 text-xs"
+                [label]="conectando() ? 'Verificando…' : 'Guardar y conectar'"
+                [loading]="conectando()"
                 [disabled]="!usuario.trim() || !password || conectando()"
-                (click)="conectar()"
-              >
-                @if (conectando()) {
-                  <lucide-icon name="loader-2" [size]="14" class="animate-spin" />
-                }
-                {{ conectando() ? 'Verificando…' : 'Guardar y conectar' }}
-              </button>
+                (clicked)="conectar()"
+              />
             </div>
           </div>
         }

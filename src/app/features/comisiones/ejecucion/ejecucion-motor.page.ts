@@ -6,6 +6,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
+import { SkButtonComponent, SkInputComponent } from '@skandia/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { CorreoModalData, EjecucionMotorStore } from './ejecucion-motor.store';
@@ -50,10 +52,17 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
     FormsModule,
     RouterLink,
     LucideAngularModule,
+    SkButtonComponent,
+    SkInputComponent,
     AccessDeniedComponent,
     MotorEjecucionTabComponent,
     MotorTableToolbarComponent,
     MotorDataTableComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
   ],
   template: `
     @if (!tieneAcceso()) {
@@ -74,86 +83,88 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
         </div>
 
         <!-- Pestañas -->
-        <div class="flex justify-center border-b border-border/30 pb-3">
-          <div
+        <p-tabs
+          [value]="tab()"
+          (valueChange)="cambiarTab($any($event))"
+          [lazy]="true"
+          styleClass="flex flex-col items-center border-b border-border/30 pb-3"
+        >
+          <p-tablist
+            aria-label="Vistas de Ejecución del motor"
             class="glass flex max-w-full flex-wrap justify-center gap-1 rounded-full bg-[var(--surface-sunken)] p-1 px-2"
           >
             @for (t of tabs; track t.value) {
-              <button
-                type="button"
-                (click)="cambiarTab(t.value)"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
-                [class]="
-                  tab() === t.value
-                    ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
-                    : 'bg-transparent text-muted-foreground hover:text-foreground'
-                "
-              >
+              <p-tab [value]="t.value" class="inline-flex items-center gap-2">
                 @if (t.value === 'motor' && store.stats().running > 0) {
                   <span class="h-2 w-2 animate-pulse rounded-full bg-sky-300"></span>
                 }
                 {{ t.label }}
-              </button>
+              </p-tab>
             }
-          </div>
-        </div>
-
-        <div class="glass min-h-[500px] rounded-2xl p-3 shadow-[var(--shadow-md)]">
-          @if (tab() === 'motor') {
-            <alma-motor-ejecucion-tab
-              (confirmar)="pedirConfirmacion($event)"
-              (verError)="errorDe.set($event)"
-            />
-          } @else {
-            @let dataTab = tabDatos();
-            @let estado = store.tableData()[dataTab];
-            <div class="space-y-4">
-              <div>
-                <h2 class="text-lg font-bold">{{ titulo(dataTab).titulo }}</h2>
-                <p class="text-xs text-muted-foreground">{{ titulo(dataTab).subtitulo }}</p>
-              </div>
-
-              <div class="overflow-hidden rounded-xl border border-border/30 bg-card">
-                <alma-motor-table-toolbar
-                  [variant]="dataTab === 'correos' ? 'correos' : 'comisiones'"
-                  [search]="store.filtros(dataTab).search"
-                  [periodos]="store.periodosByTab()[dataTab] || []"
-                  [periodo]="periodoActual(dataTab)"
-                  [compania]="companiaActual(dataTab)"
-                  [segmento]="segmentoActual(dataTab)"
-                  [estado]="estadoActual(dataTab)"
-                  [roles]="store.roles()"
-                  [itemsPerPage]="estado.page_size"
-                  [cargando]="estado.loading"
-                  [exportando]="exportando()"
-                  (searchChange)="store.setFiltro(dataTab, 'search', $event)"
-                  (filtroChange)="store.setFiltro(dataTab, $event.key, $event.value)"
-                  (filtrar)="store.aplicarFiltros(dataTab)"
-                  (limpiar)="store.limpiarFiltros(dataTab)"
-                  (exportar)="exportar(dataTab)"
-                  (itemsPerPageChange)="store.cambiarTamanoPagina(dataTab, $event)"
-                />
-
-                <alma-motor-data-table
-                  [columns]="estado.cols"
-                  [rows]="estado.rows"
-                  [loading]="estado.loading"
-                  [currentPage]="estado.page"
-                  [pageSize]="estado.page_size"
-                  [totalPages]="estado.pages"
-                  [totalRecords]="estado.total"
-                  [columnLabels]="dataTab === 'correos' ? { IdTercero: 'Id' } : {}"
-                  [conAcciones]="dataTab === 'correos'"
-                  [filtersResetKey]="store.filterResetKeys()[dataTab]"
-                  (pageChange)="store.cambiarPagina(dataTab, $event)"
-                  (pageSizeChange)="store.cambiarTamanoPagina(dataTab, $event)"
-                  (editar)="abrirEdicionCorreo($event)"
-                  (excluir)="porExcluir.set(aCorreo($event))"
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="motor">
+              <div class="glass min-h-[500px] rounded-2xl p-3 shadow-[var(--shadow-md)]">
+                <alma-motor-ejecucion-tab
+                  (confirmar)="pedirConfirmacion($event)"
+                  (verError)="errorDe.set($event)"
                 />
               </div>
-            </div>
-          }
-        </div>
+            </p-tabpanel>
+            @for (dt of dataTabs; track dt) {
+              <p-tabpanel [value]="dt">
+                <div class="glass min-h-[500px] rounded-2xl p-3 shadow-[var(--shadow-md)]">
+                  @let estado = store.tableData()[dt];
+                  <div class="space-y-4">
+                    <div>
+                      <h2 class="text-lg font-bold">{{ titulo(dt).titulo }}</h2>
+                      <p class="text-xs text-muted-foreground">{{ titulo(dt).subtitulo }}</p>
+                    </div>
+
+                    <div class="overflow-hidden rounded-xl border border-border/30 bg-card">
+                      <alma-motor-table-toolbar
+                        [variant]="dt === 'correos' ? 'correos' : 'comisiones'"
+                        [search]="store.filtros(dt).search"
+                        [periodos]="store.periodosByTab()[dt] || []"
+                        [periodo]="periodoActual(dt)"
+                        [compania]="companiaActual(dt)"
+                        [segmento]="segmentoActual(dt)"
+                        [estado]="estadoActual(dt)"
+                        [roles]="store.roles()"
+                        [itemsPerPage]="estado.page_size"
+                        [cargando]="estado.loading"
+                        [exportando]="exportando()"
+                        (searchChange)="store.setFiltro(dt, 'search', $event)"
+                        (filtroChange)="store.setFiltro(dt, $event.key, $event.value)"
+                        (filtrar)="store.aplicarFiltros(dt)"
+                        (limpiar)="store.limpiarFiltros(dt)"
+                        (exportar)="exportar(dt)"
+                        (itemsPerPageChange)="store.cambiarTamanoPagina(dt, $event)"
+                      />
+
+                      <alma-motor-data-table
+                        [columns]="estado.cols"
+                        [rows]="estado.rows"
+                        [loading]="estado.loading"
+                        [currentPage]="estado.page"
+                        [pageSize]="estado.page_size"
+                        [totalPages]="estado.pages"
+                        [totalRecords]="estado.total"
+                        [columnLabels]="dt === 'correos' ? { IdTercero: 'Id' } : {}"
+                        [conAcciones]="dt === 'correos'"
+                        [filtersResetKey]="store.filterResetKeys()[dt]"
+                        (pageChange)="store.cambiarPagina(dt, $event)"
+                        (pageSizeChange)="store.cambiarTamanoPagina(dt, $event)"
+                        (editar)="abrirEdicionCorreo($event)"
+                        (excluir)="porExcluir.set(aCorreo($event))"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </p-tabpanel>
+            }
+          </p-tabpanels>
+        </p-tabs>
       </div>
 
       <!-- Confirmar ejecución -->
@@ -167,9 +178,9 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             (click)="$event.stopPropagation()"
           >
             <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-primary dark:bg-emerald-500/15"
+              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-primary dark:bg-emerald-500/15"
             >
-              ⚙️
+              <lucide-icon name="settings" [size]="22" />
             </div>
             <h2 class="mt-3 text-center text-lg font-bold">Confirmar ejecución</h2>
             <p class="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
@@ -182,20 +193,20 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               {{ descripcionProceso(porConfirmar()) }}
             </div>
             <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
+              <sk-button
                 type="button"
-                (click)="porConfirmar.set(null)"
-                class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-              >
-                Cancelar
-              </button>
-              <button
+                variant="secondary"
+                label="Cancelar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="porConfirmar.set(null)"
+              />
+              <sk-button
                 type="button"
-                (click)="ejecutar()"
-                class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
-              >
-                Sí, ejecutar
-              </button>
+                variant="primary"
+                label="Sí, ejecutar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="ejecutar()"
+              />
             </div>
           </div>
         </div>
@@ -212,9 +223,9 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             (click)="$event.stopPropagation()"
           >
             <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-lg font-bold text-destructive"
+              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"
             >
-              ⚠️
+              <lucide-icon name="alert-triangle" [size]="22" />
             </div>
             <h2 class="mt-3 text-center text-lg font-bold">Error en la ejecución</h2>
             <p class="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
@@ -227,20 +238,21 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               {{ detalleError() }}
             </div>
             <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
+              <sk-button
                 type="button"
-                (click)="errorDe.set(null)"
-                class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-              >
-                Cerrar
-              </button>
-              <button
+                variant="secondary"
+                label="Cerrar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="errorDe.set(null)"
+              />
+              <sk-button
                 type="button"
-                (click)="reintentar()"
-                class="alma-btn w-full rounded-xl bg-destructive text-white hover:bg-destructive/90 sm:w-auto"
-              >
-                Reintentar
-              </button>
+                variant="primary"
+                severity="danger"
+                label="Reintentar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="reintentar()"
+              />
             </div>
           </div>
         </div>
@@ -257,9 +269,9 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             (click)="$event.stopPropagation()"
           >
             <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-lg font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
+              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
             >
-              ✉️
+              <lucide-icon name="mail" [size]="22" />
             </div>
             <h2 class="mt-3 text-center text-lg font-bold">Editar destinatario</h2>
             <p class="mt-2 text-center text-xs leading-relaxed text-muted-foreground">
@@ -270,49 +282,37 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
 
             <div class="space-y-4 py-4">
               <div class="space-y-1">
-                <label
-                  class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                  for="correo-nombre"
-                >
-                  Nombre Destinatario
-                </label>
-                <input
-                  id="correo-nombre"
-                  class="alma-input h-10 rounded-xl"
+                <sk-input
+                  label="Nombre Destinatario"
+                  class="rounded-xl"
                   [(ngModel)]="nombreDestinatario"
                 />
               </div>
               <div class="space-y-1">
-                <label
-                  class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                  for="correo-mail"
-                >
-                  Correo
-                </label>
-                <input
-                  id="correo-mail"
+                <sk-input
+                  label="Correo"
                   type="email"
-                  class="alma-input h-10 rounded-xl"
+                  class="rounded-xl"
                   [(ngModel)]="correoDestinatario"
                 />
               </div>
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
+              <sk-button
                 type="button"
-                (click)="porEditar.set(null)"
-                class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-              >
-                Cancelar
-              </button>
-              <button
+                variant="secondary"
+                label="Cancelar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="porEditar.set(null)"
+              />
+              <sk-button
                 type="button"
-                (click)="guardarCorreo(data)"
-                class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
-              >
-                Guardar
-              </button>
+                variant="primary"
+                label="Guardar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="guardarCorreo(data)"
+              />
             </div>
           </div>
         </div>
@@ -329,9 +329,9 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             (click)="$event.stopPropagation()"
           >
             <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-lg font-bold text-destructive"
+              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive"
             >
-              🚫
+              <lucide-icon name="x-circle" [size]="22" />
             </div>
             <h2 class="mt-3 text-center text-lg font-bold">Excluir del envío</h2>
             <p
@@ -347,20 +347,21 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               Esta acción solo aplica si el registro está en estado <strong>Pendiente</strong>.
             </div>
             <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
+              <sk-button
                 type="button"
-                (click)="porExcluir.set(null)"
-                class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-              >
-                Cancelar
-              </button>
-              <button
+                variant="secondary"
+                label="Cancelar"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="porExcluir.set(null)"
+              />
+              <sk-button
                 type="button"
-                (click)="confirmarExclusion(data)"
-                class="alma-btn w-full rounded-xl bg-destructive text-white hover:bg-destructive/90 sm:w-auto"
-              >
-                Excluir
-              </button>
+                variant="primary"
+                severity="danger"
+                label="Excluir"
+                class="w-full rounded-xl sm:w-auto"
+                (clicked)="confirmarExclusion(data)"
+              />
             </div>
           </div>
         </div>
@@ -373,6 +374,7 @@ export class EjecucionMotorPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   protected readonly tabs = TABS;
+  protected readonly dataTabs: MotorDataTab[] = ['pre', 'post', 'mant', 'correos'];
   protected readonly tab = signal<Tab>('motor');
   protected readonly exportando = signal(false);
 
@@ -387,12 +389,6 @@ export class EjecucionMotorPageComponent implements OnInit {
   protected readonly tieneAcceso = computed(() =>
     this.auth.hasPermission('app.motor-comisiones.view'),
   );
-
-  /** El tab actual acotado a los de datos (la plantilla ya excluye 'motor'). */
-  protected readonly tabDatos = computed<MotorDataTab>(() => {
-    const t = this.tab();
-    return t === 'motor' ? 'pre' : t;
-  });
 
   protected readonly detalleError = computed(() => {
     const id = this.errorDe();

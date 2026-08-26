@@ -14,6 +14,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent, SkTextareaComponent } from '@skandia/ui';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionPlan, CommissionRule } from './commission-plans.api';
 import { CommissionRulesApi, mapApiRuleToUI } from './commission-rules.api';
@@ -37,8 +39,16 @@ type MotivoPara = 'reject' | 'inactivate';
   imports: [
     FormsModule,
     LucideAngularModule,
+    SkButtonComponent,
+    SkInputComponent,
+    SkTextareaComponent,
     CommissionRulesTableComponent,
     RuleDialogComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
   ],
   template: `
     <div
@@ -52,214 +62,185 @@ type MotivoPara = 'reject' | 'inactivate';
         <h2 class="text-center text-xl font-bold">Editor de Planes de Compensación</h2>
 
         <!-- Pestañas -->
-        <div class="mt-4 grid w-full grid-cols-2 gap-1 rounded-full bg-[var(--surface-sunken)] p-1">
-          <button
-            type="button"
-            (click)="tab.set('information')"
-            class="w-full rounded-full px-4 py-2 text-xs font-medium transition-all sm:text-sm"
-            [class]="
-              tab() === 'information'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground'
-            "
-          >
-            Información
-          </button>
-          <button
-            type="button"
-            (click)="tab.set('history')"
-            class="w-full rounded-full px-4 py-2 text-xs font-medium transition-all sm:text-sm"
-            [class]="
-              tab() === 'history'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground'
-            "
-          >
-            Historial
-          </button>
-        </div>
-
-        @if (tab() === 'information') {
-          <div class="scrollbar mt-6 flex-1 overflow-y-auto pb-4 pr-2">
-            <!-- Información general -->
-            <div class="flex flex-col space-y-4">
-              <h3 class="border-b border-border pb-2 text-sm font-semibold text-muted-foreground">
-                Información General
-              </h3>
-              <div class="space-y-4">
-                <div>
-                  <label class="text-xs font-medium sm:text-sm" for="plan-name">Nombre*</label>
-                  <input
-                    id="plan-name"
-                    class="alma-input mt-1"
-                    placeholder="Ingrese el nombre del plan"
-                    [(ngModel)]="nombre"
-                  />
-                </div>
-                <div>
-                  <label class="text-xs font-medium sm:text-sm" for="plan-desc">
-                    Descripción
-                  </label>
-                  <textarea
-                    id="plan-desc"
-                    class="alma-input mt-1"
-                    rows="2"
-                    placeholder="Ingrese la descripción del plan"
-                    [(ngModel)]="descripcion"
-                  ></textarea>
-                </div>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-xs font-medium sm:text-sm" for="plan-start">
-                      Fecha de Inicio *
-                    </label>
-                    <input id="plan-start" type="date" class="alma-input" [(ngModel)]="inicio" />
+        <p-tabs
+          [value]="tab()"
+          (valueChange)="tab.set($any($event))"
+          [lazy]="true"
+          styleClass="mt-4 flex flex-1 flex-col overflow-hidden"
+        >
+          <p-tablist aria-label="Secciones del plan">
+            <p-tab value="information">Información</p-tab>
+            <p-tab value="history">Historial</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="information">
+              <div class="scrollbar mt-6 flex-1 overflow-y-auto pb-4 pr-2">
+                <!-- Información general -->
+                <div class="flex flex-col space-y-4">
+                  <h3
+                    class="border-b border-border pb-2 text-sm font-semibold text-muted-foreground"
+                  >
+                    Información General
+                  </h3>
+                  <div class="space-y-4">
+                    <div>
+                      <sk-input
+                        label="Nombre*"
+                        placeholder="Ingrese el nombre del plan"
+                        [(ngModel)]="nombre"
+                      />
+                    </div>
+                    <div>
+                      <sk-textarea
+                        label="Descripción"
+                        [rows]="2"
+                        placeholder="Ingrese la descripción del plan"
+                        [(ngModel)]="descripcion"
+                      />
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div class="flex flex-col gap-1.5">
+                        <sk-input
+                          label="Fecha de Inicio *"
+                          type="date"
+                          [(ngModel)]="inicio"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <sk-input
+                          label="Fecha de Fin *"
+                          type="date"
+                          [(ngModel)]="fin"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-xs font-medium sm:text-sm" for="plan-end">
-                      Fecha de Fin *
-                    </label>
-                    <input
-                      id="plan-end"
-                      type="date"
-                      class="alma-input"
-                      [min]="inicio"
-                      [(ngModel)]="fin"
+                </div>
+
+                <!-- Reglas -->
+                <div class="mt-6 flex flex-col">
+                  <div class="mb-2 flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-muted-foreground">Reglas</h3>
+                    <sk-button
+                      variant="primary"
+                      type="button"
+                      label="Crear"
+                      [disabled]="cargandoReglas()"
+                      (clicked)="creandoRegla.set(true)"
                     />
                   </div>
+
+                  @if (cargandoReglas()) {
+                    <div
+                      class="flex items-center justify-center rounded-md border border-border py-8 text-sm text-muted-foreground"
+                    >
+                      <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
+                      Cargando reglas…
+                    </div>
+                  } @else if (errorReglas(); as err) {
+                    <div
+                      class="rounded-md border border-border py-8 text-center text-sm text-destructive"
+                    >
+                      Error al cargar reglas: {{ err }}
+                    </div>
+                  } @else if (reglas().length === 0) {
+                    <div
+                      class="rounded-md border border-border py-8 text-center text-sm text-muted-foreground"
+                    >
+                      No hay reglas creadas aún. Haz clic en "Crear" para agregar tu primera
+                      regla.
+                    </div>
+                  } @else {
+                    <alma-commission-rules-table
+                      [rules]="reglas()"
+                      [planId]="plan().id"
+                      (ruleDeleted)="cargarReglas()"
+                      (ruleUpdated)="cargarReglas()"
+                    />
+                  }
                 </div>
               </div>
-            </div>
-
-            <!-- Reglas -->
-            <div class="mt-6 flex flex-col">
-              <div class="mb-2 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-muted-foreground">Reglas</h3>
-                <button
-                  type="button"
-                  (click)="creandoRegla.set(true)"
-                  [disabled]="cargandoReglas()"
-                  class="alma-btn alma-btn-primary h-8 px-3 text-xs"
-                >
-                  <lucide-icon name="plus" [size]="16" class="mr-2" />
-                  Crear
-                </button>
+            </p-tabpanel>
+            <p-tabpanel value="history">
+              <div class="flex-1 overflow-y-auto py-8 text-center text-sm text-muted-foreground">
+                Funcionalidad de historial próximamente.
               </div>
-
-              @if (cargandoReglas()) {
-                <div
-                  class="flex items-center justify-center rounded-md border border-border py-8 text-sm text-muted-foreground"
-                >
-                  <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-                  Cargando reglas…
-                </div>
-              } @else if (errorReglas(); as err) {
-                <div
-                  class="rounded-md border border-border py-8 text-center text-sm text-destructive"
-                >
-                  Error al cargar reglas: {{ err }}
-                </div>
-              } @else if (reglas().length === 0) {
-                <div
-                  class="rounded-md border border-border py-8 text-center text-sm text-muted-foreground"
-                >
-                  No hay reglas creadas aún. Haz clic en "Crear" para agregar tu primera
-                  regla.
-                </div>
-              } @else {
-                <alma-commission-rules-table
-                  [rules]="reglas()"
-                  [planId]="plan().id"
-                  (ruleDeleted)="cargarReglas()"
-                  (ruleUpdated)="cargarReglas()"
-                />
-              }
-            </div>
-          </div>
-        } @else {
-          <div class="flex-1 overflow-y-auto py-8 text-center text-sm text-muted-foreground">
-            Funcionalidad de historial próximamente.
-          </div>
-        }
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
 
         <!-- Acciones según el estado del plan -->
         <div class="mt-auto flex flex-wrap gap-2 border-t border-border pt-4">
           @switch (plan().status) {
             @case ('ready_to_approve') {
-              <button
+              <sk-button
+                variant="primary"
                 type="button"
-                (click)="publicar()"
+                [label]="ocupado() ? 'Publicando…' : 'Publicar'"
                 [disabled]="ocupado()"
-                class="alma-btn alma-btn-primary rounded-xl"
-              >
-                {{ ocupado() ? 'Publicando…' : 'Publicar' }}
-              </button>
-              <button
+                (clicked)="publicar()"
+              />
+              <sk-button
+                variant="secondary"
+                severity="danger"
                 type="button"
-                (click)="pedirMotivo('reject')"
+                label="Rechazar"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20"
-              >
-                Rechazar
-              </button>
+                (clicked)="pedirMotivo('reject')"
+              />
             }
             @case ('rejected') {
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                (click)="enviarAAprobacion()"
+                label="Listo para Aprobar"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-primary bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                Listo para Aprobar
-              </button>
+                (clicked)="enviarAAprobacion()"
+              />
             }
             @case ('inactive') {
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                (click)="enviarAAprobacion()"
+                label="Listo para Aprobar"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-primary bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                Listo para Aprobar
-              </button>
+                (clicked)="enviarAAprobacion()"
+              />
             }
             @case ('published') {
-              <button
+              <sk-button
+                variant="secondary"
+                severity="danger"
                 type="button"
-                (click)="pedirMotivo('inactivate')"
+                [label]="ocupado() ? 'Inactivando…' : 'Inactivar'"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-destructive bg-destructive/10 text-destructive hover:bg-destructive/20"
-              >
-                {{ ocupado() ? 'Inactivando…' : 'Inactivar' }}
-              </button>
+                (clicked)="pedirMotivo('inactivate')"
+              />
             }
             @default {
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                (click)="guardarBorrador()"
+                [label]="ocupado() ? 'Guardando…' : 'Guardar como Borrador'"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-primary bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                {{ ocupado() ? 'Guardando…' : 'Guardar como Borrador' }}
-              </button>
-              <button
+                (clicked)="guardarBorrador()"
+              />
+              <sk-button
+                variant="secondary"
                 type="button"
-                (click)="enviarAAprobacion()"
+                label="Listo para Aprobar"
                 [disabled]="ocupado()"
-                class="alma-btn rounded-xl border border-primary bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                Listo para Aprobar
-              </button>
+                (clicked)="enviarAAprobacion()"
+              />
             }
           }
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
+            label="Cancelar"
             [disabled]="ocupado()"
-            class="alma-btn alma-btn-outline rounded-xl"
-          >
-            Cancelar
-          </button>
+            (clicked)="cerrar()"
+          />
         </div>
       </div>
     </div>
@@ -290,43 +271,42 @@ type MotivoPara = 'reject' | 'inactivate';
           </p>
 
           <div class="py-4">
-            <label class="text-sm font-medium" for="motivo">
-              {{
+            <sk-textarea
+              [label]="
                 destino === 'reject'
                   ? 'Motivo del rechazo (opcional)'
                   : 'Razón de inactivación (opcional)'
-              }}
-            </label>
-            <textarea
-              id="motivo"
-              class="alma-input mt-2"
-              rows="4"
+              "
+              [rows]="4"
               [disabled]="ocupado()"
               [(ngModel)]="motivo"
-            ></textarea>
+            />
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="motivoPara.set(null)"
+              label="Cancelar"
               [disabled]="ocupado()"
-              class="alma-btn alma-btn-outline"
-            >
-              Cancelar
-            </button>
-            <button
+              (clicked)="motivoPara.set(null)"
+            />
+            <sk-button
+              variant="primary"
+              severity="danger"
               type="button"
-              (click)="confirmarMotivo(destino)"
+              [label]="
+                destino === 'reject'
+                  ? ocupado()
+                    ? 'Rechazando…'
+                    : 'Rechazar Plan'
+                  : ocupado()
+                    ? 'Inactivando…'
+                    : 'Inactivar Plan'
+              "
               [disabled]="ocupado()"
-              class="alma-btn bg-destructive text-white hover:bg-destructive/90"
-            >
-              @if (destino === 'reject') {
-                {{ ocupado() ? 'Rechazando…' : 'Rechazar Plan' }}
-              } @else {
-                {{ ocupado() ? 'Inactivando…' : 'Inactivar Plan' }}
-              }
-            </button>
+              (clicked)="confirmarMotivo(destino)"
+            />
           </div>
         </div>
       </div>

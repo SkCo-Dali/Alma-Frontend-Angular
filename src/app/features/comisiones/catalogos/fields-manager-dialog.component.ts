@@ -13,6 +13,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { Catalog, CatalogField } from './catalogs.api';
@@ -37,6 +38,7 @@ const COLOR_TIPO: Record<string, string> = {
   selector: 'alma-fields-manager-dialog',
   imports: [
     LucideAngularModule,
+    SkButtonComponent,
     PortalDirective,
     CreateFieldsDialogComponent,
     EditFieldDialogComponent,
@@ -47,7 +49,7 @@ const COLOR_TIPO: Record<string, string> = {
       (click)="cerrar()"
     >
       <div
-        class="surface-solid flex max-h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border p-6 shadow-2xl"
+        class="surface-solid flex max-h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border p-4 shadow-2xl sm:p-6"
         (click)="$event.stopPropagation()"
       >
         <div class="flex items-center justify-between gap-4">
@@ -57,14 +59,13 @@ const COLOR_TIPO: Record<string, string> = {
               Configurar los campos para este catálogo
             </p>
           </div>
-          <button
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="agregando.set(true)"
-            class="alma-btn alma-btn-primary h-9 px-3 text-xs"
-          >
-            <lucide-icon name="plus" [size]="16" class="mr-2" />
-            Agregar Campo
-          </button>
+            class="h-9 px-3 text-xs"
+            label="Agregar Campo"
+            (clicked)="agregando.set(true)"
+          />
         </div>
 
         <div class="mt-4 min-h-0 flex-1 overflow-auto">
@@ -183,9 +184,12 @@ const COLOR_TIPO: Record<string, string> = {
         </div>
 
         <div class="mt-4 flex justify-end border-t border-border pt-4">
-          <button type="button" (click)="cerrar()" class="alma-btn alma-btn-outline">
-            Cerrar
-          </button>
+          <sk-button
+            variant="secondary"
+            type="button"
+            label="Cerrar"
+            (clicked)="cerrar()"
+          />
         </div>
       </div>
     </div>
@@ -206,21 +210,20 @@ const COLOR_TIPO: Record<string, string> = {
             acción no se puede deshacer.
           </p>
           <div class="mt-6 flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="porBorrar.set(null)"
-              class="alma-btn alma-btn-outline"
-            >
-              Cancelar
-            </button>
-            <button
+              label="Cancelar"
+              (clicked)="porBorrar.set(null)"
+            />
+            <sk-button
+              variant="primary"
+              severity="danger"
               type="button"
-              (click)="confirmarBorrado()"
               [disabled]="borrando()"
-              class="alma-btn bg-destructive text-white hover:bg-destructive/90"
-            >
-              {{ borrando() ? 'Eliminando…' : 'Eliminar' }}
-            </button>
+              [label]="borrando() ? 'Eliminando…' : 'Eliminar'"
+              (clicked)="confirmarBorrado()"
+            />
           </div>
         </div>
       </div>

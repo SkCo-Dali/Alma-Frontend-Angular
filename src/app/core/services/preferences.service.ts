@@ -8,19 +8,19 @@ import { PreferenciasPortal } from '../models/platform.models';
 
 export type Theme = 'system' | 'light' | 'dark';
 
-/** Fondos disponibles: los cinco primeros son wallpapers solarpunk
- *  (public/wallpapers/*.jpg); el resto son paletas esmeriladas --wp-*. */
+/** Fondos disponibles: los cinco primeros son paletas de color sólido
+ *  esmeriladas --wp-*; el resto son wallpapers fotográficos (public/wallpapers/*.jpg). */
 export const BACKGROUNDS = [
-  'terraza',
-  'mirador',
-  'lago',
-  'balcon',
-  'dorado',
   'oceano',
   'aurora',
   'atardecer',
   'grafito',
   'cielo',
+  'terraza',
+  'mirador',
+  'lago',
+  'balcon',
+  'dorado',
 ] as const;
 export type Background = (typeof BACKGROUNDS)[number];
 

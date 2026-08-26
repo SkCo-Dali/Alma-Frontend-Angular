@@ -130,7 +130,7 @@ const DIVIDER = '__divider__';
             <div
               class="h-[72px] w-[72px] overflow-hidden rounded-[22%] shadow-[0_6px_14px_rgba(0,0,0,.16)] transition-transform hover:scale-105 active:scale-95"
             >
-              <alma-app-icon-art [app]="app" iconClassName="h-9 w-9" />
+              <alma-app-icon-art [app]="app" iconClassName="h-11 w-11" />
             </div>
             <span
               class="max-w-[96px] truncate text-center text-xs font-medium text-white drop-shadow"

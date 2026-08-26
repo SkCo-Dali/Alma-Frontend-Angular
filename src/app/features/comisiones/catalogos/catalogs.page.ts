@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -29,6 +30,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
   imports: [
     RouterLink,
     LucideAngularModule,
+    SkButtonComponent,
     PortalDirective,
     AccessDeniedComponent,
     CreateCatalogDialogComponent,
@@ -51,14 +53,13 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
             </a>
             <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">Catálogos</h1>
           </div>
-          <button
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="creando.set(true)"
-            class="alma-btn alma-btn-primary h-10 w-full shrink-0 rounded-xl px-6 lg:w-auto"
-          >
-            <lucide-icon name="plus" [size]="16" class="mr-2" />
-            Crear Catálogo
-          </button>
+            class="h-10 w-full shrink-0 rounded-xl px-6 lg:w-auto"
+            label="Crear Catálogo"
+            (clicked)="creando.set(true)"
+          />
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -96,9 +97,14 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                     <tbody>
                       @for (c of store.catalogs(); track c.id) {
                         <tr
-                          class="cursor-pointer hover:bg-muted/50"
+                          class="cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                           [class.bg-muted]="seleccionado()?.id === c.id"
+                          role="button"
+                          tabindex="0"
+                          [attr.aria-label]="'Ver detalle del catálogo ' + c.name"
                           (click)="seleccionado.set(c)"
+                          (keydown.enter)="seleccionado.set(c)"
+                          (keydown.space)="$event.preventDefault(); seleccionado.set(c)"
                         >
                           <td class="px-4 py-2 font-medium">{{ c.name }}</td>
                           <td class="max-w-xs truncate px-4 py-2">{{ c.description || '-' }}</td>
@@ -240,14 +246,13 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                     </div>
                   }
                   <div class="border-t border-border"></div>
-                  <button
+                  <sk-button
+                    variant="secondary"
                     type="button"
-                    (click)="administrando.set(c)"
-                    class="alma-btn alma-btn-outline w-full"
-                  >
-                    <lucide-icon name="layers" [size]="16" class="mr-2" />
-                    Administrar Campos
-                  </button>
+                    class="w-full"
+                    label="Administrar Campos"
+                    (clicked)="administrando.set(c)"
+                  />
                 </div>
               </div>
             } @else {
@@ -293,21 +298,20 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                 campos. Esta acción no se puede deshacer.
               </p>
               <div class="mt-6 flex justify-end gap-2">
-                <button
+                <sk-button
+                  variant="secondary"
                   type="button"
-                  (click)="porBorrar.set(null)"
-                  class="alma-btn alma-btn-outline"
-                >
-                  Cancelar
-                </button>
-                <button
+                  label="Cancelar"
+                  (clicked)="porBorrar.set(null)"
+                />
+                <sk-button
+                  variant="primary"
+                  severity="danger"
                   type="button"
-                  (click)="confirmarBorrado()"
                   [disabled]="borrando()"
-                  class="alma-btn bg-destructive text-white hover:bg-destructive/90"
-                >
-                  {{ borrando() ? 'Eliminando…' : 'Eliminar' }}
-                </button>
+                  [label]="borrando() ? 'Eliminando…' : 'Eliminar'"
+                  (clicked)="confirmarBorrado()"
+                />
               </div>
             </div>
           </div>

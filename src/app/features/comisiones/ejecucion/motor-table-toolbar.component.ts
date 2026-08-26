@@ -5,6 +5,7 @@
 import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent } from '@skandia/ui';
 import {
   MOTOR_COMPANY_FILTER_OPTIONS,
   MOTOR_ESTADO_CORREO_OPTIONS,
@@ -15,112 +16,98 @@ import {
 
 @Component({
   selector: 'alma-motor-table-toolbar',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkDropdownComponent, SkInputComponent],
   template: `
     <div class="space-y-3 border-b border-border/30 bg-card p-3 sm:p-4">
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <input
-          class="alma-input h-10 w-full rounded-full bg-card md:max-w-[280px]"
+        <sk-input
           placeholder="Buscar"
           [ngModel]="search()"
           (ngModelChange)="searchChange.emit($event)"
           (keydown.enter)="filtrar.emit()"
+          class="w-full md:max-w-[280px]"
+          fluid
         />
 
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           @if (variant() === 'comisiones') {
-            <select
-              class="alma-input h-10 w-full sm:w-[200px]"
+            <sk-dropdown
+              label="Compañías"
+              [options]="companiaOptions"
               [ngModel]="compania()"
               (ngModelChange)="filtroChange.emit({ key: 'compania', value: $event })"
-            >
-              <option value="">Compañías</option>
-              @for (c of companias; track c.value) {
-                <option [value]="c.value">{{ c.label }}</option>
-              }
-            </select>
+              class="w-full sm:w-[200px]"
+              fluid
+            />
           } @else {
-            <select
-              class="alma-input h-10 w-full sm:w-[150px]"
+            <sk-dropdown
+              label="Segmento"
+              [options]="segmentoOptions()"
               [ngModel]="segmento()"
               (ngModelChange)="filtroChange.emit({ key: 'segmento', value: $event })"
-            >
-              <option value="">Segmento</option>
-              @for (r of roles(); track r) {
-                <option [value]="r">{{ etiquetaSegmento(r) }}</option>
-              }
-            </select>
-            <select
-              class="alma-input h-10 w-full sm:w-[140px]"
+              class="w-full sm:w-[150px]"
+              fluid
+            />
+            <sk-dropdown
+              label="Estado"
+              [options]="estadoOptions"
               [ngModel]="estado()"
               (ngModelChange)="filtroChange.emit({ key: 'estado', value: $event })"
-            >
-              <option value="">Estado</option>
-              @for (e of estados; track e) {
-                <option [value]="e">{{ e }}</option>
-              }
-            </select>
+              class="w-full sm:w-[140px]"
+              fluid
+            />
           }
 
-          <select
-            class="alma-input h-10 w-full sm:w-[160px]"
+          <sk-dropdown
+            label="Periodos"
+            [options]="periodoOptions()"
             [ngModel]="periodo()"
             (ngModelChange)="filtroChange.emit({ key: 'periodo', value: $event })"
-          >
-            <option value="">Periodos</option>
-            @for (p of periodos(); track p) {
-              <option [value]="p">{{ etiquetaPeriodo(p) }}</option>
-            }
-          </select>
+            class="w-full sm:w-[160px]"
+            fluid
+          />
         </div>
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
-          <button
+          <sk-button
             type="button"
-            (click)="filtrar.emit()"
+            variant="primary"
+            label="Filtrar"
+            class="h-10 rounded-lg px-4 text-sm"
             [disabled]="cargando()"
-            class="alma-btn alma-btn-primary h-10 rounded-lg px-4 text-sm"
-          >
-            @if (cargando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
-            }
-            Filtrar
-          </button>
-          <button
+            [loading]="cargando()"
+            (clicked)="filtrar.emit()"
+          />
+          <sk-button
             type="button"
-            (click)="limpiar.emit()"
+            variant="secondary"
+            label="Limpiar"
+            class="h-10 rounded-lg"
             [disabled]="cargando()"
-            class="alma-btn alma-btn-outline h-10 rounded-lg"
-          >
-            Limpiar
-          </button>
+            (clicked)="limpiar.emit()"
+          />
         </div>
 
         <div class="flex items-center gap-2">
-          <select
-            class="alma-input h-10 w-[80px] shrink-0"
-            [ngModel]="itemsPerPage()"
+          <sk-dropdown
+            label="Tamaño"
+            [options]="tamanosOptions"
+            [ngModel]="'' + itemsPerPage()"
             (ngModelChange)="itemsPerPageChange.emit(+$event)"
-          >
-            @for (s of tamanos; track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
-          <button
+            class="w-[80px] shrink-0"
+            fluid
+          />
+          <sk-button
             type="button"
-            (click)="exportar.emit()"
+            variant="secondary"
+            label="Descargar Excel"
+            class="h-10 whitespace-nowrap rounded-lg px-4 text-sm"
             [disabled]="exportando()"
-            class="alma-btn h-10 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
-          >
-            @if (exportando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
-            } @else {
-              <lucide-icon name="download" [size]="16" class="mr-2" />
-            }
-            Descargar Excel
-          </button>
+            [loading]="exportando()"
+            (clicked)="exportar.emit()"
+          />
         </div>
       </div>
     </div>
@@ -150,11 +137,39 @@ export class MotorTableToolbarComponent {
   protected readonly estados = MOTOR_ESTADO_CORREO_OPTIONS;
   protected readonly tamanos = MOTOR_PAGE_SIZE_OPTIONS;
 
+  protected readonly companiaOptions: { label: string; value: string }[] = [
+    { label: 'Compañías', value: '' },
+    ...this.companias,
+  ];
+
+  protected readonly estadoOptions: { label: string; value: string }[] = [
+    { label: 'Estado', value: '' },
+    ...this.estados.map((e) => ({ label: e, value: e })),
+  ];
+
+  protected readonly tamanosOptions: { label: string; value: string }[] = this.tamanos.map(
+    (s) => ({ label: String(s), value: String(s) }),
+  );
+
   protected etiquetaPeriodo(p: string): string {
     return formatMotorPeriodo(p);
   }
 
   protected etiquetaSegmento(s: string): string {
     return formatMotorSegmentoLabel(s);
+  }
+
+  protected segmentoOptions(): { label: string; value: string }[] {
+    return [
+      { label: 'Segmento', value: '' },
+      ...this.roles().map((r) => ({ label: this.etiquetaSegmento(r), value: r })),
+    ];
+  }
+
+  protected periodoOptions(): { label: string; value: string }[] {
+    return [
+      { label: 'Periodos', value: '' },
+      ...this.periodos().map((p) => ({ label: this.etiquetaPeriodo(p), value: p })),
+    ];
   }
 }

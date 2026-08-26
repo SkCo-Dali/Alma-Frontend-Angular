@@ -2,78 +2,65 @@
 // Enter), filtro de mes, tamaño de página, descarga de Excel y el resumen de periodo y
 // total.
 
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent } from '@skandia/ui';
 import { FilterOption, PAGE_SIZE_OPTIONS } from './info-gerencial.api';
 
 @Component({
   selector: 'alma-ig-table-toolbar',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkDropdownComponent, SkInputComponent],
   template: `
     <div class="space-y-3 border-b border-border/30 bg-card p-3">
       <div class="flex flex-col items-stretch gap-2 lg:flex-row lg:items-center">
         <div class="flex items-center gap-2 lg:max-w-[360px]">
-          <input
-            class="alma-input h-10 w-full rounded-full"
+          <sk-input
             placeholder="Buscar"
+            fluid
             [ngModel]="search()"
             (ngModelChange)="searchChange.emit($event)"
             (keydown.enter)="buscar.emit()"
           />
-          <button
+          <sk-button
             type="button"
-            (click)="buscar.emit()"
+            variant="secondary"
+            label="Buscar"
+            class="h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-medium"
             [disabled]="buscando()"
-            class="alma-btn alma-btn-outline h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-medium"
-          >
-            @if (buscando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
-            } @else {
-              <lucide-icon name="search" [size]="16" class="mr-2" />
-            }
-            Buscar
-          </button>
+            [loading]="buscando()"
+            (clicked)="buscar.emit()"
+          />
         </div>
 
         <div class="flex-1"></div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           @if (monthOptions().length > 0) {
-            <select
-              class="alma-input h-10 min-w-[180px] max-w-[220px]"
+            <sk-dropdown
+              label="Filtrar por mes"
+              [options]="monthOptions()"
+              class="min-w-[180px] max-w-[220px]"
               [disabled]="!monthFilter()"
               [ngModel]="monthFilter() ?? ''"
               (ngModelChange)="monthChange.emit($event)"
-            >
-              <option value="">Filtrar por mes</option>
-              @for (o of monthOptions(); track o.value) {
-                <option [value]="o.value">{{ o.label }}</option>
-              }
-            </select>
+            />
           }
-          <select
-            class="alma-input h-10 w-[80px] shrink-0"
-            [ngModel]="itemsPerPage()"
+          <sk-dropdown
+            [options]="tamanosOpciones"
+            class="w-[80px] shrink-0"
+            [ngModel]="itemsPerPageStr()"
             (ngModelChange)="itemsPerPageChange.emit(+$event)"
-          >
-            @for (s of tamanos; track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
-          <button
+          />
+          <sk-button
             type="button"
-            (click)="exportar.emit()"
+            variant="secondary"
+            label="Descargar Excel"
+            class="h-10 shrink-0 whitespace-nowrap rounded-lg px-4 text-sm font-medium"
             [disabled]="exportando()"
-            class="alma-btn h-10 shrink-0 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
-          >
-            @if (exportando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
-            } @else {
-              <lucide-icon name="download" [size]="16" class="mr-2" />
-            }
-            Descargar Excel
-          </button>
+            [loading]="exportando()"
+            (clicked)="exportar.emit()"
+          />
         </div>
       </div>
 
@@ -114,5 +101,9 @@ export class IgTableToolbarComponent {
   readonly itemsPerPageChange = output<number>();
   readonly exportar = output<void>();
 
-  protected readonly tamanos = PAGE_SIZE_OPTIONS;
+  protected readonly tamanosOpciones = PAGE_SIZE_OPTIONS.map((s) => ({
+    label: String(s),
+    value: String(s),
+  }));
+  protected readonly itemsPerPageStr = computed(() => String(this.itemsPerPage()));
 }

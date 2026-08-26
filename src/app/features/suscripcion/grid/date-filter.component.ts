@@ -14,6 +14,8 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { DistinctStore } from './distinct.store';
 import { DistinctBaseRequest, SuscripcionGridApi } from './suscripcion-grid.api';
@@ -39,7 +41,17 @@ interface AnioGrupo {
 
 @Component({
   selector: 'alma-date-filter',
-  imports: [LucideAngularModule, AlmaCheckboxComponent, DateFilterTabComponent],
+  imports: [
+    LucideAngularModule,
+    AlmaCheckboxComponent,
+    DateFilterTabComponent,
+    SkButtonComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
+  ],
   template: `
     <div (click)="$event.stopPropagation()">
       @if (store.loading()) {
@@ -47,39 +59,15 @@ interface AnioGrupo {
       } @else if (store.error(); as err) {
         <div class="py-4 text-center text-sm text-destructive">Error: {{ err }}</div>
       } @else {
-        <div class="mb-3 flex">
-          <div class="flex rounded-xl bg-muted p-1">
-            <button
-              type="button"
-              (click)="$event.stopPropagation(); tab.set('specific')"
-              class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
-              [class]="
-                tab() === 'specific'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              "
-            >
-              Específicas
-            </button>
-            <button
-              type="button"
-              (click)="$event.stopPropagation(); tab.set('advanced')"
-              class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
-              [class]="
-                tab() === 'advanced'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              "
-            >
-              Filtros de Fecha
-            </button>
-          </div>
-        </div>
-      }
-
-      <div class="max-h-80 space-y-2 overflow-y-auto">
-        @if (!store.loading() && !store.error() && tab() === 'specific') {
-          @if (vacios() > 0) {
+        <p-tabs [value]="tab()" (valueChange)="tab.set($any($event))" [lazy]="true">
+          <p-tablist aria-label="Modo de filtro de fecha">
+            <p-tab value="specific">Específicas</p-tab>
+            <p-tab value="advanced">Filtros de Fecha</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <div class="max-h-80 space-y-2 overflow-y-auto">
+              <p-tabpanel value="specific">
+              @if (vacios() > 0) {
             <label
               class="flex items-center gap-2 border-b border-border/60 p-2 hover:bg-accent/50"
             >
@@ -201,40 +189,42 @@ interface AnioGrupo {
               </div>
             }
           </div>
-        }
-
-        @if (!store.loading() && !store.error() && tab() === 'advanced') {
-          <alma-date-filter-tab
-            [availableDates]="fechasDisponibles()"
-            (applied)="aplicarAvanzado($event)"
-            (closed)="requestClose.emit()"
-          />
-        }
-      </div>
+              </p-tabpanel>
+              <p-tabpanel value="advanced">
+                <alma-date-filter-tab
+                  [availableDates]="fechasDisponibles()"
+                  (applied)="aplicarAvanzado($event)"
+                  (closed)="requestClose.emit()"
+                />
+              </p-tabpanel>
+            </div>
+          </p-tabpanels>
+        </p-tabs>
+      }
 
       <div class="mt-3 flex justify-between border-t border-border/60 pt-3">
-        <button
+        <sk-button
+          variant="secondary"
           type="button"
-          class="alma-btn alma-btn-outline h-8 rounded-lg text-xs text-muted-foreground"
-          (click)="limpiar()"
-        >
-          Limpiar
-        </button>
+          class="h-8 rounded-lg text-xs text-muted-foreground"
+          label="Limpiar"
+          (clicked)="limpiar()"
+        />
         <div class="flex gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            class="alma-btn alma-btn-outline h-8 rounded-lg text-xs text-muted-foreground"
-            (click)="cancelar()"
-          >
-            Cancelar
-          </button>
-          <button
+            class="h-8 rounded-lg text-xs text-muted-foreground"
+            label="Cancelar"
+            (clicked)="cancelar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
-            (click)="aplicar()"
-          >
-            Aplicar
-          </button>
+            class="h-8 rounded-lg text-xs"
+            label="Aplicar"
+            (clicked)="aplicar()"
+          />
         </div>
       </div>
     </div>

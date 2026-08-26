@@ -1,39 +1,38 @@
 // Cliente HTTP base hacia alma-backend. Todas las llamadas van autenticadas con el token
-// de Entra (MSAL).
+// de Entra (MSAL), adjuntado por `authInterceptor` — ver core/http/auth.interceptor.ts.
 
 import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { catchError, firstValueFrom, throwError } from 'rxjs';
 import { environment } from '@env/environment';
-import { AuthService } from '../auth/auth.service';
 import { MeApi, PreferenciasPortal } from '../models/platform.models';
 
 const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly auth = inject(AuthService);
+  private readonly http = inject(HttpClient);
 
-  async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...((init?.headers as Record<string, string> | undefined) ?? {}),
-    };
-    const token = await this.auth.getAccessToken();
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+  /** Firma preservada de la era `fetch`: sólo se usan `method` y `body` de
+   *  RequestInit (los headers los pone el interceptor). */
+  fetch<T>(path: string, init?: RequestInit): Promise<T> {
+    const method = init?.method ?? 'GET';
+    const body = init?.body as string | undefined;
 
-    const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-    const text = await res.text();
-    let body: unknown = null;
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch {
-      body = text;
-    }
-    if (!res.ok) {
-      const detail =
-        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
-      throw new Error(detail);
-    }
-    return body as T;
+    return firstValueFrom(
+      this.http
+        .request<T>(method, `${API_BASE_URL}${path}`, {
+          body,
+          headers: { 'Content-Type': 'application/json' },
+        })
+        .pipe(
+          catchError((err: HttpErrorResponse) => {
+            const detail =
+              (err.error as { detail?: string } | null)?.detail ?? `HTTP ${err.status} en ${path}`;
+            return throwError(() => new Error(detail));
+          }),
+        ),
+    );
   }
 
   /** Perfil del usuario autenticado: identidad + permisos RBAC por App. */

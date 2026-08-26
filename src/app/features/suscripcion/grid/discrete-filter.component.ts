@@ -17,6 +17,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SkButtonComponent, SkInputComponent } from '@skandia/ui';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { DistinctStore } from './distinct.store';
 import { DistinctBaseRequest, GridFilter, SuscripcionGridApi } from './suscripcion-grid.api';
@@ -26,7 +28,18 @@ const RENDER_CAP = 200;
 
 @Component({
   selector: 'alma-discrete-filter',
-  imports: [FormsModule, AlmaCheckboxComponent, TextFilterTabComponent],
+  imports: [
+    FormsModule,
+    AlmaCheckboxComponent,
+    TextFilterTabComponent,
+    SkButtonComponent,
+    SkInputComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
+  ],
   template: `
     <div (click)="$event.stopPropagation()">
       @if (store.loading()) {
@@ -34,41 +47,18 @@ const RENDER_CAP = 200;
       } @else if (store.error(); as err) {
         <div class="py-4 text-center text-sm text-destructive">Error: {{ err }}</div>
       } @else {
-        @if (mostrarPestanaTexto()) {
-          <div class="mb-3 flex">
-            <div class="flex rounded-xl bg-muted p-1">
-              <button
-                type="button"
-                (click)="$event.stopPropagation(); tab.set('specific')"
-                class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
-                [class]="
-                  tab() === 'specific'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent'
-                "
-              >
-                Específica
-              </button>
-              <button
-                type="button"
-                (click)="$event.stopPropagation(); tab.set('text')"
-                class="rounded-lg px-3 py-1 text-xs font-medium transition-colors"
-                [class]="
-                  tab() === 'text'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent'
-                "
-              >
-                Filtros de Texto
-              </button>
-            </div>
-          </div>
-        }
-
-        @if (tab() === 'specific') {
+        <p-tabs [value]="tab()" (valueChange)="tab.set($any($event))" [lazy]="true">
+          @if (mostrarPestanaTexto()) {
+            <p-tablist aria-label="Modo de filtro">
+              <p-tab value="specific">Específica</p-tab>
+              <p-tab value="text">Filtros de Texto</p-tab>
+            </p-tablist>
+          }
+          <p-tabpanels>
+          <p-tabpanel value="specific">
           <div class="mb-3">
-            <input
-              class="alma-input h-8 rounded-lg text-sm"
+            <sk-input
+              iconLeft="search"
               placeholder="Buscar valores..."
               [(ngModel)]="termino"
               (ngModelChange)="store.buscar($event)"
@@ -156,37 +146,42 @@ const RENDER_CAP = 200;
           </div>
 
           <div class="mt-3 flex justify-between border-t border-border/60 pt-3">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              class="alma-btn alma-btn-outline h-8 rounded-lg text-xs text-muted-foreground"
-              (click)="limpiar()"
-            >
-              Limpiar
-            </button>
+              class="h-8 rounded-lg text-xs text-muted-foreground"
+              label="Limpiar"
+              (clicked)="limpiar()"
+            />
             <div class="flex gap-2">
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                class="alma-btn alma-btn-outline h-8 rounded-lg text-xs text-muted-foreground"
-                (click)="cancelar()"
-              >
-                Cancelar
-              </button>
-              <button
+                class="h-8 rounded-lg text-xs text-muted-foreground"
+                label="Cancelar"
+                (clicked)="cancelar()"
+              />
+              <sk-button
+                variant="primary"
                 type="button"
-                class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
+                class="h-8 rounded-lg text-xs"
                 [disabled]="store.loading()"
-                (click)="aplicar()"
-              >
-                Aplicar
-              </button>
+                label="Aplicar"
+                (clicked)="aplicar()"
+              />
             </div>
           </div>
-        } @else {
-          <alma-text-filter-tab
-            (applied)="aplicarTexto($event)"
-            (closed)="requestClose.emit()"
-          />
-        }
+          </p-tabpanel>
+          @if (mostrarPestanaTexto()) {
+            <p-tabpanel value="text">
+              <alma-text-filter-tab
+                (applied)="aplicarTexto($event)"
+                (closed)="requestClose.emit()"
+              />
+            </p-tabpanel>
+          }
+          </p-tabpanels>
+        </p-tabs>
       }
     </div>
   `,

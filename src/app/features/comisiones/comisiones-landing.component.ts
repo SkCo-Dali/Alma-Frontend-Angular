@@ -12,8 +12,8 @@ interface MotorModule {
   description: string;
   icon: string;
   path: string;
-  /** Gradiente vivo de la tarjeta (estilo app Atajos de Apple) */
-  gradient: string;
+  /** Fondo de la tarjeta — --sec-blue-d03 (azul complementario, Skandia DS) */
+  color: string;
   hidden?: boolean;
   disabled?: boolean;
 }
@@ -43,7 +43,7 @@ interface MotorModule {
               role="button"
               [tabindex]="m.disabled ? -1 : 0"
               [attr.aria-disabled]="m.disabled"
-              [style.background]="m.gradient"
+              [style.background]="m.color"
               class="group relative flex min-h-36 flex-col justify-between overflow-hidden rounded-3xl p-4 text-white shadow-[var(--shadow-md)] transition-all duration-300"
               [class]="
                 m.disabled
@@ -110,14 +110,14 @@ export class ComisionesLandingComponent {
           'Administra y configura planes de comisiones para diferentes canales y tipos de asesores',
         icon: 'calendar-cog',
         path: '/apps/motor-comisiones/compensation-plans',
-        gradient: 'linear-gradient(150deg, #0A84FF, #30B0C7)',
+        color: '#39b398', // --sec-blue-d03
       },
       {
         title: 'Catálogos',
         description: 'Administra catálogos de datos utilizados para cálculos de comisiones',
         icon: 'columns-3-cog',
         path: '/apps/motor-comisiones/catalogs',
-        gradient: 'linear-gradient(150deg, #BF5AF2, #6D4AE0)',
+        color: '#39b398', // --sec-blue-d03
         hidden: !puedeCatalogos,
       },
       {
@@ -125,14 +125,14 @@ export class ComisionesLandingComponent {
         description: 'Dashboard con métricas y análisis de comisiones para supervisores',
         icon: 'chart-column-stacked',
         path: '/apps/motor-comisiones/info-gerencial',
-        gradient: 'linear-gradient(150deg, #30D158, #00A032)',
+        color: '#39b398', // --sec-blue-d03
       },
       {
         title: 'Parametrización',
         description: 'Configura reglas, tipos de comisión y parámetros financieros',
         icon: 'settings',
         path: '/apps/motor-comisiones/accounting',
-        gradient: 'linear-gradient(150deg, #FF9F0A, #FF6B22)',
+        color: '#39b398', // --sec-blue-d03
       },
       {
         title: 'Ejecución del motor de Comisiones',
@@ -140,7 +140,7 @@ export class ComisionesLandingComponent {
           'Lanza y monitorea los procesos del motor de comisiones y distribución de correos',
         icon: 'play',
         path: '/apps/motor-comisiones/ejecucion-motor',
-        gradient: 'linear-gradient(150deg, #00C7BE, #0089B8)',
+        color: '#39b398', // --sec-blue-d03
       },
     ];
     return todos.filter((m) => !m.hidden);

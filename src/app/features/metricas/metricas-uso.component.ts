@@ -2,13 +2,14 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkTagComponent } from '@skandia/ui';
 import { MetricasApi, ResumenMetricas } from '../../core/services/metricas.api';
 
 const RANGOS = [7, 30, 90] as const;
 
 @Component({
   selector: 'alma-metricas-uso',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, SkTagComponent],
   template: `
     <div class="flex flex-col gap-4 rounded-xl border border-border bg-card p-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -137,9 +138,7 @@ const RANGOS = [7, 30, 90] as const;
                   @for (u of d.agente!.top_usuarios; track u.email) {
                     <div class="flex items-center justify-between gap-2 text-sm">
                       <span class="truncate text-foreground">{{ u.email }}</span>
-                      <span class="alma-badge shrink-0 bg-[var(--surface-sunken)] font-normal">
-                        {{ u.mensajes }} msjs
-                      </span>
+                      <sk-tag [value]="u.mensajes + ' msjs'" severity="secondary" />
                     </div>
                   }
                 </div>
@@ -153,7 +152,7 @@ const RANGOS = [7, 30, 90] as const;
               <p class="mb-3 text-xs font-medium text-muted-foreground">
                 Qué le preguntan al Agente (recientes)
               </p>
-              <div class="max-h-64 overflow-y-auto">
+              <div class="max-h-64 overflow-auto">
                 <table class="alma-table">
                   <thead>
                     <tr>

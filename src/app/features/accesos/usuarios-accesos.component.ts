@@ -3,6 +3,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkTagComponent,
+} from '@skandia/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   AccesosApi,
@@ -12,38 +18,48 @@ import {
 } from '../../core/services/accesos.api';
 import { AdminTableComponent } from '../../shared/components/admin-table.component';
 import { RolesPickerComponent } from './roles-picker.component';
+import { activoSeverity } from '../../shared/status-severity';
 
 type FiltroEstado = 'todos' | 'activos' | 'inactivos';
 
 @Component({
   selector: 'alma-usuarios-accesos',
-  imports: [FormsModule, LucideAngularModule, AdminTableComponent, RolesPickerComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkTagComponent,
+    AdminTableComponent,
+    RolesPickerComponent,
+  ],
   template: `
     <div class="flex flex-col gap-4">
       <!-- Barra de filtros + crear -->
       <div class="flex flex-wrap items-center gap-2">
-        <div class="relative min-w-72 flex-1">
-          <lucide-icon
-            name="search"
-            [size]="16"
-            class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            class="alma-input pl-8"
+        <div class="min-w-72 flex-1">
+          <sk-input
+            fluid
+            iconLeft="search"
             [(ngModel)]="filtro"
             placeholder="Buscar por nombre, correo o rol…"
           />
         </div>
-        <select class="alma-input w-32" [(ngModel)]="estado">
-          <option value="todos">Todos</option>
-          <option value="activos">Activos</option>
-          <option value="inactivos">Inactivos</option>
-        </select>
+        <sk-dropdown
+          class="w-32"
+          [options]="estadoOpciones"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="estado"
+        />
         @if (puedeGestionar()) {
-          <button type="button" class="alma-btn alma-btn-primary" (click)="creando.set(true)">
-            <lucide-icon name="user-plus" [size]="16" />
-            Crear usuario
-          </button>
+          <sk-button
+            type="button"
+            variant="primary"
+            label="Crear usuario"
+            (clicked)="creando.set(true)"
+          />
         }
       </div>
 
@@ -65,7 +81,7 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
         <ng-template #fila let-u>
           <td class="px-4 py-3 text-sm text-muted-foreground">
             @if (editando()?.user_id === u.user_id) {
-              <input class="alma-input h-8" [(ngModel)]="nombreEdit" />
+              <sk-input [(ngModel)]="nombreEdit" />
             } @else {
               <span class="font-medium text-foreground" [class.opacity-50]="!u.is_active">
                 {{ u.name }}
@@ -77,21 +93,18 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
           </td>
           <td class="px-4 py-3 text-sm">
             @if (editando()?.user_id === u.user_id) {
-              <select class="alma-input h-8 w-28" [(ngModel)]="activoEdit">
-                <option [ngValue]="true">activo</option>
-                <option [ngValue]="false">inactivo</option>
-              </select>
+              <sk-dropdown
+                class="w-28"
+                [options]="$any(activoOpciones)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="activoEdit"
+              />
             } @else {
-              <span
-                class="alma-badge"
-                [class]="
-                  u.is_active
-                    ? 'alma-badge bg-primary/10 text-primary'
-                    : 'alma-badge bg-muted text-muted-foreground'
-                "
-              >
-                {{ u.is_active ? 'activo' : 'inactivo' }}
-              </span>
+              <sk-tag
+                [value]="u.is_active ? 'activo' : 'inactivo'"
+                [severity]="activoSeverity(u.is_active)"
+              />
             }
           </td>
           <td class="px-4 py-3">
@@ -135,32 +148,32 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
             <td class="px-4 py-3">
               @if (editando()?.user_id === u.user_id) {
                 <div class="flex justify-end gap-1">
-                  <button
+                  <sk-button
                     type="button"
-                    class="alma-btn alma-btn-primary h-8"
+                    variant="primary"
+                    size="small"
+                    label="Guardar"
                     [disabled]="guardando()"
-                    (click)="guardarEdicion()"
-                  >
-                    Guardar
-                  </button>
-                  <button
+                    (clicked)="guardarEdicion()"
+                  />
+                  <sk-button
                     type="button"
-                    class="alma-btn alma-btn-outline h-8"
-                    (click)="editando.set(null)"
-                  >
-                    Cancelar
-                  </button>
+                    variant="secondary"
+                    size="small"
+                    label="Cancelar"
+                    (clicked)="editando.set(null)"
+                  />
                 </div>
               } @else {
                 <div class="flex justify-end">
-                  <button
+                  <sk-button
                     type="button"
-                    class="alma-btn alma-btn-ghost"
-                    (click)="iniciarEdicion(u)"
-                    title="Editar usuario"
-                  >
-                    <lucide-icon name="pencil" [size]="16" />
-                  </button>
+                    variant="tertiary"
+                    icon="pencil"
+                    iconOnly
+                    ariaLabel="Editar usuario"
+                    (clicked)="iniciarEdicion(u)"
+                  />
                 </div>
               }
             </td>
@@ -183,9 +196,8 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
 
             <div class="mt-4 flex flex-col gap-4">
               <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-medium">Correo corporativo</label>
-                <input
-                  class="alma-input"
+                <sk-input
+                  label="Correo corporativo"
                   [(ngModel)]="email"
                   (ngModelChange)="nombreDir.set(null)"
                   (blur)="resolverNombre()"
@@ -217,20 +229,20 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
             }
 
             <div class="mt-4 flex justify-end gap-2">
-              <button type="button" class="alma-btn alma-btn-outline" (click)="cerrarCrear()">
-                Cancelar
-              </button>
-              <button
+              <sk-button
                 type="button"
-                class="alma-btn alma-btn-primary"
+                variant="secondary"
+                label="Cancelar"
+                (clicked)="cerrarCrear()"
+              />
+              <sk-button
+                type="button"
+                variant="primary"
+                label="Crear"
                 [disabled]="!email.includes('@') || creandoUsuario()"
-                (click)="crear()"
-              >
-                @if (creandoUsuario()) {
-                  <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-                }
-                Crear
-              </button>
+                [loading]="creandoUsuario()"
+                (clicked)="crear()"
+              />
             </div>
           </div>
         </div>
@@ -243,12 +255,24 @@ export class UsuariosAccesosComponent {
   private readonly auth = inject(AuthService);
 
   protected readonly etiqueta = etiquetaRol;
+  protected readonly activoSeverity = activoSeverity;
 
   protected filtro = '';
   protected estado: FiltroEstado = 'todos';
   protected email = '';
   protected nombreEdit = '';
   protected activoEdit = true;
+
+  protected readonly estadoOpciones: { label: string; value: FiltroEstado }[] = [
+    { label: 'Todos', value: 'todos' },
+    { label: 'Activos', value: 'activos' },
+    { label: 'Inactivos', value: 'inactivos' },
+  ];
+
+  protected readonly activoOpciones: { label: string; value: boolean }[] = [
+    { label: 'activo', value: true },
+    { label: 'inactivo', value: false },
+  ];
 
   protected readonly usuarios = signal<UsuarioDirectorio[]>([]);
   protected readonly roles = signal<RolCatalogo[]>([]);

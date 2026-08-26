@@ -4,6 +4,12 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkTextareaComponent,
+} from '@skandia/ui';
 import { ToastService } from '../../../core/services/toast.service';
 import { inject } from '@angular/core';
 import { ResultadoItem } from '../simulador/simulador.api';
@@ -27,24 +33,21 @@ const MAX_FILAS_CATALOGO = 40;
 
 @Component({
   selector: 'alma-resultado-select',
-  imports: [],
+  imports: [FormsModule, SkDropdownComponent],
   template: `
-    <select
-      class="alma-input h-8 w-40 rounded-lg text-xs"
+    <sk-dropdown
+      class="w-40"
       [class]="clase()"
-      [value]="value()"
-      (change)="valueChange.emit($any($event.target).value)"
-    >
-      @for (r of resultados; track r) {
-        <option [value]="r">{{ r }}</option>
-      }
-    </select>
+      [options]="opciones"
+      [ngModel]="value()"
+      (ngModelChange)="valueChange.emit($event)"
+    />
   `,
 })
 export class ResultadoSelectComponent {
   readonly value = input.required<string>();
   readonly valueChange = output<ResultadoItem>();
-  protected readonly resultados = RESULTADOS;
+  protected readonly opciones = RESULTADOS.map((r) => ({ label: r, value: r }));
   protected readonly clase = computed(() => RESULTADO_CLS[this.value()] ?? '');
 }
 
@@ -52,17 +55,15 @@ export class ResultadoSelectComponent {
 
 @Component({
   selector: 'alma-lista-texto-editor',
-  imports: [FormsModule],
+  imports: [FormsModule, SkTextareaComponent],
   template: `
-    <div>
-      <textarea
-        class="alma-input min-h-28 rounded-xl py-2 text-xs"
-        [value]="texto()"
-        (input)="onInput($any($event.target).value)"
-        (blur)="normalizar()"
-      ></textarea>
-      <p class="mt-1 text-[10px] text-muted-foreground">Un requisito por renglón.</p>
-    </div>
+    <sk-textarea
+      class="min-h-28 text-xs"
+      [ngModel]="texto()"
+      (ngModelChange)="onInput($event)"
+      (focusout)="normalizar()"
+      helpText="Un requisito por renglón."
+    />
   `,
 })
 export class ListaTextoEditorComponent {
@@ -84,7 +85,7 @@ export class ListaTextoEditorComponent {
 
 @Component({
   selector: 'alma-segmentos-editor',
-  imports: [LucideAngularModule, ResultadoSelectComponent],
+  imports: [FormsModule, LucideAngularModule, SkInputComponent, ResultadoSelectComponent],
   template: `
     <div class="overflow-x-auto rounded-xl border border-border/50">
       <table class="w-full min-w-[640px] text-xs">
@@ -103,26 +104,26 @@ export class ListaTextoEditorComponent {
           @for (s of value(); track $index; let i = $index) {
             <tr class="border-b border-border/30 last:border-0">
               <td class="w-20 px-2 py-1">
-                <input
+                <sk-input
                   type="number"
-                  class="alma-input h-8 rounded-lg text-xs"
-                  [value]="s.desde"
-                  (input)="set(i, { desde: entero($any($event.target).value) })"
+                  class="w-20"
+                  [ngModel]="s.desde"
+                  (ngModelChange)="set(i, { desde: entero($event) })"
                 />
               </td>
               <td class="w-20 px-2 py-1">
-                <input
+                <sk-input
                   type="number"
-                  class="alma-input h-8 rounded-lg text-xs"
-                  [value]="s.hasta"
-                  (input)="set(i, { hasta: entero($any($event.target).value) })"
+                  class="w-20"
+                  [ngModel]="s.hasta"
+                  (ngModelChange)="set(i, { hasta: entero($event) })"
                 />
               </td>
               <td class="w-44 px-2 py-1">
-                <input
-                  class="alma-input h-8 rounded-lg text-xs"
-                  [value]="s.categoria"
-                  (input)="set(i, { categoria: $any($event.target).value })"
+                <sk-input
+                  class="w-44"
+                  [ngModel]="s.categoria"
+                  (ngModelChange)="set(i, { categoria: $event })"
                 />
               </td>
               <td class="px-2 py-1">
@@ -132,10 +133,10 @@ export class ListaTextoEditorComponent {
                 />
               </td>
               <td class="px-2 py-1">
-                <input
-                  class="alma-input h-8 min-w-56 rounded-lg text-xs"
-                  [value]="s.requisito"
-                  (input)="set(i, { requisito: $any($event.target).value })"
+                <sk-input
+                  class="min-w-56"
+                  [ngModel]="s.requisito"
+                  (ngModelChange)="set(i, { requisito: $event })"
                   placeholder="—"
                 />
               </td>
@@ -211,37 +212,40 @@ export class SegmentosEditorComponent {
 
 @Component({
   selector: 'alma-catalogo-editor',
-  imports: [FormsModule, LucideAngularModule, ResultadoSelectComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkInputComponent,
+    SkTextareaComponent,
+    ResultadoSelectComponent,
+  ],
   template: `
     <div class="space-y-2">
       <div class="flex flex-wrap items-center gap-2">
-        <div class="relative min-w-52 flex-1">
-          <lucide-icon
-            name="search"
-            [size]="14"
-            class="absolute left-2.5 top-2 text-muted-foreground"
-          />
-          <input
-            class="alma-input h-8 rounded-lg pl-8 text-xs"
+        <div class="min-w-52 flex-1">
+          <sk-input
+            fluid
+            iconLeft="search"
             [(ngModel)]="filtro"
             (ngModelChange)="filtroSig.set($event)"
             [placeholder]="'Buscar entre ' + value().length + ' ítems…'"
           />
         </div>
         <div class="flex items-center gap-1.5">
-          <input
-            class="alma-input h-8 w-44 rounded-lg text-xs"
+          <sk-input
+            class="w-44"
             [(ngModel)]="nuevo"
             (keydown.enter)="agregar()"
             placeholder="Nuevo ítem…"
           />
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="agregar()"
-            class="alma-btn alma-btn-outline h-8 rounded-lg text-xs"
-          >
-            <lucide-icon name="plus" [size]="12" /> Agregar
-          </button>
+            size="small"
+            label="Agregar"
+            (clicked)="agregar()"
+          />
         </div>
       </div>
 
@@ -269,10 +273,9 @@ export class SegmentosEditorComponent {
             @for (v of visibles(); track v.i) {
               <tr class="border-b border-border/30 align-top last:border-0">
                 <td class="w-56 px-2 py-1">
-                  <input
-                    class="alma-input h-8 rounded-lg text-xs"
-                    [value]="v.x.nombre"
-                    (input)="set(v.i, { nombre: $any($event.target).value })"
+                  <sk-input
+                    [ngModel]="v.x.nombre"
+                    (ngModelChange)="set(v.i, { nombre: $event })"
                   />
                 </td>
                 <td class="px-2 py-1">
@@ -282,13 +285,13 @@ export class SegmentosEditorComponent {
                   />
                 </td>
                 <td class="px-2 py-1">
-                  <textarea
-                    rows="1"
-                    class="alma-input min-h-8 min-w-64 rounded-lg py-1.5 text-xs"
-                    [value]="v.x.requisito"
-                    (input)="set(v.i, { requisito: $any($event.target).value })"
+                  <sk-textarea
+                    [rows]="1"
+                    class="min-h-8 min-w-64"
+                    [ngModel]="v.x.requisito"
+                    (ngModelChange)="set(v.i, { requisito: $event })"
                     placeholder="—"
-                  ></textarea>
+                  />
                 </td>
                 <td class="w-9 px-1 py-1">
                   <button
@@ -367,7 +370,7 @@ export class CatalogoEditorComponent {
 
 @Component({
   selector: 'alma-matriz-editor',
-  imports: [LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkInputComponent],
   template: `
     <div class="space-y-2">
       @for (fila of value(); track $index; let i = $index) {
@@ -378,19 +381,19 @@ export class CatalogoEditorComponent {
             >
               Edad
             </span>
-            <input
+            <sk-input
               type="number"
-              class="alma-input h-8 w-20 rounded-lg text-xs"
-              [value]="fila.edadDesde"
-              (input)="setFila(i, { edadDesde: entero($any($event.target).value) })"
+              class="w-20"
+              [ngModel]="fila.edadDesde"
+              (ngModelChange)="setFila(i, { edadDesde: entero($event) })"
             />
             <span class="text-xs text-muted-foreground">a</span>
-            <input
+            <sk-input
               type="number"
-              class="alma-input h-8 w-20 rounded-lg text-xs"
-              [value]="fila.edadHasta ?? ''"
+              class="w-20"
+              [ngModel]="fila.edadHasta ?? ''"
               placeholder="∞"
-              (input)="setEdadHasta(i, $any($event.target).value)"
+              (ngModelChange)="setEdadHasta(i, $event)"
             />
             <span class="text-[10px] text-muted-foreground">(vacío = sin tope)</span>
             <button
@@ -405,25 +408,23 @@ export class CatalogoEditorComponent {
           <div class="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             @for (r of fila.rangos; track $index; let j = $index) {
               <div class="flex items-center gap-1.5 rounded-lg bg-muted/20 px-2 py-1.5">
-                <input
-                  class="alma-input h-7 rounded-md text-[11px]"
-                  [value]="miles(r.desde)"
-                  (input)="setRango(i, j, { desde: soloDigitos($any($event.target).value) })"
+                <sk-input
+                  class="text-[11px]"
+                  [ngModel]="miles(r.desde)"
+                  (ngModelChange)="setRango(i, j, { desde: soloDigitos($event) })"
                 />
                 <span class="text-[10px] text-muted-foreground">a</span>
-                <input
-                  class="alma-input h-7 rounded-md text-[11px]"
-                  [value]="r.hasta === null ? '' : miles(r.hasta)"
+                <sk-input
+                  class="text-[11px]"
+                  [ngModel]="r.hasta === null ? '' : miles(r.hasta)"
                   placeholder="∞"
-                  (input)="setHasta(i, j, $any($event.target).value)"
+                  (ngModelChange)="setHasta(i, j, $event)"
                 />
-                <input
-                  class="alma-input h-7 w-12 rounded-md text-center text-[11px] font-semibold"
-                  [value]="r.paquete"
+                <sk-input
+                  class="w-12 text-center text-[11px] font-semibold"
                   aria-label="Paquete"
-                  (input)="
-                    setRango(i, j, { paquete: $any($event.target).value.toUpperCase() })
-                  "
+                  [ngModel]="r.paquete"
+                  (ngModelChange)="setRango(i, j, { paquete: $event.toUpperCase() })"
                 />
                 <button
                   type="button"
@@ -533,21 +534,19 @@ export class MatrizEditorComponent {
 
 @Component({
   selector: 'alma-paquetes-editor',
-  imports: [],
+  imports: [FormsModule, SkTextareaComponent],
   template: `
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       @for (letra of letras(); track letra) {
         <div class="rounded-xl border border-border/50 p-2.5">
           <p class="mb-1.5 text-xs font-semibold text-foreground">Paquete {{ letra }}</p>
-          <textarea
-            class="alma-input min-h-32 rounded-lg py-2 text-[11px]"
-            [value]="texto(letra)"
-            (input)="onInput(letra, $any($event.target).value)"
-            (blur)="normalizar(letra)"
-          ></textarea>
-          <p class="mt-1 text-[10px] text-muted-foreground">
-            {{ conteo(letra) }} exámenes · uno por renglón.
-          </p>
+          <sk-textarea
+            class="min-h-32 text-[11px]"
+            [ngModel]="texto(letra)"
+            (ngModelChange)="onInput(letra, $event)"
+            (focusout)="normalizar(letra)"
+            [helpText]="conteo(letra) + ' exámenes · uno por renglón.'"
+          />
         </div>
       }
     </div>

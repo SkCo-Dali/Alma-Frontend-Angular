@@ -30,8 +30,7 @@ const CONFIG_APP = appPlataforma({
   nombre: 'Configuración',
   descripcion: 'Apariencia, conexiones y ayuda del portal.',
   icono: 'settings',
-  iconUrl: '/app-icons/configuracion.png',
-  color: '#64748B',
+  color: '#666666', // --sk-color-text-muted
   internalRoute: '/settings',
 });
 
@@ -40,8 +39,7 @@ const ADMIN_APP = appPlataforma({
   nombre: 'Accesos',
   descripcion: 'Usuarios, roles, auditoría y métricas de la plataforma.',
   icono: 'shield-check',
-  iconUrl: '/app-icons/accesos.png',
-  color: '#33415A',
+  color: '#404040', // --sk-color-text
   internalRoute: '/admin',
 });
 

@@ -559,7 +559,7 @@ export class EjecucionMotorStore implements OnDestroy {
         setTimeout(() => this.adfPhase.set('waiting_email'), ADF_TRIGGERED_MS),
         setTimeout(() => {
           this.adfPhase.set('check_email');
-          this.toast.ok('📧 Revisa tu correo', 'El correo de notificación debería haber llegado');
+          this.toast.ok('Revisa tu correo', 'El correo de notificación debería haber llegado');
         }, ADF_TRIGGERED_MS + ADF_WAITING_EMAIL_MS),
         setTimeout(
           () => {

@@ -6,14 +6,13 @@
 //   en pantallas angostas se muestran solo las que caben.
 // - Reordenamiento drag & drop EN VIVO (desktop + táctil) y menú contextual
 //   (Abrir / Quitar del Dock).
-// - Se auto-oculta fuera del inicio (/apps/*, /admin, /settings, /help); el asa
-//   inferior lo invoca.
+// - Siempre visible en todas las páginas del shell (sin auto-ocultado).
 
 import { NgTemplateOutlet } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { LaunchpadService } from '../../core/services/launchpad.service';
 import {
   Component,
-  DestroyRef,
   ElementRef,
   QueryList,
   ViewChildren,
@@ -45,51 +44,29 @@ interface DockEntry {
   kind: 'app' | 'nav-img' | 'nav-action';
   app?: Application;
   img?: string;
+  icon?: string;
   to?: string;
   href?: string;
 }
 
 @Component({
   selector: 'alma-dock',
-  imports: [NgTemplateOutlet, RouterLink, AppIconArtComponent, DockLaunchpadComponent],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    LucideAngularModule,
+    AppIconArtComponent,
+    DockLaunchpadComponent,
+  ],
   template: `
-    <!-- Asa tipo indicador de iPhone -->
-    @if (insideApp()) {
-      <div
-        class="fixed inset-x-0 bottom-0 z-30 flex items-end justify-center"
-        (dragenter)="invocar()"
-        (dragover)="$event.preventDefault(); invocar()"
-      >
-        <button
-          type="button"
-          aria-label="Mostrar dock"
-          (mouseenter)="invocar()"
-          (click)="invocar()"
-          (focus)="invocar()"
-          class="flex cursor-pointer flex-col items-center px-3 pb-1.5 pt-3 transition-opacity duration-200"
-          [style.opacity]="hidden() ? 1 : 0"
-          [style.pointerEvents]="hidden() ? 'auto' : 'none'"
-        >
-          <span
-            class="glass-strong h-[7px] w-32 rounded-full border border-border shadow-[var(--shadow-md)]"
-          ></span>
-        </button>
-      </div>
-    }
-
     <div
-      class="dock-panel pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center px-3"
-      [style.transform]="hidden() ? 'translateY(130px)' : 'translateY(0)'"
-      [style.opacity]="hidden() ? 0 : 1"
-      (mouseenter)="cancelarOcultar()"
-      (mouseleave)="alSalirDelPanel($event)"
+      class="dock-panel pointer-events-none fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3"
     >
       <nav
         aria-label="Dock de navegación"
-        class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-full border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
+        class="glass-strong pointer-events-auto relative flex max-w-[calc(100vw-1.5rem)] items-end gap-1.5 overflow-x-auto rounded-full border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
         (mouseleave)="onLeaveNav()"
-        (focusin)="insideApp() && invocar()"
       >
         @for (entry of entries(); track entry.key; let i = $index) {
           @if (entry.key === 'sep') {
@@ -166,6 +143,10 @@ interface DockEntry {
         >
           @if (entry.kind === 'app') {
             <alma-app-icon-art [app]="entry.app" />
+          } @else if (entry.icon) {
+            <div class="flex h-full w-full items-center justify-center bg-secondary text-foreground">
+              <lucide-icon [name]="entry.icon" [class]="'h-[62%] w-[62%]'" [strokeWidth]="1.75" />
+            </div>
           } @else {
             <img [src]="entry.img" alt="" draggable="false" class="h-full w-full object-cover" />
           }
@@ -189,14 +170,14 @@ interface DockEntry {
         <p class="px-2.5 py-1 text-xs font-medium text-muted-foreground">{{ ctx.label }}</p>
         @if (ctx.to) {
           <button
-            class="w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent"
+            class="w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-[var(--button-brand-secondary-hover)]"
             (click)="abrirDesdeMenu(ctx.to)"
           >
             Abrir
           </button>
         }
         <button
-          class="w-full rounded-md px-2.5 py-1.5 text-left text-sm text-destructive hover:bg-accent"
+          class="w-full rounded-md px-2.5 py-1.5 text-left text-sm text-destructive hover:bg-[var(--button-brand-secondary-hover)]"
           (click)="quitarDelDock(ctx.appId)"
         >
           Quitar del Dock
@@ -205,6 +186,18 @@ interface DockEntry {
     }
 
     <alma-dock-launchpad [open]="launchpad.open()" (closed)="launchpad.open.set(false)" />
+  `,
+  styles: `
+    /* lucide-icon no tiene tamaño propio (encoge al contenido): sin esto, el
+       % del glyph se resuelve contra su svg (24px) en vez del tile, y al no
+       centrarse por sí solo queda pegado arriba a la izquierda. */
+    lucide-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
   `,
 })
 export class DockComponent {
@@ -216,52 +209,6 @@ export class DockComponent {
 
   protected readonly launchpad = inject(LaunchpadService);
   protected readonly pathname = signal(this.router.url);
-  protected readonly summoned = signal(false);
-  protected readonly insideApp = computed(() => {
-    const p = this.pathname();
-    return (
-      p.startsWith('/apps/') ||
-      p.startsWith('/admin') ||
-      p.startsWith('/settings') ||
-      p.startsWith('/help')
-    );
-  });
-  protected readonly hidden = computed(() => this.insideApp() && !this.summoned());
-
-  // Hover-intent: entre la línea invocadora (bottom-0) y el Dock (bottom-3) hay
-  // una franja muerta. Sin gracia, cruzarla dispara un ocultar→mostrar en cadena
-  // que se siente como rebote. Ocultamos con un retardo CANCELABLE: volver a
-  // entrar cancela el cierre en vez de reiniciar la animación.
-  private ocultarTimer: number | null = null;
-
-  protected cancelarOcultar(): void {
-    if (this.ocultarTimer !== null) {
-      clearTimeout(this.ocultarTimer);
-      this.ocultarTimer = null;
-    }
-  }
-
-  private programarOcultar(): void {
-    this.cancelarOcultar();
-    this.ocultarTimer = setTimeout(() => this.summoned.set(false), 300) as unknown as number;
-  }
-
-  protected invocar(): void {
-    this.cancelarOcultar();
-    this.summoned.set(true);
-  }
-
-  /**
-   * El Dock DESLIZA bajo el cursor al mostrarse/ocultarse, lo que dispara un
-   * mouseleave "fantasma" con el cursor quieto. Si el cursor sigue pegado al
-   * borde inferior (sobre la línea invocadora, por debajo del Dock) NO ocultamos:
-   * no se fue, es el Dock el que pasó por debajo.
-   */
-  protected alSalirDelPanel(e: MouseEvent): void {
-    if (!this.insideApp()) return;
-    if (window.innerHeight - e.clientY < 28) return;
-    this.programarOcultar();
-  }
 
   // Ancho de viewport reactivo (cuántas apps caben en el Dock)
   private readonly vw = signal(window.innerWidth);
@@ -306,15 +253,10 @@ export class DockComponent {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.cancelarOcultar());
     window.addEventListener('resize', this.onResize);
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => {
-        this.pathname.set(e.urlAfterRedirects);
-        this.cancelarOcultar();
-        this.summoned.set(false);
-      });
+      .subscribe((e) => this.pathname.set(e.urlAfterRedirects));
   }
 
   private orderIds(): string[] {
@@ -330,7 +272,10 @@ export class DockComponent {
     const vw = this.vw();
     const esMovil = vw < 768;
     const disponible = vw - (esMovil ? 150 : 260);
-    const caben = Math.max(1, Math.floor(disponible / 50));
+    // ~86px reales por tile (label max-width 68px + padding del .dock-entry +
+    // gap-1.5 entre tiles), no 50px — con menos, el dock subestimaba cuántas
+    // Apps caben y desbordaba el viewport (mitigado también con overflow-x-auto).
+    const caben = Math.max(1, Math.floor(disponible / 86));
     const topeVista = Math.min(caben, esMovil ? 8 : MAX_DOCK);
     const anclas = clampDock(Math.min(this.prefs.dockCount(), orderIds.length));
     const visibles = Math.min(anclas, topeVista);
@@ -356,7 +301,7 @@ export class DockComponent {
         label: 'Inicio',
         active: path === '/',
         kind: 'nav-img',
-        img: '/app-icons/nav-inicio.png',
+        icon: 'home',
         to: '/',
       },
       {
@@ -364,7 +309,7 @@ export class DockComponent {
         label: 'Todas las apps',
         active: this.launchpad.open(),
         kind: 'nav-action',
-        img: '/app-icons/nav-todas.png',
+        icon: 'layout-grid',
       },
       { key: 'sep', label: '', active: false, kind: 'nav-img' },
       ...apps,

@@ -13,6 +13,7 @@
   "private": true,
   "dependencies": {
     "@angular/animations": "^21.2.6",
+    "@angular/cdk": "^21.2.6",
     "@angular/common": "^21.2.6",
     "@angular/compiler": "^21.2.6",
     "@angular/core": "^21.2.6",
@@ -21,7 +22,11 @@
     "@angular/platform-browser-dynamic": "^21.2.6",
     "@angular/router": "^21.2.6",
     "@azure/msal-browser": "^5.6.2",
+    "@primeuix/themes": "^2.0.0",
+    "@skandia/ui": "file:vendor/skandia-ui/skandia-ui-0.1.11.tgz",
     "lucide-angular": "^0.575.0",
+    "primeicons": "^7.0.0",
+    "primeng": "^21.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

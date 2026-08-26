@@ -20,6 +20,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import { Application } from '../../core/models/platform.models';
 
@@ -56,7 +57,7 @@ function cargarScript(url: string): Promise<void> {
 
 @Component({
   selector: 'alma-microfrontend-host',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, SkButtonComponent],
   template: `
     @if (error(); as err) {
       <div class="flex min-h-[55vh] flex-col items-center justify-center text-center">
@@ -67,9 +68,13 @@ function cargarScript(url: string): Promise<void> {
         </div>
         <h1 class="mt-4 text-xl font-bold">No se pudo cargar {{ app().nombre }}</h1>
         <p class="mt-2 max-w-md text-sm text-muted-foreground">{{ err }}</p>
-        <button type="button" (click)="montar()" class="alma-btn alma-btn-outline mt-6">
-          Reintentar
-        </button>
+        <sk-button
+          variant="secondary"
+          type="button"
+          class="mt-6"
+          label="Reintentar"
+          (clicked)="montar()"
+        />
       </div>
     } @else if (cargando()) {
       <div class="flex min-h-[55vh] flex-col items-center justify-center gap-3">

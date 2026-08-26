@@ -8,7 +8,12 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkSwitchComponent,
+} from '@skandia/ui';
 import { ToastService } from '../../../core/services/toast.service';
 import { SuscripcionGridApi } from '../grid/suscripcion-grid.api';
 import { CatalogoComboboxComponent } from './catalogo-combobox.component';
@@ -75,7 +80,10 @@ interface ItemVista {
   imports: [
     FormsModule,
     LucideAngularModule,
-    AlmaSwitchComponent,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkSwitchComponent,
     CatalogoComboboxComponent,
   ],
   template: `
@@ -126,20 +134,21 @@ interface ItemVista {
               Precargar desde una cotización (opcional)
             </p>
             <div class="flex gap-1.5">
-              <input
-                class="alma-input h-8 rounded-lg text-xs"
+              <sk-input
                 [(ngModel)]="textoBusqueda"
                 (keydown.enter)="buscar()"
                 placeholder="N° de cotización o asegurado…"
+                fluid
               />
-              <button
+              <sk-button
+                variant="secondary"
                 type="button"
-                (click)="buscar()"
-                aria-label="Buscar cotización"
-                class="alma-btn alma-btn-outline h-8 w-8 shrink-0 rounded-lg p-0"
-              >
-                <lucide-icon name="search" [size]="14" />
-              </button>
+                size="small"
+                iconOnly
+                icon="search"
+                ariaLabel="Buscar cotización"
+                (clicked)="buscar()"
+              />
             </div>
             @if (cotizacion(); as c) {
               <p class="truncate text-[11px] text-foreground">
@@ -180,41 +189,40 @@ interface ItemVista {
         <!-- ── Formulario ── -->
         <div class="grid grid-cols-2 gap-2.5">
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Edad</p>
-            <input
+            <sk-input
               type="number"
-              class="alma-input h-9 rounded-xl text-sm"
+              label="Edad"
               [(ngModel)]="edad"
               [placeholder]="rangoEdad()"
+              fluid
             />
           </div>
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Sexo</p>
-            <select class="alma-input h-9 rounded-xl text-sm" [(ngModel)]="sexo">
-              <option value="">—</option>
-              <option value="F">Femenino</option>
-              <option value="M">Masculino</option>
-            </select>
+            <sk-dropdown
+              label="Sexo"
+              [options]="sexoOptions"
+              [(ngModel)]="sexo"
+              fluid
+            />
           </div>
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Estatura (m)</p>
-            <input
+            <sk-input
               type="number"
-              step="0.01"
-              class="alma-input h-9 rounded-xl text-sm"
+              label="Estatura (m)"
               [(ngModel)]="estatura"
               (ngModelChange)="imcTick.set(imcTick() + 1)"
               placeholder="1.70"
+              fluid
             />
           </div>
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Peso (kg)</p>
-            <input
+            <sk-input
               type="number"
-              class="alma-input h-9 rounded-xl text-sm"
+              label="Peso (kg)"
               [(ngModel)]="peso"
               (ngModelChange)="imcTick.set(imcTick() + 1)"
               placeholder="70"
+              fluid
             />
           </div>
         </div>
@@ -285,16 +293,16 @@ interface ItemVista {
         </div>
 
         <div class="space-y-2">
-          <div class="flex items-center justify-between">
+          <label class="flex items-center justify-between">
             <p class="text-xs font-medium text-foreground">
               ¿Practica algún hobby o actividad extracurricular?
             </p>
-            <alma-switch
+            <sk-switch
               [checked]="practicaHobby()"
-              (checkedChange)="practicaHobby.set($event)"
-              ariaLabel="¿Practica algún hobby?"
+              [label]="''"
+              (valueChange)="practicaHobby.set($any($event).checked)"
             />
-          </div>
+          </label>
           @if (practicaHobby()) {
             <div class="space-y-1.5">
               @if (hobbies().length === 0) {
@@ -340,38 +348,34 @@ interface ItemVista {
 
         <div class="grid grid-cols-2 gap-2.5">
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Valor asegurado</p>
-            <input
-              class="alma-input h-9 rounded-xl text-sm"
+            <sk-input
+              label="Valor asegurado"
               [(ngModel)]="valorAsegurado"
-              (blur)="valorAsegurado = fmt(parse(valorAsegurado))"
+              (focusout)="valorAsegurado = fmt(parse(valorAsegurado))"
               placeholder="0"
+              fluid
             />
           </div>
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Valor cúmulo</p>
-            <input
-              class="alma-input h-9 rounded-xl text-sm"
+            <sk-input
+              label="Valor cúmulo"
               [(ngModel)]="valorCumulo"
-              (blur)="valorCumulo = fmt(parse(valorCumulo))"
+              (focusout)="valorCumulo = fmt(parse(valorCumulo))"
               placeholder="0"
+              fluid
             />
           </div>
         </div>
 
-        <button
+        <sk-button
+          variant="primary"
           type="button"
-          (click)="simular()"
+          label="Simular"
+          class="w-full"
+          [loading]="simulando()"
           [disabled]="simulando() || cargandoCatalogos()"
-          class="alma-btn alma-btn-primary h-9 w-full rounded-xl"
-        >
-          @if (simulando()) {
-            <lucide-icon name="refresh-cw" [size]="14" class="animate-spin" />
-          } @else {
-            <lucide-icon name="calculator" [size]="14" />
-          }
-          Simular
-        </button>
+          (clicked)="simular()"
+        />
 
         <!-- ── Resultado ── -->
         @if (resultado(); as r) {
@@ -543,6 +547,12 @@ export class SimuladorPanelComponent {
 
   protected readonly fmt = fmtMiles;
   protected readonly parse = parseMiles;
+
+  protected readonly sexoOptions: { label: string; value: 'F' | 'M' | '' }[] = [
+    { label: '—', value: '' },
+    { label: 'Femenino', value: 'F' },
+    { label: 'Masculino', value: 'M' },
+  ];
 
   // ── Estado del formulario ──
   protected edad = '';

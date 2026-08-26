@@ -17,13 +17,15 @@ export function isApiConflictError(error: unknown): error is ApiConflictError {
 }
 
 export const CONFLICT_TOAST_DESCRIPTION =
-  'No se puede crear el registro porque ya existe ese registro.';
+  'Ya existe un registro igual a este. Revisa los datos e intenta de nuevo.';
 
-/** Mensajes genéricos por acción (no se filtran errores técnicos al usuario). */
+/** Mensajes genéricos por acción (no se filtran errores técnicos al usuario).
+ *  Tuteo consistente con el resto de la plataforma — antes cambiaban a
+ *  "usted" solo aquí. */
 export const MENSAJES_ERROR: Record<string, string> = {
-  create: 'Error al crear el registro. Por favor intente nuevamente.',
-  update: 'Error al actualizar el registro. Por favor intente nuevamente.',
-  delete: 'Error al eliminar el registro. Por favor intente nuevamente.',
-  fetch: 'Error al cargar la información. Por favor intente nuevamente.',
-  toggle: 'Error al cambiar el estado del registro. Por favor intente nuevamente.',
+  create: 'No pudimos crear el registro. Intenta de nuevo en un momento.',
+  update: 'No pudimos guardar los cambios. Intenta de nuevo en un momento.',
+  delete: 'No pudimos eliminar el registro. Intenta de nuevo en un momento.',
+  fetch: 'No pudimos cargar la información. Intenta de nuevo en un momento.',
+  toggle: 'No pudimos cambiar el estado del registro. Intenta de nuevo en un momento.',
 };

@@ -14,7 +14,7 @@ export const APP_CATALOG: Application[] = [
       'Administración de usuarios del Servicio al Cliente: consulta, bloqueo y desbloqueo con trazabilidad, creación y validación de PIN.',
     categoria: 'Servicio al Cliente',
     icono: 'user-cog',
-    color: '#0A84FF',
+    color: '#0099de', // --sk-color-info
     url: '/apps/sac-usuarios',
     internalRoute: '/apps/sac-usuarios',
     integrationType: 'microfrontend',
@@ -43,7 +43,7 @@ export const APP_CATALOG: Application[] = [
     categoria: 'Asistentes',
     icono: 'sparkles',
     iconUrl: '/app-icons/agente-alma.png',
-    color: '#00C83C',
+    color: '#00c73d', // --sk-color-primary
     url: '/apps/agente-alma',
     internalRoute: '/apps/agente-alma',
     integrationType: 'internal',
@@ -58,7 +58,7 @@ export const APP_CATALOG: Application[] = [
       'Base de cheques emitidos de Servicio al Cliente. Alimenta al Agente Alma.',
     categoria: 'Servicio al Cliente',
     icono: 'wallet',
-    color: '#00C83C',
+    color: '#00c73d', // --sk-color-primary
     url: '/apps/cheques',
     internalRoute: '/apps/cheques',
     integrationType: 'internal',
@@ -73,8 +73,7 @@ export const APP_CATALOG: Application[] = [
       'Bandeja de cotizaciones de Vida: declaraciones, evaluación del motor y emisión.',
     categoria: 'Suscripción',
     icono: 'brain',
-    iconUrl: '/app-icons/suscripcion.png',
-    color: '#00C83C',
+    color: '#03a835', // --sk-color-primary-hover
     url: '/apps/suscripcion',
     internalRoute: '/apps/suscripcion',
     integrationType: 'internal',
@@ -90,8 +89,7 @@ export const APP_CATALOG: Application[] = [
       'Planes de compensación, parametrización, ejecución del motor e información gerencial.',
     categoria: 'Comisiones',
     icono: 'calculator',
-    iconUrl: '/app-icons/motor-comisiones.png',
-    color: '#00C83C',
+    color: '#00c73d', // --sk-color-primary
     url: '/apps/motor-comisiones',
     internalRoute: '/apps/motor-comisiones',
     integrationType: 'internal',
@@ -106,7 +104,7 @@ export const APP_CATALOG: Application[] = [
     descripcion: 'Gestión y seguimiento de solicitudes de emisión de pólizas.',
     categoria: 'Emisión',
     icono: 'file-text',
-    color: '#00C83C',
+    color: '#16d727', // --sk-color-accent
     url: 'https://emision.skandia.co',
     integrationType: 'external',
     requiredPermission: 'app.emision.view',
@@ -120,7 +118,7 @@ export const APP_CATALOG: Application[] = [
     descripcion: 'Repositorio de expedientes, soportes y documentos de Operaciones.',
     categoria: 'Documental',
     icono: 'folder-open',
-    color: '#0F6CBD',
+    color: '#666666', // --sk-color-text-muted
     url: 'https://documental.skandia.co',
     integrationType: 'external',
     requiredPermission: 'app.documental.view',
@@ -134,7 +132,7 @@ export const APP_CATALOG: Application[] = [
     descripcion: 'Consulta de terceros, declaraciones y transacciones en Pharos.',
     categoria: 'Consultas',
     icono: 'gem',
-    color: '#00B294',
+    color: '#009a2f', // --sk-color-primary-active
     url: 'https://pharos.skandia.co',
     integrationType: 'external',
     requiredPermission: 'app.pharos.view',
@@ -148,7 +146,7 @@ export const APP_CATALOG: Application[] = [
     descripcion: 'Indicadores y métricas de la operación en tiempo real.',
     categoria: 'Analítica',
     icono: 'bar-chart-3',
-    color: '#6B69D6',
+    color: '#404040', // --sk-color-text
     url: 'https://dashboard.skandia.co',
     integrationType: 'external',
     requiredPermission: 'app.dashboard.view',
@@ -162,7 +160,7 @@ export const APP_CATALOG: Application[] = [
     descripcion: 'Acceso al CRM corporativo y vistas 360 del cliente.',
     categoria: 'CRM',
     icono: 'cloud',
-    color: '#00A1E0',
+    color: '#0099de', // --sk-color-info
     url: 'https://skandia.my.salesforce.com',
     integrationType: 'external',
     requiredPermission: 'app.salesforce.view',

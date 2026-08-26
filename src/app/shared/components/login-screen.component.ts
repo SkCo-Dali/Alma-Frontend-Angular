@@ -22,7 +22,7 @@ import { AlmaHousingComponent } from './alma-housing.component';
       <alma-housing [size]="224" [interactive]="true" />
 
       <h1 class="mt-8 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-        Bienvenido a Alma
+        Te damos la bienvenida a Alma
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">Conecta · Orquesta · Impulsa</p>
 

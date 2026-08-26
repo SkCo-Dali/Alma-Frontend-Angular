@@ -5,6 +5,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent } from '@skandia/ui';
 import {
   addDays,
   addMonths,
@@ -152,7 +153,7 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
 
 @Component({
   selector: 'alma-date-filter-tab',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkDropdownComponent],
   template: `
     <div class="space-y-0.5">
       @for (preset of presets; track preset.id) {
@@ -195,17 +196,21 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
             <p class="text-xs text-muted-foreground">Mostrar las filas en las cuales:</p>
 
             <div class="flex items-center gap-2">
-              <select class="alma-input h-8 w-[180px] text-xs" [(ngModel)]="op1">
-                @for (o of operadores; track o.value) {
-                  <option [value]="o.value">{{ o.label }}</option>
-                }
-              </select>
-              <select class="alma-input h-8 flex-1 text-xs" [(ngModel)]="val1">
-                <option value="">Seleccionar fecha...</option>
-                @for (d of fechasOrdenadas(); track d) {
-                  <option [value]="d">{{ etiqueta(d) }}</option>
-                }
-              </select>
+              <sk-dropdown
+                class="w-[180px]"
+                [options]="operadores"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="op1"
+              />
+              <sk-dropdown
+                class="flex-1"
+                placeholder="Seleccionar fecha..."
+                [options]="fechaOpciones()"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="val1"
+              />
             </div>
 
             <div class="flex items-center gap-4">
@@ -218,36 +223,38 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
             </div>
 
             <div class="flex items-center gap-2">
-              <select class="alma-input h-8 w-[180px] text-xs" [(ngModel)]="op2">
-                @for (o of operadores; track o.value) {
-                  <option [value]="o.value">{{ o.label }}</option>
-                }
-              </select>
-              <select class="alma-input h-8 flex-1 text-xs" [(ngModel)]="val2">
-                <option value="">Seleccionar fecha...</option>
-                @for (d of fechasOrdenadas(); track d) {
-                  <option [value]="d">{{ etiqueta(d) }}</option>
-                }
-              </select>
+              <sk-dropdown
+                class="w-[180px]"
+                [options]="operadores"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="op2"
+              />
+              <sk-dropdown
+                class="flex-1"
+                placeholder="Seleccionar fecha..."
+                [options]="fechaOpciones()"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="val2"
+              />
             </div>
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              class="alma-btn alma-btn-outline h-8 rounded-lg text-xs"
-              (click)="dialogoAbierto.set(false)"
-            >
-              Cancelar
-            </button>
-            <button
+              label="Cancelar"
+              (clicked)="dialogoAbierto.set(false)"
+            />
+            <sk-button
+              variant="primary"
               type="button"
-              class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
+              label="Aceptar"
               [disabled]="!val1 && !val2"
-              (click)="aceptarPersonalizado()"
-            >
-              Aceptar
-            </button>
+              (clicked)="aceptarPersonalizado()"
+            />
           </div>
         </div>
       </div>
@@ -273,6 +280,11 @@ export class DateFilterTabComponent {
 
   protected readonly fechasOrdenadas = computed(() =>
     [...this.availableDates()].sort((a, b) => a.localeCompare(b)),
+  );
+
+  /** Opciones {label, value} para el sk-dropdown de selección de fecha. */
+  protected readonly fechaOpciones = computed(() =>
+    this.fechasOrdenadas().map((d) => ({ label: this.etiqueta(d), value: d })),
   );
 
   protected clickPreset(ev: MouseEvent, preset: DatePreset): void {

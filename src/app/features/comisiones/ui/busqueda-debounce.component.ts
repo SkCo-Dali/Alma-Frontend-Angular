@@ -10,27 +10,22 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
+import { SkInputComponent } from '@skandia/ui';
 
 const DEBOUNCE_MS = 500;
 
 @Component({
   selector: 'alma-busqueda-debounce',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, SkInputComponent],
   template: `
-    <div class="relative w-full">
-      <span
-        class="pointer-events-none absolute inset-y-0 left-3.5 z-20 flex items-center"
-      >
-        <lucide-icon name="search" [size]="16" class="mr-2 text-muted-foreground" />
-      </span>
-      <input
-        class="alma-input bg-card pl-11 text-left shadow-sm"
-        [placeholder]="placeholder()"
-        [(ngModel)]="local"
-        (ngModelChange)="onInput($event)"
-      />
-    </div>
+    <sk-input
+      class="w-full"
+      fluid
+      iconLeft="search"
+      [placeholder]="placeholder()"
+      [(ngModel)]="local"
+      (ngModelChange)="onInput($event)"
+    />
   `,
 })
 export class BusquedaDebounceComponent implements OnDestroy {

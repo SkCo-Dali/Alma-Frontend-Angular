@@ -5,8 +5,9 @@
 // masonry en desktop. El único estado visible es el de Pipeline (uw_status/sub_status).
 
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
@@ -37,6 +38,7 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
     EmitirDialogComponent,
     EvaluarModalComponent,
     SimuladorHostComponent,
+    SkButtonComponent,
   ],
   template: `
     @if (!puedeVer()) {
@@ -55,12 +57,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
         </p>
         <p class="mt-1 text-sm text-muted-foreground">{{ error() }}</p>
         <div class="mt-4 flex justify-center gap-2">
-          <a routerLink="/apps/suscripcion/cotizaciones" class="alma-btn alma-btn-outline">
-            <lucide-icon name="arrow-left" [size]="16" /> Volver
-          </a>
-          <button type="button" (click)="recargar()" class="alma-btn alma-btn-outline">
-            <lucide-icon name="refresh-cw" [size]="16" /> Reintentar
-          </button>
+          <sk-button variant="secondary" type="button" label="Volver" (clicked)="volver()" />
+          <sk-button
+            variant="secondary"
+            type="button"
+            label="Reintentar"
+            (clicked)="recargar()"
+          />
         </div>
       </div>
     } @else if (tarea(); as sel) {
@@ -86,13 +89,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                 />
               }
               @if (puedeGestionar()) {
-                <button
+                <sk-button
+                  variant="secondary"
                   type="button"
-                  (click)="modal.set('evaluar')"
-                  class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
-                >
-                  <lucide-icon name="stethoscope" [size]="16" /> Evaluar con el motor
-                </button>
+                  size="small"
+                  label="Evaluar con el motor"
+                  (clicked)="modal.set('evaluar')"
+                />
               }
               <!-- Aprobar y emitir: solo con permiso emit; habilitado cuando la
                    cotización es emitible (creada HOY, sin contrato, no emitida). -->
@@ -105,14 +108,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                       : (sel.afiliacion?.motivo_no_emitible ?? '')
                   "
                 >
-                  <button
+                  <sk-button
+                    variant="primary"
                     type="button"
+                    label="Aprobar y emitir"
                     [disabled]="!sel.afiliacion?.emitible"
-                    (click)="modal.set('emitir')"
-                    class="alma-btn alma-btn-primary h-8 rounded-xl text-xs"
-                  >
-                    <lucide-icon name="send" [size]="16" /> Aprobar y emitir
-                  </button>
+                    (clicked)="modal.set('emitir')"
+                  />
                 </span>
               }
             </div>
@@ -268,14 +270,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                 </div>
               </div>
             </div>
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
+              label="Ver cuestionario"
               [disabled]="!sel.declaraciones"
-              (click)="modal.set('declaraciones')"
-              class="alma-btn h-9 w-full rounded-xl border border-primary text-primary hover:bg-primary hover:text-white"
-            >
-              Ver cuestionario
-            </button>
+              (clicked)="modal.set('declaraciones')"
+            />
           </section>
         </div>
 
@@ -375,6 +376,11 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
 export class DetalleSolicitudComponent {
   private readonly api = inject(SuscripcionApi);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected volver(): void {
+    this.router.navigateByUrl('/apps/suscripcion/cotizaciones');
+  }
 
   /** Parámetro de ruta (withComponentInputBinding). */
   readonly solicitudId = input.required<string>();

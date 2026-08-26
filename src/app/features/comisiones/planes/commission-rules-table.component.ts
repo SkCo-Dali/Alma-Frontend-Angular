@@ -4,6 +4,7 @@
 
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionRule } from './commission-plans.api';
 import {
@@ -15,7 +16,7 @@ import { RuleDialogComponent } from './rule-dialog.component';
 
 @Component({
   selector: 'alma-commission-rules-table',
-  imports: [LucideAngularModule, RuleDialogComponent],
+  imports: [LucideAngularModule, SkButtonComponent, RuleDialogComponent],
   template: `
     @if (rules().length === 0) {
       <div class="py-8 text-center text-sm text-muted-foreground">
@@ -48,13 +49,18 @@ import { RuleDialogComponent } from './rule-dialog.component';
               <tbody>
                 @for (r of rules(); track r.id; let i = $index) {
                   <tr
-                    class="group cursor-pointer transition-colors even:bg-muted/5 hover:bg-primary/5"
+                    class="group cursor-pointer transition-colors even:bg-muted/5 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     [class]="
                       seleccionada()?.id === r.id
                         ? 'bg-primary/10 ring-1 ring-inset ring-primary/30'
                         : ''
                     "
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-label]="'Editar la regla ' + r.name"
                     (click)="abrirEdicion(r)"
+                    (keydown.enter)="abrirEdicion(r)"
+                    (keydown.space)="$event.preventDefault(); abrirEdicion(r)"
                   >
                     <td class="py-2.5 text-center text-xs text-muted-foreground">
                       {{ i + 1 }}
@@ -200,22 +206,21 @@ import { RuleDialogComponent } from './rule-dialog.component';
             no se puede deshacer.
           </p>
           <div class="mt-6 flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="porBorrar.set(null)"
+              label="Cancelar"
               [disabled]="borrando()"
-              class="alma-btn alma-btn-outline"
-            >
-              Cancelar
-            </button>
-            <button
+              (clicked)="porBorrar.set(null)"
+            />
+            <sk-button
+              variant="primary"
+              severity="danger"
               type="button"
-              (click)="confirmarBorrado()"
+              [label]="borrando() ? 'Eliminando…' : 'Eliminar'"
               [disabled]="borrando()"
-              class="alma-btn bg-destructive text-white hover:bg-destructive/90"
-            >
-              {{ borrando() ? 'Eliminando…' : 'Eliminar' }}
-            </button>
+              (clicked)="confirmarBorrado()"
+            />
           </div>
         </div>
       </div>

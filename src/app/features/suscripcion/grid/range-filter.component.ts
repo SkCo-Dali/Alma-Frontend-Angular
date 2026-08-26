@@ -3,6 +3,7 @@
 
 import { Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent } from '@skandia/ui';
 import { GridFilter } from './suscripcion-grid.api';
 
 export type RangeOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between';
@@ -19,54 +20,46 @@ const OPERATOR_OPTIONS: { value: RangeOp; label: string }[] = [
 
 @Component({
   selector: 'alma-range-filter',
-  imports: [FormsModule],
+  imports: [FormsModule, SkButtonComponent, SkDropdownComponent, SkInputComponent],
   template: `
     <div (click)="$event.stopPropagation()">
       <div class="space-y-3">
-        <select class="alma-input h-8 text-sm" [(ngModel)]="op" (ngModelChange)="onOpChange()">
-          @for (o of operadores; track o.value) {
-            <option [value]="o.value">{{ o.label }}</option>
-          }
-        </select>
+        <sk-dropdown
+          [options]="operadores"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="op"
+          (ngModelChange)="onOpChange()"
+        />
 
         <div>
-          <label class="text-xs text-muted-foreground">
-            {{ op === 'between' ? 'Desde' : 'Valor' }}
-          </label>
-          <input
+          <sk-input
             type="number"
-            class="alma-input h-8 rounded-lg text-sm tabular-nums"
+            [label]="op === 'between' ? 'Desde' : 'Valor'"
             [(ngModel)]="valor1"
           />
         </div>
 
         @if (op === 'between') {
           <div>
-            <label class="text-xs text-muted-foreground">Hasta</label>
-            <input
-              type="number"
-              class="alma-input h-8 rounded-lg text-sm tabular-nums"
-              [(ngModel)]="valor2"
-            />
+            <sk-input type="number" label="Hasta" [(ngModel)]="valor2" />
           </div>
         }
       </div>
 
       <div class="mt-4 flex justify-between border-t border-border/60 pt-3">
-        <button
+        <sk-button
+          variant="secondary"
           type="button"
-          class="alma-btn alma-btn-outline h-8 rounded-lg text-xs text-muted-foreground"
-          (click)="limpiar()"
-        >
-          Limpiar
-        </button>
-        <button
+          label="Limpiar"
+          (clicked)="limpiar()"
+        />
+        <sk-button
+          variant="primary"
           type="button"
-          class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
-          (click)="aplicar()"
-        >
-          Aplicar
-        </button>
+          label="Aplicar"
+          (clicked)="aplicar()"
+        />
       </div>
     </div>
   `,

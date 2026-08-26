@@ -19,3 +19,6 @@ Thumbs.db
 
 # Angular
 .angular/
+
+# Artefactos locales de depuración (Playwright MCP)
+.playwright-mcp/

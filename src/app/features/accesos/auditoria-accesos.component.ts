@@ -2,12 +2,13 @@
 
 import { Component, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkTagComponent } from '@skandia/ui';
 import { AccesosApi, EventoAuditoria } from '../../core/services/accesos.api';
 import { AdminTableComponent } from '../../shared/components/admin-table.component';
 
 @Component({
   selector: 'alma-auditoria-accesos',
-  imports: [LucideAngularModule, AdminTableComponent],
+  imports: [LucideAngularModule, AdminTableComponent, SkTagComponent],
   template: `
     @if (cargando()) {
       <div class="flex items-center gap-2 py-8 text-sm text-muted-foreground">
@@ -31,16 +32,10 @@ import { AdminTableComponent } from '../../shared/components/admin-table.compone
         <td class="px-4 py-3 text-sm text-muted-foreground">{{ e.email }}</td>
         <td class="px-4 py-3 text-sm text-muted-foreground">{{ e.role }}</td>
         <td class="px-4 py-3">
-          <span
-            class="alma-badge"
-            [class]="
-              e.action === 'granted'
-                ? 'alma-badge bg-primary/10 text-primary'
-                : 'alma-badge bg-amber-500/10 text-amber-600 dark:text-amber-400'
-            "
-          >
-            {{ e.action === 'granted' ? 'otorgado' : 'revocado' }}
-          </span>
+          <sk-tag
+            [value]="e.action === 'granted' ? 'otorgado' : 'revocado'"
+            [severity]="e.action === 'granted' ? 'success' : 'warn'"
+          />
         </td>
         <td class="px-4 py-3 text-sm text-muted-foreground">{{ e.performed_by }}</td>
       </ng-template>

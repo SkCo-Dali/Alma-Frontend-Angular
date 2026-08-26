@@ -4,14 +4,15 @@
 
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { CuentaPharosApi, SuscripcionApi } from './suscripcion.api';
 import { Tarea, fmtCOP } from './suscripcion.domain';
 
 @Component({
   selector: 'alma-emitir-dialog',
-  imports: [FormsModule, RouterLink, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
@@ -42,13 +43,12 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
               {{ adv }}
             </div>
           }
-          <button
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="cerrar()"
-            class="alma-btn alma-btn-primary mt-4 w-full rounded-xl"
-          >
-            Listo
-          </button>
+            label="Listo"
+            (clicked)="cerrar()"
+          />
         } @else if (cargandoCuenta()) {
           <div class="flex flex-col items-center gap-3 p-8">
             <lucide-icon
@@ -83,20 +83,18 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
             }}
           </p>
           <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="cerrar()"
-              class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-            >
-              Cancelar
-            </button>
-            <a
-              routerLink="/settings"
-              (click)="cerrar()"
-              class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
-            >
-              {{ requiereRefresco() ? 'Actualizar cuenta' : 'Conectar cuenta' }}
-            </a>
+              label="Cancelar"
+              (clicked)="cerrar()"
+            />
+            <sk-button
+              variant="primary"
+              type="button"
+              [label]="requiereRefresco() ? 'Actualizar cuenta' : 'Conectar cuenta'"
+              (clicked)="irAConfiguracion()"
+            />
           </div>
         } @else {
           <!-- Confirmación de emisión -->
@@ -145,24 +143,20 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
           }
 
           <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="cerrar()"
-              class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-            >
-              Cancelar
-            </button>
-            <button
+              label="Cancelar"
+              (clicked)="cerrar()"
+            />
+            <sk-button
+              variant="primary"
               type="button"
+              [label]="emitiendo() ? 'Emitiendo…' : 'Sí, emitir póliza'"
+              [loading]="emitiendo()"
               [disabled]="!acepta || emitiendo()"
-              (click)="emitir()"
-              class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
-            >
-              @if (emitiendo()) {
-                <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-              }
-              {{ emitiendo() ? 'Emitiendo…' : 'Sí, emitir póliza' }}
-            </button>
+              (clicked)="emitir()"
+            />
           </div>
         }
       </div>
@@ -171,6 +165,7 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
 })
 export class EmitirDialogComponent {
   private readonly api = inject(SuscripcionApi);
+  private readonly router = inject(Router);
 
   readonly tarea = input.required<Tarea>();
   readonly closed = output<void>();
@@ -232,5 +227,10 @@ export class EmitirDialogComponent {
   protected cerrar(): void {
     this.acepta = false;
     this.closed.emit();
+  }
+
+  protected irAConfiguracion(): void {
+    this.cerrar();
+    this.router.navigateByUrl('/settings');
   }
 }

@@ -6,8 +6,9 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent, SkTextareaComponent } from '@skandia/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
@@ -131,6 +132,10 @@ interface GrupoVista {
     LucideAngularModule,
     AccessDeniedComponent,
     AlmaLoaderComponent,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkTextareaComponent,
     ListaEditorComponent,
     EnfermedadesEditorComponent,
     HistorialCambiosComponent,
@@ -152,12 +157,13 @@ interface GrupoVista {
         </p>
         <p class="mt-1 text-sm text-muted-foreground">{{ err }}</p>
         <div class="mt-4 flex justify-center gap-2">
-          <a routerLink="/apps/suscripcion" class="alma-btn alma-btn-outline">
-            <lucide-icon name="arrow-left" [size]="16" /> Volver
-          </a>
-          <button type="button" (click)="cargar()" class="alma-btn alma-btn-outline">
-            <lucide-icon name="refresh-cw" [size]="16" /> Reintentar
-          </button>
+          <sk-button variant="secondary" type="button" label="Volver" (clicked)="volver()" />
+          <sk-button
+            variant="secondary"
+            type="button"
+            label="Reintentar"
+            (clicked)="cargar()"
+          />
         </div>
       </div>
     } @else {
@@ -227,14 +233,11 @@ interface GrupoVista {
                         </p>
                       }
                     </div>
-                    <input
+                    <sk-input
                       type="number"
-                      [step]="p.param.tipo === 'entero' ? 1 : 'any'"
-                      [value]="p.valor"
-                      (input)="cambiarNumero(g.grupo, p.param, $any($event.target).value)"
-                      class="alma-input h-9 rounded-xl text-sm"
-                      [class.border-amber-500/60]="p.dirty"
-                      [class.border-destructive]="p.invalido"
+                      [ngModel]="p.valor"
+                      (ngModelChange)="cambiarNumero(g.grupo, p.param, $event)"
+                      [invalid]="p.invalido"
                     />
                   </div>
                 }
@@ -270,7 +273,7 @@ interface GrupoVista {
                   />
                 } @else {
                   <!-- Mapeo código Pipeline → reglas del motor -->
-                  <div class="overflow-hidden rounded-xl border border-border/50">
+                  <div class="overflow-x-auto rounded-xl border border-border/50">
                     <table class="w-full text-sm">
                       <thead>
                         <tr class="border-b border-border/50 bg-muted/30 text-left">
@@ -293,22 +296,14 @@ interface GrupoVista {
                               {{ codigo }}
                             </td>
                             <td class="px-3 py-1.5">
-                              <select
-                                class="alma-input h-8 w-56 rounded-lg text-xs"
-                                [value]="valorMapa(p.valor, codigo)"
-                                (change)="
-                                  cambiarMapa(
-                                    g.grupo,
-                                    p.param,
-                                    codigo,
-                                    $any($event.target).value
-                                  )
-                                "
-                              >
-                                @for (op of opcionesMapa; track op.slug) {
-                                  <option [value]="op.slug">{{ op.label }}</option>
-                                }
-                              </select>
+                              <sk-dropdown
+                                class="w-56"
+                                [options]="opcionesMapa"
+                                optionLabel="label"
+                                optionValue="value"
+                                [ngModel]="valorMapa(p.valor, codigo)"
+                                (ngModelChange)="cambiarMapa(g.grupo, p.param, codigo, $event)"
+                              />
                             </td>
                           </tr>
                         }
@@ -342,21 +337,22 @@ interface GrupoVista {
                   {{ cambios().length === 1 ? 'cambio sin guardar' : 'cambios sin guardar' }}
                 </p>
                 <div class="ml-auto flex items-center gap-2">
-                  <button
+                  <sk-button
+                    variant="tertiary"
                     type="button"
-                    (click)="descartar()"
-                    class="alma-btn h-8 rounded-xl text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <lucide-icon name="rotate-ccw" [size]="14" /> Descartar
-                  </button>
-                  <button
+                    size="small"
+                    icon="undo"
+                    label="Descartar"
+                    (clicked)="descartar()"
+                  />
+                  <sk-button
+                    variant="primary"
                     type="button"
+                    size="small"
+                    label="Guardar cambios"
                     [disabled]="errores().length > 0"
-                    (click)="confirmOpen.set(true)"
-                    class="alma-btn alma-btn-primary h-8 rounded-xl text-xs"
-                  >
-                    <lucide-icon name="save" [size]="14" /> Guardar cambios
-                  </button>
+                    (clicked)="confirmOpen.set(true)"
+                  />
                 </div>
               </div>
               @if (errores().length > 0) {
@@ -414,37 +410,30 @@ interface GrupoVista {
               </ul>
 
               <div class="mt-3">
-                <label class="text-xs font-medium text-foreground" for="comentario-config">
-                  Comentario (opcional)
-                </label>
-                <textarea
-                  id="comentario-config"
+                <sk-textarea
+                  label="Comentario (opcional)"
                   [(ngModel)]="comentario"
                   placeholder="Por qué se hace este cambio (queda en el historial)…"
-                  class="alma-input mt-1 min-h-20 rounded-xl py-2 text-sm"
-                ></textarea>
+                  [rows]="3"
+                />
               </div>
 
               <div class="mt-4 flex justify-end gap-2">
-                <button
+                <sk-button
+                  variant="secondary"
                   type="button"
+                  label="Cancelar"
                   [disabled]="guardando()"
-                  (click)="confirmOpen.set(false)"
-                  class="alma-btn alma-btn-outline rounded-xl"
-                >
-                  Cancelar
-                </button>
-                <button
+                  (clicked)="confirmOpen.set(false)"
+                />
+                <sk-button
+                  variant="primary"
                   type="button"
+                  label="Guardar cambios"
+                  [loading]="guardando()"
                   [disabled]="guardando()"
-                  (click)="guardar()"
-                  class="alma-btn alma-btn-primary rounded-xl"
-                >
-                  @if (guardando()) {
-                    <lucide-icon name="refresh-cw" [size]="14" class="animate-spin" />
-                  }
-                  Guardar cambios
-                </button>
+                  (clicked)="guardar()"
+                />
               </div>
             </div>
           </div>
@@ -457,9 +446,14 @@ export class MotorConfigPageComponent {
   private readonly api = inject(MotorConfigApiService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+
+  protected volver(): void {
+    this.router.navigateByUrl('/apps/suscripcion');
+  }
 
   protected readonly opcionesMapa = Object.entries(MAPA_OPCIONES).map(([slug, label]) => ({
-    slug,
+    value: slug,
     label,
   }));
 
@@ -654,7 +648,8 @@ export class MotorConfigPageComponent {
     });
   }
 
-  protected cambiarNumero(g: GrupoConfig, p: ParametroConfig, texto: string): void {
+  protected cambiarNumero(g: GrupoConfig, p: ParametroConfig, valor: string | number): void {
+    const texto = String(valor);
     const n = p.tipo === 'entero' ? Number.parseInt(texto, 10) : Number.parseFloat(texto);
     this.setValor(g, p, Number.isNaN(n) ? NaN : n);
   }

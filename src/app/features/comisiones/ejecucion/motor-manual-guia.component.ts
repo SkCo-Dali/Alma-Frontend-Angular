@@ -11,13 +11,15 @@ import { LucideAngularModule } from 'lucide-angular';
       <button
         type="button"
         (click)="abierto.set(!abierto())"
+        [attr.aria-expanded]="abierto()"
+        aria-controls="motor-manual-guia-contenido"
         class="flex w-full items-center justify-between bg-muted/20 p-4 transition-colors hover:bg-muted/30"
       >
         <div class="flex items-center gap-3">
           <div
-            class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
           >
-            📋
+            <lucide-icon name="clipboard-list" [size]="16" />
           </div>
           <div class="text-left">
             <h3 class="text-sm font-bold">Manual de Uso</h3>
@@ -36,6 +38,7 @@ import { LucideAngularModule } from 'lucide-angular';
 
       @if (abierto()) {
         <div
+          id="motor-manual-guia-contenido"
           class="space-y-4 border-t border-border bg-card p-5 text-xs leading-relaxed text-muted-foreground"
         >
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

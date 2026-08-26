@@ -8,7 +8,13 @@
 
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkSwitchComponent,
+  SkTextareaComponent,
+} from '@skandia/ui';
 import {
   CATALOG_FIELD_TYPES,
   Catalog,
@@ -21,7 +27,14 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
 
 @Component({
   selector: 'alma-create-catalog-dialog',
-  imports: [FormsModule, AlmaSwitchComponent, FieldRowsComponent],
+  imports: [
+    FormsModule,
+    SkSwitchComponent,
+    FieldRowsComponent,
+    SkButtonComponent,
+    SkInputComponent,
+    SkTextareaComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -38,54 +51,47 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
 
         <div class="space-y-4 py-4">
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="cat-name">
-              Nombre del Catálogo <span class="text-destructive">*</span>
-            </label>
-            <input
-              id="cat-name"
-              class="alma-input"
+            <sk-input
+              label="Nombre del Catálogo *"
               placeholder="ej., Pólizas"
+              fluid
               [(ngModel)]="nombre"
             />
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="cat-desc">Descripción</label>
-            <textarea
-              id="cat-desc"
-              class="alma-input"
-              rows="3"
+            <sk-textarea
+              label="Descripción"
+              [rows]="3"
               placeholder="ej., Transacciones de pólizas"
+              fluid
               [(ngModel)]="descripcion"
-            ></textarea>
+            />
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="cat-path">Ruta de Origen</label>
-            <input
-              id="cat-path"
-              class="alma-input"
+            <sk-input
+              label="Ruta de Origen"
               placeholder="ej., dbfs:/mnt/fact/polizas_delta"
+              helpText="Ruta al conjunto de datos en Storage/Databricks"
+              fluid
               [(ngModel)]="rutaOrigen"
             />
-            <p class="text-xs text-muted-foreground">
-              Ruta al conjunto de datos en Storage/Databricks
-            </p>
           </div>
 
-          <div class="flex items-center justify-between">
+          <label class="flex items-center justify-between">
             <div class="space-y-0.5">
               <span class="text-sm font-medium">Activo</span>
               <p class="text-xs text-muted-foreground">
                 Habilitar este catálogo para usar en reglas
               </p>
             </div>
-            <alma-switch
+            <sk-switch
               [checked]="activo()"
-              (checkedChange)="activo.set($event)"
-              ariaLabel="Activo"
+              [label]="''"
+              (valueChange)="activo.set($any($event).checked)"
             />
-          </div>
+          </label>
 
           <div class="mt-4 border-t border-border pt-4">
             <alma-field-rows [(campos)]="campos" />
@@ -93,22 +99,20 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
         </div>
 
         <div class="flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline"
-          >
-            Cancelar
-          </button>
-          <button
+            label="Cancelar"
+            (clicked)="cerrar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="crear()"
             [disabled]="guardando() || !puedeGuardar()"
-            class="alma-btn alma-btn-primary"
-          >
-            {{ guardando() ? 'Creando…' : 'Crear Catálogo' }}
-          </button>
+            [label]="guardando() ? 'Creando…' : 'Crear Catálogo'"
+            (clicked)="crear()"
+          />
         </div>
       </div>
     </div>
@@ -163,7 +167,7 @@ export class CreateCatalogDialogComponent {
 
 @Component({
   selector: 'alma-edit-catalog-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, SkButtonComponent, SkInputComponent, SkTextareaComponent],
   template: `
     <div
       class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
@@ -178,46 +182,36 @@ export class CreateCatalogDialogComponent {
 
         <div class="space-y-4 py-4">
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="edit-cat-name">
-              Nombre <span class="text-destructive">*</span>
-            </label>
-            <input id="edit-cat-name" class="alma-input" [(ngModel)]="nombre" />
+            <sk-input label="Nombre *" fluid [(ngModel)]="nombre" />
           </div>
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="edit-cat-desc">Descripción</label>
-            <textarea
-              id="edit-cat-desc"
-              class="alma-input"
-              rows="3"
-              [(ngModel)]="descripcion"
-            ></textarea>
+            <sk-textarea label="Descripción" [rows]="3" fluid [(ngModel)]="descripcion" />
           </div>
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="edit-cat-path">Ruta de Origen</label>
-            <input id="edit-cat-path" class="alma-input" [(ngModel)]="rutaOrigen" />
-            <p class="text-xs text-muted-foreground">
-              Ruta de referencia al conjunto de datos en Storage/Databricks
-            </p>
+            <sk-input
+              label="Ruta de Origen"
+              helpText="Ruta de referencia al conjunto de datos en Storage/Databricks"
+              fluid
+              [(ngModel)]="rutaOrigen"
+            />
           </div>
         </div>
 
         <div class="flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline"
-          >
-            Cancelar
-          </button>
-          <button
+            label="Cancelar"
+            (clicked)="cerrar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="guardar()"
             [disabled]="guardando() || !nombre.trim()"
-            class="alma-btn alma-btn-primary"
-          >
-            {{ guardando() ? 'Guardando…' : 'Guardar Cambios' }}
-          </button>
+            [label]="guardando() ? 'Guardando…' : 'Guardar Cambios'"
+            (clicked)="guardar()"
+          />
         </div>
       </div>
     </div>
@@ -264,7 +258,7 @@ export class EditCatalogDialogComponent implements OnInit {
 
 @Component({
   selector: 'alma-create-fields-dialog',
-  imports: [FieldRowsComponent],
+  imports: [FieldRowsComponent, SkButtonComponent],
   template: `
     <div
       class="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -286,22 +280,20 @@ export class EditCatalogDialogComponent implements OnInit {
         </div>
 
         <div class="flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline"
-          >
-            Cancelar
-          </button>
-          <button
+            label="Cancelar"
+            (clicked)="cerrar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="crear()"
             [disabled]="guardando() || !puedeGuardar()"
-            class="alma-btn alma-btn-primary"
-          >
-            {{ guardando() ? 'Creando…' : 'Crear Campos' }}
-          </button>
+            [label]="guardando() ? 'Creando…' : 'Crear Campos'"
+            (clicked)="crear()"
+          />
         </div>
       </div>
     </div>
@@ -341,7 +333,14 @@ export class CreateFieldsDialogComponent {
 
 @Component({
   selector: 'alma-edit-field-dialog',
-  imports: [FormsModule, AlmaSwitchComponent],
+  imports: [
+    FormsModule,
+    SkSwitchComponent,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkTextareaComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -357,83 +356,64 @@ export class CreateFieldsDialogComponent {
         <div class="space-y-4 py-4">
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="space-y-2">
-              <label class="text-sm font-medium" for="ef-name">
-                Nombre del Campo <span class="text-destructive">*</span>
-              </label>
-              <input id="ef-name" class="alma-input" [(ngModel)]="nombre" />
+              <sk-input label="Nombre del Campo *" fluid [(ngModel)]="nombre" />
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium" for="ef-type">
-                Tipo de Campo <span class="text-destructive">*</span>
-              </label>
-              <select
-                id="ef-type"
-                class="alma-input"
+              <sk-dropdown
+                label="Tipo de Campo *"
+                [options]="tipoOpciones"
+                fluid
                 [ngModel]="tipo()"
                 (ngModelChange)="tipo.set($event)"
-              >
-                @for (t of tipos; track t) {
-                  <option [value]="t">{{ t }}</option>
-                }
-              </select>
+              />
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium" for="ef-display">Nombre para Mostrar</label>
-              <input id="ef-display" class="alma-input" [(ngModel)]="etiqueta" />
+              <sk-input label="Nombre para Mostrar" fluid [(ngModel)]="etiqueta" />
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium" for="ef-example">Valor de Ejemplo</label>
-              <input id="ef-example" class="alma-input" [(ngModel)]="ejemplo" />
+              <sk-input label="Valor de Ejemplo" fluid [(ngModel)]="ejemplo" />
             </div>
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="ef-desc">Descripción</label>
-            <textarea
-              id="ef-desc"
-              class="alma-input"
-              rows="2"
-              [(ngModel)]="descripcion"
-            ></textarea>
+            <sk-textarea label="Descripción" [rows]="2" fluid [(ngModel)]="descripcion" />
           </div>
 
           <div class="flex gap-6">
-            <div class="flex items-center gap-2 text-sm">
-              <alma-switch
+            <label class="flex items-center gap-2 text-sm">
+              <sk-switch
                 [checked]="filtrable()"
-                (checkedChange)="filtrable.set($event)"
-                ariaLabel="Filtrable"
+                [label]="''"
+                (valueChange)="filtrable.set($any($event).checked)"
               />
               Filtrable
-            </div>
-            <div class="flex items-center gap-2 text-sm">
-              <alma-switch
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <sk-switch
                 [checked]="visible()"
-                (checkedChange)="visible.set($event)"
-                ariaLabel="Visible"
+                [label]="''"
+                (valueChange)="visible.set($any($event).checked)"
               />
               Visible
-            </div>
+            </label>
           </div>
         </div>
 
         <div class="flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline"
-          >
-            Cancelar
-          </button>
-          <button
+            label="Cancelar"
+            (clicked)="cerrar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="guardar()"
             [disabled]="guardando() || !nombre.trim()"
-            class="alma-btn alma-btn-primary"
-          >
-            {{ guardando() ? 'Guardando…' : 'Guardar Cambios' }}
-          </button>
+            [label]="guardando() ? 'Guardando…' : 'Guardar Cambios'"
+            (clicked)="guardar()"
+          />
         </div>
       </div>
     </div>
@@ -446,7 +426,7 @@ export class EditFieldDialogComponent implements OnInit {
 
   private readonly store = inject(CatalogsStore);
 
-  protected readonly tipos = CATALOG_FIELD_TYPES;
+  protected readonly tipoOpciones = CATALOG_FIELD_TYPES.map((t) => ({ label: t, value: t }));
   protected readonly guardando = signal(false);
 
   protected nombre = '';

@@ -4,6 +4,7 @@
 import { Component, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent } from '@skandia/ui';
 
 export type TextFilterOp =
   | 'eq'
@@ -48,14 +49,13 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
 
 @Component({
   selector: 'alma-text-filter-tab',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, SkButtonComponent, SkDropdownComponent, SkInputComponent],
   template: `
     @if (presetPidiendoValor(); as preset) {
       <div class="space-y-3">
         <p class="text-xs text-muted-foreground">{{ preset.label.replace('…', '') }}:</p>
-        <input
+        <sk-input
           #valorInput
-          class="alma-input h-8 rounded-lg"
           placeholder="Escriba un valor..."
           [(ngModel)]="valorPreset"
           (keydown.enter)="aplicarPreset()"
@@ -63,21 +63,19 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
           (click)="$event.stopPropagation()"
         />
         <div class="flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            class="alma-btn alma-btn-outline h-8 rounded-lg text-xs"
-            (click)="cancelarPreset()"
-          >
-            Cancelar
-          </button>
-          <button
+            label="Cancelar"
+            (clicked)="cancelarPreset()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
+            label="Aplicar"
             [disabled]="!valorPreset.trim()"
-            (click)="aplicarPreset()"
-          >
-            Aplicar
-          </button>
+            (clicked)="aplicarPreset()"
+          />
         </div>
       </div>
     } @else {
@@ -126,13 +124,15 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
             <p class="text-xs text-muted-foreground">Mostrar las filas en las cuales:</p>
 
             <div class="flex items-center gap-2">
-              <select class="alma-input h-8 w-[180px] text-xs" [(ngModel)]="op1">
-                @for (o of operadores; track o.value) {
-                  <option [value]="o.value">{{ o.label }}</option>
-                }
-              </select>
-              <input
-                class="alma-input h-8 flex-1 rounded-lg text-xs"
+              <sk-dropdown
+                class="w-[180px]"
+                [options]="operadores"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="op1"
+              />
+              <sk-input
+                class="flex-1"
                 placeholder="Valor..."
                 [(ngModel)]="val1"
               />
@@ -148,13 +148,15 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
             </div>
 
             <div class="flex items-center gap-2">
-              <select class="alma-input h-8 w-[180px] text-xs" [(ngModel)]="op2">
-                @for (o of operadores; track o.value) {
-                  <option [value]="o.value">{{ o.label }}</option>
-                }
-              </select>
-              <input
-                class="alma-input h-8 flex-1 rounded-lg text-xs"
+              <sk-dropdown
+                class="w-[180px]"
+                [options]="operadores"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="op2"
+              />
+              <sk-input
+                class="flex-1"
                 placeholder="Valor..."
                 [(ngModel)]="val2"
               />
@@ -162,21 +164,19 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
           </div>
 
           <div class="flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              class="alma-btn alma-btn-outline h-8 rounded-lg text-xs"
-              (click)="dialogoAbierto.set(false)"
-            >
-              Cancelar
-            </button>
-            <button
+              label="Cancelar"
+              (clicked)="dialogoAbierto.set(false)"
+            />
+            <sk-button
+              variant="primary"
               type="button"
-              class="alma-btn alma-btn-primary h-8 rounded-lg text-xs"
+              label="Aceptar"
               [disabled]="!val1.trim() && !val2.trim()"
-              (click)="aceptarPersonalizado()"
-            >
-              Aceptar
-            </button>
+              (clicked)="aceptarPersonalizado()"
+            />
           </div>
         </div>
       </div>

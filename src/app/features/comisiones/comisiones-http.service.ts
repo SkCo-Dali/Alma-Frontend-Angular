@@ -1,16 +1,18 @@
 // HTTP base del módulo de comisiones:
-//  - El token de Entra se agrega aquí, de forma explícita (no hay interceptor
-//    global de fetch).
-//  - Conserva el retry con backoff exponencial ante 5xx/errores de red y el
+//  - El Bearer token lo adjunta `authInterceptor` (core/http/auth.interceptor.ts).
+//  - Conserva el retry con backoff exponencial ante 5xx/errores de red (ahora
+//    vía `retryInterceptor`, opt-in con el context token WITH_RETRY) y el
 //    ApiConflictError en 409 (registro duplicado), que la UI trata distinto.
 
 import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
-import { AuthService } from '../../core/auth/auth.service';
+import { WITH_RETRY } from '../../core/http/retry.interceptor';
 import { ApiConflictError, HTTP_CONFLICT } from './api-error';
 
 const API_BASE = environment.apiUrl.replace(/\/+$/, '');
-const RETRIES = 3;
+const RETRY_CONTEXT = new HttpContext().set(WITH_RETRY, true);
 
 /** Nombre de archivo del header, con la variante UTF-8 primero. */
 function nombreDeContentDisposition(header: string | null): string | null {
@@ -23,55 +25,37 @@ function nombreDeContentDisposition(header: string | null): string | null {
 
 @Injectable({ providedIn: 'root' })
 export class ComisionesHttp {
-  private readonly auth = inject(AuthService);
-
-  private async headers(): Promise<Record<string, string>> {
-    const h: Record<string, string> = { 'Content-Type': 'application/json' };
-    const token = await this.auth.getAccessToken();
-    if (token) h['Authorization'] = `Bearer ${token}`;
-    return h;
-  }
-
-  /** fetch con retry: reintenta 5xx y errores de red con backoff exponencial. */
-  private async fetchConRetry(url: string, init?: RequestInit): Promise<Response> {
-    for (let i = 0; i < RETRIES; i++) {
-      try {
-        const res = await fetch(url, init);
-        // Éxito o error de cliente (4xx): se devuelve tal cual.
-        if (res.ok || (res.status >= 400 && res.status < 500)) return res;
-        if (i === RETRIES - 1) return res;
-      } catch (err) {
-        if (i === RETRIES - 1) throw err;
-      }
-      await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000));
-    }
-    throw new Error('Max retries exceeded');
-  }
+  private readonly http = inject(HttpClient);
 
   /** GET que devuelve JSON. */
   async get<T>(path: string): Promise<T> {
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
-      headers: await this.headers(),
-    });
-    if (!res.ok) throw await this.error(res, `Error consultando ${path}`);
-    return (await res.json()) as T;
+    try {
+      return await firstValueFrom(
+        this.http.get<T>(`${API_BASE}${path}`, { context: RETRY_CONTEXT }),
+      );
+    } catch (err) {
+      throw await this.error(err, `Error consultando ${path}`);
+    }
   }
 
-  /** POST/PUT/PATCH que devuelve JSON (o null si el cuerpo viene vacío). */
+  /** POST/PUT/PATCH/DELETE que devuelve JSON (o null si el cuerpo viene vacío). */
   async send<T>(
     path: string,
     method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     body?: unknown,
     fallbackMessage = 'La operación falló',
   ): Promise<T> {
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
-      method,
-      headers: await this.headers(),
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    if (!res.ok) throw await this.error(res, fallbackMessage);
-    const texto = await res.text();
-    return (texto ? JSON.parse(texto) : null) as T;
+    try {
+      return await firstValueFrom(
+        this.http.request<T>(method, `${API_BASE}${path}`, {
+          body: body === undefined ? undefined : JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json' },
+          context: RETRY_CONTEXT,
+        }),
+      );
+    } catch (err) {
+      throw await this.error(err, fallbackMessage);
+    }
   }
 
   /**
@@ -79,15 +63,22 @@ export class ComisionesHttp {
    * Content-Disposition cuando el backend lo manda; si no, del fallback.
    */
   async descargar(path: string, fallbackFilename: string): Promise<void> {
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
-      headers: await this.headers(),
-    });
-    if (!res.ok) throw await this.error(res, 'No se pudo generar el archivo');
+    let res: HttpResponse<Blob>;
+    try {
+      res = await firstValueFrom(
+        this.http.get(`${API_BASE}${path}`, {
+          observe: 'response',
+          responseType: 'blob',
+          context: RETRY_CONTEXT,
+        }),
+      );
+    } catch (err) {
+      throw await this.error(err, 'No se pudo generar el archivo');
+    }
 
-    const blob = await res.blob();
+    const blob = res.body!;
     const nombre =
-      nombreDeContentDisposition(res.headers.get('Content-Disposition')) ??
-      fallbackFilename;
+      nombreDeContentDisposition(res.headers.get('Content-Disposition')) ?? fallbackFilename;
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -98,24 +89,43 @@ export class ComisionesHttp {
   }
 
   /**
-   * Traduce una respuesta fallida: 409 → ApiConflictError (duplicado), y el
-   * resto a Error con el `detail` del backend cuando viene en JSON.
+   * Traduce un error de HttpClient: 409 → ApiConflictError (duplicado), y el
+   * resto a Error con el `detail` del backend cuando viene en JSON. El status
+   * queda en el mensaje: varios flujos lo inspeccionan (403/404/409).
    */
-  private async error(res: Response, fallbackMessage: string): Promise<Error> {
-    const texto = await res.text().catch(() => '');
-    if (res.status === HTTP_CONFLICT) {
+  private async error(err: unknown, fallbackMessage: string): Promise<Error> {
+    if (!(err instanceof HttpErrorResponse)) {
+      return err instanceof Error ? err : new Error(fallbackMessage);
+    }
+
+    const texto = await this.textoDelError(err);
+    if (err.status === HTTP_CONFLICT) {
       return new ApiConflictError(texto || fallbackMessage);
     }
+
     let detalle = texto;
-    try {
-      const json = JSON.parse(texto) as { detail?: string };
-      if (json?.detail) detalle = json.detail;
-    } catch {
-      /* no era JSON: se usa el texto crudo */
+    const cuerpo = err.error as { detail?: string } | string | null;
+    if (cuerpo && typeof cuerpo === 'object') {
+      detalle = cuerpo.detail ?? JSON.stringify(cuerpo);
     }
-    // El status queda en el mensaje: varios flujos lo inspeccionan (403/404/409).
+
     return new Error(
-      `${fallbackMessage}: ${res.status} ${res.statusText}${detalle ? ` - ${detalle}` : ''}`,
+      `${fallbackMessage}: ${err.status} ${err.statusText}${detalle ? ` - ${detalle}` : ''}`,
     );
+  }
+
+  /** `err.error` ya viene parseado por HttpClient (JSON u objeto); si la
+   *  respuesta fue un Blob (p. ej. un error del endpoint de descarga con
+   *  responseType 'blob'), hay que leerlo aparte. */
+  private async textoDelError(err: HttpErrorResponse): Promise<string> {
+    if (err.error instanceof Blob) {
+      try {
+        return await err.error.text();
+      } catch {
+        return '';
+      }
+    }
+    if (typeof err.error === 'string') return err.error;
+    return '';
   }
 }

@@ -24,6 +24,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent, SkTextareaComponent } from '@skandia/ui';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { CatalogsStore } from '../catalogos/catalogs.store';
@@ -43,7 +45,20 @@ type Tab = 'information' | 'rule' | 'preview';
 
 @Component({
   selector: 'alma-rule-dialog',
-  imports: [FormsModule, LucideAngularModule, PortalDirective],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkTextareaComponent,
+    PortalDirective,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
+  ],
   template: `
     <div
       class="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -67,71 +82,52 @@ type Tab = 'information' | 'rule' | 'preview';
         </div>
 
         <!-- Pestañas -->
-        <div class="glass flex w-full gap-1 rounded-full bg-[var(--surface-sunken)] p-1">
-          @for (t of tabs; track t.id) {
-            <button
-              type="button"
-              (click)="tab.set(t.id)"
-              class="flex-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm"
-              [class]="
-                tab() === t.id
-                  ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
-                  : 'text-muted-foreground'
-              "
-            >
-              {{ t.label }}
-            </button>
-          }
-        </div>
+        <p-tabs
+          [value]="tab()"
+          (valueChange)="tab.set($any($event))"
+          [lazy]="true"
+        >
+          <p-tablist aria-label="Secciones de la regla">
+            @for (t of tabs; track t.id) {
+              <p-tab [value]="t.id">{{ t.label }}</p-tab>
+            }
+          </p-tablist>
+          <p-tabpanels>
+            <!-- Información -->
+            <p-tabpanel value="information">
+              <div class="mt-4 space-y-4">
+                <div>
+                  <sk-input
+                    label="Nombre *"
+                    placeholder="AIS_FRONT1_OMPEV_MASTER"
+                    [(ngModel)]="nombre"
+                  />
+                </div>
+                <div>
+                  <sk-textarea
+                    label="Descripción"
+                    [rows]="3"
+                    placeholder="No se difiere la comisión, esta se paga el 100% con la prima 1"
+                    [(ngModel)]="descripcion"
+                  />
+                </div>
+              </div>
+            </p-tabpanel>
 
-        <!-- Información -->
-        @if (tab() === 'information') {
-          <div class="mt-4 space-y-4">
+            <!-- Regla -->
+            <p-tabpanel value="rule">
+              <div class="mt-4 space-y-4">
             <div>
-              <label class="text-sm font-medium" for="rule-name">Nombre *</label>
-              <input
-                id="rule-name"
-                class="alma-input mt-1"
-                placeholder="AIS_FRONT1_OMPEV_MASTER"
-                [(ngModel)]="nombre"
-              />
-            </div>
-            <div>
-              <label class="text-sm font-medium" for="rule-desc">Descripción</label>
-              <textarea
-                id="rule-desc"
-                class="alma-input mt-1"
-                rows="3"
-                placeholder="No se difiere la comisión, esta se paga el 100% con la prima 1"
-                [(ngModel)]="descripcion"
-              ></textarea>
-            </div>
-          </div>
-        }
-
-        <!-- Regla -->
-        @if (tab() === 'rule') {
-          <div class="mt-4 space-y-4">
-            <div>
-              <label class="text-sm font-medium" for="rule-catalog">Catálogo *</label>
-              <select
-                id="rule-catalog"
-                class="alma-input mt-1"
+              <sk-dropdown
+                label="Catálogo *"
+                [options]="catalogoOptions()"
+                [placeholder]="
+                  catalogos.loading() ? 'Cargando catálogos…' : 'Seleccionar un catálogo'
+                "
                 [disabled]="catalogos.loading()"
                 [ngModel]="catalogo()"
                 (ngModelChange)="cambiarCatalogo($event)"
-              >
-                <option value="">
-                  {{
-                    catalogos.loading()
-                      ? 'Cargando catálogos…'
-                      : 'Seleccionar un catálogo'
-                  }}
-                </option>
-                @for (c of catalogos.activos(); track c.id) {
-                  <option [value]="c.id">{{ c.name }}</option>
-                }
-              </select>
+              />
             </div>
 
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 sm:gap-6">
@@ -141,16 +137,13 @@ type Tab = 'information' | 'rule' | 'preview';
                   <label class="text-sm font-medium" for="rule-formula">Fórmula</label>
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-medium text-muted-foreground">Funciones:</span>
-                    <select
-                      class="alma-input h-8 w-[130px] border-none bg-muted/50 text-xs"
+                    <sk-dropdown
+                      class="w-[130px]"
+                      label="Insertar función"
+                      [options]="funcionOptions"
                       [ngModel]="''"
                       (ngModelChange)="insertarFuncion($event)"
-                    >
-                      <option value="">Insertar función</option>
-                      @for (f of funciones; track f) {
-                        <option [value]="f">{{ f }}()</option>
-                      }
-                    </select>
+                    />
                   </div>
                 </div>
                 <textarea
@@ -163,13 +156,12 @@ type Tab = 'information' | 'rule' | 'preview';
                 ></textarea>
                 <div class="mt-2 flex flex-wrap gap-1">
                   @for (op of operadores; track op.symbol) {
-                    <button
+                    <sk-button
+                      variant="secondary"
                       type="button"
-                      (click)="insertarTexto(op.symbol)"
-                      class="alma-btn alma-btn-outline h-8 px-3 text-sm"
-                    >
-                      {{ op.label }}
-                    </button>
+                      [label]="op.label"
+                      (clicked)="insertarTexto(op.symbol)"
+                    />
                   }
                 </div>
               </div>
@@ -178,21 +170,12 @@ type Tab = 'information' | 'rule' | 'preview';
               <div>
                 <label class="text-sm font-medium">Haz clic para insertar campos</label>
                 <div class="mt-1 space-y-2">
-                  <div class="relative flex items-center">
-                    <span class="pointer-events-none absolute left-2.5 z-20 flex items-center">
-                      <lucide-icon
-                        name="search"
-                        [size]="14"
-                        class="text-muted-foreground"
-                      />
-                    </span>
-                    <input
-                      class="alma-input pl-8"
-                      placeholder="Escribe para buscar"
-                      [(ngModel)]="busquedaCampo"
-                      (ngModelChange)="busquedaCampoSig.set($event)"
-                    />
-                  </div>
+                  <sk-input
+                    placeholder="Escribe para buscar"
+                    iconLeft="search"
+                    [(ngModel)]="busquedaCampo"
+                    (ngModelChange)="busquedaCampoSig.set($event)"
+                  />
                   <div class="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2">
                     @if (catalogos.loadingFields()) {
                       <div class="py-4 text-center text-xs text-muted-foreground">
@@ -227,14 +210,14 @@ type Tab = 'information' | 'rule' | 'preview';
             <div class="mt-6">
               <div class="mb-3 flex items-center justify-between">
                 <label class="text-sm font-medium">Condiciones</label>
-                <button
+                <sk-button
+                  variant="secondary"
                   type="button"
-                  (click)="agregarCondicion()"
-                  class="alma-btn alma-btn-outline h-8 px-3"
-                  aria-label="Agregar condición"
-                >
-                  <lucide-icon name="plus" [size]="16" />
-                </button>
+                  iconOnly
+                  icon="plus"
+                  ariaLabel="Agregar condición"
+                  (clicked)="agregarCondicion()"
+                />
               </div>
 
               <div class="space-y-3">
@@ -254,62 +237,43 @@ type Tab = 'information' | 'rule' | 'preview';
                     </div>
 
                     <div class="w-full sm:col-span-3">
-                      <select
-                        class="alma-input"
+                      <sk-dropdown
                         [disabled]="!catalogo()"
+                        [label]="catalogo() ? 'Campo' : 'Primero selecciona catálogo'"
+                        [options]="campoOptions()"
                         [ngModel]="c.field"
                         (ngModelChange)="cambiarCondicion(c.id, 'field', $event)"
-                      >
-                        <option value="">
-                          {{ catalogo() ? 'Campo' : 'Primero selecciona catálogo' }}
-                        </option>
-                        @for (f of campos(); track f.id) {
-                          <option [value]="f.field_name" [title]="f.description || ''">
-                            {{ f.display_name || f.field_name }}
-                          </option>
-                        }
-                      </select>
+                      />
                     </div>
 
                     <div class="w-full sm:col-span-2">
-                      <select
-                        class="alma-input"
+                      <sk-dropdown
                         [disabled]="!c.field"
+                        label="Condición"
+                        [options]="condicionOptions(c.fieldType)"
                         [ngModel]="c.condition"
                         (ngModelChange)="cambiarCondicion(c.id, 'condition', $event)"
-                      >
-                        <option value="">Condición</option>
-                        @for (o of opcionesCondicion(c.fieldType); track o) {
-                          <option [value]="o">{{ o }}</option>
-                        }
-                      </select>
+                      />
                     </div>
 
                     <div class="w-full sm:col-span-2">
-                      <select
-                        class="alma-input"
+                      <sk-dropdown
+                        label="Tipo de valor"
+                        [options]="valueTypeOptions"
                         [ngModel]="c.valueType"
                         (ngModelChange)="cambiarCondicion(c.id, 'valueType', $event)"
-                      >
-                        <option value="column">Columna</option>
-                        <option value="text">Texto</option>
-                      </select>
+                      />
                     </div>
 
                     <div class="relative w-full sm:col-span-3">
-                      <button
+                      <sk-button
+                        variant="secondary"
                         type="button"
-                        (click)="alternarValores(c, $event)"
-                        class="alma-btn alma-btn-outline w-full justify-between"
+                        class="w-full"
                         [class.text-muted-foreground]="!c.value"
-                      >
-                        <span class="truncate">{{ c.value || 'Valor' }}</span>
-                        <lucide-icon
-                          name="chevrons-up-down"
-                          [size]="16"
-                          class="ml-2 shrink-0 opacity-50"
-                        />
-                      </button>
+                        [label]="c.value || 'Valor'"
+                        (clicked)="alternarValores(c, $event)"
+                      />
 
                       @if (valoresAbiertos() === c.id) {
                         <div
@@ -317,8 +281,8 @@ type Tab = 'information' | 'rule' | 'preview';
                           almaPortal
                           class="surface-solid fixed z-[120] min-w-[240px] rounded-lg border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                         >
-                          <input
-                            class="alma-input mb-1 h-8 text-sm"
+                          <sk-input
+                            class="mb-1"
                             placeholder="Buscar o escribir valor…"
                             [(ngModel)]="valorLibre"
                             (keydown.enter)="confirmarValorLibre(c.id)"
@@ -378,37 +342,39 @@ type Tab = 'information' | 'rule' | 'preview';
                 }
               </div>
             </div>
-          </div>
-        }
+              </div>
+            </p-tabpanel>
 
-        <!-- Vista previa -->
-        @if (tab() === 'preview') {
-          <div class="mt-4 py-8 text-center">
-            <p class="mb-2 text-sm text-muted-foreground">
-              Las siguientes 10 comisiones principales mostradas son solo una vista previa
-              del total que tu regla podría generar.
-            </p>
-            <p class="font-medium">Vista previa no disponible.</p>
-          </div>
-        }
+            <!-- Vista previa -->
+            <p-tabpanel value="preview">
+              <div class="mt-4 py-8 text-center">
+                <p class="mb-2 text-sm text-muted-foreground">
+                  Las siguientes 10 comisiones principales mostradas son solo una vista previa
+                  del total que tu regla podría generar.
+                </p>
+                <p class="font-medium">Vista previa no disponible.</p>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
 
         <div class="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cancelar()"
+            class="w-full sm:w-auto"
+            label="Cancelar"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline w-full sm:w-auto"
-          >
-            Cancelar
-          </button>
-          <button
+            (clicked)="cancelar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="guardar()"
+            class="w-full sm:w-auto"
+            [label]="textoGuardar()"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-primary w-full sm:w-auto"
-          >
-            {{ textoGuardar() }}
-          </button>
+            (clicked)="guardar()"
+          />
         </div>
       </div>
     </div>
@@ -460,6 +426,28 @@ export class RuleDialogComponent implements OnInit {
     const lista = this.campos();
     return q ? lista.filter((f) => f.field_name.toLowerCase().includes(q)) : lista;
   });
+
+  /** Opciones sk-dropdown para el selector de catálogo. */
+  protected readonly catalogoOptions = computed(() =>
+    this.catalogos.activos().map((c) => ({ label: c.name, value: c.id })),
+  );
+
+  /** Opciones sk-dropdown para el selector de campo de cada condición. */
+  protected readonly campoOptions = computed(() =>
+    this.campos().map((f) => ({ label: f.display_name || f.field_name, value: f.field_name })),
+  );
+
+  /** Opciones sk-dropdown estáticas del selector "tipo de valor" de cada condición. */
+  protected readonly valueTypeOptions: { label: string; value: string }[] = [
+    { label: 'Columna', value: 'column' },
+    { label: 'Texto', value: 'text' },
+  ];
+
+  /** Opciones sk-dropdown del selector "insertar función" de la fórmula. */
+  protected readonly funcionOptions = FORMULA_FUNCTIONS.map((f) => ({
+    label: `${f}()`,
+    value: f,
+  }));
 
   protected readonly textoGuardar = computed(() => {
     if (this.guardando()) return this.esEdicion() ? 'Actualizando…' : 'Creando…';
@@ -521,6 +509,11 @@ export class RuleDialogComponent implements OnInit {
 
   protected opcionesCondicion(fieldType?: string): string[] {
     return getConditionOptions(fieldType);
+  }
+
+  /** Opciones sk-dropdown del selector de operador de cada condición. */
+  protected condicionOptions(fieldType?: string): { label: string; value: string }[] {
+    return this.opcionesCondicion(fieldType).map((o) => ({ label: o, value: o }));
   }
 
   protected valores(c: ConditionRow) {

@@ -235,8 +235,13 @@ interface CeldaRender {
               } @else {
                 @for (row of data(); track row.Id) {
                   <tr
-                    class="cursor-pointer text-xs leading-tight transition-colors hover:bg-primary/5"
+                    class="cursor-pointer text-xs leading-tight transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-label]="'Ver detalle de la cotización ' + row['NroCotizacion']"
                     (click)="rowClick.emit(row)"
+                    (keydown.enter)="rowClick.emit(row)"
+                    (keydown.space)="$event.preventDefault(); rowClick.emit(row)"
                   >
                     @for (col of stickyCols(); track col.key; let ci = $index) {
                       <td

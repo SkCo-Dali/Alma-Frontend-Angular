@@ -4,6 +4,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { AuthService } from '../../core/auth/auth.service';
 import { APP_CATALOG } from '../../core/constants/app-catalog';
 import { AccesosApi, RolCatalogo } from '../../core/services/accesos.api';
@@ -24,6 +25,11 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
     UsuariosAccesosComponent,
     AuditoriaAccesosComponent,
     MetricasUsoComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
   ],
   template: `
     <alma-page-header
@@ -31,105 +37,100 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
       description="Usuarios, roles, auditoría y métricas de la plataforma."
     />
 
-    <div
-      class="mb-5 flex flex-wrap gap-1 rounded-lg border border-border bg-card p-1 shadow-[var(--shadow-sm)]"
+    <p-tabs
+      [value]="activeTab()"
+      (valueChange)="setTab($any($event))"
+      [lazy]="true"
+      styleClass="mb-5"
     >
-      @for (t of visiblesTabs(); track t.id) {
-        <button
-          type="button"
-          (click)="setTab(t.id)"
-          class="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-          [class]="
-            activeTab() === t.id
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-          "
-        >
-          <lucide-icon [name]="t.icon" [size]="16" />
-          {{ t.label }}
-        </button>
-      }
-    </div>
-
-    @switch (activeTab()) {
-      @case ('apps') {
-        <!-- Catálogo de Apps registradas en la plataforma (registry del frontend) -->
-        <alma-admin-table
-          [headers]="['Aplicación', 'Categoría', 'Integración', 'Permiso requerido', 'Estado']"
-          [rows]="catalogo"
-          [rowTpl]="filaApp"
-        />
-        <ng-template #filaApp let-a>
-          <td class="px-4 py-3">
-            <div class="flex items-center gap-2.5">
-              <div
-                class="flex h-8 w-8 items-center justify-center rounded-md"
-                [style.backgroundColor]="a.color + '18'"
-                [style.color]="a.color"
-              >
-                <lucide-icon [name]="a.icono" [size]="16" />
-              </div>
-              <span class="font-medium text-foreground">{{ a.nombre }}</span>
-            </div>
-          </td>
-          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.categoria }}</td>
-          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.integrationType }}</td>
-          <td class="px-4 py-3">
-            <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
-              {{ a.requiredPermission }}
-            </code>
-          </td>
-          <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.estado }}</td>
-        </ng-template>
-      }
-      @case ('usuarios') {
-        <alma-usuarios-accesos />
-      }
-      @case ('roles') {
-        <!-- Roles reales del RBAC (alma.Roles vía API, filtrados al ámbito) -->
-        @if (rolesCargando()) {
-          <div class="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-            <lucide-icon name="loader-2" [size]="16" class="animate-spin" /> Cargando roles…
-          </div>
-        } @else if (rolesError(); as err) {
-          <p class="py-8 text-sm text-destructive">{{ err }}</p>
-        } @else {
-          <alma-admin-table
-            [headers]="['Ámbito', 'Rol', 'Descripción', 'Permisos']"
-            [rows]="roles()"
-            [rowTpl]="filaRol"
-          />
-          <ng-template #filaRol let-r>
-            <td class="px-4 py-3 text-sm text-muted-foreground">
-              @if (r.app) {
-                {{ r.app }}
-              } @else {
-                <span class="font-medium text-primary">Plataforma</span>
-              }
-            </td>
-            <td class="px-4 py-3">
-              <span class="font-medium text-foreground">{{ r.name }}</span>
-            </td>
-            <td class="px-4 py-3 text-sm text-muted-foreground">{{ r.description ?? '—' }}</td>
-            <td class="px-4 py-3">
-              <div class="flex flex-wrap gap-1">
-                @for (p of r.permissions; track p) {
-                  <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
-                    {{ p }}
-                  </code>
-                }
-              </div>
-            </td>
-          </ng-template>
+      <p-tablist aria-label="Secciones de Accesos">
+        @for (t of visiblesTabs(); track t.id) {
+          <p-tab [value]="t.id" class="inline-flex items-center gap-2">
+            <lucide-icon [name]="t.icon" [size]="16" />
+            {{ t.label }}
+          </p-tab>
         }
-      }
-      @case ('auditoria') {
-        <alma-auditoria-accesos />
-      }
-      @case ('metricas') {
-        <alma-metricas-uso />
-      }
-    }
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="apps">
+          <!-- Catálogo de Apps registradas en la plataforma (registry del frontend) -->
+          <alma-admin-table
+            [headers]="['Aplicación', 'Categoría', 'Integración', 'Permiso requerido', 'Estado']"
+            [rows]="catalogo"
+            [rowTpl]="filaApp"
+          />
+          <ng-template #filaApp let-a>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                <div
+                  class="flex h-8 w-8 items-center justify-center rounded-md"
+                  [style.backgroundColor]="a.color + '18'"
+                  [style.color]="a.color"
+                >
+                  <lucide-icon [name]="a.icono" [size]="16" />
+                </div>
+                <span class="font-medium text-foreground">{{ a.nombre }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.categoria }}</td>
+            <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.integrationType }}</td>
+            <td class="px-4 py-3">
+              <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
+                {{ a.requiredPermission }}
+              </code>
+            </td>
+            <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.estado }}</td>
+          </ng-template>
+        </p-tabpanel>
+        <p-tabpanel value="usuarios">
+          <alma-usuarios-accesos />
+        </p-tabpanel>
+        <p-tabpanel value="roles">
+          <!-- Roles reales del RBAC (alma.Roles vía API, filtrados al ámbito) -->
+          @if (rolesCargando()) {
+            <div class="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+              <lucide-icon name="loader-2" [size]="16" class="animate-spin" /> Cargando roles…
+            </div>
+          } @else if (rolesError(); as err) {
+            <p class="py-8 text-sm text-destructive">{{ err }}</p>
+          } @else {
+            <alma-admin-table
+              [headers]="['Ámbito', 'Rol', 'Descripción', 'Permisos']"
+              [rows]="roles()"
+              [rowTpl]="filaRol"
+            />
+            <ng-template #filaRol let-r>
+              <td class="px-4 py-3 text-sm text-muted-foreground">
+                @if (r.app) {
+                  {{ r.app }}
+                } @else {
+                  <span class="font-medium text-primary">Plataforma</span>
+                }
+              </td>
+              <td class="px-4 py-3">
+                <span class="font-medium text-foreground">{{ r.name }}</span>
+              </td>
+              <td class="px-4 py-3 text-sm text-muted-foreground">{{ r.description ?? '—' }}</td>
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap gap-1">
+                  @for (p of r.permissions; track p) {
+                    <code class="rounded bg-[var(--surface-sunken)] px-1.5 py-0.5 text-[11px]">
+                      {{ p }}
+                    </code>
+                  }
+                </div>
+              </td>
+            </ng-template>
+          }
+        </p-tabpanel>
+        <p-tabpanel value="auditoria">
+          <alma-auditoria-accesos />
+        </p-tabpanel>
+        <p-tabpanel value="metricas">
+          <alma-metricas-uso />
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
   `,
 })
 export class AdminComponent {

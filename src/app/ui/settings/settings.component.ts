@@ -3,6 +3,7 @@
 
 import { Component, computed, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkTagComponent } from '@skandia/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   BACKGROUNDS,
@@ -19,19 +20,40 @@ const TEMAS: { id: Theme; label: string; icon: string }[] = [
   { id: 'system', label: 'Sistema', icon: 'monitor' },
 ];
 
-// Vista previa (aprox.) de cada fondo esmerilado; la paleta real vive en
-// styles.css (--wp-* por data-bg).
+// Vista previa (aprox.) de cada fondo; la paleta esmerilada real vive en
+// styles.css (--wp-* por data-bg). Los sólidos usan tokens del Design System
+// Skandia (@skandia/ui); los wallpapers fotográficos son imágenes propias de Alma.
 const FONDOS: Record<Background, { label: string; preview: string }> = {
+  oceano: {
+    label: 'Océano',
+    preview:
+      'linear-gradient(135deg, var(--feedback-info-dark), var(--extras-c18), var(--primary-l03))',
+  },
+  aurora: {
+    label: 'Aurora',
+    preview:
+      'linear-gradient(135deg, var(--primary-00), var(--feedback-info-dark), var(--feedback-warning-dark))',
+  },
+  atardecer: {
+    label: 'Atardecer',
+    preview:
+      'linear-gradient(135deg, var(--feedback-warning-dark), var(--extras-c15), var(--secondarygreencomplementary-00))',
+  },
+  grafito: {
+    label: 'Grafito',
+    preview:
+      'linear-gradient(135deg, var(--neutral-l04), var(--primarygrey-l05), var(--neutral-l03))',
+  },
+  cielo: {
+    label: 'Cielo',
+    preview:
+      'linear-gradient(135deg, var(--extras-c02), var(--secondarybluecomplementary-l03), var(--primary-l04))',
+  },
   terraza: { label: 'Terraza', preview: 'url(/wallpapers/terraza.jpg) center/cover' },
   mirador: { label: 'Mirador', preview: 'url(/wallpapers/mirador.jpg) center/cover' },
   lago: { label: 'Lago', preview: 'url(/wallpapers/lago.jpg) center/cover' },
   balcon: { label: 'Balcón', preview: 'url(/wallpapers/balcon.jpg) center/cover' },
   dorado: { label: 'Dorado', preview: 'url(/wallpapers/dorado.jpg) center/cover' },
-  oceano: { label: 'Océano', preview: 'linear-gradient(135deg,#4fb8ff,#02b1ff,#7ce0c0)' },
-  aurora: { label: 'Aurora', preview: 'linear-gradient(135deg,#00c83c,#02b1ff,#ff9200)' },
-  atardecer: { label: 'Atardecer', preview: 'linear-gradient(135deg,#ffb54d,#ff9200,#a0e070)' },
-  grafito: { label: 'Grafito', preview: 'linear-gradient(135deg,#d0d3d8,#b6bbc2,#e2e4e8)' },
-  cielo: { label: 'Cielo', preview: 'linear-gradient(135deg,#bfe6ff,#8fd6f0,#dff0e6)' },
 };
 
 const AYUDA = [
@@ -42,7 +64,13 @@ const AYUDA = [
 
 @Component({
   selector: 'alma-settings',
-  imports: [LucideAngularModule, PageHeaderComponent, CuentaPharosComponent],
+  imports: [
+    LucideAngularModule,
+    SkButtonComponent,
+    SkTagComponent,
+    PageHeaderComponent,
+    CuentaPharosComponent,
+  ],
   template: `
     <alma-page-header title="Configuración" description="Preferencias personales del portal." />
 
@@ -121,7 +149,7 @@ const AYUDA = [
       <section class="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)]">
         <div class="flex items-center gap-2">
           <h2 class="text-sm font-semibold text-foreground">Conexiones para el Agente Alma</h2>
-          <span class="alma-badge bg-primary/10 text-primary">Próximamente</span>
+          <sk-tag value="Próximamente" severity="info" />
         </div>
         <p class="mb-4 mt-1 text-xs text-muted-foreground">
           Conecta tus cuentas para que el Agente Alma trabaje contigo de forma transversal:
@@ -140,7 +168,12 @@ const AYUDA = [
                 contexto en la App de Comisiones y te sugiere la acción.
               </p>
             </div>
-            <button class="alma-btn alma-btn-outline h-8 text-xs" disabled>Conectar</button>
+            <sk-button
+              variant="secondary"
+              class="h-8 text-xs"
+              [disabled]="true"
+              label="Conectar"
+            />
           </div>
           <div class="flex items-start gap-3 rounded-lg border border-dashed border-border p-3 opacity-70">
             <span class="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
@@ -153,7 +186,12 @@ const AYUDA = [
                 para darte el contexto completo.
               </p>
             </div>
-            <button class="alma-btn alma-btn-outline h-8 text-xs" disabled>Conectar</button>
+            <sk-button
+              variant="secondary"
+              class="h-8 text-xs"
+              [disabled]="true"
+              label="Conectar"
+            />
           </div>
         </div>
       </section>
@@ -185,10 +223,12 @@ const AYUDA = [
         <p class="mb-3 text-xs text-muted-foreground">
           Sesión iniciada como {{ user().correo }}.
         </p>
-        <button type="button" class="alma-btn alma-btn-outline" (click)="signOut()">
-          <lucide-icon name="log-out" [size]="16" />
-          Cerrar sesión
-        </button>
+        <sk-button
+          variant="secondary"
+          type="button"
+          label="Cerrar sesión"
+          (clicked)="signOut()"
+        />
       </section>
     </div>
   `,

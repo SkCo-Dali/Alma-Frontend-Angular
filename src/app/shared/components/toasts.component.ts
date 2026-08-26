@@ -16,7 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
             [class]="
               t.variant === 'destructive' ? 'border-destructive/40' : 'border-border'
             "
-            role="status"
+            [attr.role]="t.variant === 'destructive' ? 'alert' : 'status'"
           >
             <div class="min-w-0 flex-1">
               <p

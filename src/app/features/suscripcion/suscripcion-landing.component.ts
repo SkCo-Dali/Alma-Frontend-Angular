@@ -13,8 +13,8 @@ interface SuscripcionModule {
   description: string;
   icon: string;
   path: string;
-  /** Gradiente vivo de la tarjeta (estilo app Atajos de Apple) */
-  gradient: string;
+  /** Fondo de la tarjeta — --sec-blue-d03 (azul complementario, Skandia DS) */
+  color: string;
   hidden?: boolean;
   disabled?: boolean;
 }
@@ -44,7 +44,7 @@ interface SuscripcionModule {
               role="button"
               [tabindex]="m.disabled ? -1 : 0"
               [attr.aria-disabled]="m.disabled"
-              [style.background]="m.gradient"
+              [style.background]="m.color"
               class="group relative flex min-h-36 flex-col justify-between overflow-hidden rounded-3xl p-4 text-white shadow-[var(--shadow-md)] transition-all duration-300"
               [class]="
                 m.disabled
@@ -110,7 +110,7 @@ export class SuscripcionLandingComponent {
           'Cotizaciones de Vida sincronizadas de Pipeline: declaraciones, evaluación del motor y emisión.',
         icon: 'inbox',
         path: '/apps/suscripcion/cotizaciones',
-        gradient: 'linear-gradient(150deg, #00C83C, #0089B8)',
+        color: '#39b398', // --sec-blue-d03
       },
       {
         title: 'Configuración del motor de reglas',
@@ -118,7 +118,7 @@ export class SuscripcionLandingComponent {
           'Parámetros vigentes del motor de suscripción: edítalos sin depender de despliegues.',
         icon: 'sliders-horizontal',
         path: '/apps/suscripcion/motor',
-        gradient: 'linear-gradient(150deg, #BF5AF2, #6D4AE0)',
+        color: '#39b398', // --sec-blue-d03
         // SOLO coordinador y admins (el analista no lo ve).
         hidden: !this.auth.hasPermission('app.suscripcion.motor.config'),
       },
@@ -128,7 +128,7 @@ export class SuscripcionLandingComponent {
           'Tablas de IMC, catálogos (preexistencias, ocupaciones, hobbies, países) y exámenes del simulador.',
         icon: 'calculator',
         path: '/apps/suscripcion/simulador',
-        gradient: 'linear-gradient(150deg, #FF9F0A, #FF375F)',
+        color: '#39b398', // --sec-blue-d03
         // SOLO coordinador y admins (el analista usa el simulador, no su config).
         hidden: !this.auth.hasPermission('app.suscripcion.simulador.config'),
       },

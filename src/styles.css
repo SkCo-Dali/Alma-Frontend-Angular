@@ -3,13 +3,71 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ALMA design system — lenguaje de diseño macOS.
+ * ALMA design system — lenguaje de diseño macOS sobre foundations Skandia.
  *
  * Materiales: superficies sólidas con borde y sombra sobre un wallpaper de
- * gradientes suaves. Tipografía: fuente de texto del sistema con peso base 450.
- * Geometría: --radius 14px (tarjetas), controles ~10-12px. Acento: verde
- * Skandia (#00C83C claro / #30D158 oscuro).
+ * gradientes suaves. Tipografía: Montserrat (títulos) + Open Sans (cuerpo),
+ * self-hosted. Geometría: --radius 14px (tarjetas), controles ~10-12px.
+ * Acento: verde Skandia (#00C83C claro / #30D158 oscuro).
+ *
+ * Foundations del Design System: `@skandia/ui` (SkCo.Fidu.DesignSystem.Lib.UX)
+ * inyecta sus tokens (`--title`, `--body`, `--weight-*`, `--primary-00`,
+ * `--background-fiduciaria`, etc.) en runtime vía `provideAlmaSkandiaUI()`
+ * (src/app/shared/providers/alma-skandia-ui.provider.ts). Los tokens propios
+ * de Alma en este archivo (oklch, `--wp-*`, `--shadow-*`) siguen gobernando el
+ * lenguaje visual de Alma — son capas separadas, no un reemplazo. Ver
+ * docs/skandia-ui-adoption.md para el mapeo completo y las desviaciones
+ * documentadas (p. ej. el wallpaper de Alma se conserva en vez de aplicar
+ * `--background-fiduciaria` como fondo raíz).
  */
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/montserrat-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/montserrat-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/montserrat-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/open-sans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/open-sans-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/open-sans-700.woff2") format("woff2");
+}
+
+/* Breakpoints de layout del contrato UX, ya expuestos por @skandia/ui como
+   --breakpoint-mobile (768px) / --breakpoint-tablet (1024px) — no son CSS
+   vars evaluables dentro de @media, así que para media queries se usan los
+   literales: móvil <768px · tablet 768–1023.98px · desktop ≥1024px */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 6px);
@@ -44,6 +102,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  /* Antes definidos y sin mapear: de ahí las ~400 fugas a amber/emerald/sky
+     crudos de Tailwind en templates. --info es nuevo, reutiliza el azul de
+     --chart-2 hasta poder alinearlo con --sk-color-info real. */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
 }
 
 :root {
@@ -73,6 +137,7 @@
   --destructive-foreground: oklch(0.995 0 0);
   --success: oklch(0.7 0.2 148);
   --warning: oklch(0.75 0.15 75);
+  --info: oklch(0.55 0.14 255); /* mismo azul de --chart-2 */
 
   /* Hairlines */
   --border: oklch(0 0 0 / 8%);
@@ -129,6 +194,7 @@
   --destructive-foreground: oklch(0.995 0 0);
   --success: oklch(0.76 0.2 150);
   --warning: oklch(0.78 0.15 80);
+  --info: oklch(0.68 0.13 255); /* mismo azul de --chart-2 */
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
@@ -182,84 +248,89 @@ html.dark[data-bg='lago'] body { background-image: linear-gradient(rgba(7, 20, 1
 html.dark[data-bg='balcon'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/balcon.jpg'); }
 html.dark[data-bg='dorado'] body { background-image: linear-gradient(rgba(7, 20, 16, 0.55), rgba(7, 20, 16, 0.55)), url('/wallpapers/dorado.jpg'); }
 
+/* Los 5 fondos sólidos se arman con tokens reales del Design System Skandia
+   (@skandia/ui — Tokens/primitive-color.css, inyectados en runtime por
+   provideAlmaSkandiaUI()), vía color-mix() para la luminosidad/alpha de cada
+   variante en vez de valores oklch inventados a mano. */
+
 /* OCÉANO ─ azul Skandia protagonista (+ acento verde) */
 html[data-bg="oceano"] {
-  --wp-base: oklch(0.93 0.035 235);
-  --wp-a: oklch(0.82 0.15 235 / 90%);
-  --wp-b: oklch(0.85 0.11 205 / 82%);
-  --wp-c: oklch(0.86 0.12 150 / 68%);
-  --wp-d: oklch(0.9 0.08 250 / 60%);
+  --wp-base: color-mix(in oklch, var(--feedback-info-light) 70%, white);
+  --wp-a: color-mix(in oklch, var(--feedback-info-dark) 78%, transparent);
+  --wp-b: color-mix(in oklch, var(--extras-c18) 70%, transparent);
+  --wp-c: color-mix(in oklch, var(--primary-l02) 58%, transparent);
+  --wp-d: color-mix(in oklch, var(--extras-c02) 55%, transparent);
 }
 html.dark[data-bg="oceano"] {
-  --wp-base: oklch(0.19 0.03 238);
-  --wp-a: oklch(0.4 0.13 235 / 76%);
-  --wp-b: oklch(0.4 0.1 205 / 68%);
-  --wp-c: oklch(0.42 0.1 150 / 58%);
-  --wp-d: oklch(0.35 0.08 250 / 45%);
+  --wp-base: color-mix(in oklch, var(--primarygrey-d04) 88%, var(--feedback-info-dark));
+  --wp-a: color-mix(in oklch, var(--feedback-info-dark) 62%, transparent);
+  --wp-b: color-mix(in oklch, var(--extras-c18) 55%, transparent);
+  --wp-c: color-mix(in oklch, var(--primary-d01) 48%, transparent);
+  --wp-d: color-mix(in oklch, var(--secondarybluecomplementary-d03) 40%, transparent);
 }
 
 /* AURORA ─ multicolor Skandia (verde + azul + naranja) */
 html[data-bg="aurora"] {
-  --wp-base: oklch(0.93 0.03 200);
-  --wp-a: oklch(0.83 0.16 150 / 88%);
-  --wp-b: oklch(0.82 0.14 235 / 84%);
-  --wp-c: oklch(0.85 0.14 65 / 80%);
-  --wp-d: oklch(0.88 0.1 185 / 62%);
+  --wp-base: color-mix(in oklch, var(--primary-l05) 80%, white);
+  --wp-a: color-mix(in oklch, var(--primary-00) 72%, transparent);
+  --wp-b: color-mix(in oklch, var(--feedback-info-dark) 68%, transparent);
+  --wp-c: color-mix(in oklch, var(--feedback-warning-dark) 62%, transparent);
+  --wp-d: color-mix(in oklch, var(--extras-c19) 40%, transparent);
 }
 html.dark[data-bg="aurora"] {
-  --wp-base: oklch(0.19 0.03 200);
-  --wp-a: oklch(0.44 0.14 150 / 76%);
-  --wp-b: oklch(0.42 0.12 235 / 68%);
-  --wp-c: oklch(0.44 0.12 65 / 62%);
-  --wp-d: oklch(0.38 0.09 185 / 45%);
+  --wp-base: color-mix(in oklch, var(--primarygrey-d04) 90%, var(--primary-00));
+  --wp-a: color-mix(in oklch, var(--primary-d01) 60%, transparent);
+  --wp-b: color-mix(in oklch, var(--feedback-info-dark) 55%, transparent);
+  --wp-c: color-mix(in oklch, var(--feedback-warning-dark) 50%, transparent);
+  --wp-d: color-mix(in oklch, var(--extras-c19) 32%, transparent);
 }
 
 /* ATARDECER ─ naranja Skandia protagonista (+ ámbar y acento verde) */
 html[data-bg="atardecer"] {
-  --wp-base: oklch(0.95 0.04 75);
-  --wp-a: oklch(0.83 0.15 65 / 90%);
-  --wp-b: oklch(0.86 0.13 88 / 82%);
-  --wp-c: oklch(0.85 0.12 145 / 62%);
-  --wp-d: oklch(0.9 0.1 55 / 60%);
+  --wp-base: color-mix(in oklch, var(--feedback-warning-light) 75%, white);
+  --wp-a: color-mix(in oklch, var(--feedback-warning-dark) 72%, transparent);
+  --wp-b: color-mix(in oklch, var(--extras-c15) 65%, transparent);
+  --wp-c: color-mix(in oklch, var(--secondarygreencomplementary-00) 55%, transparent);
+  --wp-d: color-mix(in oklch, var(--extras-c04) 50%, transparent);
 }
 html.dark[data-bg="atardecer"] {
-  --wp-base: oklch(0.21 0.03 65);
-  --wp-a: oklch(0.45 0.13 62 / 76%);
-  --wp-b: oklch(0.44 0.11 88 / 66%);
-  --wp-c: oklch(0.42 0.1 145 / 55%);
-  --wp-d: oklch(0.38 0.09 55 / 45%);
+  --wp-base: color-mix(in oklch, var(--primarygrey-d04) 90%, var(--feedback-warning-dark));
+  --wp-a: color-mix(in oklch, var(--feedback-warning-dark) 60%, transparent);
+  --wp-b: color-mix(in oklch, var(--extras-c15) 52%, transparent);
+  --wp-c: color-mix(in oklch, var(--secondarygreencomplementary-d02) 48%, transparent);
+  --wp-d: color-mix(in oklch, var(--extras-c04) 42%, transparent);
 }
 
 /* GRAFITO ─ gris Skandia protagonista (premium, tintes de marca muy sutiles) */
 html[data-bg="grafito"] {
-  --wp-base: oklch(0.94 0.008 260);
-  --wp-a: oklch(0.87 0.025 150 / 85%);
-  --wp-b: oklch(0.85 0.022 235 / 80%);
-  --wp-c: oklch(0.89 0.018 70 / 72%);
-  --wp-d: oklch(0.91 0.01 260 / 58%);
+  --wp-base: color-mix(in oklch, var(--neutral-l02) 85%, white);
+  --wp-a: color-mix(in oklch, var(--neutral-l04) 70%, transparent);
+  --wp-b: color-mix(in oklch, var(--primarygrey-l05) 62%, transparent);
+  --wp-c: color-mix(in oklch, var(--neutral-l03) 58%, transparent);
+  --wp-d: color-mix(in oklch, var(--primarygrey-l04) 46%, transparent);
 }
 html.dark[data-bg="grafito"] {
-  --wp-base: oklch(0.18 0.006 260);
-  --wp-a: oklch(0.35 0.025 150 / 72%);
-  --wp-b: oklch(0.33 0.022 235 / 66%);
-  --wp-c: oklch(0.36 0.018 70 / 58%);
-  --wp-d: oklch(0.3 0.01 260 / 42%);
+  --wp-base: color-mix(in oklch, var(--primarygrey-d04) 92%, black);
+  --wp-a: color-mix(in oklch, var(--primarygrey-l02) 42%, transparent);
+  --wp-b: color-mix(in oklch, var(--primarygrey-l03) 36%, transparent);
+  --wp-c: color-mix(in oklch, var(--neutral-l06) 32%, transparent);
+  --wp-d: color-mix(in oklch, var(--primarygrey-d02) 30%, transparent);
 }
 
 /* CIELO ─ celeste claro protagonista (aireado, más blanco) */
 html[data-bg="cielo"] {
-  --wp-base: oklch(0.96 0.02 225);
-  --wp-a: oklch(0.9 0.09 220 / 85%);
-  --wp-b: oklch(0.92 0.06 195 / 80%);
-  --wp-c: oklch(0.95 0.04 240 / 80%);
-  --wp-d: oklch(0.93 0.06 155 / 55%);
+  --wp-base: color-mix(in oklch, var(--feedback-info-light) 65%, white);
+  --wp-a: color-mix(in oklch, var(--extras-c02) 70%, transparent);
+  --wp-b: color-mix(in oklch, var(--secondarybluecomplementary-l03) 65%, transparent);
+  --wp-c: color-mix(in oklch, var(--primary-l04) 60%, transparent);
+  --wp-d: color-mix(in oklch, var(--secondarygreencomplementary-l03) 45%, transparent);
 }
 html.dark[data-bg="cielo"] {
-  --wp-base: oklch(0.22 0.02 225);
-  --wp-a: oklch(0.44 0.09 218 / 72%);
-  --wp-b: oklch(0.42 0.07 195 / 66%);
-  --wp-c: oklch(0.46 0.05 240 / 62%);
-  --wp-d: oklch(0.4 0.05 155 / 42%);
+  --wp-base: color-mix(in oklch, var(--primarygrey-d04) 90%, var(--feedback-info-dark));
+  --wp-a: color-mix(in oklch, var(--extras-c18) 52%, transparent);
+  --wp-b: color-mix(in oklch, var(--secondarybluecomplementary-d03) 46%, transparent);
+  --wp-c: color-mix(in oklch, var(--primary-d02) 40%, transparent);
+  --wp-d: color-mix(in oklch, var(--secondarygreencomplementary-d03) 32%, transparent);
 }
 
 @layer base {
@@ -275,20 +346,12 @@ html.dark[data-bg="cielo"] {
   }
 
   body {
-    /* Fuente de texto del sistema (Segoe UI Variable Text en Windows, SF Pro
-       Text en Mac) con peso base 450 para más presencia sin verse fino. */
-    font-family:
-      -apple-system,
-      BlinkMacSystemFont,
-      "SF Pro Text",
-      "Segoe UI Variable Text",
-      "Segoe UI Variable Display",
-      "Segoe UI",
-      Roboto,
-      system-ui,
-      sans-serif;
-    font-weight: 450;
-    letter-spacing: -0.003em;
+    /* Tipografía oficial Skandia: Open Sans (cuerpo), self-hosted en
+       public/fonts. -webkit-font-smoothing/text-rendering se conservan:
+       preservan el subpíxel de ClearType en Windows independientemente de
+       la tipografía elegida. */
+    font-family: var(--body), system-ui, sans-serif;
+    font-weight: var(--weight-regular);
     -webkit-font-smoothing: auto;
     text-rendering: optimizeLegibility;
     color: var(--color-foreground);
@@ -304,10 +367,26 @@ html.dark[data-bg="cielo"] {
 
   h1,
   h2,
-  h3 {
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--title), sans-serif;
+    font-weight: var(--weight-bold);
     letter-spacing: -0.02em;
     text-wrap: balance;
   }
+
+  label {
+    font-family: var(--body), system-ui, sans-serif;
+    font-weight: var(--weight-medium);
+  }
+
+  small {
+    font-family: var(--body), system-ui, sans-serif;
+    font-weight: var(--weight-medium);
+  }
+
 }
 
 @layer base {
@@ -347,16 +426,9 @@ html.dark[data-bg="cielo"] {
 }
 
 @layer components {
-  /* Superficies opacas: se quitó backdrop-filter (en Windows promovía cada
-     tarjeta a una capa GPU que renderiza el texto borroso). */
-  .glass {
-    background-color: var(--card);
-    border: 1px solid var(--border);
-  }
-  .glass-strong {
-    background-color: var(--surface-raised);
-    border: 1px solid var(--border);
-  }
+  /* .glass / .glass-strong viven fuera de @layer, más abajo — ver
+     "Materiales solarpunk": una regla dentro de @layer nunca gana contra una
+     de fuera, así que declararlas aquí era código muerto. */
 
   /* Superficie OPACA para modales y menús desplegables. */
   .surface-solid {
@@ -934,4 +1006,22 @@ html.dark[data-bg="cielo"] {
 .dock-entry.activa .dock-label {
   color: var(--primary);
   font-weight: 600;
+}
+
+/* Parche @skandia/ui: sk-input reserva un padding-block-start de 20px
+   para su label flotante sin importar si hay label o no, dejando el
+   placeholder/texto descentrado hacia abajo cuando se usa solo con
+   `placeholder` (patrón habitual de Alma para buscadores/filtros
+   compactos). Cuando no hay label, centramos el texto en su lugar.
+   No toca el componente en sí — ver docs/skandia-ui-adoption.md. */
+sk-input:has(label:empty) .sk-input__box .sk-input__field {
+  padding-block: 13px !important;
+}
+
+/* Mismo parche para sk-dropdown: su valor seleccionado (.p-select-label)
+   sufre el mismo padding-block-start:20px fijo cuando no hay label —
+   afecta a los selectores compactos de tamaño de página/operador que
+   deliberadamente no llevan label flotante. */
+sk-dropdown:has(label:empty) .sk-dropdown__field.p-select .p-select-label {
+  padding-block: 13px !important;
 }

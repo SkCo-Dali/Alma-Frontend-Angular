@@ -5,6 +5,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkDropdownComponent } from '@skandia/ui';
+import { Tabs, TabList, Tab as PTab, TabPanels, TabPanel } from 'primeng/tabs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { IgChartsComponent } from './ig-charts.component';
@@ -12,6 +14,7 @@ import { IgTableToolbarComponent } from './ig-table-toolbar.component';
 import { IgTableComponent } from './ig-table.component';
 import {
   COLUMNAS_MONEDA,
+  FilterOption,
   InfoGerencialFilters,
   REPORT_TYPES,
   ReportType,
@@ -30,10 +33,17 @@ import { InfoGerencialStore } from './info-gerencial.store';
     FormsModule,
     RouterLink,
     LucideAngularModule,
+    SkButtonComponent,
+    SkDropdownComponent,
     AccessDeniedComponent,
     IgChartsComponent,
     IgTableComponent,
     IgTableToolbarComponent,
+    Tabs,
+    TabList,
+    PTab,
+    TabPanels,
+    TabPanel,
   ],
   template: `
     @if (!tieneAcceso()) {
@@ -53,42 +63,23 @@ import { InfoGerencialStore } from './info-gerencial.store';
           </div>
 
           <!-- Pestañas -->
-          <div class="flex justify-center">
-            <div
-              class="glass inline-flex gap-1 rounded-full bg-[var(--surface-sunken)] p-1"
-            >
-              <button
-                type="button"
-                (click)="tab.set('desempeno')"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
-                [class]="
-                  tab() === 'desempeno'
-                    ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
-                    : 'text-muted-foreground hover:text-foreground'
-                "
-              >
-                <lucide-icon name="activity" [size]="16" class="shrink-0" />
-                Desempeño
-              </button>
-              <button
-                type="button"
-                (click)="irAReportes()"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
-                [class]="
-                  tab() === 'reportes'
-                    ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
-                    : 'text-muted-foreground hover:text-foreground'
-                "
-              >
-                <lucide-icon name="bar-chart-3" [size]="16" class="shrink-0" />
-                Reportes
-              </button>
+          <p-tabs [value]="tab()" (valueChange)="onTabChange($any($event))" [lazy]="true">
+            <div class="flex justify-center">
+              <p-tablist aria-label="Vistas de Métricas y Reportes">
+                @for (v of vistas; track v.id) {
+                  <p-tab [value]="v.id" class="inline-flex items-center gap-2">
+                    <lucide-icon [name]="v.icon" [size]="16" class="shrink-0" />
+                    {{ v.label }}
+                  </p-tab>
+                }
+              </p-tablist>
             </div>
-          </div>
-
-          <div class="glass mt-4 overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]">
-            @if (tab() === 'desempeno') {
-              <div class="p-3 md:p-6">
+            <p-tabpanels>
+                <p-tabpanel
+                  value="desempeno"
+                  class="glass mt-4 overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]"
+                >
+                  <div class="p-3 md:p-6">
                 <div class="mb-6 space-y-6 rounded-2xl bg-[var(--surface-sunken)] p-3 md:p-6">
                   <!-- Filtros (se aplican al pulsar Filtrar) -->
                   <div
@@ -96,27 +87,24 @@ import { InfoGerencialStore } from './info-gerencial.store';
                   >
                     <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       @for (f of filtros; track f.key) {
-                        <select
-                          class="alma-input h-10"
+                        <sk-dropdown
+                          [options]="opcionesFiltro(f)"
+                          fluid
+                          class="h-10"
                           [disabled]="store.filtrosCargando() || store.metricasCargando()"
                           [ngModel]="valorFiltro(f.key)"
                           (ngModelChange)="store.setBorrador(f.key, $event)"
-                        >
-                          <option value="all">{{ f.label }}</option>
-                          @for (o of opciones(f.key); track o.value) {
-                            <option [value]="o.value">{{ o.label }}</option>
-                          }
-                        </select>
+                        />
                       }
                     </div>
-                    <button
+                    <sk-button
                       type="button"
-                      (click)="store.aplicarFiltros()"
+                      variant="primary"
+                      label="Filtrar"
+                      class="h-10 w-full shrink-0 rounded-lg px-8 text-sm font-semibold lg:w-auto lg:min-w-[110px]"
                       [disabled]="store.metricasCargando()"
-                      class="alma-btn alma-btn-primary h-10 w-full shrink-0 rounded-lg px-8 text-sm font-semibold lg:w-auto lg:min-w-[110px]"
-                    >
-                      Filtrar
-                    </button>
+                      (clicked)="store.aplicarFiltros()"
+                    />
                   </div>
 
                   <alma-ig-charts
@@ -166,28 +154,27 @@ import { InfoGerencialStore } from './info-gerencial.store';
                   {{ actualizacion }}
                 </div>
               </div>
-            } @else {
-              <div class="p-3 md:p-6">
+                </p-tabpanel>
+                <p-tabpanel
+                  value="reportes"
+                  class="glass mt-4 overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]"
+                >
+                  <div class="p-3 md:p-6">
                 <!-- Selector de reporte -->
                 <div class="flex justify-center border-b border-border/30 pb-3">
-                  <div
-                    class="glass flex max-w-full flex-wrap justify-center gap-1 rounded-2xl bg-[var(--surface-sunken)] p-1 px-2 md:rounded-full"
+                  <p-tabs
+                    [value]="store.reporteActivo()"
+                    (valueChange)="cambiarReporte($any($event))"
                   >
-                    @for (r of reportes; track r.value) {
-                      <button
-                        type="button"
-                        (click)="cambiarReporte(r.value)"
-                        class="whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
-                        [class]="
-                          store.reporteActivo() === r.value
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-transparent text-muted-foreground hover:text-foreground'
-                        "
-                      >
-                        {{ r.label }}
-                      </button>
-                    }
-                  </div>
+                    <p-tablist
+                      aria-label="Tipo de reporte"
+                      class="glass flex max-w-full flex-wrap justify-center gap-1 rounded-2xl bg-[var(--surface-sunken)] p-1 px-2 md:rounded-full"
+                    >
+                      @for (r of reportes; track r.value) {
+                        <p-tab [value]="r.value">{{ r.label }}</p-tab>
+                      }
+                    </p-tablist>
+                  </p-tabs>
                 </div>
 
                 <div class="mt-4 overflow-hidden bg-card">
@@ -230,8 +217,9 @@ import { InfoGerencialStore } from './info-gerencial.store';
                   {{ actualizacion }}
                 </div>
               </div>
-            }
-          </div>
+                </p-tabpanel>
+              </p-tabpanels>
+            </p-tabs>
         </div>
       </div>
     }
@@ -242,6 +230,10 @@ export class InfoGerencialPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
 
   protected readonly tab = signal<'desempeno' | 'reportes'>('desempeno');
+  protected readonly vistas: { id: 'desempeno' | 'reportes'; label: string; icon: string }[] = [
+    { id: 'desempeno', label: 'Desempeño', icon: 'activity' },
+    { id: 'reportes', label: 'Reportes', icon: 'bar-chart-3' },
+  ];
   protected readonly reportes = REPORT_TYPES;
   protected readonly columnasMoneda = COLUMNAS_MONEDA;
   protected readonly actualizacion = ultimaActualizacion();
@@ -306,6 +298,18 @@ export class InfoGerencialPageComponent implements OnInit {
     if (key === 'channel') return o.channels;
     if (key === 'company') return o.companies;
     return o.products;
+  }
+
+  protected opcionesFiltro(f: { key: keyof InfoGerencialFilters; label: string }): FilterOption[] {
+    return [{ value: 'all', label: f.label }, ...this.opciones(f.key)];
+  }
+
+  protected onTabChange(t: 'desempeno' | 'reportes'): void {
+    if (t === 'reportes') {
+      this.irAReportes();
+    } else {
+      this.tab.set('desempeno');
+    }
   }
 
   /** El reporte se pide la primera vez que se entra a la pestaña. */

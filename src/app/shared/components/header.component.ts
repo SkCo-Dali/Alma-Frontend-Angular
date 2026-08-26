@@ -87,14 +87,14 @@ import { shortName } from '../../core/utils/name';
               <a
                 routerLink="/profile"
                 (click)="menuOpen.set(false)"
-                class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-[var(--button-brand-secondary-hover)]"
               >
                 <lucide-icon name="user" [size]="16" /> Mi perfil
               </a>
               <a
                 routerLink="/settings"
                 (click)="menuOpen.set(false)"
-                class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors hover:bg-[var(--button-brand-secondary-hover)]"
               >
                 <lucide-icon name="settings" [size]="16" /> Configuración
               </a>
@@ -102,7 +102,7 @@ import { shortName } from '../../core/utils/name';
               <button
                 type="button"
                 (click)="signOut()"
-                class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-accent"
+                class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-[var(--button-brand-secondary-hover)]"
               >
                 <lucide-icon name="log-out" [size]="16" /> Cerrar sesión
               </button>

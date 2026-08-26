@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkTextareaComponent } from '@skandia/ui';
 import { AlmaHousingComponent } from '../../shared/components/alma-housing.component';
 import { AlmaSphereComponent } from '../../shared/components/alma-sphere.component';
 import {
@@ -34,7 +35,14 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
 
 @Component({
   selector: 'alma-chat-agente',
-  imports: [FormsModule, LucideAngularModule, AlmaHousingComponent, AlmaSphereComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkTextareaComponent,
+    AlmaHousingComponent,
+    AlmaSphereComponent,
+  ],
   template: `
     <div class="flex h-[calc(100dvh-11rem)] gap-4">
       <!-- Rail de historial -->
@@ -42,14 +50,13 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
         class="hidden w-64 shrink-0 flex-col rounded-xl border border-border bg-card md:flex"
       >
         <div class="p-3">
-          <button
+          <sk-button
             type="button"
-            class="alma-btn alma-btn-outline w-full justify-start gap-2"
-            (click)="nuevaConversacion()"
-          >
-            <lucide-icon name="message-square-plus" [size]="16" />
-            Nueva conversación
-          </button>
+            variant="secondary"
+            label="Nueva conversación"
+            class="w-full justify-start gap-2"
+            (clicked)="nuevaConversacion()"
+          />
         </div>
         <div class="flex-1 overflow-y-auto px-2 pb-2">
           <p class="px-2 py-1 text-xs font-medium text-muted-foreground">Recientes</p>
@@ -151,25 +158,24 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
         <!-- Composer -->
         <div class="border-t border-border p-3">
           <div class="mx-auto flex max-w-3xl items-end gap-2">
-            <textarea
-              class="alma-input max-h-40 min-h-[44px] flex-1 resize-none py-2.5"
-              rows="1"
+            <sk-textarea
+              class="max-h-40 min-h-[44px] flex-1 resize-none"
+              [rows]="1"
               [(ngModel)]="input"
               (keydown.enter)="onEnter($any($event))"
               placeholder="Escribe tu consulta… (Enter para enviar, Shift+Enter salto de línea)"
-            ></textarea>
-            <button
+            />
+            <sk-button
               type="button"
-              class="alma-btn alma-btn-primary h-11 w-11 shrink-0 p-0"
+              variant="primary"
+              icon="send"
+              iconOnly
+              ariaLabel="Enviar mensaje"
+              class="h-11 w-11 shrink-0 p-0"
               [disabled]="!input.trim() || streaming()"
-              (click)="enviar()"
-            >
-              @if (streaming()) {
-                <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-              } @else {
-                <lucide-icon name="send" [size]="16" />
-              }
-            </button>
+              [loading]="streaming()"
+              (clicked)="enviar()"
+            />
           </div>
           <p class="mx-auto mt-1.5 max-w-3xl text-center text-[11px] text-muted-foreground">
             Alma usa solo información oficial de Skandia. Verifica los datos antes de actuar.

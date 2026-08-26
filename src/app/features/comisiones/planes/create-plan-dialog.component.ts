@@ -3,12 +3,13 @@
 
 import { Component, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SkButtonComponent, SkInputComponent, SkTextareaComponent } from '@skandia/ui';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionPlan } from './commission-plans.api';
 
 @Component({
   selector: 'alma-create-plan-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, SkButtonComponent, SkInputComponent, SkTextareaComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -27,63 +28,47 @@ import { CommissionPlan } from './commission-plans.api';
 
         <div class="mt-4 space-y-3 sm:space-y-4">
           <div>
-            <label class="text-sm font-medium" for="new-plan-name">Nombre *</label>
-            <input
-              id="new-plan-name"
-              class="alma-input mt-1"
+            <sk-input
+              label="Nombre *"
               placeholder="Ingrese el nombre del plan"
               [(ngModel)]="nombre"
             />
           </div>
 
           <div>
-            <label class="text-sm font-medium" for="new-plan-desc">Descripción</label>
-            <textarea
-              id="new-plan-desc"
-              class="alma-input mt-1"
-              rows="3"
+            <sk-textarea
+              label="Descripción"
+              [rows]="3"
               placeholder="Ingrese la descripción del plan"
               [(ngModel)]="descripcion"
-            ></textarea>
+            />
           </div>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium" for="new-plan-start">
-                Fecha de Inicio *
-              </label>
-              <input id="new-plan-start" type="date" class="alma-input" [(ngModel)]="inicio" />
+              <sk-input label="Fecha de Inicio *" type="date" [(ngModel)]="inicio" />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium" for="new-plan-end">Fecha de Fin *</label>
-              <input
-                id="new-plan-end"
-                type="date"
-                class="alma-input"
-                [min]="inicio"
-                [(ngModel)]="fin"
-              />
+              <sk-input label="Fecha de Fin *" type="date" [(ngModel)]="fin" />
             </div>
           </div>
         </div>
 
         <div class="mt-6 flex justify-end gap-2">
-          <button
+          <sk-button
+            variant="secondary"
             type="button"
-            (click)="cerrar()"
+            label="Cancelar"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline rounded-xl"
-          >
-            Cancelar
-          </button>
-          <button
+            (clicked)="cerrar()"
+          />
+          <sk-button
+            variant="primary"
             type="button"
-            (click)="crear()"
+            [label]="guardando() ? 'Creando…' : 'Crear Plan'"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-primary rounded-xl"
-          >
-            {{ guardando() ? 'Creando…' : 'Crear Plan' }}
-          </button>
+            (clicked)="crear()"
+          />
         </div>
       </div>
     </div>

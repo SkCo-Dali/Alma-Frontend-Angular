@@ -12,7 +12,12 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import {
+  SkButtonComponent,
+  SkDropdownComponent,
+  SkInputComponent,
+  SkSwitchComponent,
+} from '@skandia/ui';
 
 export type ParamFieldTipo =
   | 'texto'
@@ -49,7 +54,14 @@ export type ParamValues = Record<string, string | boolean>;
 
 @Component({
   selector: 'alma-param-form-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
+    SkSwitchComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -72,102 +84,103 @@ export type ParamValues = Record<string, string | boolean>;
           @for (f of fields(); track f.key) {
             <div class="space-y-2" [class.sm:col-span-full]="f.ancho === 'full'">
               @if (f.tipo === 'switch') {
-                <div class="flex items-center justify-between gap-2">
+                <label class="flex items-center justify-between gap-2">
                   <span class="text-sm font-medium">{{ f.label }}</span>
-                  <alma-switch
+                  <sk-switch
                     [checked]="booleano(f.key)"
                     [disabled]="!!f.deshabilitado"
-                    (checkedChange)="setValor(f.key, $event)"
-                    [ariaLabel]="f.label"
+                    [label]="''"
+                    (valueChange)="setValor(f.key, $any($event).checked)"
                   />
-                </div>
+                </label>
                 @if (f.ayuda) {
                   <p class="text-xs text-muted-foreground">{{ f.ayuda }}</p>
                 }
               } @else {
-                <label class="text-sm font-medium" [for]="'pf-' + f.key">
-                  {{ f.label }}
-                  @if (f.requerido) {
-                    <span class="text-destructive">*</span>
-                  }
-                </label>
+                @if (f.tipo === 'periodo') {
+                  <label class="text-sm font-medium">
+                    {{ f.label }}
+                    @if (f.requerido) {
+                      <span class="text-destructive">*</span>
+                    }
+                  </label>
+                }
 
                 @switch (f.tipo) {
                   @case ('select') {
                     @if (f.buscable) {
-                      <input
-                        class="alma-input mb-1 h-8 text-xs"
+                      <sk-input
                         placeholder="Buscar…"
                         [ngModel]="busqueda()[f.key] || ''"
                         (ngModelChange)="setBusqueda(f.key, $event)"
+                        fluid
                       />
                     }
-                    <select
-                      [id]="'pf-' + f.key"
-                      class="alma-input"
+                    <sk-dropdown
+                      [label]="labelTexto(f)"
+                      [options]="opcionesSelect(f)"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
-                    >
-                      <option value="">Seleccionar…</option>
-                      @for (o of opcionesVisibles(f); track o.value) {
-                        <option [value]="o.value">{{ o.label }}</option>
-                      }
-                    </select>
+                      [helpText]="f.ayuda ?? ''"
+                      [errorMessage]="errorTexto(f)"
+                      [invalid]="esInvalido(f)"
+                      fluid
+                    />
                   }
                   @case ('fecha') {
-                    <input
-                      [id]="'pf-' + f.key"
+                    <sk-input
                       type="date"
-                      class="alma-input"
+                      [label]="labelTexto(f)"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
+                      [helpText]="f.ayuda ?? ''"
+                      [errorMessage]="errorTexto(f)"
+                      [invalid]="esInvalido(f)"
+                      fluid
                     />
                   }
                   @case ('periodo') {
                     <div class="flex gap-2">
-                      <select
-                        [id]="'pf-' + f.key"
-                        class="alma-input"
+                      <sk-dropdown
+                        label="Año"
+                        [options]="aniosOptions"
                         [ngModel]="anioDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, $event, mesDe(f.key))"
-                      >
-                        <option value="">Año</option>
-                        @for (a of anios; track a) {
-                          <option [value]="a">{{ a }}</option>
-                        }
-                      </select>
-                      <select
-                        class="alma-input"
+                        fluid
+                      />
+                      <sk-dropdown
+                        label="Mes"
+                        [options]="mesesOptions"
                         [ngModel]="mesDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, anioDe(f.key), $event)"
-                      >
-                        <option value="">Mes</option>
-                        @for (m of meses; track m.value) {
-                          <option [value]="m.value">{{ m.label }}</option>
-                        }
-                      </select>
+                        fluid
+                      />
                     </div>
                   }
                   @default {
-                    <input
-                      [id]="'pf-' + f.key"
-                      class="alma-input"
+                    <sk-input
                       [type]="f.tipo === 'email' ? 'email' : 'text'"
-                      [attr.maxlength]="f.maxLength ?? null"
+                      [label]="labelTexto(f)"
                       [disabled]="!!f.deshabilitado"
                       [placeholder]="f.placeholder ?? ''"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setTexto(f, $event)"
+                      [helpText]="f.ayuda ?? ''"
+                      [errorMessage]="errorTexto(f)"
+                      [invalid]="esInvalido(f)"
+                      fluid
                     />
                   }
                 }
 
-                @if (errores()[f.key]; as err) {
-                  <p class="text-xs text-destructive">{{ err }}</p>
-                } @else if (f.ayuda) {
-                  <p class="text-xs text-muted-foreground">{{ f.ayuda }}</p>
+                @if (f.tipo === 'periodo') {
+                  @if (errores()[f.key]; as err) {
+                    <p class="text-xs text-destructive">{{ err }}</p>
+                  } @else if (f.ayuda) {
+                    <p class="text-xs text-muted-foreground">{{ f.ayuda }}</p>
+                  }
                 }
               }
             </div>
@@ -175,22 +188,20 @@ export type ParamValues = Record<string, string | boolean>;
         </div>
 
         <div class="flex justify-end gap-2 border-t border-border pt-4">
-          <button
+          <sk-button
             type="button"
-            (click)="cerrar()"
+            variant="secondary"
+            label="Cancelar"
             [disabled]="guardando()"
-            class="alma-btn alma-btn-outline"
-          >
-            Cancelar
-          </button>
-          <button
+            (clicked)="cerrar()"
+          />
+          <sk-button
             type="button"
-            (click)="enviar()"
+            variant="primary"
+            [label]="guardando() ? textoGuardando() : textoGuardar()"
             [disabled]="guardando() || hayErrores()"
-            class="alma-btn alma-btn-primary"
-          >
-            {{ guardando() ? textoGuardando() : textoGuardar() }}
-          </button>
+            (clicked)="enviar()"
+          />
         </div>
       </div>
     </div>
@@ -238,6 +249,16 @@ export class ParamFormDialogComponent implements OnInit {
     return Array.from({ length: 16 }, (_, i) => String(actual - 10 + i));
   })();
 
+  protected readonly aniosOptions: ParamFieldOption[] = [
+    { label: 'Año', value: '' },
+    ...this.anios.map((a) => ({ label: a, value: a })),
+  ];
+
+  protected readonly mesesOptions: ParamFieldOption[] = [
+    { label: 'Mes', value: '' },
+    ...this.meses,
+  ];
+
   ngOnInit(): void {
     this.estado.set({ ...this.valores() });
   }
@@ -273,6 +294,24 @@ export class ParamFormDialogComponent implements OnInit {
     if (!f.buscable) return todas;
     const q = (this.busqueda()[f.key] ?? '').trim().toLowerCase();
     return q ? todas.filter((o) => o.label.toLowerCase().includes(q)) : todas;
+  }
+
+  /** Opciones del select con la entrada "Seleccionar…" al inicio (permite volver a vacío). */
+  protected opcionesSelect(f: ParamField): ParamFieldOption[] {
+    return [{ label: 'Seleccionar…', value: '' }, ...this.opcionesVisibles(f)];
+  }
+
+  /** Texto del label flotante, con el asterisco de requerido plegado adentro. */
+  protected labelTexto(f: ParamField): string {
+    return f.requerido ? `${f.label} *` : f.label;
+  }
+
+  protected errorTexto(f: ParamField): string {
+    return this.errores()[f.key] ?? '';
+  }
+
+  protected esInvalido(f: ParamField): boolean {
+    return !!this.errores()[f.key];
   }
 
   protected anioDe(key: string): string {

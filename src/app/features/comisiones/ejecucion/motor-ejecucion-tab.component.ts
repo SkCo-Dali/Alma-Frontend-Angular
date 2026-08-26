@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { AdfPhase, EjecucionMotorStore, JobPhase } from './ejecucion-motor.store';
 import { MotorManualGuiaComponent } from './motor-manual-guia.component';
 
@@ -70,7 +71,7 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
 
 @Component({
   selector: 'alma-motor-ejecucion-tab',
-  imports: [LucideAngularModule, MotorManualGuiaComponent],
+  imports: [LucideAngularModule, SkButtonComponent, MotorManualGuiaComponent],
   template: `
     <div class="space-y-6">
       <alma-motor-manual-guia />
@@ -148,15 +149,15 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                 </div>
               </td>
               <td class="px-4 py-2 text-center">
-                <button
+                <sk-button
                   type="button"
-                  (click)="confirmar.emit('adf')"
+                  variant="primary"
+                  iconOnly
+                  icon="play"
+                  ariaLabel="Ejecutar pipeline de ingesta"
                   [disabled]="adfCorriendo()"
-                  class="h-8 w-8 rounded-lg bg-primary text-white hover:bg-[var(--primary-hover)] disabled:opacity-30"
-                  aria-label="Ejecutar pipeline de ingesta"
-                >
-                  <lucide-icon name="play" [size]="14" />
-                </button>
+                  (clicked)="confirmar.emit('adf')"
+                />
               </td>
             </tr>
 
@@ -240,24 +241,25 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                 </td>
                 <td class="px-4 py-2">
                   <div class="flex items-center justify-center gap-1.5">
-                    <button
+                    <sk-button
                       type="button"
-                      (click)="confirmar.emit(j.job_id)"
+                      variant="primary"
+                      iconOnly
+                      icon="play"
+                      ariaLabel="Ejecutar job"
                       [disabled]="corriendo(s.phase)"
-                      class="h-8 w-8 rounded-lg bg-primary text-white hover:bg-[var(--primary-hover)] disabled:opacity-30"
-                      aria-label="Ejecutar job"
-                    >
-                      <lucide-icon name="play" [size]="14" />
-                    </button>
-                    <button
+                      (clicked)="confirmar.emit(j.job_id)"
+                    />
+                    <sk-button
                       type="button"
-                      (click)="store.cancelarJob(j.job_id)"
+                      variant="secondary"
+                      severity="danger"
+                      iconOnly
+                      icon="stop"
+                      ariaLabel="Cancelar job"
                       [disabled]="!corriendo(s.phase) || s.phase === 'terminating'"
-                      class="h-8 w-8 rounded-lg border border-destructive text-destructive hover:bg-destructive/10 disabled:opacity-30"
-                      aria-label="Cancelar job"
-                    >
-                      <lucide-icon name="square" [size]="14" />
-                    </button>
+                      (clicked)="store.cancelarJob(j.job_id)"
+                    />
                   </div>
                 </td>
               </tr>

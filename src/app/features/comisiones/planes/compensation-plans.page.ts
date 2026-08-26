@@ -4,6 +4,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { BusquedaDebounceComponent } from '../ui/busqueda-debounce.component';
@@ -22,6 +23,7 @@ import { PlansTableComponent } from './plans-table.component';
   imports: [
     RouterLink,
     LucideAngularModule,
+    SkButtonComponent,
     AccessDeniedComponent,
     BusquedaDebounceComponent,
     CreatePlanDialogComponent,
@@ -46,14 +48,13 @@ import { PlansTableComponent } from './plans-table.component';
               Planes de Compensación
             </h1>
           </div>
-          <button
+          <sk-button
             type="button"
-            (click)="creando.set(true)"
-            class="alma-btn alma-btn-primary h-9 shrink-0 rounded-xl px-4"
-          >
-            <lucide-icon name="plus" [size]="16" class="sm:mr-2" />
-            <span class="hidden sm:inline">Crear Plan</span>
-          </button>
+            variant="primary"
+            label="Crear Plan"
+            class="h-9 shrink-0 rounded-xl px-4"
+            (clicked)="creando.set(true)"
+          />
         </div>
 
         <!-- Búsqueda y limpieza de filtros -->
@@ -67,15 +68,15 @@ import { PlansTableComponent } from './plans-table.component';
             </div>
             <div class="flex items-center gap-2">
               @if (store.hayFiltros()) {
-                <button
+                <sk-button
                   type="button"
-                  (click)="store.clearAllFilters()"
-                  title="Limpiar filtros"
-                  class="alma-btn h-10 shrink-0 border border-input text-muted-foreground hover:text-foreground sm:border-transparent"
-                >
-                  <lucide-icon name="x" [size]="16" class="mr-2" />
-                  Limpiar
-                </button>
+                  variant="tertiary"
+                  icon="times"
+                  label="Limpiar"
+                  ariaLabel="Limpiar filtros"
+                  class="h-10 shrink-0"
+                  (clicked)="store.clearAllFilters()"
+                />
               }
               @if (store.loadingAll() && store.hayFiltros()) {
                 <div

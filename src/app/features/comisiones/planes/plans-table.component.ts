@@ -11,6 +11,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent } from '@skandia/ui';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
@@ -46,6 +47,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
   selector: 'alma-plans-table',
   imports: [
     LucideAngularModule,
+    SkButtonComponent,
     PortalDirective,
     GridPaginationComponent,
     ColumnFilterComponent,
@@ -247,21 +249,20 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
             Aviso: Si este plan tiene reglas asociadas, debes eliminarlas primero.
           </div>
           <div class="mt-6 flex justify-end gap-2">
-            <button
+            <sk-button
+              variant="secondary"
               type="button"
-              (click)="porBorrar.set(null)"
-              class="alma-btn alma-btn-outline rounded-xl"
-            >
-              Cancelar
-            </button>
-            <button
+              label="Cancelar"
+              (clicked)="porBorrar.set(null)"
+            />
+            <sk-button
+              variant="primary"
+              severity="danger"
               type="button"
-              (click)="confirmarBorrado()"
+              [label]="borrando() ? 'Eliminando…' : 'Confirmar Eliminación'"
               [disabled]="borrando()"
-              class="alma-btn rounded-xl bg-destructive text-white hover:bg-destructive/90"
-            >
-              {{ borrando() ? 'Eliminando…' : 'Confirmar Eliminación' }}
-            </button>
+              (clicked)="confirmarBorrado()"
+            />
           </div>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { Tabs, TabList, Tab as PTab } from 'primeng/tabs';
+import { SkButtonComponent, SkDropdownComponent, SkInputComponent } from '@skandia/ui';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { CommissionPlansApi } from '../planes/commission-plans.api';
@@ -29,6 +31,12 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
     FormsModule,
     RouterLink,
     LucideAngularModule,
+    Tabs,
+    TabList,
+    PTab,
+    SkButtonComponent,
+    SkDropdownComponent,
+    SkInputComponent,
     AccessDeniedComponent,
     ParamTableComponent,
     ParamFormDialogComponent,
@@ -50,34 +58,29 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
         </div>
 
         <!-- Pestañas: selector en móvil, pills en escritorio -->
-        <select
-          class="alma-input lg:hidden"
+        <sk-dropdown
+          class="lg:hidden"
+          [options]="vistas"
+          optionLabel="label"
+          optionValue="value"
           [ngModel]="vista()"
           (ngModelChange)="cambiarVista($event)"
-        >
-          @for (v of vistas; track v.value) {
-            <option [value]="v.value">{{ v.label }}</option>
-          }
-        </select>
+        />
 
-        <div
-          class="glass hidden w-fit gap-1 rounded-full bg-[var(--surface-sunken)] p-1 lg:inline-flex"
+        <p-tabs
+          [value]="vista()"
+          (valueChange)="cambiarVista($any($event))"
+          styleClass="hidden lg:block"
         >
-          @for (v of vistas; track v.value) {
-            <button
-              type="button"
-              (click)="cambiarVista(v.value)"
-              class="whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-all"
-              [class]="
-                vista() === v.value
-                  ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
-                  : 'text-muted-foreground hover:text-foreground'
-              "
-            >
-              {{ v.label }}
-            </button>
-          }
-        </div>
+          <p-tablist
+            aria-label="Vistas de Parametrización"
+            class="glass flex max-w-full flex-wrap gap-1 rounded-full bg-[var(--surface-sunken)] p-1 px-2"
+          >
+            @for (v of vistas; track v.value) {
+              <p-tab [value]="v.value">{{ v.label }}</p-tab>
+            }
+          </p-tablist>
+        </p-tabs>
 
         <!-- Secciones de la pestaña activa -->
         @for (id of seccionesVisibles(); track id) {
@@ -91,25 +94,21 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
                 }
               </div>
               @if (spec.botonCrear) {
-                <button
+                <sk-button
                   type="button"
-                  (click)="abrirCrear(id)"
-                  class="alma-btn alma-btn-primary h-10 shrink-0 rounded-xl px-4"
-                >
-                  <lucide-icon name="plus" [size]="16" class="mr-2" />
-                  {{ spec.botonCrear }}
-                </button>
+                  variant="primary"
+                  [label]="spec.botonCrear"
+                  (clicked)="abrirCrear(id)"
+                />
               }
             </div>
 
             <!-- Búsqueda y rango de fechas -->
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div class="relative flex w-full items-center sm:max-w-md">
-                <span class="pointer-events-none absolute left-3 z-20 flex items-center">
-                  <lucide-icon name="search" [size]="16" class="text-muted-foreground" />
-                </span>
-                <input
-                  class="alma-input pl-10"
+              <div class="flex w-full items-center sm:max-w-md">
+                <sk-input
+                  fluid
+                  iconLeft="search"
                   [placeholder]="spec.placeholderBusqueda"
                   [ngModel]="busqueda()[id] || ''"
                   (ngModelChange)="setBusqueda(id, $event)"
@@ -118,61 +117,45 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
 
               @if (spec.conRangoFechas) {
                 <div class="flex items-center gap-2">
-                  <input type="date" class="alma-input h-10 w-[150px]" [(ngModel)]="desde" />
+                  <sk-input type="date" class="w-[150px]" [(ngModel)]="desde" />
                   <span class="text-xs text-muted-foreground">a</span>
-                  <input type="date" class="alma-input h-10 w-[150px]" [(ngModel)]="hasta" />
-                  <button
+                  <sk-input type="date" class="w-[150px]" [(ngModel)]="hasta" />
+                  <sk-button
                     type="button"
-                    (click)="consultarRango()"
+                    variant="primary"
+                    label="Consultar"
                     [disabled]="!desde || !hasta || store.loading()[id]"
-                    class="alma-btn alma-btn-primary h-10 rounded-lg px-4"
-                  >
-                    Consultar
-                  </button>
+                    (clicked)="consultarRango()"
+                  />
                 </div>
               }
 
               @if (busqueda()[id]) {
-                <button
+                <sk-button
                   type="button"
-                  (click)="limpiar(id)"
-                  title="Limpiar filtros"
-                  class="alma-btn alma-btn-outline h-10 shrink-0 text-muted-foreground"
-                >
-                  <lucide-icon name="x" [size]="16" class="mr-2" />
-                  Limpiar
-                </button>
+                  variant="secondary"
+                  label="Limpiar"
+                  (clicked)="limpiar(id)"
+                />
               }
             </div>
 
             <!-- Sub-pestañas por compañía -->
             @if (spec.porCategoria) {
-              <div class="flex flex-wrap gap-2">
-                @for (c of categorias; track c) {
-                  <button
-                    type="button"
-                    (click)="setCategoria(id, c)"
-                    class="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all"
-                    [class]="
-                      categoria(id) === c
-                        ? 'border-transparent bg-primary text-primary-foreground shadow-sm'
-                        : 'border-border bg-card text-muted-foreground hover:bg-accent'
-                    "
-                  >
-                    {{ etiquetaCategoria(c) }}
-                    <span
-                      class="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                      [class]="
-                        categoria(id) === c
-                          ? 'bg-white/25 text-primary-foreground'
-                          : 'bg-muted text-muted-foreground'
-                      "
-                    >
-                      {{ conteo(id, c) }}
-                    </span>
-                  </button>
-                }
-              </div>
+              <p-tabs [value]="categoria(id)" (valueChange)="setCategoria(id, $any($event))">
+                <p-tablist aria-label="Compañía">
+                  @for (c of categorias; track c) {
+                    <p-tab [value]="c" class="inline-flex items-center gap-2">
+                      {{ etiquetaCategoria(c) }}
+                      <span
+                        class="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground"
+                      >
+                        {{ conteo(id, c) }}
+                      </span>
+                    </p-tab>
+                  }
+                </p-tablist>
+              </p-tabs>
             }
 
             @if (store.loading()[id]) {
@@ -239,21 +222,20 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
               Esto eliminará permanentemente el registro. Esta acción no se puede deshacer.
             </p>
             <div class="mt-6 flex justify-end gap-2">
-              <button
+              <sk-button
                 type="button"
-                (click)="porBorrar.set(null)"
-                class="alma-btn alma-btn-outline"
-              >
-                Cancelar
-              </button>
-              <button
+                variant="secondary"
+                label="Cancelar"
+                (clicked)="porBorrar.set(null)"
+              />
+              <sk-button
                 type="button"
-                (click)="confirmarBorrado(sel.seccion, sel.row)"
+                variant="primary"
+                severity="danger"
+                [label]="borrando() ? 'Eliminando…' : 'Eliminar'"
                 [disabled]="borrando()"
-                class="alma-btn bg-destructive text-white hover:bg-destructive/90"
-              >
-                {{ borrando() ? 'Eliminando…' : 'Eliminar' }}
-              </button>
+                (clicked)="confirmarBorrado(sel.seccion, sel.row)"
+              />
             </div>
           </div>
         </div>

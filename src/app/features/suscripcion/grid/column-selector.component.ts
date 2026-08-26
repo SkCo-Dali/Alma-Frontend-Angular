@@ -4,8 +4,8 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { SkButtonComponent, SkInputComponent, SkSwitchComponent } from '@skandia/ui';
 import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
-import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { TooltipDirective } from '../../../shared/tooltip.directive';
 import { ColumnConfig } from './suscripcion-grid.api';
 
@@ -15,18 +15,19 @@ import { ColumnConfig } from './suscripcion-grid.api';
     FormsModule,
     LucideAngularModule,
     AlmaCheckboxComponent,
-    AlmaSwitchComponent,
+    SkSwitchComponent,
     TooltipDirective,
+    SkButtonComponent,
+    SkInputComponent,
   ],
   template: `
-    <button
+    <sk-button
+      variant="secondary"
       type="button"
-      (click)="abrir()"
-      class="alma-btn alma-btn-outline h-9 rounded-xl bg-card px-3 text-xs font-medium"
-    >
-      <lucide-icon name="columns-3" [size]="16" class="text-primary" />
-      Columnas
-    </button>
+      size="small"
+      label="Columnas"
+      (clicked)="abrir()"
+    />
 
     @if (abierto()) {
       <!-- Overlay -->
@@ -73,8 +74,7 @@ import { ColumnConfig } from './suscripcion-grid.api';
         <!-- Buscador + listado -->
         <div class="flex flex-1 flex-col overflow-hidden">
           <div class="px-4 pb-2 pt-3">
-            <input
-              class="alma-input h-8 rounded-lg"
+            <sk-input
               placeholder="Buscar columnas..."
               [(ngModel)]="filtro"
               (ngModelChange)="filtroSig.set($event)"
@@ -150,14 +150,14 @@ import { ColumnConfig } from './suscripcion-grid.api';
 
         <!-- Footer -->
         <div class="shrink-0 border-t border-border/40 bg-muted/20 px-4 py-3">
-          <div class="flex items-center justify-between">
+          <label class="flex items-center justify-between">
             <span class="text-xs font-semibold">Seleccionar todas</span>
-            <alma-switch
+            <sk-switch
               [checked]="todasSeleccionadas()"
-              (checkedChange)="toggleTodas($event)"
-              ariaLabel="Seleccionar todas las columnas"
+              [label]="''"
+              (valueChange)="toggleTodas($any($event).checked)"
             />
-          </div>
+          </label>
         </div>
       </div>
     }
