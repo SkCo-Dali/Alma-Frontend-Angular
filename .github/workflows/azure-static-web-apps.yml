@@ -9,6 +9,11 @@ on:
       - develop
       - staging
       - main
+      # Propuesta visual del área de UX (@skandia/ui): despliega al MISMO
+      # ambiente Development que develop — el último push gana la SWA de Dev.
+      # Para devolver la SWA a develop sin commits de relleno:
+      #   gh workflow run azure-static-web-apps.yml --ref develop
+      - alma-ux
   workflow_dispatch:
     inputs:
       environment:
