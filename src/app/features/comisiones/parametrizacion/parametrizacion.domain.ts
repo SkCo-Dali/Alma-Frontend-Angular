@@ -246,6 +246,16 @@ export interface SpecialCaseRecord {
   UltimaActualizacion: string;
 }
 
+export interface ExcludedContractRecord {
+  id: string;
+  NombreCompania: string;
+  CodigoCompania: string;
+  Producto: string;
+  ContratoLargo: string;
+  Activo: boolean;
+  UltimaActualizacion: string;
+}
+
 // ── Utilidades de nombres de plan ───────────────────────────────────────────
 
 /**

@@ -1,4 +1,4 @@
-// Descripción de las 8 secciones de Parametrización: columnas de la tabla,
+// Descripción de las secciones de Parametrización: columnas de la tabla,
 // campos del formulario, campos derivados y validaciones cruzadas. Es la descripción
 // declarativa que alimenta una sola tabla y un solo diálogo genéricos.
 
@@ -10,6 +10,7 @@ import {
   AccountingCategory,
   CANAL_OPTIONS,
   CATEGORY_TO_COMPANY_CODE,
+  COMPANY_CODE_TO_NAME,
   COMPANY_OPTIONS,
   DOCUMENT_TYPE_OPTIONS,
   STATUS_OPTIONS,
@@ -68,6 +69,9 @@ const codigoCanal = (canal: string): number =>
 
 const codigoCompania = (nombre: string): number =>
   COMPANY_OPTIONS.find((c) => c.value === nombre)?.code ?? 0;
+
+const nombreCompania = (codigo: string | number | undefined): string =>
+  COMPANY_CODE_TO_NAME[Number(codigo)] ?? '';
 
 /** Porcentajes: el registro guarda fracción y el formulario muestra 0-100. */
 const aPorcentajeForm = (v: unknown): string => {
@@ -781,6 +785,87 @@ const CASOS_ESPECIALES: SeccionSpec = {
   }),
 };
 
+// ── 9. Exclusión de contratos ───────────────────────────────────────────────
+
+const EXCLUSION_CONTRATOS: SeccionSpec = {
+  id: 'exclusionContratos',
+  titulo: 'Exclusión de Contratos',
+  placeholderBusqueda: 'Buscar por compañía, producto o contrato...',
+  botonCrear: 'Crear Registro',
+  anchoMinimo: '1100px',
+  formColumnas: 2,
+  formAncho: '620px',
+  tituloCrear: 'Crear Exclusión de Contrato',
+  descCrear: 'Ingresa los detalles para registrar una nueva exclusión de contrato.',
+  tituloEditar: 'Editar Exclusión de Contrato',
+  descEditar: () => 'Modifica los detalles de la exclusión de contrato seleccionada.',
+  columnas: [
+    { key: 'NombreCompania', label: 'Nombre Compañía' },
+    { key: 'CodigoCompania', label: 'Código Compañía', tipo: 'mono' },
+    { key: 'Producto', label: 'Producto', tipo: 'chipPrimario' },
+    { key: 'ContratoLargo', label: 'Contrato Largo', tipo: 'mono' },
+    { key: 'Activo', label: 'Activo', tipo: 'switch' },
+    {
+      key: 'UltimaActualizacion',
+      label: 'Última Actualización',
+      tipo: 'fecha',
+      filtro: 'fecha',
+    },
+  ],
+  buscarEn: (r) => [r['NombreCompania'], r['Producto'], r['ContratoLargo'], r['CodigoCompania']],
+  campos: () => [
+    {
+      key: 'NombreCompania',
+      label: 'Nombre Compañía',
+      tipo: 'select',
+      requerido: true,
+      opciones: companyOptions,
+      ancho: 'full',
+    },
+    {
+      key: 'CodigoCompania',
+      label: 'Código Compañía',
+      tipo: 'numero',
+      requerido: true,
+      deshabilitado: true,
+      maxLength: 50,
+    },
+    { key: 'Producto', label: 'Producto', tipo: 'texto', requerido: true, maxLength: 255 },
+    {
+      key: 'ContratoLargo',
+      label: 'Contrato Largo',
+      tipo: 'texto',
+      requerido: true,
+      maxLength: 50,
+    },
+    { key: 'Activo', label: 'Estado Activo', tipo: 'switch', ayuda: 'Estado del registro' },
+  ],
+  aFormulario: (r) => {
+    const codigo = r ? String(r['CodigoCompania'] ?? '') : '';
+    return {
+      NombreCompania: r
+        ? nombreCompania(codigo) || txt(r['NombreCompania'] as string)
+        : '',
+      CodigoCompania: codigo,
+      Producto: txt(r?.['Producto'] as string),
+      ContratoLargo: txt(r?.['ContratoLargo'] as string),
+      Activo: r ? Boolean(r['Activo']) : true,
+    };
+  },
+  aRegistro: (v) => ({
+    NombreCompania: txt(v['NombreCompania']),
+    CodigoCompania: txt(v['CodigoCompania']) || String(codigoCompania(txt(v['NombreCompania']))),
+    Producto: txt(v['Producto']),
+    ContratoLargo: txt(v['ContratoLargo']),
+    Activo: Boolean(v['Activo']),
+  }),
+  derivar: (key, v) => {
+    if (key !== 'NombreCompania') return v;
+    const codigo = codigoCompania(txt(v['NombreCompania']));
+    return { ...v, CodigoCompania: codigo ? String(codigo) : '' };
+  },
+};
+
 /** dd/MM/yyyy → yyyy-MM-dd para el input date, y de vuelta. */
 function aIsoDesdeUI(v: string): string {
   if (!v) return '';
@@ -807,6 +892,7 @@ export const SECCIONES: Record<SeccionId, SeccionSpec> = {
   configProducto: CONFIG_PRODUCTO,
   ajustesComisiones: AJUSTES,
   casosEspeciales: CASOS_ESPECIALES,
+  exclusionContratos: EXCLUSION_CONTRATOS,
 };
 
 /** Pestañas principales y qué secciones muestra cada una, en orden. */
@@ -825,4 +911,9 @@ export const VISTAS: { value: string; label: string; secciones: SeccionId[] }[] 
     secciones: ['ajustesComisiones'],
   },
   { value: 'casos_especiales', label: 'Casos Especiales', secciones: ['casosEspeciales'] },
+  {
+    value: 'exclusion_contratos',
+    label: 'Exclusión de Contratos',
+    secciones: ['exclusionContratos'],
+  },
 ];

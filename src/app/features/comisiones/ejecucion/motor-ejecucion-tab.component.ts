@@ -147,16 +147,24 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                   <div class="text-[10px] text-muted-foreground">{{ textoAdf() }}</div>
                 </div>
               </td>
-              <td class="px-4 py-2 text-center">
-                <button
-                  type="button"
-                  (click)="confirmar.emit('adf')"
-                  [disabled]="adfCorriendo()"
-                  class="h-8 w-8 rounded-lg bg-primary text-white hover:bg-[var(--primary-hover)] disabled:opacity-30"
-                  aria-label="Ejecutar pipeline de ingesta"
-                >
-                  <lucide-icon name="play" [size]="14" />
-                </button>
+              <td class="px-4 py-2">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="confirmar.emit('adf')"
+                    [disabled]="adfCorriendo()"
+                    class="alma-btn alma-btn-primary h-8 w-8 shrink-0 p-0 [&_svg]:block"
+                    aria-label="Ejecutar pipeline de ingesta"
+                  >
+                    <lucide-icon
+                      name="play"
+                      [size]="14"
+                      class="-translate-x-px"
+                      [strokeWidth]="2.5"
+                    />
+                  </button>
+                  <span class="h-8 w-8 shrink-0" aria-hidden="true"></span>
+                </div>
               </td>
             </tr>
 
@@ -244,19 +252,24 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                       type="button"
                       (click)="confirmar.emit(j.job_id)"
                       [disabled]="corriendo(s.phase)"
-                      class="h-8 w-8 rounded-lg bg-primary text-white hover:bg-[var(--primary-hover)] disabled:opacity-30"
+                      class="alma-btn alma-btn-primary h-8 w-8 shrink-0 p-0 [&_svg]:block"
                       aria-label="Ejecutar job"
                     >
-                      <lucide-icon name="play" [size]="14" />
+                      <lucide-icon
+                        name="play"
+                        [size]="14"
+                        class="-translate-x-px"
+                        [strokeWidth]="2.5"
+                      />
                     </button>
                     <button
                       type="button"
                       (click)="store.cancelarJob(j.job_id)"
                       [disabled]="!corriendo(s.phase) || s.phase === 'terminating'"
-                      class="h-8 w-8 rounded-lg border border-destructive text-destructive hover:bg-destructive/10 disabled:opacity-30"
+                      class="alma-btn h-8 w-8 shrink-0 p-0 bg-destructive/15 text-destructive ring-1 ring-inset ring-destructive/55 hover:bg-destructive hover:text-white [&_svg]:block"
                       aria-label="Cancelar job"
                     >
-                      <lucide-icon name="square" [size]="14" />
+                      <lucide-icon name="square" [size]="12" [strokeWidth]="2.5" />
                     </button>
                   </div>
                 </td>
