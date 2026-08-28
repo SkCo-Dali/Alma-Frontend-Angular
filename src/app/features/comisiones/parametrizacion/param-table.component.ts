@@ -146,13 +146,15 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                                     : 'bg-muted text-muted-foreground'
                                 "
                               >
-                                {{ verdadero(row, col.key) ? 'Activo' : 'Inactivo' }}
-                              </span>
-                              <alma-switch
-                                [checked]="verdadero(row, col.key)"
-                                (checkedChange)="alternar.emit({ row: row, activo: $event })"
-                                ariaLabel="Activar o desactivar"
-                              />
+                              {{ verdadero(row, col.key) ? 'Activo' : 'Inactivo' }}
+                            </span>
+                              @if (conAcciones()) {
+                                <alma-switch
+                                  [checked]="verdadero(row, col.key)"
+                                  (checkedChange)="alternar.emit({ row: row, activo: $event })"
+                                  ariaLabel="Activar o desactivar"
+                                />
+                              }
                             </div>
                           }
                           @case ('chipPrimario') {

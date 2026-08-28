@@ -23,6 +23,7 @@ import {
   CommissionTypeRecord,
   DeferredPercentageRecord,
   DeferredRecord,
+  ExcludedContractRecord,
   SpecialCaseRecord,
   aFechaUI,
   aIsoFecha,
@@ -464,6 +465,75 @@ export class ParametrizacionApi {
       'Error cambiando el estado del caso especial',
     );
   }
+
+  // ── 9. Exclusión de contratos ─────────────────────────────────────────────
+
+  /** El listado puede llegar como arreglo plano o como {items}. */
+  async listExcludedContracts(): Promise<ExcludedContractRecord[]> {
+    const primera = await this.http.get<
+      ApiExcludedContract[] | ListResponse<ApiExcludedContract>
+    >(`/api/commission-excluded-contract${qs({ page: 1, page_size: PAGE_SIZE })}`);
+    const normalizar = (
+      res: ApiExcludedContract[] | ListResponse<ApiExcludedContract>,
+    ): { items: ApiExcludedContract[]; total: number } =>
+      Array.isArray(res)
+        ? { items: res, total: res.length }
+        : { items: res.items ?? [], total: res.total ?? res.items?.length ?? 0 };
+
+    const { items, total } = normalizar(primera);
+    let todos = [...items];
+    const paginas = Math.ceil(total / PAGE_SIZE);
+    if (paginas > 1) {
+      const restantes = await Promise.all(
+        Array.from({ length: paginas - 1 }, (_, i) =>
+          this.http.get<ApiExcludedContract[] | ListResponse<ApiExcludedContract>>(
+            `/api/commission-excluded-contract${qs({ page: i + 2, page_size: PAGE_SIZE })}`,
+          ),
+        ),
+      );
+      for (const r of restantes) todos = [...todos, ...normalizar(r).items];
+    }
+    return todos.map(mapExcludedContract);
+  }
+
+  createExcludedContract(data: Partial<ExcludedContractRecord>): Promise<ApiExcludedContract> {
+    return this.http.send<ApiExcludedContract>(
+      '/api/commission-excluded-contract',
+      'POST',
+      toExcludedContractRequest(data),
+      'Error creando la exclusión de contrato',
+    );
+  }
+
+  updateExcludedContract(
+    id: string,
+    data: Partial<ExcludedContractRecord>,
+  ): Promise<ApiExcludedContract> {
+    return this.http.send<ApiExcludedContract>(
+      `/api/commission-excluded-contract/${id}`,
+      'PUT',
+      toExcludedContractRequest(data),
+      'Error actualizando la exclusión de contrato',
+    );
+  }
+
+  deleteExcludedContract(id: string): Promise<void> {
+    return this.http.send<void>(
+      `/api/commission-excluded-contract/${id}`,
+      'DELETE',
+      undefined,
+      'Error eliminando la exclusión de contrato',
+    );
+  }
+
+  toggleExcludedContract(id: string, isActive: boolean): Promise<unknown> {
+    return this.http.send(
+      `/api/commission-excluded-contract/${id}/toggle-active`,
+      'POST',
+      { is_active: isActive },
+      'Error cambiando el estado de la exclusión de contrato',
+    );
+  }
 }
 
 // ── Formas del API y mapeos ─────────────────────────────────────────────────
@@ -829,6 +899,42 @@ function toSpecialCaseRequest(r: Partial<SpecialCaseRecord>) {
     company_name: r.NombreCompania ?? '',
     society_id: Number(r.IdSociedad) || 0,
     special_classification: r.ClasificacionEspecial ?? '',
+    is_active: r.Activo ?? true,
+  };
+}
+
+interface ApiExcludedContract {
+  id?: string;
+  excluded_contract_id?: string;
+  company_code: string | number;
+  company_name: string;
+  product: string;
+  long_contract: string | number;
+  is_active: boolean;
+  updated_at?: string;
+}
+
+function mapExcludedContract(api: ApiExcludedContract): ExcludedContractRecord {
+  return {
+    id:
+      api.excluded_contract_id ??
+      api.id ??
+      `${api.company_code}-${api.product}-${api.long_contract}`,
+    NombreCompania: api.company_name,
+    CodigoCompania: String(api.company_code ?? ''),
+    Producto: api.product ?? '',
+    ContratoLargo: String(api.long_contract ?? ''),
+    Activo: Boolean(api.is_active),
+    UltimaActualizacion: api.updated_at ?? '',
+  };
+}
+
+function toExcludedContractRequest(r: Partial<ExcludedContractRecord>) {
+  return {
+    company_code: String(r.CodigoCompania ?? ''),
+    company_name: r.NombreCompania ?? '',
+    product: r.Producto ?? '',
+    long_contract: String(r.ContratoLargo ?? ''),
     is_active: r.Activo ?? true,
   };
 }
