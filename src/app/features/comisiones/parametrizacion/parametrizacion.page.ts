@@ -1,4 +1,4 @@
-// Parametrización del Motor de Comisiones: 6 pestañas que agrupan 8 secciones, cada una
+// Parametrización del Motor de Comisiones: pestañas que agrupan secciones, cada una
 // con su búsqueda, su tabla y sus diálogos de crear/editar/eliminar.
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -187,6 +187,14 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
                 >
                   No se pudo consultar la API de casos especiales. Revisa la consola para
                   validar la respuesta del servicio.
+                </div>
+              }
+              @if (id === 'exclusionContratos' && store.errorExclusionContratos()) {
+                <div
+                  class="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+                >
+                  No se pudo consultar la API de exclusión de contratos. Revisa la consola
+                  para validar la respuesta del servicio.
                 </div>
               }
               <alma-param-table
