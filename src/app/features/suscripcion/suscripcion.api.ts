@@ -243,6 +243,19 @@ export interface AnalisisDeclaracionesApi {
   estatura: string | null;
 }
 
+/** Tercero (rol) del nodo Pharos: pestaña "Terceros" de la cotización. */
+export interface TerceroApi {
+  tipo: string; // Tomador | Asegurado | Beneficiario | Pagador | Agente | Rol N
+  dRoleid: string;
+  nombre: string | null;
+  partyCode: string | null;
+  porcentaje: number | null;
+  nivel: number;
+  parentesco: string | null; // solo beneficiarios
+  visibleType: number | null;
+  activo: boolean;
+}
+
 export interface DeclaracionesApi {
   todas_negativas: boolean | null;
   fecha: string;
@@ -253,6 +266,8 @@ export interface DeclaracionesApi {
     nodeStatus: string | null;
     formularios: DeclaracionFormApi[];
     declaracionesRaiz?: DeclaracionItemApi[] | null;
+    /** Terceros del nodo (bridge nuevo; snapshots viejos no lo traen). */
+    terceros?: TerceroApi[] | null;
     sinCalibrar: number;
   }> | null;
   pharos: {
@@ -261,6 +276,49 @@ export interface DeclaracionesApi {
     wStatus: number | null;
     nodos: Array<Record<string, unknown>> | null;
   };
+}
+
+/** Fila del historial de Control Emisión del cliente (pólizas anteriores). */
+export interface HistorialClienteItemApi {
+  nro_cotizacion: string | null;
+  es_actual: boolean;
+  producto: string | null;
+  fecha_recepcion: string | null;
+  estado: string | null;
+  subestado: string | null;
+  suma_asegurada: number | null;
+  cobertura: string | null;
+  estado_cobertura: string | null;
+  contrato_pharos: string | null;
+  fecha_emision: string | null;
+  fecha_pago: string | null;
+  motivo_rechazo_retracto: string | null;
+  observaciones: string | null;
+  observaciones_reaseguro: string | null;
+  observaciones_examenes: string | null;
+}
+
+/** Producto del portafolio del cliente en Skandia (Sigscg.Contrato). */
+export interface ProductoClienteApi {
+  productCode: string | null;
+  productoDesc: string | null;
+  planProducto: string | null;
+  contrato: string | null;
+  estadoCodigo: string | null;
+  estado: string | null;
+  fechaInicio: string | null;
+  fechaTerminacion: string | null;
+}
+
+/** Correo del buzón de suscripción relacionado con el cliente. */
+export interface CorreoClienteApi {
+  asunto: string | null;
+  de: string | null;
+  de_nombre: string | null;
+  para: Array<string | null>;
+  fecha: string | null;
+  resumen: string | null;
+  enlace: string | null;
 }
 
 export interface Verificaciones {
@@ -417,6 +475,32 @@ export class SuscripcionApi {
     return this.api.fetch<DeclaracionesApi>(
       `/api/suscripcion/solicitudes/${solicitudId}/declaraciones`,
     );
+  }
+
+  /** Pólizas/cotizaciones ANTERIORES del asegurado en Control Emisión. */
+  getHistorialCliente(solicitudId: string): Promise<{ items: HistorialClienteItemApi[]; count: number }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/historial-cliente`);
+  }
+
+  /** Portafolio del cliente en Skandia (todos los cores, sin saldos). */
+  getProductosCliente(solicitudId: string): Promise<{ items: ProductoClienteApi[]; count: number }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/productos-cliente`);
+  }
+
+  /** Correos del buzón de suscripción que mencionan la cédula/cotización. */
+  getCorreosCliente(solicitudId: string): Promise<{ items: CorreoClienteApi[]; count: number }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correos`);
+  }
+
+  /** Envía el correo de suscripción al FP (CC opcional al director). */
+  enviarCorreoAsesor(
+    solicitudId: string,
+    body: { asunto: string; cuerpo: string; copiar_director: boolean },
+  ): Promise<{ enviado: boolean; para: string; cc: string[] }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correo-asesor`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   }
 
   /** Verificación de cúmulo contra Pharos (pólizas vigentes del asegurado). */
