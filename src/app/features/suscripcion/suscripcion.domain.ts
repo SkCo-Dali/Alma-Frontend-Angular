@@ -287,7 +287,7 @@ export function veredictoSalud(d: {
   if (d.todas_negativas === true && d.covid_positivo)
     return {
       estado: 'covid_sin_restriccion',
-      label: 'COVID-19 · sin restricción',
+      label: 'COVID-19',
       cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
       icon: 'info',
     };
