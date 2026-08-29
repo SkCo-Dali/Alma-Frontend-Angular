@@ -84,6 +84,8 @@ export interface SuscripcionRowMeta {
   veredicto_slug:
     | 'sin_novedades'
     | 'requiere_revision'
+    | 'covid_sin_restriccion'
+    | 'covid_sin_vacuna'
     | 'con_positivas'
     | 'sin_diligenciar'
     | null;
