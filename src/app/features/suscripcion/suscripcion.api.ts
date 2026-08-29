@@ -196,6 +196,7 @@ export interface SolicitudApi {
   declaraciones: {
     todas_negativas: boolean | null;
     covid_positivo: boolean;
+    covid_vacunado: boolean;
     retiene_por_salud: boolean;
     fecha: string;
   } | null;
