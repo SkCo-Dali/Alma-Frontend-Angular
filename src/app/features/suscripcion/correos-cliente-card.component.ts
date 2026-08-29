@@ -254,9 +254,11 @@ export class CorreosClienteCardComponent {
     this.enviando.set(true);
     this.errorEnvio.set(null);
     try {
+      // Texto plano: el backend valida (sin HTML) y convierte los saltos de
+      // línea para el correo.
       const res = await this.api.enviarCorreoAsesor(this.solicitudId(), {
         asunto: this.asunto.trim(),
-        cuerpo: this.cuerpo.trim().replace(/\n/g, '<br/>'),
+        cuerpo: this.cuerpo.trim(),
         copiar_director: this.copiarDirector,
       });
       this.resultadoEnvio.set({ para: res.para, cc: res.cc });
