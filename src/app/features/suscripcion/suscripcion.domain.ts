@@ -243,6 +243,7 @@ export const DECISION_BADGE: Record<string, string> = {
 
 export type EstadoVeredictoSalud =
   | 'positivas'
+  | 'covid_sin_restriccion'
   | 'revision'
   | 'sin_novedades'
   | 'sin_diligenciar';
@@ -258,6 +259,10 @@ export interface VeredictoSalud {
  * Veredicto de salud COHERENTE a partir del resumen de declaraciones: si Pharos
  * marca COVID positivo o retención por salud, el caso pasa a "Requiere
  * revisión" en vez de "Sin novedades" (bug de badges contradictorios).
+ *
+ * Excepción COVID: cuando el cuestionario de enfermedades está todo en "No" y la
+ * ÚNICA positiva es la prueba COVID-19 (P14), NO se marca "Requiere revisión"
+ * sino una alerta informativa no restrictiva ("COVID-19 · sin restricción").
  */
 export function veredictoSalud(d: {
   todas_negativas: boolean | null;
@@ -271,7 +276,16 @@ export function veredictoSalud(d: {
       cls: 'bg-destructive/10 text-destructive',
       icon: 'alert-triangle',
     };
-  if (d.todas_negativas === true && (d.covid_positivo || d.retiene_por_salud))
+  // La única positiva es la prueba COVID (P14): alerta no restrictiva. Debe ir
+  // ANTES de "Requiere revisión" para no restringir por la retención COVID.
+  if (d.todas_negativas === true && d.covid_positivo)
+    return {
+      estado: 'covid_sin_restriccion',
+      label: 'COVID-19 · sin restricción',
+      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+      icon: 'info',
+    };
+  if (d.todas_negativas === true && d.retiene_por_salud)
     return {
       estado: 'revision',
       label: 'Requiere revisión',
@@ -302,6 +316,10 @@ export const VEREDICTO_PILL: Record<string, { cls: string; icon: string }> = {
   requiere_revision: {
     cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
     icon: 'alert-triangle',
+  },
+  covid_sin_restriccion: {
+    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    icon: 'info',
   },
   con_positivas: {
     cls: 'bg-destructive/10 text-destructive',
