@@ -441,6 +441,7 @@ export class DetalleSolicitudComponent {
     return veredictoSalud({
       todas_negativas: d?.todas_negativas ?? null,
       covid_positivo: Boolean(d?.covid_positivo),
+      covid_vacunado: Boolean(d?.covid_vacunado),
       retiene_por_salud: Boolean(d?.retiene_por_salud),
     });
   });

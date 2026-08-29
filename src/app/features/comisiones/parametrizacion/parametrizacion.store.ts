@@ -1,4 +1,4 @@
-// Estado de Parametrización: las 8 entidades con su carga perezosa por pestaña. Como en
+// Estado de Parametrización: entidades con carga perezosa por pestaña. Como en
 // el original, cada entidad se trae COMPLETA (todas las páginas) y el filtrado, orden y
 // paginación son en cliente; tras cualquier mutación se recarga la entidad entera en vez
 // de parchear el arreglo local.
@@ -14,6 +14,7 @@ import {
   CommissionTypeRecord,
   DeferredPercentageRecord,
   DeferredRecord,
+  ExcludedContractRecord,
   SpecialCaseRecord,
 } from './parametrizacion.domain';
 
@@ -25,7 +26,8 @@ export type SeccionId =
   | 'configContrato'
   | 'configProducto'
   | 'ajustesComisiones'
-  | 'casosEspeciales';
+  | 'casosEspeciales'
+  | 'exclusionContratos';
 
 @Injectable()
 export class ParametrizacionStore {
@@ -40,6 +42,7 @@ export class ParametrizacionStore {
   readonly productConfig = signal<AutonomousPatrimonyRecord[]>([]);
   readonly commissionAdjustments = signal<CommissionConfigRecord[]>([]);
   readonly specialCases = signal<SpecialCaseRecord[]>([]);
+  readonly excludedContracts = signal<ExcludedContractRecord[]>([]);
 
   readonly loading = signal<Record<SeccionId, boolean>>({
     contabilidad: false,
@@ -50,10 +53,12 @@ export class ParametrizacionStore {
     configProducto: false,
     ajustesComisiones: false,
     casosEspeciales: false,
+    exclusionContratos: false,
   });
 
-  /** Los casos especiales muestran un aviso propio si su servicio falla. */
+  /** Aviso propio si el listado de la pestaña falla. */
   readonly errorCasosEspeciales = signal<string | null>(null);
+  readonly errorExclusionContratos = signal<string | null>(null);
 
   private marcar(seccion: SeccionId, valor: boolean): void {
     this.loading.update((prev) => ({ ...prev, [seccion]: valor }));
@@ -68,10 +73,14 @@ export class ParametrizacionStore {
     try {
       destino.set(await traer());
       if (seccion === 'casosEspeciales') this.errorCasosEspeciales.set(null);
+      if (seccion === 'exclusionContratos') this.errorExclusionContratos.set(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (seccion === 'casosEspeciales') {
         this.errorCasosEspeciales.set(msg);
+      }
+      if (seccion === 'exclusionContratos') {
+        this.errorExclusionContratos.set(msg);
       }
       this.toast.errorGenerico('fetch', msg);
     } finally {
@@ -135,6 +144,14 @@ export class ParametrizacionStore {
     );
   }
 
+  cargarExclusionContratos(): Promise<void> {
+    return this.cargar(
+      'exclusionContratos',
+      () => this.api.listExcludedContracts(),
+      this.excludedContracts,
+    );
+  }
+
   /** Lo que se recarga al entrar a cada pestaña (igual que el original). */
   cargarPestana(vista: string): void {
     if (vista === 'contabilidad') {
@@ -151,6 +168,8 @@ export class ParametrizacionStore {
       void this.cargarAjustes();
     } else if (vista === 'casos_especiales') {
       void this.cargarCasosEspeciales();
+    } else if (vista === 'exclusion_contratos') {
+      void this.cargarExclusionContratos();
     }
   }
 
@@ -201,6 +220,8 @@ export class ParametrizacionStore {
           return this.api.createCommissionAdjustment(datos as unknown as CommissionConfigRecord);
         case 'casosEspeciales':
           return this.api.createSpecialCase(datos as Partial<SpecialCaseRecord>);
+        case 'exclusionContratos':
+          return this.api.createExcludedContract(datos as Partial<ExcludedContractRecord>);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -242,6 +263,8 @@ export class ParametrizacionStore {
           return this.api.updateCommissionAdjustment(id, datos as unknown as CommissionConfigRecord);
         case 'casosEspeciales':
           return this.api.updateSpecialCase(id, datos as Partial<SpecialCaseRecord>);
+        case 'exclusionContratos':
+          return this.api.updateExcludedContract(id, datos as Partial<ExcludedContractRecord>);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -273,6 +296,8 @@ export class ParametrizacionStore {
           return this.api.deleteCommissionAdjustment(id);
         case 'casosEspeciales':
           return this.api.deleteSpecialCase(id);
+        case 'exclusionContratos':
+          return this.api.deleteExcludedContract(id);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -304,6 +329,8 @@ export class ParametrizacionStore {
           return this.api.toggleCommissionAdjustment(id, activo);
         case 'casosEspeciales':
           return this.api.toggleSpecialCase(id, activo);
+        case 'exclusionContratos':
+          return this.api.toggleExcludedContract(id, activo);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -335,6 +362,8 @@ export class ParametrizacionStore {
         return () => this.cargarAjustes();
       case 'casosEspeciales':
         return () => this.cargarCasosEspeciales();
+      case 'exclusionContratos':
+        return () => this.cargarExclusionContratos();
     }
   }
 
@@ -356,6 +385,8 @@ export class ParametrizacionStore {
         return this.commissionAdjustments() as unknown as Record<string, unknown>[];
       case 'casosEspeciales':
         return this.specialCases() as unknown as Record<string, unknown>[];
+      case 'exclusionContratos':
+        return this.excludedContracts() as unknown as Record<string, unknown>[];
     }
   }
 }

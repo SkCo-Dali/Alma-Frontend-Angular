@@ -150,14 +150,26 @@ export function buildGrupos(a: AfiliacionDetalleApi, sel: Tarea): GrupoDef[] {
       ],
     },
     {
-      title: 'Sumas aseguradas',
+      // Cúmulo REAL (control de cúmulos: pólizas vigentes + cotizaciones en
+      // trámite, la actual incluida). Si el bridge no respondió, todo viene
+      // null y el grupo se oculta — nunca se muestra el TotalCumulus de
+      // Pipeline, que era el bug del "cúmulo incompleto".
+      title: 'Cúmulo del cliente',
       icon: 'coins',
       filas: [
-        { k: 'Vida ahorro', v: positivo(su.vida_ahorro), num: true },
-        { k: 'Vida incapacidad', v: positivo(su.vida_incapacidad), num: true },
-        { k: 'Capital seguro', v: positivo(su.capital_seguro), num: true },
-        { k: 'Crea patrimonio', v: positivo(su.crea_patrimonio), num: true },
-        { k: 'Total cúmulo', v: positivo(su.total_cumulo), strong: true, num: true },
+        { k: 'Crea Ahorro', v: positivo(su.crea_ahorro), num: true },
+        { k: 'Crea Patrimonio', v: positivo(su.crea_patrimonio), num: true },
+        { k: 'Capital + Seguro', v: positivo(su.capital_seguro), num: true },
+        { k: 'Vida e Incapacidad', v: positivo(su.vida_incapacidad), num: true },
+        { k: 'Crea Serenidad', v: positivo(su.crea_serenidad), num: true },
+        {
+          k: 'Exposiciones',
+          v:
+            su.polizas_vigentes != null || su.en_tramite != null
+              ? `${su.polizas_vigentes ?? 0} vigente(s) · ${su.en_tramite ?? 0} en trámite`
+              : null,
+        },
+        { k: 'Total cúmulo', v: money(su.total_cumulo), strong: true, num: true },
       ],
     },
     {
