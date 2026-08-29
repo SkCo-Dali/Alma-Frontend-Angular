@@ -119,12 +119,18 @@ export interface AfiliacionDetalleApi {
     cobertura: string | null;
     estado_cobertura: string | null;
   };
+  // Cúmulo REAL del cliente (control de cúmulos vía bridge: pólizas vigentes
+  // + cotizaciones en trámite). Null = el bridge no respondió; se ocultan las
+  // filas en vez de mostrar el TotalCumulus de Pipeline, que nunca acumula.
   sumas: {
-    vida_ahorro: number | null;
-    vida_incapacidad: number | null;
-    capital_seguro: number | null;
+    crea_ahorro: number | null;
     crea_patrimonio: number | null;
+    capital_seguro: number | null;
+    vida_incapacidad: number | null;
+    crea_serenidad: number | null;
     total_cumulo: number | null;
+    polizas_vigentes: number | null;
+    en_tramite: number | null;
   };
   proceso: {
     fecha_recibida_estudio: string | null;
@@ -424,10 +430,15 @@ export class SuscripcionApi {
   emitirSolicitud(
     solicitudId: string,
     confirmacion: string,
+    opciones?: { cobertura?: 'VT' | 'VI'; observaciones?: string },
   ): Promise<{ contrato: string; advertencia: string | null }> {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/emitir`, {
       method: 'POST',
-      body: JSON.stringify({ confirmacion }),
+      body: JSON.stringify({
+        confirmacion,
+        cobertura: opciones?.cobertura ?? null,
+        observaciones: opciones?.observaciones || null,
+      }),
     });
   }
 
