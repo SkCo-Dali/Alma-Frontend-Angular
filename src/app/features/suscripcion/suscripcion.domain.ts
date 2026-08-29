@@ -296,7 +296,7 @@ export function veredictoSalud(d: {
   if (d.todas_negativas === true && d.retiene_por_salud && !d.covid_vacunado)
     return {
       estado: 'covid_sin_vacuna',
-      label: 'Sin vacuna COVID · sin restricción',
+      label: 'Sin vacuna COVID',
       cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
       icon: 'info',
     };
