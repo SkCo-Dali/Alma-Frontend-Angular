@@ -8,17 +8,48 @@
 // editarlas/eliminarlas. La galería carga sus propias plantillas (la página
 // /apps/suscripcion/plantillas ya no existe).
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { register as registerSwiper } from 'swiper/element/bundle';
 import { AuthService } from '../../core/auth/auth.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { HtmlCorreoPipe } from './html-correo.pipe';
 import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
+// Web component <swiper-container> (bundle: trae Navigation/Autoplay/FreeMode/
+// Mousewheel y sus estilos en shadow DOM). Registrar es idempotente.
+registerSwiper();
+
+/** El elemento swiper-container con la API que usamos (init="false"). */
+interface SwiperContainerEl extends HTMLElement {
+  initialize(): void;
+  swiper?: unknown;
+}
+
+// Configuración CALCADA del EmailTemplatesModal de Dali (swiper/react):
+// una sola fila en loop, autoplay 3s pausado con el mouse, arrastre libre
+// con inercia, rueda del mouse y flechas (ocultas en tablet como en Dali).
+const SWIPER_PARAMS = {
+  loop: true,
+  grabCursor: true,
+  freeMode: { enabled: true, momentumRatio: 0.3 },
+  mousewheel: { forceToAxis: true },
+  autoplay: { delay: 3000, disableOnInteraction: true, pauseOnMouseEnter: true },
+  spaceBetween: 14,
+  slidesPerView: 1.3,
+  navigation: true,
+  breakpoints: {
+    640: { slidesPerView: 2.3, spaceBetween: 14, navigation: { enabled: false } },
+    1024: { slidesPerView: 3.3, spaceBetween: 16, navigation: { enabled: true } },
+    1440: { slidesPerView: 4.3, spaceBetween: 18, navigation: { enabled: true } },
+  },
+};
+
 @Component({
   selector: 'alma-galeria-plantillas-dialog',
   imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, HtmlCorreoPipe],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   styles: [`
     .glass { background: color-mix(in oklab, var(--background) 60%, transparent);
       border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
@@ -43,8 +74,11 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
     .card:hover .borde { opacity: 1; }
     .borde { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; opacity: 0;
       background: linear-gradient(90deg, var(--primary), #34d399); transition: opacity .3s; }
-    .thumb { position: relative; height: 176px; overflow: hidden; background: #fff;
+    /* Alturas de miniatura de Dali: h-40 / md:h-48 / lg:h-52 */
+    .thumb { position: relative; height: 160px; overflow: hidden; background: #fff;
       border-bottom: 1px solid color-mix(in oklab, var(--border) 40%, transparent); }
+    @media (min-width: 768px) { .thumb { height: 192px; } }
+    @media (min-width: 1024px) { .thumb { height: 208px; } }
     .thumb .mini { position: absolute; inset: 0; padding: 8px; overflow: hidden;
       pointer-events: none; transform: scale(0.25); transform-origin: top left;
       width: 400%; height: 400%; color: #1f2937; background: #fff;
@@ -75,7 +109,8 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
             </div>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <input [(ngModel)]="busqueda" placeholder="Buscar plantillas..."
+            <input [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)"
+                   placeholder="Buscar plantillas..."
                    class="alma-input h-8 w-48 rounded-lg text-sm sm:w-56" />
             <button type="button"
                     class="h-8 rounded-lg bg-gradient-to-r from-primary to-emerald-500 px-3 text-xs font-medium text-white shadow-md shadow-primary/20">
@@ -106,8 +141,10 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
           }
         </div>
 
-        <!-- Grid de tarjetas: el CLIC previsualiza (como Dali) -->
-        <div class="min-h-0 flex-1 overflow-y-auto pt-1">
+        <!-- Carrusel de tarjetas (Swiper, como Dali): UNA fila con flechas,
+             arrastre libre, rueda del mouse y autoplay cada 3s que se pausa
+             con el mouse encima. El CLIC previsualiza. -->
+        <div class="min-h-0 flex-1 overflow-hidden pt-1">
           @if (cargando()) {
             <div class="flex flex-col items-center gap-2 p-12">
               <alma-loader [size]="56" />
@@ -121,27 +158,39 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
               No hay plantillas para esa búsqueda.
             </div>
           } @else {
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              @for (p of filtradas(); track p.id) {
-                <button type="button" class="card" (click)="previa.set(p)">
-                  <div class="thumb">
-                    <div class="mini" [innerHTML]="p.cuerpo_html | htmlCorreo"></div>
-                    <div class="velo"><span>Ver plantilla</span></div>
-                  </div>
-                  <div class="flex flex-1 flex-col gap-1 p-3">
-                    <h4 class="line-clamp-2 min-h-[2.4rem] text-sm font-semibold leading-snug">{{ p.nombre }}</h4>
-                    <p class="line-clamp-1 text-xs text-muted-foreground">{{ p.asunto }}</p>
-                    <div class="mt-auto flex flex-wrap gap-1.5 pt-1">
-                      <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">{{ p.categoria }}</span>
-                      @if (!p.activa) {
-                        <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Inactiva</span>
-                      }
-                    </div>
-                  </div>
-                  <div class="borde"></div>
-                </button>
-              }
-            </div>
+            <!-- track por la clave de la lista: al cambiar filtros/búsqueda el
+                 carrusel se recrea limpio (loop+autoplay no soportan bien que
+                 Angular les mute los slides por debajo). -->
+            @for (k of [claveLista()]; track k) {
+              <swiper-container
+                #swiperEl
+                init="false"
+                class="block h-full w-full"
+                style="--swiper-navigation-color: var(--primary); --swiper-navigation-size: 18px;"
+              >
+                @for (p of filtradas(); track p.id) {
+                  <swiper-slide class="pb-2" style="height: auto;">
+                    <button type="button" class="card h-full w-full" (click)="previa.set(p)">
+                      <div class="thumb">
+                        <div class="mini" [innerHTML]="p.cuerpo_html | htmlCorreo"></div>
+                        <div class="velo"><span>Ver plantilla</span></div>
+                      </div>
+                      <div class="flex flex-1 flex-col gap-1 p-3">
+                        <h4 class="line-clamp-2 min-h-[2.4rem] text-sm font-semibold leading-snug">{{ p.nombre }}</h4>
+                        <p class="line-clamp-1 text-xs text-muted-foreground">{{ p.asunto }}</p>
+                        <div class="mt-auto flex flex-wrap gap-1.5 pt-1">
+                          <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">{{ p.categoria }}</span>
+                          @if (!p.activa) {
+                            <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Inactiva</span>
+                          }
+                        </div>
+                      </div>
+                      <div class="borde"></div>
+                    </button>
+                  </swiper-slide>
+                }
+              </swiper-container>
+            }
           }
         </div>
       </div>
@@ -224,7 +273,7 @@ export class GaleriaPlantillasDialogComponent {
   /** El usuario pidió editar esta plantilla (el padre abre el editor). */
   readonly editar = output<PlantillaCorreoApi>();
 
-  protected busqueda = '';
+  protected readonly busqueda = signal('');
   protected readonly categoria = signal('');
   protected readonly tipo = signal<'todas' | 'mias'>('todas');
   protected readonly previa = signal<PlantillaCorreoApi | null>(null);
@@ -271,8 +320,8 @@ export class GaleriaPlantillasDialogComponent {
     }
   }
 
-  protected filtradas(): PlantillaCorreoApi[] {
-    const q = this.busqueda.trim().toLowerCase();
+  protected readonly filtradas = computed<PlantillaCorreoApi[]>(() => {
+    const q = this.busqueda().trim().toLowerCase();
     const yo = (this.auth.user()?.correo ?? '').toLowerCase();
     return this.plantillas().filter(
       (p) =>
@@ -282,7 +331,22 @@ export class GaleriaPlantillasDialogComponent {
         (!this.categoria() || p.categoria === this.categoria()) &&
         (!q || p.nombre.toLowerCase().includes(q) || p.asunto.toLowerCase().includes(q)),
     );
-  }
+  });
+
+  /** Clave estable de la lista: recrea el carrusel al cambiar el filtro. */
+  protected readonly claveLista = computed(() =>
+    this.filtradas().map((p) => p.id).join('|'),
+  );
+
+  private readonly swiperRef = viewChild<ElementRef<SwiperContainerEl>>('swiperEl');
+
+  private readonly iniciarSwiper = effect(() => {
+    const el = this.swiperRef()?.nativeElement;
+    if (el && !el.swiper) {
+      Object.assign(el, SWIPER_PARAMS);
+      el.initialize();
+    }
+  });
 
   protected usar(p: PlantillaCorreoApi): void {
     this.previa.set(null);
