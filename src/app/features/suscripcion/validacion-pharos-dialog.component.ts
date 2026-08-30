@@ -155,6 +155,12 @@ function dia(iso: unknown): string | null {
                   </div>
                 }
               </div>
+              @if (sinEtiqueta() > 0) {
+                <p class="mt-1 px-1 text-[11px] text-muted-foreground">
+                  +{{ sinEtiqueta() }} campo(s) técnicos del producto sin etiqueta de
+                  negocio (ids internos de Pharos, no se muestran).
+                </p>
+              }
             }
 
             <!-- CertifiAportes -->
@@ -230,8 +236,23 @@ export class ValidacionPharosDialogComponent {
       .filter((f) => f.valor !== '');
   }
 
+  // Solo las declaraciones CALIBRADAS (con etiqueta de negocio). Las que el
+  // bridge aún no tiene mapeadas son ids internos de Pharos y mostrarlas como
+  // "Declaración 346..." confunde más de lo que aporta: van en un contador.
   protected readonly declaracionesProducto = computed<FilaValor[]>(() =>
-    this.filasDe(this.nodo()?.declaracionesRaiz ?? []),
+    this.filasDe(
+      (this.nodo()?.declaracionesRaiz ?? []).filter((d) => d.descripcion != null),
+    ),
+  );
+
+  protected readonly sinEtiqueta = computed<number>(
+    () =>
+      (this.nodo()?.declaracionesRaiz ?? []).filter(
+        (d) =>
+          d.descripcion == null &&
+          d.visibleType !== 4 &&
+          (valorLegible(d.valor) ?? '') !== '',
+      ).length,
   );
 
   protected readonly certifiAportes = computed<FilaValor[]>(() => {
