@@ -126,16 +126,21 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
       border: 0; padding: 4px 10px; background: transparent; cursor: pointer;
       color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
     .toggle button.on { background: var(--primary); color: #fff; }
-    /* Lienzo TipTap (mismo look del prose de Dali) */
-    .lienzo { background: #fff; }
-    .lienzo :global(.ProseMirror) { outline: none; }
-    .lienzo .tiptap { min-height: 46vh; max-height: 58vh; overflow-y: auto;
-      padding: 18px 20px 48px; color: #1f2937; outline: none;
+    /* Lienzo TipTap (mismo look del prose de Dali). OJO encapsulación de
+       Angular: el div .tiptap lo crea ProseMirror en runtime SIN el atributo
+       de scoping del componente, así que sus reglas van con ::ng-deep — sin
+       eso el editor nace SIN altura y el modal de envío se ve aplastado. El
+       min-height también vive en el wrapper .lienzo (que sí es del template)
+       como doble seguro. */
+    .lienzo { background: #fff; min-height: 46vh; }
+    :host ::ng-deep .lienzo .tiptap { min-height: 46vh; max-height: 58vh;
+      overflow-y: auto; padding: 18px 20px 48px; color: #1f2937; outline: none;
       font-family: Arial, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.55; }
-    .lienzo .tiptap p { margin: 0 0 .6em; }
-    .lienzo .tiptap img { max-width: 100%; height: auto; }
-    .lienzo .tiptap ul { list-style: disc; padding-left: 1.4em; }
-    .lienzo .tiptap ol { list-style: decimal; padding-left: 1.4em; }
+    :host ::ng-deep .lienzo .tiptap p { margin: 0 0 .6em; }
+    :host ::ng-deep .lienzo .tiptap img { max-width: 100%; height: auto; }
+    :host ::ng-deep .lienzo .tiptap ul { list-style: disc; padding-left: 1.4em; }
+    :host ::ng-deep .lienzo .tiptap ol { list-style: decimal; padding-left: 1.4em; }
+    :host ::ng-deep .lienzo .ProseMirror { outline: none; }
     textarea.codigo { display: block; width: 100%; min-height: 46vh; max-height: 58vh;
       border: 0; border-radius: 6px; resize: vertical; padding: 14px 16px;
       background: #101613; color: #d1fae5;
