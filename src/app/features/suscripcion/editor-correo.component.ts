@@ -1,15 +1,18 @@
-// Editor enriquecido de plantillas de correo — réplica del editor del módulo
-// de correos de Dali: barra de formato (negrita/cursiva/subrayado, fuente,
-// tamaño, color, listas, alineación, imagen, emoji), "En Blanco", alternador
-// Visual/HTML y campos dinámicos insertables al cursor (clic o arrastre).
-// El HTML resultante se guarda tal cual; las variables {{clave}} las renderiza
-// el backend con los datos reales de la cotización al enviar.
+// Editor de correos — réplica 1:1 del RichTextEditor + toolbar del módulo de
+// correos de Dali (EmailComposer/EditTemplateDialog), portada a Angular sin
+// dependencias: misma barra (B/I/U, Fuente ▾, Tamaño ▾, color A, listas,
+// alineaciones, imagen, emoji, "En Blanco" ámbar, acciones "Plantillas" y
+// "+ Campos"), asunto sin borde debajo de la barra, banda de campos
+// arrastrables y lienzo blanco tipo página con el conmutador Visual/HTML
+// flotante. Lo único distinto a Dali son los campos: aquí son las variables
+// {{...}} de la cotización.
 
 import {
   Component,
   ElementRef,
   effect,
   input,
+  model,
   output,
   signal,
   viewChild,
@@ -17,164 +20,314 @@ import {
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 
-const FUENTES = ['Segoe UI', 'Arial', 'Georgia', 'Verdana', 'Trebuchet MS', 'Courier New'];
-// execCommand fontSize usa 1–7; etiquetas legibles como en Dali.
-const TAMANOS: Array<[string, string]> = [
-  ['1', 'Muy pequeño'], ['2', 'Pequeño'], ['3', 'Normal'],
-  ['4', 'Mediano'], ['5', 'Grande'], ['6', 'Muy grande'], ['7', 'Enorme'],
+const FUENTES = [
+  ['Arial', 'Arial, sans-serif'],
+  ['Times New Roman', 'Times New Roman, serif'],
+  ['Courier New', 'Courier New, monospace'],
+  ['Georgia', 'Georgia, serif'],
+  ['Verdana', 'Verdana, sans-serif'],
+  ['Tahoma', 'Tahoma, sans-serif'],
+] as const;
+
+// execCommand usa tamaños 1–7; se muestran los px equivalentes (como Dali).
+const TAMANOS = [
+  ['1', '10px'], ['2', '13px'], ['3', '16px'], ['4', '18px'],
+  ['5', '24px'], ['6', '32px'], ['7', '48px'],
+] as const;
+
+const EMOJIS = [
+  '😀', '😄', '🙂', '😉', '😍', '🤝', '👋', '👍',
+  '🙏', '👏', '💪', '🎉', '🎯', '✨', '✅', '☑️',
+  '⚠️', '❗', '📌', '📎', '📅', '🗓️', '⏰', '📈',
+  '💚', '💼', '📄', '📝', '✉️', '📣', '🛡️', '☂️',
 ];
-const EMOJIS = ['😀', '🙂', '👍', '🙏', '🎉', '✅', '⚠️', '📌', '📎', '📅', '💚', '🌱', '💼', '📈', '☂️', '🛡️'];
 
 @Component({
   selector: 'alma-editor-correo',
   imports: [FormsModule, LucideAngularModule],
   styles: [`
-    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
-      border: 1px solid var(--border); border-bottom: 0; border-radius: 12px 12px 0 0;
-      padding: 6px 8px; background: color-mix(in oklab, var(--muted) 22%, transparent); }
+    :host { display: block; }
+    /* Barra de herramientas (Dali: bg-muted/30, borde suave, una sola fila) */
+    .barra { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+      overflow-x: auto; scrollbar-width: thin;
+      background: color-mix(in oklab, var(--muted) 30%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+      border-radius: 10px; padding: 6px; }
     .tb { display: inline-flex; align-items: center; justify-content: center;
-      min-width: 30px; height: 30px; padding: 0 7px; border-radius: 8px; border: 0;
-      background: transparent; color: var(--foreground); cursor: pointer; font-size: 13px; }
-    .tb:hover { background: color-mix(in oklab, var(--muted) 55%, transparent); }
-    .tb.on { background: var(--primary); color: #fff; }
-    .tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-    select.tb-sel { height: 30px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--background); color: var(--foreground); font-size: 12.5px; padding: 0 4px; }
-    .lienzo { min-height: 260px; max-height: 46vh; overflow-y: auto;
-      border: 1px solid var(--border); border-radius: 0 0 12px 12px; padding: 14px 16px;
-      background: #fff; color: #1c1c1c; font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 14px; line-height: 1.5; }
-    .lienzo:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
-    textarea.html { min-height: 260px; max-height: 46vh; width: 100%; resize: vertical;
-      border: 1px solid var(--border); border-radius: 0 0 12px 12px; padding: 12px 14px;
-      background: var(--background); color: var(--foreground);
+      height: 28px; min-width: 28px; padding: 0 4px; border: 0; border-radius: 8px;
+      background: transparent; color: var(--foreground); cursor: pointer;
+      font-size: 12px; flex-shrink: 0; }
+    .tb:hover { background: color-mix(in oklab, var(--muted) 70%, transparent); }
+    .tb.txt { padding: 0 8px; gap: 2px; }
+    .tb.ambar { color: #d97706; gap: 4px; padding: 0 8px; }
+    .tb.ambar:hover { background: #fef3c7; color: #b45309; }
+    .sep { width: 1px; height: 20px; flex-shrink: 0; margin: 0 2px;
+      background: color-mix(in oklab, var(--border) 80%, transparent); }
+    /* Botones de acción a la derecha (pill glass, como Dali) */
+    .acciones { display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+      margin-left: auto; padding: 2px;
+      background: color-mix(in oklab, var(--background) 40%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+      border-radius: 8px; }
+    .accion { display: inline-flex; align-items: center; gap: 4px; border: 0;
+      padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      background: transparent; color: var(--muted-foreground); cursor: pointer;
+      white-space: nowrap; }
+    .accion:hover { color: var(--foreground);
+      background: color-mix(in oklab, var(--muted) 70%, transparent); }
+    .accion.activa { background: color-mix(in oklab, var(--primary) 15%, transparent);
+      color: var(--primary); }
+    /* Asunto sin borde con línea inferior (Dali) */
+    .asunto { border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent); }
+    .asunto:focus-within { border-color: var(--primary); }
+    .asunto input { width: 100%; height: 36px; border: 0; outline: none;
+      background: transparent; color: var(--foreground); font-size: 14px; }
+    /* Banda de campos (Dali: caja gris con chips) */
+    .campos { background: color-mix(in oklab, var(--muted) 35%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+      border-radius: 10px; padding: 8px 10px; }
+    .chip { display: inline-flex; align-items: center; border: 0; cursor: grab;
+      padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      background: #dbeafe; color: #1d4ed8; }
+    .chip:hover { background: #bfdbfe; }
+    .chip:active { cursor: grabbing; }
+    :host-context(.dark) .chip, :host-context([data-theme="dark"]) .chip {
+      background: rgba(59,130,246,.18); color: #93c5fd; }
+    /* Lienzo: área gris con página blanca centrada + toggle flotante (Dali) */
+    .zona { position: relative;
+      background: color-mix(in oklab, var(--muted) 25%, transparent);
+      border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+      border-radius: 10px; padding: 12px; }
+    .toggle { position: absolute; top: 8px; right: 8px; z-index: 10;
+      display: flex; align-items: center; overflow: hidden; font-size: 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: color-mix(in oklab, var(--background) 85%, transparent);
+      backdrop-filter: blur(4px); box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+    .toggle button { display: inline-flex; align-items: center; gap: 4px;
+      border: 0; padding: 4px 10px; background: transparent; cursor: pointer;
+      color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
+    .toggle button.on { background: var(--primary); color: #fff; }
+    .pagina { background: #fff; color: #1f2937; max-width: 720px; margin: 0 auto;
+      min-height: 300px; max-height: 44vh; overflow-y: auto; border-radius: 6px;
+      box-shadow: 0 1px 3px rgb(0 0 0 / .12); padding: 20px 24px;
+      font-family: Arial, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.55; }
+    .pagina:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .pagina img { max-width: 100%; }
+    textarea.codigo { display: block; width: 100%; min-height: 300px; max-height: 44vh;
+      border: 0; border-radius: 6px; resize: vertical; padding: 14px 16px;
+      background: #101613; color: #d1fae5;
       font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; }
-    .emoji-pop { position: absolute; z-index: 30; margin-top: 4px; display: grid;
-      grid-template-columns: repeat(8, 30px); gap: 2px; padding: 8px;
-      border: 1px solid var(--border); border-radius: 12px; background: var(--background);
-      box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
-    .emoji-pop button { border: 0; background: transparent; font-size: 17px;
-      height: 30px; border-radius: 6px; cursor: pointer; }
-    .emoji-pop button:hover { background: color-mix(in oklab, var(--muted) 55%, transparent); }
+    /* Paneles flotantes (dropdowns propios) */
+    .panel { position: absolute; z-index: 40; margin-top: 4px; min-width: 150px;
+      border: 1px solid var(--border); border-radius: 10px; padding: 4px;
+      background: var(--background); box-shadow: 0 8px 24px rgb(0 0 0 / .16); }
+    .panel button { display: block; width: 100%; text-align: left; border: 0;
+      background: transparent; padding: 6px 10px; border-radius: 6px;
+      font-size: 13px; color: var(--foreground); cursor: pointer; }
+    .panel button:hover { background: color-mix(in oklab, var(--muted) 60%, transparent); }
+    .panel.emojis { display: grid; grid-template-columns: repeat(8, 32px); gap: 2px; }
+    .panel.emojis button { padding: 0; height: 32px; text-align: center; font-size: 17px; }
+    .colorA { position: relative; display: inline-flex; flex-direction: column;
+      align-items: center; justify-content: center; }
+    .colorA b { font-size: 13px; line-height: 1; font-weight: 700; }
+    .colorA i { display: block; width: 14px; height: 3px; border-radius: 2px; margin-top: 1px; }
   `],
   template: `
-    <div class="relative">
-      <div class="toolbar">
-        <button type="button" class="tb font-bold" title="Negrita" (mousedown)="cmd($event, 'bold')">B</button>
-        <button type="button" class="tb italic" title="Cursiva" (mousedown)="cmd($event, 'italic')">I</button>
-        <button type="button" class="tb underline" title="Subrayado" (mousedown)="cmd($event, 'underline')">U</button>
-        <span class="tb-sep"></span>
-        <select class="tb-sel" title="Fuente" (change)="cmdValor('fontName', $any($event.target).value); $any($event.target).value=''">
-          <option value="" disabled selected>Fuente</option>
-          @for (f of fuentes; track f) { <option [value]="f">{{ f }}</option> }
-        </select>
-        <select class="tb-sel" title="Tamaño" (change)="cmdValor('fontSize', $any($event.target).value); $any($event.target).value=''">
-          <option value="" disabled selected>Tamaño</option>
-          @for (t of tamanos; track t[0]) { <option [value]="t[0]">{{ t[1] }}</option> }
-        </select>
-        <label class="tb" title="Color de texto" style="padding:0 4px;">
-          <lucide-icon name="baseline" [size]="15" />
-          <input type="color" (change)="cmdValor('foreColor', $any($event.target).value)"
-                 style="width:18px;height:18px;border:0;background:transparent;padding:0;margin-left:2px;cursor:pointer;" />
+    <div class="relative flex min-h-0 flex-col gap-2">
+      <!-- ── Barra de herramientas (una sola fila, como Dali) ── -->
+      <div class="barra">
+        <button type="button" class="tb" title="Negrita" (mousedown)="cmd($event, 'bold')"><b>B</b></button>
+        <button type="button" class="tb italic" title="Cursiva" (mousedown)="cmd($event, 'italic')"><i>I</i></button>
+        <button type="button" class="tb underline" title="Subrayado" (mousedown)="cmd($event, 'underline')"><u>U</u></button>
+        <span class="sep"></span>
+
+        <span class="relative">
+          <button type="button" class="tb txt" (mousedown)="$event.preventDefault(); abrirPanel('fuente')">
+            Fuente <lucide-icon name="chevron-down" [size]="12" />
+          </button>
+          @if (panel() === 'fuente') {
+            <div class="panel">
+              @for (f of fuentes; track f[0]) {
+                <button type="button" [style.fontFamily]="f[1]" (mousedown)="elegir($event, 'fontName', f[1])">{{ f[0] }}</button>
+              }
+            </div>
+          }
+        </span>
+        <span class="relative">
+          <button type="button" class="tb txt" (mousedown)="$event.preventDefault(); abrirPanel('tamano')">
+            Tamaño <lucide-icon name="chevron-down" [size]="12" />
+          </button>
+          @if (panel() === 'tamano') {
+            <div class="panel">
+              @for (t of tamanos; track t[0]) {
+                <button type="button" (mousedown)="elegir($event, 'fontSize', t[0])">{{ t[1] }}</button>
+              }
+            </div>
+          }
+        </span>
+        <span class="sep"></span>
+
+        <label class="tb colorA" title="Color de texto">
+          <b>A</b><i [style.background]="color()"></i>
+          <input type="color" [value]="color()" (change)="cambiarColor($any($event.target).value)"
+                 style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
         </label>
-        <span class="tb-sep"></span>
-        <button type="button" class="tb" title="Lista con viñetas" (mousedown)="cmd($event, 'insertUnorderedList')"><lucide-icon name="list" [size]="16" /></button>
-        <button type="button" class="tb" title="Lista numerada" (mousedown)="cmd($event, 'insertOrderedList')"><lucide-icon name="list-ordered" [size]="16" /></button>
-        <span class="tb-sep"></span>
-        <button type="button" class="tb" title="Alinear a la izquierda" (mousedown)="cmd($event, 'justifyLeft')"><lucide-icon name="align-left" [size]="16" /></button>
-        <button type="button" class="tb" title="Centrar" (mousedown)="cmd($event, 'justifyCenter')"><lucide-icon name="align-center" [size]="16" /></button>
-        <button type="button" class="tb" title="Alinear a la derecha" (mousedown)="cmd($event, 'justifyRight')"><lucide-icon name="align-right" [size]="16" /></button>
-        <button type="button" class="tb" title="Justificar" (mousedown)="cmd($event, 'justifyFull')"><lucide-icon name="align-justify" [size]="16" /></button>
-        <span class="tb-sep"></span>
-        <button type="button" class="tb" title="Insertar imagen (URL o archivo)" (mousedown)="imagen($event)"><lucide-icon name="image" [size]="16" /></button>
-        <button type="button" class="tb" title="Emoji" (mousedown)="$event.preventDefault(); emojiAbierto.set(!emojiAbierto())"><lucide-icon name="smile" [size]="16" /></button>
-        <span class="tb-sep"></span>
-        <button type="button" class="tb" title="Vaciar el contenido" (mousedown)="enBlanco($event)">
-          <lucide-icon name="eraser" [size]="15" />&nbsp;En Blanco
+        <span class="sep"></span>
+
+        <button type="button" class="tb" title="Lista" (mousedown)="cmd($event, 'insertUnorderedList')"><lucide-icon name="list" [size]="15" /></button>
+        <button type="button" class="tb" title="Lista numerada" (mousedown)="cmd($event, 'insertOrderedList')"><lucide-icon name="list-ordered" [size]="15" /></button>
+        <span class="sep"></span>
+
+        <button type="button" class="tb" title="Alinear izquierda" (mousedown)="cmd($event, 'justifyLeft')"><lucide-icon name="align-left" [size]="15" /></button>
+        <button type="button" class="tb" title="Centrar" (mousedown)="cmd($event, 'justifyCenter')"><lucide-icon name="align-center" [size]="15" /></button>
+        <button type="button" class="tb" title="Alinear derecha" (mousedown)="cmd($event, 'justifyRight')"><lucide-icon name="align-right" [size]="15" /></button>
+        <button type="button" class="tb" title="Justificar" (mousedown)="cmd($event, 'justifyFull')"><lucide-icon name="align-justify" [size]="15" /></button>
+        <span class="sep"></span>
+
+        <button type="button" class="tb" title="Insertar imagen" (mousedown)="imagen($event)"><lucide-icon name="image" [size]="15" /></button>
+        <span class="relative">
+          <button type="button" class="tb" title="Insertar emoji" (mousedown)="$event.preventDefault(); abrirPanel('emoji')"><lucide-icon name="smile" [size]="15" /></button>
+          @if (panel() === 'emoji') {
+            <div class="panel emojis">
+              @for (e of emojis; track e) {
+                <button type="button" (mousedown)="insertarEmoji($event, e)">{{ e }}</button>
+              }
+            </div>
+          }
+        </span>
+        <span class="sep"></span>
+
+        <button type="button" class="tb ambar" title="Limpiar todo el contenido" (mousedown)="enBlanco($event)">
+          <lucide-icon name="eraser" [size]="14" /> En Blanco
         </button>
-        <span style="flex:1"></span>
-        <button type="button" class="tb" [class.on]="modo() === 'visual'" (click)="cambiarModo('visual')">
-          <lucide-icon name="eye" [size]="14" />&nbsp;Visual
-        </button>
-        <button type="button" class="tb" [class.on]="modo() === 'html'" (click)="cambiarModo('html')">
-          <lucide-icon name="code" [size]="14" />&nbsp;HTML
-        </button>
+
+        <div class="acciones">
+          @if (conPlantillas()) {
+            <button type="button" class="accion" (click)="abrirPlantillas.emit()">
+              <lucide-icon name="file-text" [size]="14" /> Plantillas
+            </button>
+          }
+          <button type="button" class="accion" [class.activa]="camposVisibles()" (click)="camposVisibles.set(!camposVisibles())">
+            <lucide-icon name="plus" [size]="14" /> Campos
+          </button>
+        </div>
       </div>
 
-      @if (emojiAbierto()) {
-        <div class="emoji-pop">
-          @for (e of emojis; track e) {
-            <button type="button" (mousedown)="insertarEmoji($event, e)">{{ e }}</button>
-          }
+      <!-- ── Asunto (línea sin borde, como Dali) ── -->
+      <div class="asunto">
+        <input
+          [ngModel]="asunto()"
+          (ngModelChange)="asunto.set($event)"
+          placeholder="Escribe un Asunto"
+          maxlength="250"
+          (focus)="objetivo = 'asunto'"
+          (dragover)="$event.preventDefault()"
+        />
+      </div>
+
+      <!-- ── Banda de campos dinámicos ── -->
+      @if (camposVisibles()) {
+        <div class="campos">
+          <div class="flex flex-wrap gap-1.5">
+            @for (v of listaVariables(); track v.clave) {
+              <button
+                type="button"
+                class="chip"
+                draggable="true"
+                [title]="v.titulo"
+                (dragstart)="arrastrar($event, v.clave)"
+                (click)="insertarVariable(v.clave)"
+              >
+                {{ v.etiqueta }}
+              </button>
+            }
+          </div>
+          <p class="mt-1.5 text-[11px] text-muted-foreground">
+            Arrastra los campos al asunto o contenido del email para insertarlos
+          </p>
         </div>
       }
 
-      @if (modo() === 'visual') {
-        <!-- El correo se ve sobre blanco (como lo verá el destinatario). -->
-        <div
-          #lienzo
-          class="lienzo"
-          contenteditable="true"
-          (input)="sincronizarDesdeVisual()"
-          (focus)="focusEditor.emit()"
-        ></div>
-      } @else {
-        <textarea
-          class="html"
-          [ngModel]="valorHtml()"
-          (ngModelChange)="escribirHtml($event)"
-          (focus)="focusEditor.emit()"
-          spellcheck="false"
-        ></textarea>
-      }
+      <!-- ── Lienzo con conmutador Visual/HTML flotante ── -->
+      <div class="zona">
+        <div class="toggle">
+          <button type="button" [class.on]="modo() === 'visual'" (click)="cambiarModo('visual')">
+            <lucide-icon name="eye" [size]="12" /> Visual
+          </button>
+          <button type="button" [class.on]="modo() === 'html'" (click)="cambiarModo('html')">
+            <lucide-icon name="code" [size]="12" /> HTML
+          </button>
+        </div>
+        @if (modo() === 'visual') {
+          <div
+            #lienzo
+            class="pagina"
+            contenteditable="true"
+            (input)="sincronizar()"
+            (focus)="objetivo = 'cuerpo'"
+          ></div>
+        } @else {
+          <textarea
+            class="codigo"
+            [ngModel]="value()"
+            (ngModelChange)="escribirHtml($event)"
+            placeholder="Código HTML…"
+            spellcheck="false"
+          ></textarea>
+        }
+      </div>
     </div>
   `,
 })
 export class EditorCorreoComponent {
-  /** HTML inicial (se re-aplica cuando cambia desde afuera). */
-  readonly value = input<string>('');
-  readonly valueChange = output<string>();
-  /** El padre lo usa para dirigir la inserción de campos (asunto vs cuerpo). */
-  readonly focusEditor = output<void>();
+  /** Asunto y cuerpo como modelos two-way. */
+  readonly asunto = model<string>('');
+  readonly value = model<string>('');
+  /** Variables {{clave}} → descripción (los campos de Alma). */
+  readonly variables = input<Record<string, string>>({});
+  /** Mostrar el botón "Plantillas" (el padre abre su galería). */
+  readonly conPlantillas = input<boolean>(true);
+  readonly abrirPlantillas = output<void>();
 
   protected readonly modo = signal<'visual' | 'html'>('visual');
-  protected readonly valorHtml = signal<string>('');
-  protected readonly emojiAbierto = signal(false);
+  protected readonly panel = signal<null | 'fuente' | 'tamano' | 'emoji'>(null);
+  protected readonly color = signal('#000000');
+  protected readonly camposVisibles = signal(true);
+  protected objetivo: 'asunto' | 'cuerpo' = 'cuerpo';
+
   protected readonly fuentes = FUENTES;
   protected readonly tamanos = TAMANOS;
   protected readonly emojis = EMOJIS;
 
   private readonly lienzo = viewChild<ElementRef<HTMLDivElement>>('lienzo');
-  private ultimoValueExterno = '';
+  private ultimoExterno = '';
 
   constructor() {
-    // input() no es two-way: cuando el padre cambia `value` (abrir otra
-    // plantilla), se re-pinta el lienzo; las ediciones propias no rebotan
-    // porque `ultimoValueExterno` las filtra.
     effect(() => {
-      this.value();
-      this.aplicarValorExterno();
+      const v = this.value() ?? '';
+      if (v === this.ultimoExterno) return;
+      this.ultimoExterno = v;
+      queueMicrotask(() => {
+        const el = this.lienzo()?.nativeElement;
+        if (el && el.innerHTML !== v) el.innerHTML = v;
+      });
     });
   }
 
-  private aplicarValorExterno(): void {
-    const v = this.value() ?? '';
-    if (v === this.ultimoValueExterno) return;
-    this.ultimoValueExterno = v;
-    this.valorHtml.set(v);
-    queueMicrotask(() => {
-      const el = this.lienzo()?.nativeElement;
-      if (el && el.innerHTML !== v) el.innerHTML = v;
-    });
+  protected listaVariables(): Array<{ clave: string; etiqueta: string; titulo: string }> {
+    return Object.entries(this.variables()).map(([clave, titulo]) => ({
+      clave,
+      etiqueta: `{{${clave}}}`,
+      titulo,
+    }));
   }
 
   private emitir(html: string): void {
-    this.valorHtml.set(html);
-    this.ultimoValueExterno = html;
-    this.valueChange.emit(html);
+    this.ultimoExterno = html;
+    this.value.set(html);
   }
 
-  protected sincronizarDesdeVisual(): void {
+  protected sincronizar(): void {
     const el = this.lienzo()?.nativeElement;
     if (el) this.emitir(el.innerHTML);
   }
@@ -185,52 +338,59 @@ export class EditorCorreoComponent {
 
   protected cambiarModo(m: 'visual' | 'html'): void {
     this.modo.set(m);
-    this.emojiAbierto.set(false);
+    this.panel.set(null);
     if (m === 'visual') {
       queueMicrotask(() => {
         const el = this.lienzo()?.nativeElement;
-        if (el) el.innerHTML = this.valorHtml();
+        if (el) el.innerHTML = this.value();
       });
     }
   }
 
-  /** mousedown + preventDefault conserva la selección del lienzo. */
-  protected cmd(ev: Event, comando: string): void {
-    ev.preventDefault();
-    document.execCommand(comando, false);
-    this.sincronizarDesdeVisual();
+  protected abrirPanel(p: 'fuente' | 'tamano' | 'emoji'): void {
+    this.panel.set(this.panel() === p ? null : p);
   }
 
-  protected cmdValor(comando: string, valor: string): void {
-    if (!valor) return;
+  protected cmd(ev: Event, comando: string): void {
+    ev.preventDefault();
+    this.panel.set(null);
+    this.lienzo()?.nativeElement.focus();
+    document.execCommand(comando, false);
+    this.sincronizar();
+  }
+
+  protected elegir(ev: Event, comando: string, valor: string): void {
+    ev.preventDefault();
+    this.panel.set(null);
     this.lienzo()?.nativeElement.focus();
     document.execCommand(comando, false, valor);
-    this.sincronizarDesdeVisual();
+    this.sincronizar();
+  }
+
+  protected cambiarColor(valor: string): void {
+    this.color.set(valor);
+    this.lienzo()?.nativeElement.focus();
+    document.execCommand('foreColor', false, valor);
+    this.sincronizar();
   }
 
   protected insertarEmoji(ev: Event, emoji: string): void {
     ev.preventDefault();
-    this.emojiAbierto.set(false);
+    this.panel.set(null);
     this.insertarTexto(emoji);
   }
 
   protected enBlanco(ev: Event): void {
     ev.preventDefault();
+    this.asunto.set('');
     const el = this.lienzo()?.nativeElement;
     if (el) el.innerHTML = '';
     this.emitir('');
   }
 
+  /** Como Dali: la imagen se sube desde el equipo y viaja embebida (data URI). */
   protected imagen(ev: Event): void {
     ev.preventDefault();
-    const url = window.prompt(
-      'URL de la imagen (o deja vacío para subir un archivo):', '');
-    if (url === null) return;
-    if (url.trim()) {
-      document.execCommand('insertImage', false, url.trim());
-      this.sincronizarDesdeVisual();
-      return;
-    }
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
@@ -241,23 +401,46 @@ export class EditorCorreoComponent {
       r.onload = () => {
         this.lienzo()?.nativeElement.focus();
         document.execCommand('insertImage', false, String(r.result));
-        this.sincronizarDesdeVisual();
+        this.sincronizar();
       };
       r.readAsDataURL(f);
     };
     inp.click();
   }
 
-  /** Inserta texto en el cursor del modo activo (lo usan los chips de campos). */
+  protected arrastrar(ev: DragEvent, clave: string): void {
+    ev.dataTransfer?.setData('text/plain', `{{${clave}}}`);
+  }
+
+  protected insertarVariable(clave: string): void {
+    const token = `{{${clave}}}`;
+    if (this.objetivo === 'asunto') {
+      this.asunto.set(`${this.asunto()}${token}`);
+      return;
+    }
+    this.insertarTexto(token);
+  }
+
+  /** Inserta texto en el cursor del modo activo. */
   insertarTexto(texto: string): void {
     if (this.modo() === 'html') {
-      this.emitir(this.valorHtml() + texto);
+      this.emitir(this.value() + texto);
       return;
     }
     const el = this.lienzo()?.nativeElement;
     if (!el) return;
     el.focus();
     document.execCommand('insertText', false, texto);
-    this.sincronizarDesdeVisual();
+    this.sincronizar();
+  }
+
+  /** Reemplaza asunto+cuerpo (al elegir una plantilla de la galería). */
+  cargar(asunto: string, cuerpoHtml: string): void {
+    this.asunto.set(asunto);
+    this.emitir(cuerpoHtml);
+    queueMicrotask(() => {
+      const el = this.lienzo()?.nativeElement;
+      if (el) el.innerHTML = cuerpoHtml;
+    });
   }
 }

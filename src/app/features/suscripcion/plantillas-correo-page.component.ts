@@ -183,114 +183,127 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
         }
       </div>
 
-      <!-- Editor -->
+      <!-- ── Editor de plantilla: réplica del EditTemplateDialog de Dali ── -->
       @if (editando(); as ed) {
         <div
           class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
           (click)="cerrarEditor()"
         >
           <div
-            class="surface-solid flex max-h-[92vh] w-full max-w-4xl flex-col rounded-2xl border border-border shadow-2xl"
+            class="surface-solid flex max-h-[92vh] w-full max-w-5xl flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl"
             (click)="$event.stopPropagation()"
           >
-            <header class="flex items-center justify-between border-b border-border/50 px-5 py-3">
-              <h2 class="text-base font-bold">
-                {{ ed.id ? 'Editar plantilla' : 'Nueva plantilla' }}
-              </h2>
+            <!-- Header: ícono degradado + título + subtítulo + X (Dali) -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-emerald-400 shadow-md shadow-primary/25">
+                  <lucide-icon name="mail" [size]="16" class="text-white" />
+                </div>
+                <div class="min-w-0">
+                  <h2 class="text-base font-semibold leading-tight tracking-tight">
+                    {{ ed.id ? 'Editar plantilla' : 'Nueva plantilla' }}
+                  </h2>
+                  <p class="text-[10px] leading-tight text-muted-foreground">
+                    Modifica el nombre, categoría, contenido y asunto
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 (click)="cerrarEditor()"
-                class="alma-btn alma-btn-outline h-8 w-8 rounded-xl p-0"
+                class="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Cerrar"
               >
                 <lucide-icon name="x" [size]="16" />
               </button>
-            </header>
-            <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto p-5 lg:grid-cols-2">
-              <div class="flex flex-col gap-3">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="text-xs font-medium text-muted-foreground">Nombre</label>
-                    <input [(ngModel)]="ed.nombre" maxlength="150" class="alma-input mt-1 w-full rounded-xl" />
-                  </div>
-                  <div>
-                    <label class="text-xs font-medium text-muted-foreground">Categoría</label>
-                    <input [(ngModel)]="ed.categoria" maxlength="60" class="alma-input mt-1 w-full rounded-xl" />
-                  </div>
-                </div>
-                <div>
-                  <label class="text-xs font-medium text-muted-foreground">Asunto</label>
-                  <input
-                    #asuntoInput
-                    [(ngModel)]="ed.asunto"
-                    maxlength="250"
-                    class="alma-input mt-1 w-full rounded-xl"
-                    (focus)="objetivo = 'asunto'"
-                    (dragover)="$event.preventDefault()"
-                  />
-                </div>
-                <!-- Campos dinámicos: clic los inserta donde esté el cursor
-                     (asunto o cuerpo) y también se pueden ARRASTRAR, como en Dali. -->
-                <div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (v of variables() | keyvalue; track v.key) {
-                      <button
-                        type="button"
-                        draggable="true"
-                        (dragstart)="arrastrarVariable($event, v.key)"
-                        (click)="insertarVariable(v.key)"
-                        class="cursor-grab rounded-full border border-border/60 bg-primary/10 px-2.5 py-1 text-[11.5px] font-medium text-primary hover:border-primary active:cursor-grabbing"
-                        [title]="v.value"
-                      >
-                        {{ '{{' + v.key + '}}' }}
-                      </button>
-                    }
-                  </div>
-                  <p class="mt-1 text-[11px] text-muted-foreground">
-                    Arrastra los campos al asunto o al contenido del correo, o haz clic
-                    para insertarlos donde esté el cursor.
-                  </p>
-                </div>
-                <div class="flex min-h-0 flex-1 flex-col">
-                  <label class="mb-1 text-xs font-medium text-muted-foreground">Contenido</label>
-                  <alma-editor-correo
-                    [value]="ed.cuerpo_html"
-                    (valueChange)="ed.cuerpo_html = $event"
-                    (focusEditor)="objetivo = 'cuerpo'"
-                  />
-                </div>
-              </div>
-              <div class="flex min-h-0 flex-col">
-                <p class="text-xs font-medium text-muted-foreground">Vista previa</p>
-                <div
-                  class="mt-1 min-h-0 flex-1 overflow-y-auto rounded-xl border border-border/50 bg-white p-4 text-[13px] leading-relaxed text-neutral-800"
-                  [innerHTML]="ed.cuerpo_html"
-                ></div>
-              </div>
             </div>
+
+            <!-- Toolbar + asunto + campos + lienzo (el editor completo) -->
+            <div class="min-h-0 flex-1 overflow-y-auto">
+              <alma-editor-correo
+                [(asunto)]="ed.asunto"
+                [(value)]="ed.cuerpo_html"
+                [variables]="variables()"
+                [conPlantillas]="items().length > 0"
+                (abrirPlantillas)="selectorBase.set(true)"
+              />
+            </div>
+
             @if (errorEditor(); as err) {
-              <p class="mx-5 rounded-xl bg-destructive/10 p-2 text-center text-xs text-destructive">
+              <p class="rounded-xl bg-destructive/10 p-2 text-center text-xs text-destructive">
                 {{ err }}
               </p>
             }
-            <footer class="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
-              <button type="button" (click)="cerrarEditor()" class="alma-btn alma-btn-outline rounded-xl">
-                Cancelar
-              </button>
-              <button
-                type="button"
-                [disabled]="guardando() || !ed.nombre.trim() || !ed.asunto.trim() || !ed.cuerpo_html.trim()"
-                (click)="guardar()"
-                class="alma-btn alma-btn-primary rounded-xl"
-              >
-                @if (guardando()) {
-                  <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
+
+            <!-- Footer pill: Nombre Plantilla + Categoría (+ nueva) + acciones (Dali) -->
+            <div class="rounded-xl border border-border/60 bg-background/60 px-3 py-1.5 shadow-sm">
+              <div class="flex flex-row flex-wrap items-center gap-2">
+                <div class="flex min-w-[180px] flex-1 items-center border-b border-border/50 transition-colors focus-within:border-primary">
+                  <span class="whitespace-nowrap pl-1 pr-1.5 text-xs font-medium text-muted-foreground">Nombre Plantilla:</span>
+                  <input [(ngModel)]="ed.nombre" maxlength="150" placeholder="Sin nombre"
+                         class="h-8 w-full border-0 bg-transparent px-0 text-sm outline-none" />
+                </div>
+                @if (!nuevaCategoria()) {
+                  <div class="flex min-w-[160px] items-center border-b border-border/50 transition-colors focus-within:border-primary">
+                    <span class="whitespace-nowrap pl-1 pr-1.5 text-xs font-medium text-muted-foreground">Categoría:</span>
+                    <select [(ngModel)]="ed.categoria"
+                            class="h-8 cursor-pointer border-0 bg-transparent text-sm text-foreground outline-none">
+                      @for (c of categorias(); track c) { <option [value]="c">{{ c }}</option> }
+                    </select>
+                    <button type="button" title="Crear nueva categoría" (click)="nuevaCategoria.set(true)"
+                            class="ml-0.5 flex h-6 w-6 items-center justify-center rounded-md text-primary hover:bg-primary/10">
+                      <lucide-icon name="plus" [size]="12" />
+                    </button>
+                  </div>
+                } @else {
+                  <div class="flex min-w-[160px] items-center gap-1 border-b border-border/50 focus-within:border-primary">
+                    <span class="whitespace-nowrap pl-1 pr-1.5 text-xs font-medium text-muted-foreground">Nueva:</span>
+                    <input #nuevaCat maxlength="60" placeholder="Categoría…"
+                           class="h-8 w-28 border-0 bg-transparent px-0 text-sm outline-none"
+                           (keydown.enter)="crearCategoria(nuevaCat.value); nuevaCat.value=''" />
+                    <button type="button" class="h-6 px-1.5 text-[10px] font-medium text-primary"
+                            (click)="crearCategoria(nuevaCat.value); nuevaCat.value=''">Crear</button>
+                    <button type="button" class="h-6 px-1 text-[10px] text-muted-foreground"
+                            (click)="nuevaCategoria.set(false)">✕</button>
+                  </div>
                 }
-                Guardar plantilla
-              </button>
-            </footer>
+                <div class="ml-auto flex items-center gap-2">
+                  <button type="button" (click)="cerrarEditor()" [disabled]="guardando()"
+                          class="rounded-xl border border-border/60 bg-background/50 px-3 py-1.5 text-xs transition-all hover:border-amber-500 hover:bg-amber-500 hover:text-white">
+                    Cancelar
+                  </button>
+                  <button type="button" (click)="guardar()"
+                          [disabled]="guardando() || !ed.nombre.trim() || !ed.asunto.trim() || !ed.cuerpo_html.trim()"
+                          class="flex items-center gap-1 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
+                    @if (guardando()) {
+                      <lucide-icon name="loader-2" [size]="12" class="animate-spin" /> Guardando…
+                    } @else {
+                      <lucide-icon name="save" [size]="12" /> {{ ed.id ? 'Actualizar' : 'Guardar' }}
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- Selector "Plantillas" (usar otra como base) -->
+        @if (selectorBase()) {
+          <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" (click)="selectorBase.set(false)">
+            <div class="surface-solid w-full max-w-md rounded-2xl border border-border p-4 shadow-2xl" (click)="$event.stopPropagation()">
+              <h3 class="mb-2 text-sm font-bold">Usar una plantilla como base</h3>
+              <div class="max-h-80 divide-y divide-border/40 overflow-y-auto rounded-xl border border-border/50">
+                @for (p of items(); track p.id) {
+                  <button type="button" (click)="usarComoBase(p)"
+                          class="block w-full px-3 py-2 text-left hover:bg-muted/40">
+                    <span class="text-sm font-medium">{{ p.nombre }}</span>
+                    <span class="block text-xs text-muted-foreground">{{ p.categoria }} · {{ p.asunto }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
       }
 
       <!-- Confirmación de eliminación -->
@@ -323,8 +336,39 @@ export class PlantillasCorreoPageComponent {
   private readonly router = inject(Router);
 
   private readonly editor = viewChild(EditorCorreoComponent);
-  /** A dónde va la próxima variable insertada por clic. */
-  protected objetivo: 'asunto' | 'cuerpo' = 'cuerpo';
+  protected readonly nuevaCategoria = signal(false);
+  protected readonly selectorBase = signal(false);
+  /** Categorías creadas en esta sesión (además de las de las plantillas). */
+  private readonly categoriasExtra = signal<string[]>([]);
+
+  protected readonly categorias = computed<string[]>(() => {
+    const set = new Set<string>(['Suscripción', 'General']);
+    for (const p of this.items()) set.add(p.categoria);
+    for (const c of this.categoriasExtra()) set.add(c);
+    return [...set].sort();
+  });
+
+  protected crearCategoria(nombre: string): void {
+    const limpio = nombre.trim();
+    if (!limpio) return;
+    this.categoriasExtra.set([...this.categoriasExtra(), limpio]);
+    const ed = this.editando();
+    if (ed) {
+      ed.categoria = limpio;
+      this.editando.set({ ...ed });
+    }
+    this.nuevaCategoria.set(false);
+  }
+
+  protected usarComoBase(p: PlantillaCorreoApi): void {
+    this.selectorBase.set(false);
+    const ed = this.editando();
+    if (!ed) return;
+    ed.asunto = p.asunto;
+    ed.cuerpo_html = p.cuerpo_html;
+    this.editando.set({ ...ed });
+    this.editor()?.cargar(p.asunto, p.cuerpo_html);
+  }
 
   // Cuenta del buzón (OAuth delegado)
   protected readonly cuenta = signal<{
@@ -431,23 +475,6 @@ export class PlantillasCorreoPageComponent {
     } catch (e) {
       this.errorCuenta.set(e instanceof Error ? e.message : String(e));
     }
-  }
-
-  /** Chips: arrastre nativo (texto plano {{clave}}) e inserción por clic. */
-  protected arrastrarVariable(ev: DragEvent, clave: string): void {
-    ev.dataTransfer?.setData('text/plain', `{{${clave}}}`);
-  }
-
-  protected insertarVariable(clave: string): void {
-    const token = `{{${clave}}}`;
-    const ed = this.editando();
-    if (!ed) return;
-    if (this.objetivo === 'asunto') {
-      ed.asunto = `${ed.asunto}${token}`;
-      this.editando.set({ ...ed });
-      return;
-    }
-    this.editor()?.insertarTexto(token);
   }
 
   private async cargar(): Promise<void> {
