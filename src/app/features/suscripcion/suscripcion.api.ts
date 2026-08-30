@@ -508,9 +508,26 @@ export class SuscripcionApi {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/productos-cliente`);
   }
 
-  /** Correos del buzón de suscripción que mencionan la cédula/cotización. */
-  getCorreosCliente(solicitudId: string): Promise<{ items: CorreoClienteApi[]; count: number }> {
-    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correos`);
+  /**
+   * Correos del buzón de suscripción. Sin `q` busca la cédula y la cotización
+   * del asegurado; con `q`, ese término (pestaña Historial).
+   */
+  getCorreosCliente(
+    solicitudId: string,
+    q?: string,
+  ): Promise<{ items: CorreoClienteApi[]; count: number }> {
+    const sufijo = q ? `?q=${encodeURIComponent(q)}` : '';
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correos${sufijo}`);
+  }
+
+  /** Valores reales de las variables de plantilla para la cotización. */
+  getContextoCorreo(solicitudId: string): Promise<{
+    variables: Record<string, string>;
+    descripciones: Record<string, string>;
+    para: string | null;
+    cc_director: string | null;
+  }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correo-contexto`);
   }
 
   /**
@@ -522,6 +539,7 @@ export class SuscripcionApi {
     solicitudId: string,
     body: {
       asunto: string;
+      cuerpo_html?: string | null;
       cuerpo?: string | null;
       plantilla_id?: string | null;
       mensaje?: string | null;
