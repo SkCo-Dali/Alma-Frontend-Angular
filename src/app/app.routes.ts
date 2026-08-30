@@ -62,6 +62,14 @@ export const routes: Routes = [
     title: 'Configuración del motor — ALMA',
   },
   {
+    path: 'apps/suscripcion/plantillas',
+    loadComponent: () =>
+      import('./features/suscripcion/plantillas-correo-page.component').then(
+        (m) => m.PlantillasCorreoPageComponent,
+      ),
+    title: 'Plantillas de correo — ALMA',
+  },
+  {
     path: 'apps/suscripcion/simulador',
     loadComponent: () =>
       import(

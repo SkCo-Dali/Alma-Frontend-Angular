@@ -123,6 +123,14 @@ export class SuscripcionLandingComponent {
         hidden: !this.auth.hasPermission('app.suscripcion.motor.config'),
       },
       {
+        title: 'Plantillas de correo',
+        description:
+          'Galería de correos al FP con variables de la cotización: crea, edita y activa plantillas.',
+        icon: 'mail',
+        path: '/apps/suscripcion/plantillas',
+        gradient: 'linear-gradient(150deg, #30D158, #0A84FF)',
+      },
+      {
         title: 'Configuración del Simulador de asegurabilidad',
         description:
           'Tablas de IMC, catálogos (preexistencias, ocupaciones, hobbies, países) y exámenes del simulador.',

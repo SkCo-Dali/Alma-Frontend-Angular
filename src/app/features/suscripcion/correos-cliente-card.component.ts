@@ -8,7 +8,7 @@ import { Component, effect, inject, input, output, signal, untracked } from '@an
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 @Component({
   selector: 'alma-correos-cliente-card',
@@ -125,16 +125,58 @@ import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
               Se envía desde el buzón de suscripción al FP de la cotización
               {{ nroCotizacion() }}.
             </p>
+
+            <!-- Plantilla de la galería o correo libre -->
+            <label class="mt-3 block text-xs font-medium text-muted-foreground">Plantilla</label>
+            <select
+              [ngModel]="plantillaSel()"
+              (ngModelChange)="seleccionarPlantilla($event)"
+              class="alma-input mt-1 w-full rounded-xl"
+            >
+              <option value="">Correo libre (texto plano)</option>
+              @for (p of plantillas(); track p.id) {
+                <option [value]="p.id">{{ p.categoria }} — {{ p.nombre }}</option>
+              }
+            </select>
+
             <label class="mt-3 block text-xs font-medium text-muted-foreground">Asunto</label>
             <input [(ngModel)]="asunto" maxlength="250" class="alma-input mt-1 w-full rounded-xl" />
-            <label class="mt-3 block text-xs font-medium text-muted-foreground">Mensaje</label>
-            <textarea
-              [(ngModel)]="cuerpo"
-              rows="6"
-              maxlength="20000"
-              class="alma-input mt-1 w-full rounded-xl text-sm"
-              placeholder="Qué se le solicita al asesor…"
-            ></textarea>
+
+            @if (plantillaSel()) {
+              @if (cargandoPreview()) {
+                <div class="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <lucide-icon name="loader-2" [size]="14" class="animate-spin" />
+                  Armando la vista previa con los datos de la cotización…
+                </div>
+              } @else if (preview(); as pv) {
+                <p class="mt-3 text-xs font-medium text-muted-foreground">Vista previa</p>
+                <div
+                  class="mt-1 max-h-48 overflow-y-auto rounded-xl border border-border/50 bg-white p-3 text-[12px] leading-snug text-neutral-800"
+                  [innerHTML]="pv.cuerpo_html"
+                ></div>
+                @if (pv.usa_mensaje) {
+                  <label class="mt-3 block text-xs font-medium text-muted-foreground">
+                    Tu mensaje (reemplaza el marcador de la plantilla)
+                  </label>
+                  <textarea
+                    [(ngModel)]="mensaje"
+                    rows="3"
+                    maxlength="10000"
+                    class="alma-input mt-1 w-full rounded-xl text-sm"
+                    placeholder="Qué se le solicita al asesor…"
+                  ></textarea>
+                }
+              }
+            } @else {
+              <label class="mt-3 block text-xs font-medium text-muted-foreground">Mensaje</label>
+              <textarea
+                [(ngModel)]="cuerpo"
+                rows="6"
+                maxlength="20000"
+                class="alma-input mt-1 w-full rounded-xl text-sm"
+                placeholder="Qué se le solicita al asesor…"
+              ></textarea>
+            }
             <label class="mt-3 flex cursor-pointer items-center gap-2 text-xs text-foreground">
               <input
                 type="checkbox"
@@ -158,7 +200,7 @@ import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
               </button>
               <button
                 type="button"
-                [disabled]="!asunto.trim() || !cuerpo.trim() || enviando() === true"
+                [disabled]="!puedeEnviar() || enviando() === true"
                 (click)="enviar()"
                 class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
               >
@@ -195,7 +237,40 @@ export class CorreosClienteCardComponent {
   protected readonly resultadoEnvio = signal<{ para: string; cc: string[] } | null>(null);
   protected asunto = '';
   protected cuerpo = '';
+  protected mensaje = '';
   protected copiarDirector = true;
+
+  // Plantillas de la galería (se cargan al abrir el diálogo).
+  protected readonly plantillas = signal<PlantillaCorreoApi[]>([]);
+  protected readonly plantillaSel = signal<string>('');
+  protected readonly preview = signal<{
+    asunto: string;
+    cuerpo_html: string;
+    usa_mensaje: boolean;
+  } | null>(null);
+  protected readonly cargandoPreview = signal(false);
+
+  protected puedeEnviar(): boolean {
+    if (!this.asunto.trim()) return false;
+    return this.plantillaSel() ? true : this.cuerpo.trim().length > 0;
+  }
+
+  protected async seleccionarPlantilla(id: string): Promise<void> {
+    this.plantillaSel.set(id);
+    this.preview.set(null);
+    if (!id) return;
+    this.cargandoPreview.set(true);
+    try {
+      const pv = await this.api.renderPlantillaCorreo(this.solicitudId(), id);
+      this.preview.set(pv);
+      this.asunto = pv.asunto;
+    } catch (e) {
+      this.errorEnvio.set(e instanceof Error ? e.message : String(e));
+      this.plantillaSel.set('');
+    } finally {
+      this.cargandoPreview.set(false);
+    }
+  }
 
   protected puedeGestionar(): boolean {
     return this.auth.hasPermission('app.suscripcion.solicitudes.manage');
@@ -240,6 +315,13 @@ export class CorreosClienteCardComponent {
       this.asunto = `Suscripción — cotización ${this.nroCotizacion()}`.trim();
     }
     this.enviando.set(false);
+    // Galería de plantillas activas (una vez por apertura).
+    if (this.plantillas().length === 0) {
+      void this.api
+        .getPlantillasCorreo(true)
+        .then((r) => this.plantillas.set(r.items))
+        .catch(() => this.plantillas.set([]));
+    }
   }
 
   protected cerrarEnvio(): void {
@@ -254,11 +336,14 @@ export class CorreosClienteCardComponent {
     this.enviando.set(true);
     this.errorEnvio.set(null);
     try {
-      // Texto plano: el backend valida (sin HTML) y convierte los saltos de
-      // línea para el correo.
+      // Modo plantilla: el HTML lo renderiza el servidor; solo viajan el
+      // asunto y el mensaje en texto plano. Modo libre: texto plano validado.
+      const conPlantilla = !!this.plantillaSel();
       const res = await this.api.enviarCorreoAsesor(this.solicitudId(), {
         asunto: this.asunto.trim(),
-        cuerpo: this.cuerpo.trim(),
+        cuerpo: conPlantilla ? null : this.cuerpo.trim(),
+        plantilla_id: conPlantilla ? this.plantillaSel() : null,
+        mensaje: conPlantilla ? this.mensaje.trim() || null : null,
         copiar_director: this.copiarDirector,
       });
       this.resultadoEnvio.set({ para: res.para, cc: res.cc });
