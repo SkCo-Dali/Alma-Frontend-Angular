@@ -21,7 +21,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
   template: `
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
       <div
-        class="surface-solid flex max-h-[94vh] w-full max-w-5xl flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl"
+        class="surface-solid flex max-h-[94vh] w-full max-w-[97vw] flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl lg:max-w-[82vw]"
         (click)="$event.stopPropagation()"
       >
         <!-- ── Header (Dali): ícono + título + DESTINATARIOS + X ── -->
