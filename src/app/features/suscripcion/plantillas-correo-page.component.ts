@@ -14,11 +14,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { EditorCorreoComponent } from './editor-correo.component';
+import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
 import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 @Component({
   selector: 'alma-plantillas-correo-page',
-  imports: [FormsModule, KeyValuePipe, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, EditorCorreoComponent],
+  imports: [FormsModule, KeyValuePipe, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -287,22 +288,13 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
           </div>
         </div>
 
-        <!-- Selector "Plantillas" (usar otra como base) -->
+        <!-- Galería (estilo Dali) para usar otra plantilla como base -->
         @if (selectorBase()) {
-          <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" (click)="selectorBase.set(false)">
-            <div class="surface-solid w-full max-w-md rounded-2xl border border-border p-4 shadow-2xl" (click)="$event.stopPropagation()">
-              <h3 class="mb-2 text-sm font-bold">Usar una plantilla como base</h3>
-              <div class="max-h-80 divide-y divide-border/40 overflow-y-auto rounded-xl border border-border/50">
-                @for (p of items(); track p.id) {
-                  <button type="button" (click)="usarComoBase(p)"
-                          class="block w-full px-3 py-2 text-left hover:bg-muted/40">
-                    <span class="text-sm font-medium">{{ p.nombre }}</span>
-                    <span class="block text-xs text-muted-foreground">{{ p.categoria }} · {{ p.asunto }}</span>
-                  </button>
-                }
-              </div>
-            </div>
-          </div>
+          <alma-galeria-plantillas-dialog
+            [plantillas]="items()"
+            (closed)="selectorBase.set(false)"
+            (seleccionar)="usarComoBase($event)"
+          />
         }
       }
 
