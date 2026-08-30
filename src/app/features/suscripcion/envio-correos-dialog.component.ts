@@ -10,13 +10,14 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { EditorCorreoComponent } from './editor-correo.component';
+import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
 import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
 @Component({
   selector: 'alma-envio-correos-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditorCorreoComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent],
   template: `
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
       <div
@@ -173,24 +174,14 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
       </div>
     </div>
 
-    <!-- Galería para elegir plantilla (se renderiza con los datos reales) -->
+    <!-- Galería de plantillas (estilo Dali, con miniaturas); la elegida se
+         renderiza con los datos reales de la cotización. -->
     @if (selectorPlantillas()) {
-      <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" (click)="selectorPlantillas.set(false)">
-        <div class="surface-solid w-full max-w-md rounded-2xl border border-border p-4 shadow-2xl" (click)="$event.stopPropagation()">
-          <h3 class="mb-2 text-sm font-bold">Plantillas</h3>
-          @if (plantillas().length === 0) {
-            <p class="p-4 text-center text-xs text-muted-foreground">No hay plantillas activas. Créalas en Suscripción → Plantillas de correo.</p>
-          }
-          <div class="max-h-80 divide-y divide-border/40 overflow-y-auto rounded-xl border border-border/50">
-            @for (p of plantillas(); track p.id) {
-              <button type="button" (click)="usarPlantilla(p)" class="block w-full px-3 py-2 text-left hover:bg-muted/40">
-                <span class="text-sm font-medium">{{ p.nombre }}</span>
-                <span class="block text-xs text-muted-foreground">{{ p.categoria }} · {{ p.asunto }}</span>
-              </button>
-            }
-          </div>
-        </div>
-      </div>
+      <alma-galeria-plantillas-dialog
+        [plantillas]="plantillas()"
+        (closed)="selectorPlantillas.set(false)"
+        (seleccionar)="usarPlantilla($event)"
+      />
     }
   `,
 })
