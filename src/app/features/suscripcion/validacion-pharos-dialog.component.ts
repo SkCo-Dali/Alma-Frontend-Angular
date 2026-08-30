@@ -16,13 +16,65 @@ interface FilaValor {
   valor: string;
 }
 
+/**
+ * Ajustes de presentación por declaración (ddeclarationid): etiqueta limpia,
+ * traducción de códigos a texto de negocio (como los pinta la UI de Pharos) y
+ * campos que se ocultan por redundantes. Complementa la calibración del bridge.
+ */
+const AJUSTES: Record<
+  string,
+  { label?: string; map?: Record<string, string>; ocultar?: boolean }
+> = {
+  // Sexo llega como código; Pharos muestra el texto.
+  '34644484742353': { label: 'Sexo', map: { '1': 'Femenino', '2': 'Masculino' } },
+  '325883419086948': {
+    label: 'Tipo de Prestación',
+    map: { PU: 'Pago único', RT: 'Renta temporal' },
+  },
+  '34644545785465': { label: 'Incremento Automático', map: { OTRO: 'Otro Valor' } },
+  // Código del catálogo de profesión: el NOMBRE ya se muestra en la línea de
+  // identidad del detalle; el código crudo aquí solo confunde.
+  '34644468682781': { ocultar: true },
+};
+
+/** Orden de la pestaña "Declaraciones" de la UI de Pharos (los demás, después). */
+const ORDEN_PHAROS = [
+  '34644468682760', // Meta de Ahorro
+  '34644468682799', // Tiempo de Ahorro en años
+  '34644468682878', // Prima Pactada
+  '34644468682858', // Fecha de Nacimiento
+  '34644468682819', // Edad Inicial
+  '34644484742353', // Sexo
+  '34644545785991', // Edad Alcanzada
+  '34644545785465', // Incremento Automático
+  '34644545785646', // Incremento %
+  '34644522206874', // Iniciativas
+  '34644557933531', // Contrato Ulla
+  '325099075363127', // Contingencia
+  '34644945033197', // Cambio OMPEV Sep 2020
+  '34644557933286', // Extraprima Reaseguro
+  '34644862182384', // Excluye Contingencia COVID 2
+  '34644957204315', // Indemnizaciones últimos 2 años
+  '325883419086948', // Tipo de Prestación
+];
+
+/** Números del blob ('1.62E8', '360000.0') → formato es-CO ('162.000.000'). */
+function numeroLegible(v: string): string | null {
+  // Con cero a la izquierda es un CÓDIGO (Contrato Ulla '000686328'), no un número.
+  if (/^0\d/.test(v)) return null;
+  if (!/^-?\d+(\.\d+)?(E[+-]?\d+)?$/i.test(v)) return null;
+  const n = Number(v);
+  if (Number.isNaN(n)) return null;
+  return n.toLocaleString('es-CO', { maximumFractionDigits: 2 });
+}
+
 /** Epoch ms → dd/mm/aaaa; centinelas (fechas absurdas) → null; S/N → Sí/No. */
 function valorLegible(valor: string | null): string | null {
   const v = (valor ?? '').trim();
   if (v === '') return null;
   const low = v.toLowerCase();
   if (low === 'true' || low === 's' || low === 'si') return 'Sí';
-  if (low === 'false' || low === 'n') return 'No';
+  if (low === 'false' || low === 'n' || low === 'no') return 'No';
   if (/^-?\d{12,}$/.test(v)) {
     const d = new Date(Number(v));
     const anio = d.getFullYear();
@@ -31,7 +83,7 @@ function valorLegible(valor: string | null): string | null {
     }
     return null;
   }
-  return v;
+  return numeroLegible(v) ?? v;
 }
 
 function dia(iso: unknown): string | null {
@@ -228,22 +280,34 @@ export class ValidacionPharosDialogComponent {
 
   private filasDe(items: DeclaracionItemApi[]): FilaValor[] {
     return items
-      .filter((d) => d.visibleType !== 4)
-      .map((d) => ({
-        etiqueta: d.descripcion ?? `Declaración ${d.ddeclarationid}`,
-        valor: valorLegible(d.valor) ?? '',
-      }))
+      .filter((d) => d.visibleType !== 4 && !AJUSTES[d.ddeclarationid]?.ocultar)
+      .map((d) => {
+        const aj = AJUSTES[d.ddeclarationid];
+        const crudo = (d.valor ?? '').trim();
+        const valor = aj?.map?.[crudo] ?? valorLegible(d.valor) ?? '';
+        return {
+          etiqueta: aj?.label ?? d.descripcion ?? `Declaración ${d.ddeclarationid}`,
+          valor,
+        };
+      })
       .filter((f) => f.valor !== '');
   }
 
-  // Solo las declaraciones CALIBRADAS (con etiqueta de negocio). Las que el
-  // bridge aún no tiene mapeadas son ids internos de Pharos y mostrarlas como
-  // "Declaración 346..." confunde más de lo que aporta: van en un contador.
-  protected readonly declaracionesProducto = computed<FilaValor[]>(() =>
-    this.filasDe(
-      (this.nodo()?.declaracionesRaiz ?? []).filter((d) => d.descripcion != null),
-    ),
-  );
+  // Solo las declaraciones CALIBRADAS (con etiqueta de negocio), en el orden
+  // de la pestaña Declaraciones de Pharos. Las no mapeadas son ids internos y
+  // mostrarlas como "Declaración 346..." confunde más de lo que aporta: van
+  // en un contador.
+  protected readonly declaracionesProducto = computed<FilaValor[]>(() => {
+    const raiz = (this.nodo()?.declaracionesRaiz ?? [])
+      .filter((d) => d.descripcion != null)
+      .slice()
+      .sort((a, b) => {
+        const ia = ORDEN_PHAROS.indexOf(a.ddeclarationid);
+        const ib = ORDEN_PHAROS.indexOf(b.ddeclarationid);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+    return this.filasDe(raiz);
+  });
 
   protected readonly sinEtiqueta = computed<number>(
     () =>
