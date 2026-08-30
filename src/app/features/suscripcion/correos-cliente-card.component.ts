@@ -1,18 +1,18 @@
 // Correos del buzón de suscripción relacionados con el cliente (por cédula o
-// número de cotización) + envío del correo de suscripción al FP con copia al
-// director comercial. Cubre la verificación "Correo" del analista (UW+,
-// ago-2026). Si el ambiente no tiene el buzón configurado (503), la tarjeta
+// número de cotización). El botón "Correo al asesor" abre el diálogo "Envío
+// de Correos" (réplica del módulo de Dali: componer, previsualizar,
+// historial). Si el ambiente no tiene el correo configurado (503), la tarjeta
 // se oculta sola.
 
 import { Component, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { EnvioCorreosDialogComponent } from './envio-correos-dialog.component';
+import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
 
 @Component({
   selector: 'alma-correos-cliente-card',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [LucideAngularModule, EnvioCorreosDialogComponent],
   template: `
     @if (!oculto()) {
       <section class="mb-3 break-inside-avoid-column">
@@ -28,7 +28,7 @@ import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripc
           @if (puedeGestionar()) {
             <button
               type="button"
-              (click)="abrirEnvio()"
+              (click)="dialogoAbierto.set(true)"
               class="flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
             >
               <lucide-icon name="send" [size]="12" /> Correo al asesor
@@ -85,134 +85,13 @@ import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripc
       </section>
     }
 
-    <!-- Diálogo de envío -->
-    @if (enviando() !== null) {
-      <div
-        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-        (click)="cerrarEnvio()"
-      >
-        <div
-          class="surface-solid w-full max-w-lg rounded-2xl border border-border p-6 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
-          @if (resultadoEnvio(); as res) {
-            <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-            >
-              <lucide-icon name="check-circle-2" [size]="24" />
-            </div>
-            <h2 class="mt-3 text-center text-lg font-bold">Correo enviado</h2>
-            <p class="text-center text-sm text-muted-foreground">
-              Para <strong class="text-foreground">{{ res.para }}</strong>
-              @if (res.cc.length > 0) {
-                con copia a {{ res.cc.join(', ') }}
-              }
-            </p>
-            <p class="mt-2 text-center text-xs text-muted-foreground">
-              Para estampar la fecha del correo y el subestado en Pipeline, usa
-              "Actualizar en Pipeline → Información adicional".
-            </p>
-            <button
-              type="button"
-              (click)="cerrarEnvio()"
-              class="alma-btn alma-btn-primary mt-4 w-full rounded-xl"
-            >
-              Listo
-            </button>
-          } @else {
-            <h2 class="text-lg font-bold">Correo al asesor</h2>
-            <p class="mt-1 text-xs text-muted-foreground">
-              Se envía desde el buzón de suscripción al FP de la cotización
-              {{ nroCotizacion() }}.
-            </p>
-
-            <!-- Plantilla de la galería o correo libre -->
-            <label class="mt-3 block text-xs font-medium text-muted-foreground">Plantilla</label>
-            <select
-              [ngModel]="plantillaSel()"
-              (ngModelChange)="seleccionarPlantilla($event)"
-              class="alma-input mt-1 w-full rounded-xl"
-            >
-              <option value="">Correo libre (texto plano)</option>
-              @for (p of plantillas(); track p.id) {
-                <option [value]="p.id">{{ p.categoria }} — {{ p.nombre }}</option>
-              }
-            </select>
-
-            <label class="mt-3 block text-xs font-medium text-muted-foreground">Asunto</label>
-            <input [(ngModel)]="asunto" maxlength="250" class="alma-input mt-1 w-full rounded-xl" />
-
-            @if (plantillaSel()) {
-              @if (cargandoPreview()) {
-                <div class="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <lucide-icon name="loader-2" [size]="14" class="animate-spin" />
-                  Armando la vista previa con los datos de la cotización…
-                </div>
-              } @else if (preview(); as pv) {
-                <p class="mt-3 text-xs font-medium text-muted-foreground">Vista previa</p>
-                <div
-                  class="mt-1 max-h-48 overflow-y-auto rounded-xl border border-border/50 bg-white p-3 text-[12px] leading-snug text-neutral-800"
-                  [innerHTML]="pv.cuerpo_html"
-                ></div>
-                @if (pv.usa_mensaje) {
-                  <label class="mt-3 block text-xs font-medium text-muted-foreground">
-                    Tu mensaje (reemplaza el marcador de la plantilla)
-                  </label>
-                  <textarea
-                    [(ngModel)]="mensaje"
-                    rows="3"
-                    maxlength="10000"
-                    class="alma-input mt-1 w-full rounded-xl text-sm"
-                    placeholder="Qué se le solicita al asesor…"
-                  ></textarea>
-                }
-              }
-            } @else {
-              <label class="mt-3 block text-xs font-medium text-muted-foreground">Mensaje</label>
-              <textarea
-                [(ngModel)]="cuerpo"
-                rows="6"
-                maxlength="20000"
-                class="alma-input mt-1 w-full rounded-xl text-sm"
-                placeholder="Qué se le solicita al asesor…"
-              ></textarea>
-            }
-            <label class="mt-3 flex cursor-pointer items-center gap-2 text-xs text-foreground">
-              <input
-                type="checkbox"
-                [(ngModel)]="copiarDirector"
-                class="h-4 w-4 accent-[var(--primary)]"
-              />
-              Con copia al director comercial
-            </label>
-            @if (errorEnvio(); as err) {
-              <p class="mt-3 rounded-xl bg-destructive/10 p-2 text-center text-xs text-destructive">
-                {{ err }}
-              </p>
-            }
-            <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                (click)="cerrarEnvio()"
-                class="alma-btn alma-btn-outline w-full rounded-xl sm:w-auto"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                [disabled]="!puedeEnviar() || enviando() === true"
-                (click)="enviar()"
-                class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
-              >
-                @if (enviando() === true) {
-                  <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-                }
-                {{ enviando() === true ? 'Enviando…' : 'Enviar correo' }}
-              </button>
-            </div>
-          }
-        </div>
-      </div>
+    @if (dialogoAbierto()) {
+      <alma-envio-correos-dialog
+        [solicitudId]="solicitudId()"
+        [nroCotizacion]="nroCotizacion()"
+        (closed)="cerrarDialogo()"
+        (enviado)="enviado.emit()"
+      />
     }
   `,
 })
@@ -228,49 +107,9 @@ export class CorreosClienteCardComponent {
   protected readonly items = signal<CorreoClienteApi[]>([]);
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
-  /** true cuando el ambiente no tiene el buzón configurado (503). */
+  /** true cuando el ambiente no tiene el correo configurado (503). */
   protected readonly oculto = signal(false);
-
-  // Estado del diálogo de envío: null = cerrado, false = abierto, true = enviando.
-  protected readonly enviando = signal<boolean | null>(null);
-  protected readonly errorEnvio = signal<string | null>(null);
-  protected readonly resultadoEnvio = signal<{ para: string; cc: string[] } | null>(null);
-  protected asunto = '';
-  protected cuerpo = '';
-  protected mensaje = '';
-  protected copiarDirector = true;
-
-  // Plantillas de la galería (se cargan al abrir el diálogo).
-  protected readonly plantillas = signal<PlantillaCorreoApi[]>([]);
-  protected readonly plantillaSel = signal<string>('');
-  protected readonly preview = signal<{
-    asunto: string;
-    cuerpo_html: string;
-    usa_mensaje: boolean;
-  } | null>(null);
-  protected readonly cargandoPreview = signal(false);
-
-  protected puedeEnviar(): boolean {
-    if (!this.asunto.trim()) return false;
-    return this.plantillaSel() ? true : this.cuerpo.trim().length > 0;
-  }
-
-  protected async seleccionarPlantilla(id: string): Promise<void> {
-    this.plantillaSel.set(id);
-    this.preview.set(null);
-    if (!id) return;
-    this.cargandoPreview.set(true);
-    try {
-      const pv = await this.api.renderPlantillaCorreo(this.solicitudId(), id);
-      this.preview.set(pv);
-      this.asunto = pv.asunto;
-    } catch (e) {
-      this.errorEnvio.set(e instanceof Error ? e.message : String(e));
-      this.plantillaSel.set('');
-    } finally {
-      this.cargandoPreview.set(false);
-    }
-  }
+  protected readonly dialogoAbierto = signal(false);
 
   protected puedeGestionar(): boolean {
     return this.auth.hasPermission('app.suscripcion.solicitudes.manage');
@@ -288,6 +127,12 @@ export class CorreosClienteCardComponent {
     });
   }
 
+  protected cerrarDialogo(): void {
+    this.dialogoAbierto.set(false);
+    // Refresca la lista por si el envío quedó en el buzón.
+    void this.cargar(this.solicitudId());
+  }
+
   private async cargar(id: string): Promise<void> {
     this.cargando.set(true);
     this.error.set(null);
@@ -296,8 +141,7 @@ export class CorreosClienteCardComponent {
       this.items.set(r.items ?? []);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // 503 = el módulo de correos no está configurado en el ambiente: la
-      // tarjeta desaparece en vez de mostrar un error permanente.
+      // 503 = correos no configurados en el ambiente: la tarjeta desaparece.
       if (msg.includes('503') || msg.toLowerCase().includes('no está configurad')) {
         this.oculto.set(true);
       } else {
@@ -305,53 +149,6 @@ export class CorreosClienteCardComponent {
       }
     } finally {
       this.cargando.set(false);
-    }
-  }
-
-  protected abrirEnvio(): void {
-    this.errorEnvio.set(null);
-    this.resultadoEnvio.set(null);
-    if (!this.asunto) {
-      this.asunto = `Suscripción — cotización ${this.nroCotizacion()}`.trim();
-    }
-    this.enviando.set(false);
-    // Galería de plantillas activas (una vez por apertura).
-    if (this.plantillas().length === 0) {
-      void this.api
-        .getPlantillasCorreo(true)
-        .then((r) => this.plantillas.set(r.items))
-        .catch(() => this.plantillas.set([]));
-    }
-  }
-
-  protected cerrarEnvio(): void {
-    this.enviando.set(null);
-    if (this.resultadoEnvio()) {
-      this.resultadoEnvio.set(null);
-      void this.cargar(this.solicitudId());
-    }
-  }
-
-  protected async enviar(): Promise<void> {
-    this.enviando.set(true);
-    this.errorEnvio.set(null);
-    try {
-      // Modo plantilla: el HTML lo renderiza el servidor; solo viajan el
-      // asunto y el mensaje en texto plano. Modo libre: texto plano validado.
-      const conPlantilla = !!this.plantillaSel();
-      const res = await this.api.enviarCorreoAsesor(this.solicitudId(), {
-        asunto: this.asunto.trim(),
-        cuerpo: conPlantilla ? null : this.cuerpo.trim(),
-        plantilla_id: conPlantilla ? this.plantillaSel() : null,
-        mensaje: conPlantilla ? this.mensaje.trim() || null : null,
-        copiar_director: this.copiarDirector,
-      });
-      this.resultadoEnvio.set({ para: res.para, cc: res.cc });
-      this.enviado.emit();
-    } catch (e) {
-      this.errorEnvio.set(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (this.enviando() === true) this.enviando.set(false);
     }
   }
 }
