@@ -310,6 +310,27 @@ export interface ProductoClienteApi {
   fechaTerminacion: string | null;
 }
 
+/** Plantilla de correo de suscripción (galería estilo Dali). */
+export interface PlantillaCorreoApi {
+  id: string;
+  nombre: string;
+  categoria: string;
+  asunto: string;
+  cuerpo_html: string;
+  activa: boolean;
+  creada_en: string;
+  creada_por: string;
+  actualizada_en: string | null;
+  actualizada_por: string | null;
+}
+
+export interface PlantillaCorreoIn {
+  nombre: string;
+  categoria?: string;
+  asunto: string;
+  cuerpo_html: string;
+}
+
 /** Correo del buzón de suscripción relacionado con el cliente. */
 export interface CorreoClienteApi {
   asunto: string | null;
@@ -492,15 +513,74 @@ export class SuscripcionApi {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correos`);
   }
 
-  /** Envía el correo de suscripción al FP (CC opcional al director). */
+  /**
+   * Envía el correo de suscripción al FP (CC opcional al director), en modo
+   * libre (cuerpo de texto plano) o con plantilla (plantilla_id + mensaje;
+   * el HTML lo renderiza el servidor).
+   */
   enviarCorreoAsesor(
     solicitudId: string,
-    body: { asunto: string; cuerpo: string; copiar_director: boolean },
+    body: {
+      asunto: string;
+      cuerpo?: string | null;
+      plantilla_id?: string | null;
+      mensaje?: string | null;
+      copiar_director: boolean;
+    },
   ): Promise<{ enviado: boolean; para: string; cc: string[] }> {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correo-asesor`, {
       method: 'POST',
       body: JSON.stringify(body),
     });
+  }
+
+  // ── Plantillas de correo (galería estilo Dali) ─────────────────────────────
+
+  getPlantillasCorreo(
+    soloActivas = false,
+  ): Promise<{ items: PlantillaCorreoApi[]; variables: Record<string, string> }> {
+    return this.api.fetch(
+      `/api/suscripcion/correo-plantillas?solo_activas=${soloActivas}`,
+    );
+  }
+
+  crearPlantillaCorreo(body: PlantillaCorreoIn): Promise<PlantillaCorreoApi> {
+    return this.api.fetch('/api/suscripcion/correo-plantillas', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  actualizarPlantillaCorreo(
+    id: string,
+    body: Partial<PlantillaCorreoIn> & { activa?: boolean },
+  ): Promise<PlantillaCorreoApi> {
+    return this.api.fetch(`/api/suscripcion/correo-plantillas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  }
+
+  eliminarPlantillaCorreo(id: string): Promise<void> {
+    return this.api.fetch(`/api/suscripcion/correo-plantillas/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /** Vista previa de la plantilla con los datos reales de la cotización. */
+  renderPlantillaCorreo(
+    solicitudId: string,
+    plantillaId: string,
+  ): Promise<{
+    asunto: string;
+    cuerpo_html: string;
+    para: string | null;
+    cc_director: string | null;
+    usa_mensaje: boolean;
+  }> {
+    return this.api.fetch(
+      `/api/suscripcion/solicitudes/${solicitudId}/correo-plantillas/${plantillaId}/render`,
+    );
   }
 
   /** Verificación de cúmulo contra Pharos (pólizas vigentes del asegurado). */
