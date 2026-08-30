@@ -53,6 +53,7 @@ const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32p
 // Paleta de campos de Dali (EmailComposer.fieldColors), rotada sobre los de Alma.
 const CAMPO_ETIQUETAS: Record<string, string> = {
   asegurado: 'Asegurado', cedula: 'Cédula', nro_cotizacion: 'N° Cotización',
+  contrato: 'Contrato',
   producto: 'Producto', suma_asegurada: 'Suma Asegurada', prima: 'Prima',
   fp: 'Nombre FP', director: 'Director Comercial', agencia: 'Agencia',
   analista: 'Analista', fecha: 'Fecha', mensaje: 'Mensaje',

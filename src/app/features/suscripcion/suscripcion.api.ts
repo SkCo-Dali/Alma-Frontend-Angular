@@ -311,6 +311,16 @@ export interface ProductoClienteApi {
 }
 
 /** Plantilla de correo de suscripción (galería estilo Dali). */
+export interface CuentaCorreoApi {
+  configurado: boolean;
+  conectada: boolean;
+  estado: string | null;
+  email: string | null;
+  conectada_por: string | null;
+  buzon_esperado: string | null;
+  scopes: string;
+}
+
 export interface PlantillaCorreoApi {
   id: string;
   nombre: string;
@@ -554,15 +564,7 @@ export class SuscripcionApi {
 
   // ── Cuenta del buzón conectada (OAuth delegado, patrón Dali) ───────────────
 
-  getCuentaCorreo(): Promise<{
-    configurado: boolean;
-    conectada: boolean;
-    estado: string | null;
-    email: string | null;
-    conectada_por: string | null;
-    buzon_esperado: string | null;
-    scopes: string;
-  }> {
+  getCuentaCorreo(): Promise<CuentaCorreoApi> {
     return this.api.fetch('/api/suscripcion/cuenta-correo');
   }
 
