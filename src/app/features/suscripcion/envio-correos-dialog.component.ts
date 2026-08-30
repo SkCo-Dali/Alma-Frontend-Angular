@@ -8,16 +8,20 @@
 import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { environment } from '@env/environment';
+import { AuthService } from '../../core/auth/auth.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
+import { EditarPlantillaDialogComponent, PlantillaEnEdicion } from './editar-plantilla-dialog.component';
 import { EditorCorreoComponent } from './editor-correo.component';
+import { HtmlCorreoPipe } from './html-correo.pipe';
 import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
-import { CorreoClienteApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoClienteApi, CuentaCorreoApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
 @Component({
   selector: 'alma-envio-correos-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditarPlantillaDialogComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent, HtmlCorreoPipe],
   template: `
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
       <div
@@ -87,7 +91,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
             <div class="rounded-xl border border-border/50 bg-white p-3">
               <div class="mx-auto max-w-[720px] rounded-md bg-white p-5 text-[14px] leading-relaxed text-neutral-800"
                    style="font-family: Arial, 'Segoe UI', sans-serif;"
-                   [innerHTML]="resolver(cuerpoHtml)"></div>
+                   [innerHTML]="resolver(cuerpoHtml) | htmlCorreo"></div>
             </div>
           </div>
         }
@@ -150,43 +154,92 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
           </p>
         }
 
-        <!-- ── Footer: CC + acción principal por pestaña ── -->
-        <div class="flex items-center justify-between gap-2">
-          <label class="flex cursor-pointer items-center gap-2 text-xs text-foreground">
-            <input type="checkbox" [(ngModel)]="copiarDirector" class="h-4 w-4 accent-[var(--primary)]" />
-            Con copia al director comercial
-            @if (ccDirector(); as cc) { <span class="text-muted-foreground">({{ cc }})</span> }
-          </label>
-          @if (pestana() === 'nuevo') {
-            <button type="button" (click)="pestana.set('previsualizar')"
-                    [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
-                    class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
-              <lucide-icon name="eye" [size]="14" /> Previsualizar
-            </button>
-          } @else if (pestana() === 'previsualizar') {
-            <button type="button" (click)="enviar()" [disabled]="enviando() || !para()"
-                    class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
-              @if (enviando()) { <lucide-icon name="loader-2" [size]="14" class="animate-spin" /> Enviando… }
-              @else { <lucide-icon name="send" [size]="14" /> Enviar correo }
-            </button>
-          }
+        <!-- ── Footer: cuenta del buzón + CC + acciones (patrón del modal de
+             WhatsApp de Dali: el estado de conexión vive en el footer) ── -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex min-w-0 flex-wrap items-center gap-3">
+            @if (cuenta(); as c) {
+              @if (c.conectada) {
+                <span class="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <lucide-icon name="plug-zap" [size]="13" /> Buzón conectado: {{ c.email }}
+                  @if (puedeGestionar()) {
+                    <button type="button" (click)="desconectarCuenta()"
+                            class="font-normal text-muted-foreground underline-offset-2 hover:underline">
+                      Desconectar
+                    </button>
+                  }
+                </span>
+              } @else {
+                <span class="flex items-center gap-2 rounded-xl bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                  <lucide-icon name="plug" [size]="13" />
+                  {{ c.estado === 'requiere_reconexion'
+                     ? 'El buzón requiere reconexión'
+                     : 'Buzón de suscripción sin conectar' }}
+                  @if (puedeGestionar()) {
+                    <button type="button" (click)="conectarCuenta()"
+                            class="rounded-lg bg-gradient-to-r from-primary to-emerald-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-95">
+                      Conectar cuenta
+                    </button>
+                  }
+                </span>
+              }
+            }
+            <label class="flex cursor-pointer items-center gap-2 text-xs text-foreground">
+              <input type="checkbox" [(ngModel)]="copiarDirector" class="h-4 w-4 accent-[var(--primary)]" />
+              Con copia al director comercial
+              @if (ccDirector(); as cc) { <span class="text-muted-foreground">({{ cc }})</span> }
+            </label>
+          </div>
+          <div class="flex items-center gap-2">
+            @if (pestana() === 'nuevo') {
+              @if (puedeGestionar()) {
+                <button type="button" (click)="guardarComoPlantilla()"
+                        [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
+                        class="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-xs font-medium transition-all hover:border-primary hover:text-primary disabled:opacity-50">
+                  <lucide-icon name="save" [size]="13" /> Guardar plantilla
+                </button>
+              }
+              <button type="button" (click)="pestana.set('previsualizar')"
+                      [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
+                      class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
+                <lucide-icon name="eye" [size]="14" /> Previsualizar
+              </button>
+            } @else if (pestana() === 'previsualizar') {
+              <button type="button" (click)="enviar()" [disabled]="enviando() || !para()"
+                      class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
+                @if (enviando()) { <lucide-icon name="loader-2" [size]="14" class="animate-spin" /> Enviando… }
+                @else { <lucide-icon name="send" [size]="14" /> Enviar correo }
+              </button>
+            }
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Galería de plantillas (estilo Dali, con miniaturas); la elegida se
-         renderiza con los datos reales de la cotización. -->
+    <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
+         elegida se renderiza con los datos reales de la cotización. -->
     @if (selectorPlantillas()) {
       <alma-galeria-plantillas-dialog
-        [plantillas]="plantillas()"
         (closed)="selectorPlantillas.set(false)"
         (seleccionar)="usarPlantilla($event)"
+        (editar)="editarPlantilla($event)"
+      />
+    }
+
+    <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
+    @if (editandoPlantilla(); as ed) {
+      <alma-editar-plantilla-dialog
+        [plantilla]="ed"
+        [variables]="variables()"
+        (closed)="editandoPlantilla.set(null)"
+        (guardada)="plantillaGuardada()"
       />
     }
   `,
 })
 export class EnvioCorreosDialogComponent {
   private readonly api = inject(SuscripcionApi);
+  private readonly auth = inject(AuthService);
 
   readonly solicitudId = input.required<string>();
   readonly nroCotizacion = input<string>('');
@@ -212,8 +265,16 @@ export class EnvioCorreosDialogComponent {
   protected readonly destinatarios = computed(() =>
     (this.para() ? 1 : 0) + (this.ccDirector() && this.copiarDirector ? 1 : 0) || 1);
 
-  protected readonly plantillas = signal<PlantillaCorreoApi[]>([]);
   protected readonly selectorPlantillas = signal(false);
+  protected readonly editandoPlantilla = signal<PlantillaEnEdicion | null>(null);
+  private readonly galeria = viewChild(GaleriaPlantillasDialogComponent);
+
+  // Cuenta del buzón (OAuth delegado): su estado vive en el footer del modal,
+  // como el estado de conexión en el modal de WhatsApp de Dali.
+  protected readonly cuenta = signal<CuentaCorreoApi | null>(null);
+  protected readonly puedeGestionar = computed(() =>
+    this.auth.hasPermission('app.suscripcion.solicitudes.manage'),
+  );
 
   protected readonly historial = signal<CorreoClienteApi[]>([]);
   protected readonly cargandoHistorial = signal(false);
@@ -250,15 +311,85 @@ export class EnvioCorreosDialogComponent {
     } catch {
       /* sin contexto: el editor funciona igual, sin valores para previsualizar */
     }
-    try {
-      const r = await this.api.getPlantillasCorreo(true);
-      this.plantillas.set(r.items);
-      if (Object.keys(this.variables()).length === 0 && r.variables) {
-        this.variables.set(r.variables);
+    if (Object.keys(this.variables()).length === 0) {
+      // Sin contexto (bridge caído): al menos los chips de variables.
+      try {
+        const r = await this.api.getPlantillasCorreo(true);
+        if (r.variables) this.variables.set(r.variables);
+      } catch {
+        /* el editor funciona igual, sin chips */
       }
-    } catch {
-      this.plantillas.set([]);
     }
+    void this.cargarCuenta();
+  }
+
+  private async cargarCuenta(): Promise<void> {
+    try {
+      this.cuenta.set(await this.api.getCuentaCorreo());
+    } catch {
+      this.cuenta.set(null);
+    }
+  }
+
+  /**
+   * Redirige al login de Microsoft para autorizar la cuenta del buzón
+   * (OAuth delegado, patrón Dali). Vuelve por /graph-callback, que canjea el
+   * código y regresa a esta cotización (state = URL actual).
+   */
+  protected conectarCuenta(): void {
+    const scopes =
+      this.cuenta()?.scopes ?? 'openid offline_access User.Read Mail.Send Mail.Read';
+    const params = new URLSearchParams({
+      client_id: environment.azure.clientId,
+      response_type: 'code',
+      redirect_uri: `${window.location.origin}/graph-callback`,
+      response_mode: 'query',
+      scope: scopes,
+      // El analista tiene SU sesión activa: forzamos el selector de cuentas
+      // para que entre con la del buzón, no con la personal.
+      prompt: 'select_account',
+      state: window.location.pathname + window.location.search,
+    });
+    const hint = this.cuenta()?.buzon_esperado;
+    if (hint) params.set('login_hint', hint);
+    window.location.href =
+      `https://login.microsoftonline.com/${environment.azure.tenantId}` +
+      `/oauth2/v2.0/authorize?${params.toString()}`;
+  }
+
+  protected async desconectarCuenta(): Promise<void> {
+    try {
+      await this.api.desconectarCuentaCorreo();
+    } catch {
+      /* el estado real se refleja al recargar */
+    }
+    await this.cargarCuenta();
+  }
+
+  /** "Guardar plantilla": el correo compuesto pasa al editor de plantillas. */
+  protected guardarComoPlantilla(): void {
+    this.editandoPlantilla.set({
+      id: '',
+      nombre: '',
+      categoria: 'Suscripción',
+      asunto: this.asunto,
+      cuerpo_html: this.cuerpoHtml,
+    });
+  }
+
+  /** Editar pedido desde la galería (todas las plantillas son compartidas). */
+  protected editarPlantilla(p: PlantillaCorreoApi): void {
+    this.editandoPlantilla.set({
+      id: p.id,
+      nombre: p.nombre,
+      categoria: p.categoria,
+      asunto: p.asunto,
+      cuerpo_html: p.cuerpo_html,
+    });
+  }
+
+  protected plantillaGuardada(): void {
+    void this.galeria()?.recargar();
   }
 
   /** Sustituye {{variables}} con los datos reales (para la previsualización). */

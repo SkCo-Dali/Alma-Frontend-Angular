@@ -62,12 +62,15 @@ export const routes: Routes = [
     title: 'Configuración del motor — ALMA',
   },
   {
-    path: 'apps/suscripcion/plantillas',
+    // Retorno del OAuth delegado del buzón de suscripción (redirect URI de
+    // las apps de Entra). Fuera de /apps/suscripcion para no chocar con
+    // :solicitudId y sobrevivir a cambios de esa jerarquía.
+    path: 'graph-callback',
     loadComponent: () =>
-      import('./features/suscripcion/plantillas-correo-page.component').then(
-        (m) => m.PlantillasCorreoPageComponent,
+      import('./features/suscripcion/graph-callback.component').then(
+        (m) => m.GraphCallbackComponent,
       ),
-    title: 'Plantillas de correo — ALMA',
+    title: 'Conectando buzón — ALMA',
   },
   {
     path: 'apps/suscripcion/simulador',

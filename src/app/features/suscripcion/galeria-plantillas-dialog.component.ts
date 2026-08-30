@@ -2,18 +2,23 @@
 // header con buscador inline + botón Buscar, pestañas glass de TIPO
 // (Todas / Mis plantillas) y de CATEGORÍA, tarjetas con miniatura real del
 // HTML y overlay "Ver plantilla" al hover, y el MODAL DE PREVISUALIZACIÓN
-// encima (700px) con el botón "Usar esta plantilla" — igual que en Dali,
-// donde el clic en la tarjeta previsualiza y desde ahí se usa.
+// encima (700px) con "Usar esta plantilla" + Editar + Eliminar — en Dali esos
+// dos últimos solo aparecen en las plantillas propias; aquí TODAS son
+// compartidas del área, así que cualquier usuario con manage puede
+// editarlas/eliminarlas. La galería carga sus propias plantillas (la página
+// /apps/suscripcion/plantillas ya no existe).
 
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
-import { PlantillaCorreoApi } from './suscripcion.api';
+import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
+import { HtmlCorreoPipe } from './html-correo.pipe';
+import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 @Component({
   selector: 'alma-galeria-plantillas-dialog',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, HtmlCorreoPipe],
   styles: [`
     .glass { background: color-mix(in oklab, var(--background) 60%, transparent);
       border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
@@ -103,7 +108,14 @@ import { PlantillaCorreoApi } from './suscripcion.api';
 
         <!-- Grid de tarjetas: el CLIC previsualiza (como Dali) -->
         <div class="min-h-0 flex-1 overflow-y-auto pt-1">
-          @if (filtradas().length === 0) {
+          @if (cargando()) {
+            <div class="flex flex-col items-center gap-2 p-12">
+              <alma-loader [size]="56" />
+              <p class="text-xs text-muted-foreground">Cargando plantillas…</p>
+            </div>
+          } @else if (error(); as err) {
+            <p class="p-8 text-center text-sm text-destructive">{{ err }}</p>
+          } @else if (filtradas().length === 0) {
             <div class="flex flex-col items-center gap-2 p-12 text-center text-sm text-muted-foreground">
               <lucide-icon name="file-text" [size]="28" />
               No hay plantillas para esa búsqueda.
@@ -113,7 +125,7 @@ import { PlantillaCorreoApi } from './suscripcion.api';
               @for (p of filtradas(); track p.id) {
                 <button type="button" class="card" (click)="previa.set(p)">
                   <div class="thumb">
-                    <div class="mini" [innerHTML]="p.cuerpo_html"></div>
+                    <div class="mini" [innerHTML]="p.cuerpo_html | htmlCorreo"></div>
                     <div class="velo"><span>Ver plantilla</span></div>
                   </div>
                   <div class="flex flex-1 flex-col gap-1 p-3">
@@ -152,12 +164,48 @@ import { PlantillaCorreoApi } from './suscripcion.api';
           <div class="min-h-0 flex-1 overflow-y-auto bg-white p-5 md:p-8">
             <div class="text-[14px] leading-relaxed text-neutral-800"
                  style="font-family: Arial, 'Segoe UI', sans-serif;"
-                 [innerHTML]="p.cuerpo_html"></div>
+                 [innerHTML]="p.cuerpo_html | htmlCorreo"></div>
           </div>
-          <div class="flex shrink-0 items-center justify-center gap-2 border-t border-border/30 bg-muted/20 px-5 py-3">
+          <!-- Footer (Dali plantilla propia): Usar + Editar + Eliminar -->
+          <div class="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border/30 bg-muted/20 px-5 py-3">
             <button type="button" (click)="usar(p)"
                     class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95">
               <lucide-icon name="mail" [size]="14" /> Usar esta plantilla
+            </button>
+            @if (!soloSeleccion() && puedeGestionar()) {
+              <button type="button" (click)="editar.emit(p)"
+                      class="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-xs font-medium transition-all hover:border-primary hover:text-primary">
+                <lucide-icon name="pencil" [size]="13" /> Editar
+              </button>
+              <button type="button" (click)="confirmarEliminar.set(p)"
+                      class="flex items-center gap-1.5 rounded-xl bg-destructive px-4 py-2 text-xs font-medium text-white transition-all hover:bg-destructive/90">
+                <lucide-icon name="trash-2" [size]="13" /> Eliminar
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Confirmación de eliminación (todas las plantillas son compartidas) -->
+    @if (confirmarEliminar(); as p) {
+      <div class="fixed inset-0 z-[135] flex items-center justify-center bg-black/60 p-4" (click)="confirmarEliminar.set(null)">
+        <div class="surface-solid w-full max-w-sm rounded-2xl border border-border p-6 shadow-2xl" (click)="$event.stopPropagation()">
+          <h2 class="text-base font-bold">¿Eliminar "{{ p.nombre }}"?</h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            La plantilla es compartida por todo el equipo y esta acción no se
+            puede deshacer.
+          </p>
+          @if (errorAccion(); as err) {
+            <p class="mt-2 text-xs font-medium text-destructive">{{ err }}</p>
+          }
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" (click)="confirmarEliminar.set(null)" class="alma-btn alma-btn-outline rounded-xl">
+              Cancelar
+            </button>
+            <button type="button" (click)="eliminar(p)" [disabled]="eliminando()"
+                    class="alma-btn rounded-xl bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50">
+              {{ eliminando() ? 'Eliminando…' : 'Eliminar' }}
             </button>
           </div>
         </div>
@@ -166,16 +214,31 @@ import { PlantillaCorreoApi } from './suscripcion.api';
   `,
 })
 export class GaleriaPlantillasDialogComponent {
+  private readonly api = inject(SuscripcionApi);
   private readonly auth = inject(AuthService);
 
-  readonly plantillas = input.required<PlantillaCorreoApi[]>();
+  /** true = solo elegir (sin Editar/Eliminar): p.ej. "usar como base". */
+  readonly soloSeleccion = input(false);
   readonly closed = output<void>();
   readonly seleccionar = output<PlantillaCorreoApi>();
+  /** El usuario pidió editar esta plantilla (el padre abre el editor). */
+  readonly editar = output<PlantillaCorreoApi>();
 
   protected busqueda = '';
   protected readonly categoria = signal('');
   protected readonly tipo = signal<'todas' | 'mias'>('todas');
   protected readonly previa = signal<PlantillaCorreoApi | null>(null);
+  protected readonly confirmarEliminar = signal<PlantillaCorreoApi | null>(null);
+  protected readonly eliminando = signal(false);
+  protected readonly errorAccion = signal<string | null>(null);
+
+  protected readonly plantillas = signal<PlantillaCorreoApi[]>([]);
+  protected readonly cargando = signal(true);
+  protected readonly error = signal<string | null>(null);
+
+  protected readonly puedeGestionar = computed(() =>
+    this.auth.hasPermission('app.suscripcion.solicitudes.manage'),
+  );
 
   protected readonly tiposTabs = [
     { valor: 'todas' as const, label: 'Todas' },
@@ -185,6 +248,28 @@ export class GaleriaPlantillasDialogComponent {
   protected readonly categorias = computed(() =>
     [...new Set(this.plantillas().map((p) => p.categoria))].sort(),
   );
+
+  constructor() {
+    void this.recargar();
+  }
+
+  /** Recarga la lista (también la invoca el padre tras guardar una edición). */
+  async recargar(): Promise<void> {
+    this.cargando.set(true);
+    this.error.set(null);
+    try {
+      const r = await this.api.getPlantillasCorreo();
+      this.plantillas.set(r.items);
+      const abierta = this.previa();
+      if (abierta) {
+        this.previa.set(r.items.find((p) => p.id === abierta.id) ?? null);
+      }
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.cargando.set(false);
+    }
+  }
 
   protected filtradas(): PlantillaCorreoApi[] {
     const q = this.busqueda.trim().toLowerCase();
@@ -202,5 +287,20 @@ export class GaleriaPlantillasDialogComponent {
   protected usar(p: PlantillaCorreoApi): void {
     this.previa.set(null);
     this.seleccionar.emit(p);
+  }
+
+  protected async eliminar(p: PlantillaCorreoApi): Promise<void> {
+    this.eliminando.set(true);
+    this.errorAccion.set(null);
+    try {
+      await this.api.eliminarPlantillaCorreo(p.id);
+      this.confirmarEliminar.set(null);
+      this.previa.set(null);
+      await this.recargar();
+    } catch (e) {
+      this.errorAccion.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.eliminando.set(false);
+    }
   }
 }
