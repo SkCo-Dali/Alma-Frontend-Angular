@@ -35,6 +35,25 @@ const TAMANOS = [
   ['5', '24px'], ['6', '32px'], ['7', '48px'],
 ] as const;
 
+// Etiquetas y colores de los campos (mismo patrón de Dali: cada campo con su
+// pareja pastel bg/text; el chip muestra el nombre humano, no el {{token}}).
+const CAMPO_ETIQUETAS: Record<string, string> = {
+  asegurado: 'Asegurado', cedula: 'Cédula', nro_cotizacion: 'N° Cotización',
+  producto: 'Producto', suma_asegurada: 'Suma Asegurada', prima: 'Prima',
+  fp: 'Nombre FP', director: 'Director Comercial', agencia: 'Agencia',
+  analista: 'Analista', fecha: 'Fecha', mensaje: 'Mensaje',
+};
+const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
+  { bg: '#dbeafe', text: '#1e40af' }, // azul
+  { bg: '#e5e7eb', text: '#374151' }, // gris
+  { bg: '#fef3c7', text: '#92400e' }, // ámbar
+  { bg: '#e9d5ff', text: '#6b21a8' }, // violeta
+  { bg: '#dcfce7', text: '#166534' }, // verde
+  { bg: '#fce7f3', text: '#9d174d' }, // rosa
+  { bg: '#cffafe', text: '#155e75' }, // cian
+  { bg: '#ffedd5', text: '#9a3412' }, // naranja
+];
+
 const EMOJIS = [
   '😀', '😄', '🙂', '😉', '😍', '🤝', '👋', '👍',
   '🙏', '👏', '💪', '🎉', '🎯', '✨', '✅', '☑️',
@@ -48,8 +67,10 @@ const EMOJIS = [
   styles: [`
     :host { display: block; }
     /* Barra de herramientas (Dali: bg-muted/30, borde suave, una sola fila) */
-    .barra { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
-      overflow-x: auto; scrollbar-width: thin;
+    /* flex-wrap + overflow visible: los dropdowns (fuente/tamaño/emoji) son
+       hijos absolute y un overflow-x:auto los recortaba dentro de la barra. */
+    .barra { display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+      overflow: visible;
       background: color-mix(in oklab, var(--muted) 30%, transparent);
       border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
       border-radius: 10px; padding: 6px; }
@@ -86,18 +107,14 @@ const EMOJIS = [
     .campos { background: color-mix(in oklab, var(--muted) 35%, transparent);
       border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
       border-radius: 10px; padding: 8px 10px; }
-    .chip { display: inline-flex; align-items: center; border: 0; cursor: grab;
-      padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;
-      background: #dbeafe; color: #1d4ed8; }
-    .chip:hover { background: #bfdbfe; }
-    .chip:active { cursor: grabbing; }
-    :host-context(.dark) .chip, :host-context([data-theme="dark"]) .chip {
-      background: rgba(59,130,246,.18); color: #93c5fd; }
+    .chip { display: inline-flex; align-items: center; border: 0; cursor: move;
+      padding: 5px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+      transition: transform .15s; }
+    .chip:hover { transform: scale(1.05); }
     /* Lienzo: área gris con página blanca centrada + toggle flotante (Dali) */
-    .zona { position: relative;
-      background: color-mix(in oklab, var(--muted) 25%, transparent);
-      border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
-      border-radius: 10px; padding: 12px; }
+    .zona { position: relative; background: #fff;
+      border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+      border-radius: 10px; overflow: hidden; }
     .toggle { position: absolute; top: 8px; right: 8px; z-index: 10;
       display: flex; align-items: center; overflow: hidden; font-size: 12px;
       border: 1px solid var(--border); border-radius: 8px;
@@ -107,13 +124,13 @@ const EMOJIS = [
       border: 0; padding: 4px 10px; background: transparent; cursor: pointer;
       color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
     .toggle button.on { background: var(--primary); color: #fff; }
-    .pagina { background: #fff; color: #1f2937; max-width: 720px; margin: 0 auto;
-      min-height: 300px; max-height: 44vh; overflow-y: auto; border-radius: 6px;
-      box-shadow: 0 1px 3px rgb(0 0 0 / .12); padding: 20px 24px;
+    .pagina { background: #fff; color: #1f2937; width: 100%;
+      min-height: 46vh; max-height: 58vh; overflow-y: auto;
+      padding: 18px 20px 48px;
       font-family: Arial, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.55; }
-    .pagina:focus { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .pagina:focus { outline: none; }
     .pagina img { max-width: 100%; }
-    textarea.codigo { display: block; width: 100%; min-height: 300px; max-height: 44vh;
+    textarea.codigo { display: block; width: 100%; min-height: 46vh; max-height: 58vh;
       border: 0; border-radius: 6px; resize: vertical; padding: 14px 16px;
       background: #101613; color: #d1fae5;
       font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; }
@@ -234,6 +251,8 @@ const EMOJIS = [
                 type="button"
                 class="chip"
                 draggable="true"
+                [style.background]="v.bg"
+                [style.color]="v.text"
                 [title]="v.titulo"
                 (dragstart)="arrastrar($event, v.clave)"
                 (click)="insertarVariable(v.clave)"
@@ -314,12 +333,19 @@ export class EditorCorreoComponent {
     });
   }
 
-  protected listaVariables(): Array<{ clave: string; etiqueta: string; titulo: string }> {
-    return Object.entries(this.variables()).map(([clave, titulo]) => ({
-      clave,
-      etiqueta: `{{${clave}}}`,
-      titulo,
-    }));
+  protected listaVariables(): Array<{
+    clave: string; etiqueta: string; titulo: string; bg: string; text: string;
+  }> {
+    return Object.entries(this.variables()).map(([clave, titulo], i) => {
+      const color = CAMPO_COLORES[i % CAMPO_COLORES.length];
+      return {
+        clave,
+        etiqueta: CAMPO_ETIQUETAS[clave] ?? clave,
+        titulo: `${titulo} — inserta {{${clave}}}`,
+        bg: color.bg,
+        text: color.text,
+      };
+    });
   }
 
   private emitir(html: string): void {
