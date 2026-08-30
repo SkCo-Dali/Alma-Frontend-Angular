@@ -5,18 +5,20 @@
 // desde el diálogo "Correo al asesor" del detalle.
 
 import { KeyValuePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { environment } from '@env/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
+import { EditorCorreoComponent } from './editor-correo.component';
 import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 @Component({
   selector: 'alma-plantillas-correo-page',
-  imports: [FormsModule, KeyValuePipe, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent],
+  imports: [FormsModule, KeyValuePipe, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, EditorCorreoComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -47,6 +49,64 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
             }
           </div>
         </header>
+
+        <!-- Cuenta del buzón conectada (OAuth delegado, como en Dali) -->
+        <section class="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4 shadow-[var(--shadow-sm)]">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full"
+                 [class]="cuenta()?.conectada
+                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                   : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'">
+              <lucide-icon [name]="cuenta()?.conectada ? 'plug-zap' : 'plug'" [size]="18" />
+            </div>
+            <div>
+              <p class="text-sm font-semibold">
+                @if (cuenta()?.conectada) {
+                  Buzón conectado: {{ cuenta()?.email }}
+                } @else if (cuenta()?.estado === 'requiere_reconexion') {
+                  El buzón requiere reconexión
+                } @else {
+                  Buzón de suscripción sin conectar
+                }
+              </p>
+              <p class="text-xs text-muted-foreground">
+                @if (cuenta()?.conectada) {
+                  Autorizado por {{ cuenta()?.conectada_por }} — los correos salen con
+                  permisos delegados del buzón y el token se renueva solo.
+                } @else {
+                  Inicia sesión UNA vez con la cuenta
+                  {{ cuenta()?.buzon_esperado ?? 'del buzón de suscripción' }} y autoriza
+                  el envío. No requiere aprobación del administrador.
+                }
+              </p>
+              @if (conectando()) {
+                <p class="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <lucide-icon name="loader-2" [size]="12" class="animate-spin" />
+                  Completando la conexión…
+                </p>
+              }
+              @if (errorCuenta(); as err) {
+                <p class="mt-1 text-xs font-medium text-destructive">{{ err }}</p>
+              }
+            </div>
+          </div>
+          @if (puedeGestionar()) {
+            <div class="flex gap-2">
+              @if (cuenta()?.conectada) {
+                <button type="button" (click)="desconectarCuenta()" class="alma-btn alma-btn-outline h-9 rounded-xl text-xs">
+                  Desconectar
+                </button>
+                <button type="button" (click)="conectarCuenta()" class="alma-btn alma-btn-outline h-9 rounded-xl text-xs">
+                  Reconectar
+                </button>
+              } @else {
+                <button type="button" (click)="conectarCuenta()" class="alma-btn alma-btn-primary h-9 rounded-xl text-xs">
+                  <lucide-icon name="plug-zap" [size]="14" /> Conectar cuenta
+                </button>
+              }
+            </div>
+          }
+        </section>
 
         @if (cargando()) {
           <div class="flex flex-col items-center gap-3 p-12">
@@ -160,32 +220,44 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
                 </div>
                 <div>
                   <label class="text-xs font-medium text-muted-foreground">Asunto</label>
-                  <input [(ngModel)]="ed.asunto" maxlength="250" class="alma-input mt-1 w-full rounded-xl" />
+                  <input
+                    #asuntoInput
+                    [(ngModel)]="ed.asunto"
+                    maxlength="250"
+                    class="alma-input mt-1 w-full rounded-xl"
+                    (focus)="objetivo = 'asunto'"
+                    (dragover)="$event.preventDefault()"
+                  />
                 </div>
-                <div class="flex min-h-0 flex-1 flex-col">
-                  <label class="text-xs font-medium text-muted-foreground">Cuerpo (HTML)</label>
-                  <textarea
-                    [(ngModel)]="ed.cuerpo_html"
-                    rows="14"
-                    class="alma-input mt-1 w-full flex-1 rounded-xl font-mono text-xs"
-                  ></textarea>
-                </div>
+                <!-- Campos dinámicos: clic los inserta donde esté el cursor
+                     (asunto o cuerpo) y también se pueden ARRASTRAR, como en Dali. -->
                 <div>
-                  <p class="text-xs font-medium text-muted-foreground">
-                    Variables (clic para copiar):
-                  </p>
-                  <div class="mt-1 flex flex-wrap gap-1">
+                  <div class="flex flex-wrap gap-1.5">
                     @for (v of variables() | keyvalue; track v.key) {
                       <button
                         type="button"
-                        (click)="copiarVariable(v.key)"
-                        class="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] text-foreground/80 hover:border-primary hover:text-primary"
+                        draggable="true"
+                        (dragstart)="arrastrarVariable($event, v.key)"
+                        (click)="insertarVariable(v.key)"
+                        class="cursor-grab rounded-full border border-border/60 bg-primary/10 px-2.5 py-1 text-[11.5px] font-medium text-primary hover:border-primary active:cursor-grabbing"
                         [title]="v.value"
                       >
                         {{ '{{' + v.key + '}}' }}
                       </button>
                     }
                   </div>
+                  <p class="mt-1 text-[11px] text-muted-foreground">
+                    Arrastra los campos al asunto o al contenido del correo, o haz clic
+                    para insertarlos donde esté el cursor.
+                  </p>
+                </div>
+                <div class="flex min-h-0 flex-1 flex-col">
+                  <label class="mb-1 text-xs font-medium text-muted-foreground">Contenido</label>
+                  <alma-editor-correo
+                    [value]="ed.cuerpo_html"
+                    (valueChange)="ed.cuerpo_html = $event"
+                    (focusEditor)="objetivo = 'cuerpo'"
+                  />
                 </div>
               </div>
               <div class="flex min-h-0 flex-col">
@@ -247,6 +319,25 @@ import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
 export class PlantillasCorreoPageComponent {
   private readonly api = inject(SuscripcionApi);
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  private readonly editor = viewChild(EditorCorreoComponent);
+  /** A dónde va la próxima variable insertada por clic. */
+  protected objetivo: 'asunto' | 'cuerpo' = 'cuerpo';
+
+  // Cuenta del buzón (OAuth delegado)
+  protected readonly cuenta = signal<{
+    configurado: boolean;
+    conectada: boolean;
+    estado: string | null;
+    email: string | null;
+    conectada_por: string | null;
+    buzon_esperado: string | null;
+    scopes: string;
+  } | null>(null);
+  protected readonly conectando = signal(false);
+  protected readonly errorCuenta = signal<string | null>(null);
 
   protected readonly items = signal<PlantillaCorreoApi[]>([]);
   protected readonly variables = signal<Record<string, string>>({});
@@ -274,6 +365,89 @@ export class PlantillasCorreoPageComponent {
 
   constructor() {
     void this.cargar();
+    void this.cargarCuenta();
+    // Retorno del flujo OAuth: Microsoft redirige aquí con ?code=...
+    const code = this.route.snapshot.queryParamMap.get('code');
+    if (code) void this.completarConexion(code);
+    else if (this.route.snapshot.queryParamMap.get('error')) {
+      this.errorCuenta.set(
+        this.route.snapshot.queryParamMap.get('error_description') ??
+          'La autorización fue cancelada.',
+      );
+      void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
+  }
+
+  private redirectUri(): string {
+    return `${window.location.origin}/apps/suscripcion/plantillas`;
+  }
+
+  private async cargarCuenta(): Promise<void> {
+    try {
+      this.cuenta.set(await this.api.getCuentaCorreo());
+    } catch {
+      this.cuenta.set(null);
+    }
+  }
+
+  /** Redirige al login de Microsoft para autorizar la cuenta del buzón. */
+  protected conectarCuenta(): void {
+    const scopes = this.cuenta()?.scopes ?? 'openid offline_access User.Read Mail.Send Mail.Read';
+    const params = new URLSearchParams({
+      client_id: environment.azure.clientId,
+      response_type: 'code',
+      redirect_uri: this.redirectUri(),
+      response_mode: 'query',
+      scope: scopes,
+      // El analista tiene SU sesión activa: forzamos el selector de cuentas
+      // para que entre con la del buzón, no con la personal.
+      prompt: 'select_account',
+    });
+    const hint = this.cuenta()?.buzon_esperado;
+    if (hint) params.set('login_hint', hint);
+    window.location.href =
+      `https://login.microsoftonline.com/${environment.azure.tenantId}` +
+      `/oauth2/v2.0/authorize?${params.toString()}`;
+  }
+
+  private async completarConexion(code: string): Promise<void> {
+    this.conectando.set(true);
+    this.errorCuenta.set(null);
+    try {
+      await this.api.conectarCuentaCorreo(code, this.redirectUri());
+    } catch (e) {
+      this.errorCuenta.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.conectando.set(false);
+      await this.cargarCuenta();
+      void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
+  }
+
+  protected async desconectarCuenta(): Promise<void> {
+    try {
+      await this.api.desconectarCuentaCorreo();
+      await this.cargarCuenta();
+    } catch (e) {
+      this.errorCuenta.set(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Chips: arrastre nativo (texto plano {{clave}}) e inserción por clic. */
+  protected arrastrarVariable(ev: DragEvent, clave: string): void {
+    ev.dataTransfer?.setData('text/plain', `{{${clave}}}`);
+  }
+
+  protected insertarVariable(clave: string): void {
+    const token = `{{${clave}}}`;
+    const ed = this.editando();
+    if (!ed) return;
+    if (this.objetivo === 'asunto') {
+      ed.asunto = `${ed.asunto}${token}`;
+      this.editando.set({ ...ed });
+      return;
+    }
+    this.editor()?.insertarTexto(token);
   }
 
   private async cargar(): Promise<void> {
@@ -361,11 +535,4 @@ export class PlantillasCorreoPageComponent {
     }
   }
 
-  protected async copiarVariable(clave: string): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(`{{${clave}}}`);
-    } catch {
-      /* portapapeles no disponible: sin drama */
-    }
-  }
 }
