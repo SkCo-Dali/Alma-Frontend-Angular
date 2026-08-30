@@ -534,6 +534,31 @@ export class SuscripcionApi {
     });
   }
 
+  // ── Cuenta del buzón conectada (OAuth delegado, patrón Dali) ───────────────
+
+  getCuentaCorreo(): Promise<{
+    configurado: boolean;
+    conectada: boolean;
+    estado: string | null;
+    email: string | null;
+    conectada_por: string | null;
+    buzon_esperado: string | null;
+    scopes: string;
+  }> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo');
+  }
+
+  conectarCuentaCorreo(code: string, redirectUri: string): Promise<{ conectada: boolean; email: string }> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo/conectar', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  }
+
+  desconectarCuentaCorreo(): Promise<void> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo', { method: 'DELETE' });
+  }
+
   // ── Plantillas de correo (galería estilo Dali) ─────────────────────────────
 
   getPlantillasCorreo(
