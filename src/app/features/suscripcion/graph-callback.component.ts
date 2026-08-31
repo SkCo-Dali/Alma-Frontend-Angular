@@ -8,6 +8,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
+import { CorreoApi } from '../../shared/correo/correo.api';
 import { SuscripcionApi } from './suscripcion.api';
 
 @Component({
@@ -41,6 +42,7 @@ import { SuscripcionApi } from './suscripcion.api';
 })
 export class GraphCallbackComponent {
   private readonly api = inject(SuscripcionApi);
+  private readonly correoApi = inject(CorreoApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -48,10 +50,18 @@ export class GraphCallbackComponent {
   protected readonly error = signal<string | null>(null);
   /** A dónde volver: el state del authorize (URL de origen) o la app. */
   protected readonly destino = signal('/apps/suscripcion');
+  /** state = "b:<buzonId>|<url>" (buzón genérico, p.ej. desde Configuración)
+      o "<url>" a secas (flujo del modal de Suscripción). */
+  private buzonId: string | null = null;
 
   constructor() {
     const qp = this.route.snapshot.queryParamMap;
-    const state = qp.get('state') ?? '';
+    let state = qp.get('state') ?? '';
+    const m = /^b:([0-9a-f-]{36})\|(.*)$/i.exec(state);
+    if (m) {
+      this.buzonId = m[1];
+      state = m[2];
+    }
     // Solo rutas internas: nada de volver a un origen externo inyectado.
     if (state.startsWith('/') && !state.startsWith('//')) this.destino.set(state);
     void this.procesar(qp.get('code'), qp.get('error_description') ?? qp.get('error'));
@@ -63,8 +73,13 @@ export class GraphCallbackComponent {
       this.procesando.set(false);
       return;
     }
+    const redirect = `${window.location.origin}/graph-callback`;
     try {
-      await this.api.conectarCuentaCorreo(code, `${window.location.origin}/graph-callback`);
+      if (this.buzonId) {
+        await this.correoApi.conectarBuzon(this.buzonId, code, redirect);
+      } else {
+        await this.api.conectarCuentaCorreo(code, redirect);
+      }
       this.procesando.set(false);
       setTimeout(() => void this.router.navigateByUrl(this.destino()), 900);
     } catch (e) {

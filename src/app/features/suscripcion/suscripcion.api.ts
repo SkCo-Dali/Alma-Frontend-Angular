@@ -319,20 +319,13 @@ export interface CuentaCorreoApi {
   conectada_por: string | null;
   buzon_esperado: string | null;
   scopes: string;
+  /** Conectar el buzón es acto administrativo; lo decide el backend. */
+  puede_conectar: boolean;
 }
 
-export interface PlantillaCorreoApi {
-  id: string;
-  nombre: string;
-  categoria: string;
-  asunto: string;
-  cuerpo_html: string;
-  activa: boolean;
-  creada_en: string;
-  creada_por: string;
-  actualizada_en: string | null;
-  actualizada_por: string | null;
-}
+// La plantilla ahora es de PLATAFORMA (shared/correo) — re-export por compat.
+export type { PlantillaCorreoApi } from '../../shared/correo/correo.api';
+import type { PlantillaCorreoApi } from '../../shared/correo/correo.api';
 
 export interface PlantillaCorreoIn {
   nombre: string;
@@ -579,38 +572,9 @@ export class SuscripcionApi {
     return this.api.fetch('/api/suscripcion/cuenta-correo', { method: 'DELETE' });
   }
 
-  // ── Plantillas de correo (galería estilo Dali) ─────────────────────────────
-
-  getPlantillasCorreo(
-    soloActivas = false,
-  ): Promise<{ items: PlantillaCorreoApi[]; variables: Record<string, string> }> {
-    return this.api.fetch(
-      `/api/suscripcion/correo-plantillas?solo_activas=${soloActivas}`,
-    );
-  }
-
-  crearPlantillaCorreo(body: PlantillaCorreoIn): Promise<PlantillaCorreoApi> {
-    return this.api.fetch('/api/suscripcion/correo-plantillas', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  }
-
-  actualizarPlantillaCorreo(
-    id: string,
-    body: Partial<PlantillaCorreoIn> & { activa?: boolean },
-  ): Promise<PlantillaCorreoApi> {
-    return this.api.fetch(`/api/suscripcion/correo-plantillas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    });
-  }
-
-  eliminarPlantillaCorreo(id: string): Promise<void> {
-    return this.api.fetch(`/api/suscripcion/correo-plantillas/${id}`, {
-      method: 'DELETE',
-    });
-  }
+  // Las plantillas son de PLATAFORMA: CRUD en shared/correo/CorreoApi
+  // (/api/correo/plantillas). Aquí queda solo lo que necesita el contexto
+  // de la solicitud (render con datos reales).
 
   /** Vista previa de la plantilla con los datos reales de la cotización. */
   renderPlantillaCorreo(

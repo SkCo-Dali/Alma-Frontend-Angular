@@ -6,12 +6,12 @@
 // /apps/suscripcion/plantillas eliminada, este diálogo es LA forma de crear
 // y editar plantillas.
 
-import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { EditorCorreoComponent } from './editor-correo.component';
 import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
-import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoApi, PlantillaCorreoApi } from './correo.api';
 
 /** Valores iniciales del editor. `id` vacío = plantilla nueva. */
 export interface PlantillaEnEdicion {
@@ -108,6 +108,16 @@ export interface PlantillaEnEdicion {
                         (click)="nuevaCategoria.set(false)">✕</button>
               </div>
             }
+            @if (!ed.id) {
+              <label class="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"
+                     [class.opacity-50]="!puedeCompartir()"
+                     title="Personal: solo tú la ves y usas. Compartida: todo el equipo de la App.">
+                <input type="checkbox" class="h-3.5 w-3.5 accent-[var(--primary)]"
+                       [ngModel]="soloParaMi()" (ngModelChange)="soloParaMi.set($event)"
+                       [disabled]="!puedeCompartir()" name="soloParaMi" />
+                Solo para mí
+              </label>
+            }
             <div class="ml-auto flex items-center gap-2">
               <button type="button" (click)="closed.emit()" [disabled]="guardando()"
                       class="rounded-xl border border-border/60 bg-background/50 px-3 py-1.5 text-xs transition-all hover:border-amber-500 hover:bg-amber-500 hover:text-white">
@@ -131,6 +141,7 @@ export interface PlantillaEnEdicion {
     <!-- Galería (solo selección) para usar otra plantilla como base -->
     @if (selectorBase()) {
       <alma-galeria-plantillas-dialog
+        [app]="app()"
         [soloSeleccion]="true"
         (closed)="selectorBase.set(false)"
         (seleccionar)="usarComoBase($event)"
@@ -139,8 +150,10 @@ export interface PlantillaEnEdicion {
   `,
 })
 export class EditarPlantillaDialogComponent {
-  private readonly api = inject(SuscripcionApi);
+  private readonly api = inject(CorreoApi);
 
+  /** Slug de la App dueña (p.ej. 'suscripcion'). */
+  readonly app = input.required<string>();
   /** Copia editable con los valores iniciales (el padre la construye). */
   readonly plantilla = input.required<PlantillaEnEdicion>();
   readonly variables = input<Record<string, string>>({});
@@ -151,6 +164,9 @@ export class EditarPlantillaDialogComponent {
   private readonly editor = viewChild(EditorCorreoComponent);
   protected readonly selectorBase = signal(false);
   protected readonly nuevaCategoria = signal(false);
+  /** Ámbito al CREAR: personal (solo yo) o compartida del área. */
+  protected readonly soloParaMi = signal(false);
+  protected readonly puedeCompartir = signal(true);
   protected readonly guardando = signal(false);
   protected readonly errorEditor = signal<string | null>(null);
   /** Categorías de las plantillas existentes + creadas en esta sesión. */
@@ -172,13 +188,20 @@ export class EditarPlantillaDialogComponent {
   });
 
   constructor() {
-    void this.cargarCategorias();
+    // Los inputs required no existen aún en el constructor.
+    effect(() => {
+      this.app();
+      untracked(() => void this.cargarCategorias());
+    });
   }
 
   private async cargarCategorias(): Promise<void> {
     try {
-      const r = await this.api.getPlantillasCorreo();
+      const r = await this.api.getPlantillas(this.app());
       this.categoriasBase.set([...new Set(r.items.map((p) => p.categoria))]);
+      this.puedeCompartir.set(r.puede_gestionar);
+      // Sin permiso de gestión, lo único posible es una plantilla personal.
+      if (!r.puede_gestionar && !this.ed.id) this.soloParaMi.set(true);
     } catch {
       this.categoriasBase.set([]);
     }
@@ -210,8 +233,9 @@ export class EditarPlantillaDialogComponent {
       cuerpo_html: ed.cuerpo_html,
     };
     try {
-      if (ed.id) await this.api.actualizarPlantillaCorreo(ed.id, body);
-      else await this.api.crearPlantillaCorreo(body);
+      if (ed.id) await this.api.actualizarPlantilla(ed.id, body);
+      else await this.api.crearPlantilla(this.app(), {
+        ...body, ambito: this.soloParaMi() ? 'personal' : 'app' });
       this.guardada.emit();
       this.closed.emit();
     } catch (e) {
