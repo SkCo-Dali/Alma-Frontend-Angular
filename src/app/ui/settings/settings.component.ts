@@ -15,6 +15,7 @@ import {
 } from '../../core/services/preferences.service';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { CuentaPharosComponent } from '../../features/suscripcion/cuenta-pharos.component';
+import { BuzonesCorreoCardComponent } from '../../shared/correo/buzones-correo-card.component';
 
 const TEMAS: { id: Theme; label: string; icon: string }[] = [
   { id: 'light', label: 'Claro', icon: 'sun' },
@@ -52,7 +53,7 @@ const AYUDA = [
 
 @Component({
   selector: 'alma-settings',
-  imports: [RouterLink, LucideAngularModule, PageHeaderComponent, CuentaPharosComponent],
+  imports: [RouterLink, LucideAngularModule, PageHeaderComponent, CuentaPharosComponent, BuzonesCorreoCardComponent],
   template: `
     <div class="mx-auto max-w-3xl">
       <a
@@ -201,6 +202,9 @@ const AYUDA = [
           </div>
         </div>
       </section>
+
+      <!-- Buzones de la plataforma (visible según acceso a las Apps) -->
+      <alma-buzones-correo-card />
 
       <!-- ── Ayuda ── -->
       <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">

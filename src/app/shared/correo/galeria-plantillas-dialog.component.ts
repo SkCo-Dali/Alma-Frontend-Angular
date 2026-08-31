@@ -8,14 +8,14 @@
 // editarlas/eliminarlas. La galería carga sus propias plantillas (la página
 // /apps/suscripcion/plantillas ya no existe).
 
-import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { register as registerSwiper } from 'swiper/element/bundle';
 import { AuthService } from '../../core/auth/auth.service';
-import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
+import { AlmaLoaderComponent } from '../components/alma-loader.component';
 import { HtmlCorreoPipe } from './html-correo.pipe';
-import { PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoApi, PlantillaCorreoApi } from './correo.api';
 
 // Web component <swiper-container> (bundle: trae Navigation/Autoplay/FreeMode/
 // Mousewheel y sus estilos en shadow DOM). Registrar es idempotente.
@@ -180,6 +180,11 @@ const SWIPER_PARAMS = {
                         <p class="line-clamp-1 text-xs text-muted-foreground">{{ p.asunto }}</p>
                         <div class="mt-auto flex flex-wrap gap-1.5 pt-1">
                           <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">{{ p.categoria }}</span>
+                          @if (p.ambito === 'personal') {
+                            <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">Personal</span>
+                          } @else if (p.ambito === 'plataforma') {
+                            <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">Plataforma</span>
+                          }
                           @if (!p.activa) {
                             <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Inactiva</span>
                           }
@@ -221,7 +226,7 @@ const SWIPER_PARAMS = {
                     class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] hover:shadow-xl active:scale-95">
               <lucide-icon name="mail" [size]="14" /> Usar esta plantilla
             </button>
-            @if (!soloSeleccion() && puedeGestionar()) {
+            @if (!soloSeleccion() && puedeEscribir(p)) {
               <button type="button" (click)="editar.emit(p)"
                       class="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-4 py-2 text-xs font-medium transition-all hover:border-primary hover:text-primary">
                 <lucide-icon name="pencil" [size]="13" /> Editar
@@ -263,9 +268,11 @@ const SWIPER_PARAMS = {
   `,
 })
 export class GaleriaPlantillasDialogComponent {
-  private readonly api = inject(SuscripcionApi);
+  private readonly api = inject(CorreoApi);
   private readonly auth = inject(AuthService);
 
+  /** Slug de la App cuyas plantillas se muestran (p.ej. 'suscripcion'). */
+  readonly app = input.required<string>();
   /** true = solo elegir (sin Editar/Eliminar): p.ej. "usar como base". */
   readonly soloSeleccion = input(false);
   readonly closed = output<void>();
@@ -285,9 +292,17 @@ export class GaleriaPlantillasDialogComponent {
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly puedeGestionar = computed(() =>
-    this.auth.hasPermission('app.suscripcion.solicitudes.manage'),
-  );
+  /** Gestión de plantillas compartidas de la App (lo informa el backend). */
+  protected readonly puedeGestionar = signal(false);
+
+  /** Editar/Eliminar por plantilla: personal → su propietario; app →
+      permiso de gestión; plataforma → solo admin de plataforma. */
+  protected puedeEscribir(p: PlantillaCorreoApi): boolean {
+    const yo = (this.auth.user()?.correo ?? '').toLowerCase();
+    if (p.ambito === 'personal') return (p.propietario ?? '').toLowerCase() === yo;
+    if (p.ambito === 'app') return this.puedeGestionar();
+    return this.auth.hasPermission('platform.correo.plantillas.manage');
+  }
 
   protected readonly tiposTabs = [
     { valor: 'todas' as const, label: 'Todas' },
@@ -299,7 +314,12 @@ export class GaleriaPlantillasDialogComponent {
   );
 
   constructor() {
-    void this.recargar();
+    // Los inputs required no existen aún en el constructor: cargar cuando
+    // `app` esté disponible (y recargar si el padre lo cambiara).
+    effect(() => {
+      this.app();
+      untracked(() => void this.recargar());
+    });
   }
 
   /** Recarga la lista (también la invoca el padre tras guardar una edición). */
@@ -307,7 +327,8 @@ export class GaleriaPlantillasDialogComponent {
     this.cargando.set(true);
     this.error.set(null);
     try {
-      const r = await this.api.getPlantillasCorreo();
+      const r = await this.api.getPlantillas(this.app());
+      this.puedeGestionar.set(r.puede_gestionar);
       this.plantillas.set(r.items);
       const abierta = this.previa();
       if (abierta) {
@@ -326,6 +347,7 @@ export class GaleriaPlantillasDialogComponent {
     return this.plantillas().filter(
       (p) =>
         (this.tipo() === 'todas' ||
+          (p.ambito === 'personal' && (p.propietario ?? '').toLowerCase() === yo) ||
           (p.creada_por ?? '').toLowerCase() === yo ||
           (p.actualizada_por ?? '').toLowerCase() === yo) &&
         (!this.categoria() || p.categoria === this.categoria()) &&
@@ -357,7 +379,7 @@ export class GaleriaPlantillasDialogComponent {
     this.eliminando.set(true);
     this.errorAccion.set(null);
     try {
-      await this.api.eliminarPlantillaCorreo(p.id);
+      await this.api.eliminarPlantilla(p.id);
       this.confirmarEliminar.set(null);
       this.previa.set(null);
       await this.recargar();

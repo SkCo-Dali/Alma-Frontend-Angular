@@ -11,11 +11,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { environment } from '@env/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
-import { EditarPlantillaDialogComponent, PlantillaEnEdicion } from './editar-plantilla-dialog.component';
-import { EditorCorreoComponent } from './editor-correo.component';
-import { HtmlCorreoPipe } from './html-correo.pipe';
-import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
-import { CorreoClienteApi, CuentaCorreoApi, PlantillaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoApi, PlantillaCorreoApi } from '../../shared/correo/correo.api';
+import { EditarPlantillaDialogComponent, PlantillaEnEdicion } from '../../shared/correo/editar-plantilla-dialog.component';
+import { EditorCorreoComponent } from '../../shared/correo/editor-correo.component';
+import { HtmlCorreoPipe } from '../../shared/correo/html-correo.pipe';
+import { GaleriaPlantillasDialogComponent } from '../../shared/correo/galeria-plantillas-dialog.component';
+import { CorreoClienteApi, CuentaCorreoApi, SuscripcionApi } from './suscripcion.api';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
@@ -162,7 +163,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
               @if (c.conectada) {
                 <span class="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                   <lucide-icon name="plug-zap" [size]="13" /> Buzón conectado: {{ c.email }}
-                  @if (puedeGestionar()) {
+                  @if (puedeConectar()) {
                     <button type="button" (click)="desconectarCuenta()"
                             class="font-normal text-muted-foreground underline-offset-2 hover:underline">
                       Desconectar
@@ -175,7 +176,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
                   {{ c.estado === 'requiere_reconexion'
                      ? 'El buzón requiere reconexión'
                      : 'Buzón de suscripción sin conectar' }}
-                  @if (puedeGestionar()) {
+                  @if (puedeConectar()) {
                     <button type="button" (click)="conectarCuenta()"
                             class="rounded-lg bg-gradient-to-r from-primary to-emerald-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-95">
                       Conectar cuenta
@@ -192,7 +193,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
           </div>
           <div class="flex items-center gap-2">
             @if (pestana() === 'nuevo') {
-              @if (puedeGestionar()) {
+              @if (true) {
                 <button type="button" (click)="guardarComoPlantilla()"
                         [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
                         class="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-xs font-medium transition-all hover:border-primary hover:text-primary disabled:opacity-50">
@@ -220,6 +221,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
          elegida se renderiza con los datos reales de la cotización. -->
     @if (selectorPlantillas()) {
       <alma-galeria-plantillas-dialog
+        [app]="APP"
         (closed)="selectorPlantillas.set(false)"
         (seleccionar)="usarPlantilla($event)"
         (editar)="editarPlantilla($event)"
@@ -229,6 +231,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
     <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
     @if (editandoPlantilla(); as ed) {
       <alma-editar-plantilla-dialog
+        [app]="APP"
         [plantilla]="ed"
         [variables]="variables()"
         (closed)="editandoPlantilla.set(null)"
@@ -238,7 +241,9 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
   `,
 })
 export class EnvioCorreosDialogComponent {
+  protected readonly APP = 'suscripcion';
   private readonly api = inject(SuscripcionApi);
+  private readonly correoApi = inject(CorreoApi);
   private readonly auth = inject(AuthService);
 
   readonly solicitudId = input.required<string>();
@@ -272,9 +277,9 @@ export class EnvioCorreosDialogComponent {
   // Cuenta del buzón (OAuth delegado): su estado vive en el footer del modal,
   // como el estado de conexión en el modal de WhatsApp de Dali.
   protected readonly cuenta = signal<CuentaCorreoApi | null>(null);
-  protected readonly puedeGestionar = computed(() =>
-    this.auth.hasPermission('app.suscripcion.solicitudes.manage'),
-  );
+  /** Conectar/desconectar el buzón es acto administrativo — lo decide el
+      backend (permiso app.suscripcion.correo.buzones.manage o plataforma). */
+  protected readonly puedeConectar = computed(() => !!this.cuenta()?.puede_conectar);
 
   protected readonly historial = signal<CorreoClienteApi[]>([]);
   protected readonly cargandoHistorial = signal(false);
@@ -314,7 +319,7 @@ export class EnvioCorreosDialogComponent {
     if (Object.keys(this.variables()).length === 0) {
       // Sin contexto (bridge caído): al menos los chips de variables.
       try {
-        const r = await this.api.getPlantillasCorreo(true);
+        const r = await this.correoApi.getPlantillas(this.APP, true);
         if (r.variables) this.variables.set(r.variables);
       } catch {
         /* el editor funciona igual, sin chips */
