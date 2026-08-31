@@ -31,7 +31,7 @@ export interface PlantillaEnEdicion {
       (click)="closed.emit()"
     >
       <div
-        class="surface-solid flex max-h-[92vh] w-full max-w-5xl flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl"
+        class="surface-solid flex h-[92vh] max-h-[92vh] w-full max-w-5xl flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl"
         (click)="$event.stopPropagation()"
       >
         <!-- Header: ícono degradado + título + subtítulo + X (Dali) -->
@@ -60,7 +60,7 @@ export interface PlantillaEnEdicion {
         </div>
 
         <!-- Toolbar + asunto + campos + lienzo (el editor completo) -->
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           <alma-editor-correo
             [(asunto)]="ed.asunto"
             [(value)]="ed.cuerpo_html"
