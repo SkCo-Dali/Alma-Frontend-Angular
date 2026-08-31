@@ -158,6 +158,21 @@ export interface CuentaPharosApi {
           </div>
         }
       </div>
+
+      <!-- Salesforce (próximamente) — vive junto a Pharos como cuenta conectable -->
+      <div class="mt-3 flex items-start gap-3 rounded-lg border border-dashed border-border p-4 opacity-70">
+        <span class="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
+          <lucide-icon name="plug" [size]="16" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-sm font-medium text-foreground">Salesforce</p>
+            <span class="alma-badge bg-primary/10 text-primary">Próximamente</span>
+          </div>
+          <p class="mt-0.5 text-xs text-muted-foreground">CRM (casos y clientes)</p>
+        </div>
+        <button class="alma-btn alma-btn-outline h-8 text-xs" disabled>Conectar</button>
+      </div>
     </section>
   `,
 })
