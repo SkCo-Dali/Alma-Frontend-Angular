@@ -8,15 +8,13 @@
 import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { environment } from '@env/environment';
-import { AuthService } from '../../core/auth/auth.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { CorreoApi, PlantillaCorreoApi } from '../../shared/correo/correo.api';
 import { EditarPlantillaDialogComponent, PlantillaEnEdicion } from '../../shared/correo/editar-plantilla-dialog.component';
 import { EditorCorreoComponent } from '../../shared/correo/editor-correo.component';
 import { HtmlCorreoPipe } from '../../shared/correo/html-correo.pipe';
 import { GaleriaPlantillasDialogComponent } from '../../shared/correo/galeria-plantillas-dialog.component';
-import { CorreoClienteApi, CuentaCorreoApi, SuscripcionApi } from './suscripcion.api';
+import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
@@ -26,7 +24,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
   template: `
     <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
       <div
-        class="surface-solid flex max-h-[94vh] w-full max-w-[97vw] flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl lg:max-w-[82vw]"
+        class="surface-solid flex h-[94vh] max-h-[94vh] w-full max-w-[97vw] flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl lg:max-w-[82vw]"
         (click)="$event.stopPropagation()"
       >
         <!-- ── Header (Dali): ícono + título + DESTINATARIOS + X ── -->
@@ -69,7 +67,8 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
         </div>
 
         <!-- ── Nuevo Correo ── -->
-        <div class="min-h-0 flex-1 overflow-y-auto" [hidden]="pestana() !== 'nuevo'">
+        <!-- overflow-hidden: barra/asunto/campos fijos, el lienzo scrollea solo (Dali) -->
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden" [hidden]="pestana() !== 'nuevo'">
           <alma-editor-correo
             [(asunto)]="asunto"
             [(value)]="cuerpoHtml"
@@ -159,32 +158,6 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
              WhatsApp de Dali: el estado de conexión vive en el footer) ── -->
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex min-w-0 flex-wrap items-center gap-3">
-            @if (cuenta(); as c) {
-              @if (c.conectada) {
-                <span class="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                  <lucide-icon name="plug-zap" [size]="13" /> Buzón conectado: {{ c.email }}
-                  @if (puedeConectar()) {
-                    <button type="button" (click)="desconectarCuenta()"
-                            class="font-normal text-muted-foreground underline-offset-2 hover:underline">
-                      Desconectar
-                    </button>
-                  }
-                </span>
-              } @else {
-                <span class="flex items-center gap-2 rounded-xl bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
-                  <lucide-icon name="plug" [size]="13" />
-                  {{ c.estado === 'requiere_reconexion'
-                     ? 'El buzón requiere reconexión'
-                     : 'Buzón de suscripción sin conectar' }}
-                  @if (puedeConectar()) {
-                    <button type="button" (click)="conectarCuenta()"
-                            class="rounded-lg bg-gradient-to-r from-primary to-emerald-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm transition-transform hover:scale-[1.03] active:scale-95">
-                      Conectar cuenta
-                    </button>
-                  }
-                </span>
-              }
-            }
             <label class="flex cursor-pointer items-center gap-2 text-xs text-foreground">
               <input type="checkbox" [(ngModel)]="copiarDirector" class="h-4 w-4 accent-[var(--primary)]" />
               Con copia al director comercial
@@ -193,13 +166,11 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
           </div>
           <div class="flex items-center gap-2">
             @if (pestana() === 'nuevo') {
-              @if (true) {
                 <button type="button" (click)="guardarComoPlantilla()"
                         [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
                         class="flex items-center gap-1.5 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-xs font-medium transition-all hover:border-primary hover:text-primary disabled:opacity-50">
                   <lucide-icon name="save" [size]="13" /> Guardar plantilla
                 </button>
-              }
               <button type="button" (click)="pestana.set('previsualizar')"
                       [disabled]="!asunto.trim() || !cuerpoHtml.trim()"
                       class="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 px-4 py-2 text-xs font-medium text-white shadow-lg shadow-primary/25 transition-transform hover:scale-[1.03] active:scale-95 disabled:opacity-50">
@@ -244,7 +215,6 @@ export class EnvioCorreosDialogComponent {
   protected readonly APP = 'suscripcion';
   private readonly api = inject(SuscripcionApi);
   private readonly correoApi = inject(CorreoApi);
-  private readonly auth = inject(AuthService);
 
   readonly solicitudId = input.required<string>();
   readonly nroCotizacion = input<string>('');
@@ -274,12 +244,6 @@ export class EnvioCorreosDialogComponent {
   protected readonly editandoPlantilla = signal<PlantillaEnEdicion | null>(null);
   private readonly galeria = viewChild(GaleriaPlantillasDialogComponent);
 
-  // Cuenta del buzón (OAuth delegado): su estado vive en el footer del modal,
-  // como el estado de conexión en el modal de WhatsApp de Dali.
-  protected readonly cuenta = signal<CuentaCorreoApi | null>(null);
-  /** Conectar/desconectar el buzón es acto administrativo — lo decide el
-      backend (permiso app.suscripcion.correo.buzones.manage o plataforma). */
-  protected readonly puedeConectar = computed(() => !!this.cuenta()?.puede_conectar);
 
   protected readonly historial = signal<CorreoClienteApi[]>([]);
   protected readonly cargandoHistorial = signal(false);
@@ -325,51 +289,11 @@ export class EnvioCorreosDialogComponent {
         /* el editor funciona igual, sin chips */
       }
     }
-    void this.cargarCuenta();
   }
 
-  private async cargarCuenta(): Promise<void> {
-    try {
-      this.cuenta.set(await this.api.getCuentaCorreo());
-    } catch {
-      this.cuenta.set(null);
-    }
-  }
+ 
 
-  /**
-   * Redirige al login de Microsoft para autorizar la cuenta del buzón
-   * (OAuth delegado, patrón Dali). Vuelve por /graph-callback, que canjea el
-   * código y regresa a esta cotización (state = URL actual).
-   */
-  protected conectarCuenta(): void {
-    const scopes =
-      this.cuenta()?.scopes ?? 'openid offline_access User.Read Mail.Send Mail.Read';
-    const params = new URLSearchParams({
-      client_id: environment.azure.clientId,
-      response_type: 'code',
-      redirect_uri: `${window.location.origin}/graph-callback`,
-      response_mode: 'query',
-      scope: scopes,
-      // El analista tiene SU sesión activa: forzamos el selector de cuentas
-      // para que entre con la del buzón, no con la personal.
-      prompt: 'select_account',
-      state: window.location.pathname + window.location.search,
-    });
-    const hint = this.cuenta()?.buzon_esperado;
-    if (hint) params.set('login_hint', hint);
-    window.location.href =
-      `https://login.microsoftonline.com/${environment.azure.tenantId}` +
-      `/oauth2/v2.0/authorize?${params.toString()}`;
-  }
-
-  protected async desconectarCuenta(): Promise<void> {
-    try {
-      await this.api.desconectarCuentaCorreo();
-    } catch {
-      /* el estado real se refleja al recargar */
-    }
-    await this.cargarCuenta();
-  }
+  
 
   /** "Guardar plantilla": el correo compuesto pasa al editor de plantillas. */
   protected guardarComoPlantilla(): void {

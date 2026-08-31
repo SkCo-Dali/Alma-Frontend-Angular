@@ -8,6 +8,7 @@
 // la cotización, con la misma banda de chips de colores de Dali.
 
 import {
+  HostListener,
   Component,
   ElementRef,
   OnDestroy,
@@ -73,7 +74,11 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
   selector: 'alma-editor-correo',
   imports: [FormsModule, LucideAngularModule],
   styles: [`
-    :host { display: block; }
+    :host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+    /* Réplica del layout de Dali: barra, asunto y campos quedan FIJOS y solo
+       el lienzo scrollea. El alto viene del contenedor (el modal), no de vh
+       fijos; min-height como piso para hosts sin altura definida. */
+    .raiz { flex: 1; min-height: 0; }
     /* flex-wrap + overflow visible: los dropdowns son hijos absolute y un
        overflow-x:auto los recortaba dentro de la barra. */
     .barra { display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
@@ -115,7 +120,8 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
       padding: 5px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 500;
       transition: transform .15s; }
     .chip:hover { transform: scale(1.05); }
-    .zona { position: relative; background: #fff;
+    .zona { position: relative; background: #fff; flex: 1; min-height: 200px;
+      display: flex; flex-direction: column;
       border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
       border-radius: 10px; overflow: hidden; }
     .toggle { position: absolute; top: 8px; right: 8px; z-index: 10;
@@ -133,8 +139,10 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
        eso el editor nace SIN altura y el modal de envío se ve aplastado. El
        min-height también vive en el wrapper .lienzo (que sí es del template)
        como doble seguro. */
-    .lienzo { background: #fff; min-height: 46vh; }
-    :host ::ng-deep .lienzo .tiptap { min-height: 46vh; max-height: 58vh;
+    .lienzo { background: #fff; flex: 1; min-height: 0; display: flex;
+      flex-direction: column; }
+    .lienzo > div { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    :host ::ng-deep .lienzo .tiptap { flex: 1; min-height: 0;
       overflow-y: auto; padding: 18px 20px 48px; color: #1f2937; outline: none;
       font-family: Arial, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.55; }
     :host ::ng-deep .lienzo .tiptap p { margin: 0 0 .6em; }
@@ -142,8 +150,8 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
     :host ::ng-deep .lienzo .tiptap ul { list-style: disc; padding-left: 1.4em; }
     :host ::ng-deep .lienzo .tiptap ol { list-style: decimal; padding-left: 1.4em; }
     :host ::ng-deep .lienzo .ProseMirror { outline: none; }
-    textarea.codigo { display: block; width: 100%; min-height: 46vh; max-height: 58vh;
-      border: 0; border-radius: 6px; resize: vertical; padding: 14px 16px;
+    textarea.codigo { display: block; width: 100%; flex: 1; min-height: 0;
+      border: 0; border-radius: 6px; resize: none; padding: 14px 16px;
       background: #101613; color: #d1fae5;
       font-family: ui-monospace, Consolas, monospace; font-size: 12px; line-height: 1.5; }
     .panel { position: absolute; z-index: 40; margin-top: 4px; min-width: 150px;
@@ -160,7 +168,7 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
     .colorA i { display: block; width: 14px; height: 3px; border-radius: 2px; margin-top: 1px; }
   `],
   template: `
-    <div class="relative flex min-h-0 flex-col gap-2">
+    <div class="raiz relative flex min-h-0 flex-col gap-2">
       <!-- ── Barra (misma estructura del RichTextEditor de Dali) ── -->
       <div class="barra">
         <button type="button" class="tb" title="Negrita" (mousedown)="cmd($event, 'bold')"><b>B</b></button>
@@ -168,7 +176,7 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
         <button type="button" class="tb underline" title="Subrayado" (mousedown)="cmd($event, 'underline')"><u>U</u></button>
         <span class="sep"></span>
 
-        <span class="relative">
+        <span class="relative pop-anchor">
           <button type="button" class="tb txt" (mousedown)="$event.preventDefault(); abrirPanel('fuente')">
             Fuente <lucide-icon name="chevron-down" [size]="12" />
           </button>
@@ -180,7 +188,7 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
             </div>
           }
         </span>
-        <span class="relative">
+        <span class="relative pop-anchor">
           <button type="button" class="tb txt" (mousedown)="$event.preventDefault(); abrirPanel('tamano')">
             Tamaño <lucide-icon name="chevron-down" [size]="12" />
           </button>
@@ -212,7 +220,7 @@ const CAMPO_COLORES: Array<{ bg: string; text: string }> = [
         <span class="sep"></span>
 
         <button type="button" class="tb" title="Insertar imagen" (mousedown)="imagen($event)"><lucide-icon name="image" [size]="15" /></button>
-        <span class="relative">
+        <span class="relative pop-anchor">
           <button type="button" class="tb" title="Insertar emoji" (mousedown)="$event.preventDefault(); toggleEmoji()"><lucide-icon name="smile" [size]="15" /></button>
           <div class="panel emoji-host" [hidden]="panel() !== 'emoji'" #emojiHost></div>
         </span>
@@ -308,7 +316,7 @@ export class EditorCorreoComponent implements OnDestroy {
   protected readonly modo = signal<'visual' | 'html'>('visual');
   protected readonly panel = signal<null | 'fuente' | 'tamano' | 'emoji'>(null);
   protected readonly color = signal('#000000');
-  protected readonly camposVisibles = signal(true);
+  protected readonly camposVisibles = signal(false);
   protected readonly htmlCompleto = signal('');
   protected objetivo: 'asunto' | 'cuerpo' = 'cuerpo';
 
@@ -321,6 +329,16 @@ export class EditorCorreoComponent implements OnDestroy {
   private editor: Editor | null = null;
   private emojiPicker: unknown = null;
   private ultimoExterno = '';
+
+  /** Cierra los popovers (fuente/tamaño/emoji) al hacer clic FUERA de su
+      ancla — como en Dali. Los clics dentro del ancla (.pop-anchor) no
+      cierran: ahí viven el botón y el propio panel/picker. */
+  @HostListener('document:mousedown', ['$event'])
+  protected cerrarPopovers(event: MouseEvent): void {
+    if (this.panel() === null) return;
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest?.('.pop-anchor')) this.panel.set(null);
+  }
   // Preservación de head/style de plantillas HTML completas (como Dali).
   private estructura: ExtractedTemplate | null = null;
 
