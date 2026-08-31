@@ -9,10 +9,10 @@ on:
       - develop
       - staging
       - main
-      # Propuesta visual del área de UX (@skandia/ui): despliega al MISMO
-      # ambiente Development que develop — el último push gana la SWA de Dev.
-      # Para devolver la SWA a develop sin commits de relleno:
-      #   gh workflow run azure-static-web-apps.yml --ref develop
+      # Propuesta visual del área de UX (@skandia/ui): NO toca la SWA de Dev.
+      # Se publica en el staging environment "ux" de SkCoAlmaDev, que tiene su
+      # propia URL fija y contenido aislado, así los deploys de develop y los
+      # de UX ya no se pisan entre sí.
       - alma-ux
   workflow_dispatch:
     inputs:
@@ -37,9 +37,15 @@ jobs:
     #   develop -> Development -> SkCoAlmaDev  (devalma)         -> AZURE_SWA_TOKEN_DEV
     # Los tokens son secretos de REPOSITORIO (no de Environment) para no
     # depender de permisos de admin; el Environment se mantiene por trazabilidad.
+    #
+    # Excepción: alma-ux usa el mismo build y el mismo token de Development,
+    # pero publica en el staging environment "ux" de esa SWA (SWA_ENV=ux) en
+    # vez de en producción, para no pisar el deploy de develop.
     environment: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'UAT' || 'Development') }}
     env:
       AMBIENTE: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'Production' || github.ref_name == 'staging' && 'UAT' || 'Development') }}
+      # Vacío ⇒ deploy al entorno de producción de la SWA que corresponda.
+      SWA_ENV: ${{ github.ref_name == 'alma-ux' && 'ux' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -75,3 +81,4 @@ jobs:
           api_location: "" # Api source code path - optional
           output_location: "" # Built app content directory - optional
           skip_app_build: true
+          deployment_environment: ${{ env.SWA_ENV }}
