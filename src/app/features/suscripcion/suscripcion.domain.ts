@@ -247,6 +247,7 @@ export type EstadoVeredictoSalud =
   | 'positivas'
   | 'covid_sin_restriccion'
   | 'covid_sin_vacuna'
+  | 'covid_con_vacuna'
   | 'revision'
   | 'sin_novedades'
   | 'sin_diligenciar';
@@ -292,7 +293,6 @@ export function veredictoSalud(d: {
       icon: 'info',
     };
   // Retención solo por no tener esquema de vacunación COVID: tampoco restrictiva.
-  // Va ANTES de la retención genérica; si estuviera vacunado, cae en "Requiere revisión".
   if (d.todas_negativas === true && d.retiene_por_salud && !d.covid_vacunado)
     return {
       estado: 'covid_sin_vacuna',
@@ -300,6 +300,17 @@ export function veredictoSalud(d: {
       cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
       icon: 'info',
     };
+  // Retención solo por el módulo COVID estando vacunado (esquema completo,
+  // enfermedades en "No"): Pharos retiene por haber diligenciado la vacunación,
+  // no por un riesgo. No restrictiva (coherente con los otros dos casos COVID).
+  if (d.todas_negativas === true && d.retiene_por_salud && d.covid_vacunado)
+    return {
+      estado: 'covid_con_vacuna',
+      label: 'Con vacuna COVID',
+      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+      icon: 'info',
+    };
+  // Fallback: retención por salud que no corresponde al módulo COVID.
   if (d.todas_negativas === true && d.retiene_por_salud)
     return {
       estado: 'revision',
@@ -337,6 +348,10 @@ export const VEREDICTO_PILL: Record<string, { cls: string; icon: string }> = {
     icon: 'info',
   },
   covid_sin_vacuna: {
+    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    icon: 'info',
+  },
+  covid_con_vacuna: {
     cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
     icon: 'info',
   },

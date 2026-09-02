@@ -168,7 +168,8 @@ function filtrarItems(
               @if (
                 analisis()?.retieneContratoPorSalud &&
                 veredicto().estado !== 'covid_sin_restriccion' &&
-                veredicto().estado !== 'covid_sin_vacuna'
+                veredicto().estado !== 'covid_sin_vacuna' &&
+                veredicto().estado !== 'covid_con_vacuna'
               ) {
                 <span
                   class="rounded-full bg-destructive/10 px-2.5 py-1 font-semibold text-destructive"
@@ -196,6 +197,15 @@ function filtrarItems(
                 COVID-19, pero el cuestionario de enfermedades está en “No”. Es una alerta
                 informativa: no restringe la emisión ni obliga a revisión del analista por
                 este motivo.
+              </div>
+            } @else if (veredicto().estado === 'covid_con_vacuna') {
+              <div
+                class="rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                Pharos retiene la cotización por el módulo COVID-19 (el asegurado declaró su
+                esquema de vacunación), pero el cuestionario de enfermedades está en “No”.
+                Es una alerta informativa: no restringe la emisión ni obliga a revisión del
+                analista por este motivo.
               </div>
             } @else if (analisis()?.retieneContratoPorSalud) {
               <div
