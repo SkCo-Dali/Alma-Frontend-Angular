@@ -1,16 +1,21 @@
-// Selector de roles con búsqueda e ícono ⓘ con la descripción del rol. El panel usa
-// posición fija calculada desde el trigger para no quedar recortado por contenedores con
-// overflow.
+// Selector de roles con búsqueda e ícono ⓘ con la descripción del rol.
+//
+// El panel se saca a <body> con `almaPortal` y se coloca con `colocarPanel`: al estar
+// dentro de una superficie .glass (backdrop-filter) ese ancestro se vuelve el bloque
+// contenedor del `position: fixed` y el panel salía desplazado y recortado — el usuario
+// veía el botón "Agregar rol" pero no el listado de roles.
 
-import { Component, ElementRef, ViewChild, computed, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { RolCatalogo, etiquetaRol } from '../../core/services/accesos.api';
+import { PortalDirective } from '../../shared/portal.directive';
+import { colocarPanel } from '../../shared/popover-position';
 
 const ANCHO_PANEL = 300;
 
 @Component({
   selector: 'alma-roles-picker',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, PortalDirective],
   template: `
     <button
       #boton
@@ -41,12 +46,16 @@ const ANCHO_PANEL = 300;
     </button>
 
     @if (abierto()) {
-      <div class="pointer-events-auto fixed inset-0 z-[60]" (click)="abierto.set(false)"></div>
       <div
-        class="surface-solid pointer-events-auto fixed z-[70] rounded-lg border border-border p-2 shadow-[var(--shadow-lg)]"
-        [style.top.px]="pos().top"
-        [style.left.px]="pos().left"
-        [style.width.px]="pos().width"
+        almaPortal
+        class="pointer-events-auto fixed inset-0 z-[60]"
+        (click)="abierto.set(false)"
+      ></div>
+      <div
+        #panel
+        almaPortal
+        class="surface-solid pointer-events-auto fixed z-[70] rounded-lg border border-border p-2 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        [style.width.px]="ancho()"
       >
         <div class="relative mb-2">
           <lucide-icon
@@ -114,10 +123,17 @@ export class RolesPickerComponent {
 
   @ViewChild('boton') private boton!: ElementRef<HTMLButtonElement>;
 
+  /** Al aparecer el panel (ya en <body>) se coloca con su medida real. */
+  @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {
+    if (el && this.anchor) colocarPanel(el.nativeElement, this.anchor);
+  }
+
+  private anchor: DOMRect | null = null;
+
   protected readonly etiqueta = etiquetaRol;
   protected readonly abierto = signal(false);
   protected readonly filtro = signal('');
-  protected readonly pos = signal({ top: 0, left: 0, width: ANCHO_PANEL });
+  protected readonly ancho = signal(ANCHO_PANEL);
 
   protected readonly filtrados = computed(() => {
     const q = this.filtro().trim().toLowerCase();
@@ -131,13 +147,8 @@ export class RolesPickerComponent {
   });
 
   protected abrir(): void {
-    const r = this.boton.nativeElement.getBoundingClientRect();
-    const width = Math.max(r.width, ANCHO_PANEL);
-    this.pos.set({
-      top: Math.min(r.bottom + 4, window.innerHeight - 300),
-      left: Math.min(Math.max(8, r.left), window.innerWidth - width - 8),
-      width,
-    });
+    this.anchor = this.boton.nativeElement.getBoundingClientRect();
+    this.ancho.set(Math.max(this.anchor.width, ANCHO_PANEL));
     this.filtro.set('');
     this.abierto.set(true);
   }
