@@ -593,9 +593,9 @@ const AJUSTES: SeccionSpec = {
     {
       key: 'rule',
       label: 'Regla',
-      tipo: 'select',
+      tipo: 'combobox',
       requerido: true,
-      buscable: true,
+      placeholder: 'Buscar o escribir la regla…',
       opciones: ctx.planes.map((p) => ({ label: p.name, value: p.name })),
     },
     { key: 'commission_type', label: 'Tipo Comisión', tipo: 'numero', requerido: true, maxLength: 100 },
@@ -618,7 +618,7 @@ const AJUSTES: SeccionSpec = {
     { key: 'entry_date', label: 'Fecha de Ingreso', tipo: 'fecha', deshabilitado: true },
   ],
   aFormulario: (r) => ({
-    period: r ? String(r['period'] ?? '') : '',
+    period: r ? periodoYYYYMM(r['period']) : '',
     company_name: txt(r?.['company_name'] as string),
     product: txt(r?.['product'] as string),
     long_contract: r ? String(r['long_contract'] ?? '') : '',
@@ -866,7 +866,10 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
   },
 };
 
-/** dd/MM/yyyy → yyyy-MM-dd para el input date, y de vuelta. */
+/** Periodo del API (número YYYYMM o texto con separadores) → dígitos YYYYMM. */
+function periodoYYYYMM(v: unknown): string {
+  return String(v ?? '').replace(/\D/g, '').slice(0, 6);
+}
 function aIsoDesdeUI(v: string): string {
   if (!v) return '';
   if (v.includes('/')) {
