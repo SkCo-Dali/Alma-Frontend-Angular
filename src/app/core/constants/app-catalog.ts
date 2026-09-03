@@ -67,6 +67,21 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-visor-comunicaciones',
+    nombre: 'Visor de comunicaciones',
+    descripcion:
+      'Visor de archivos .eml: renderiza el correo, sus encabezados y adjuntos sin exponer el código.',
+    categoria: 'Servicio al Cliente',
+    icono: 'mail-open',
+    color: '#02B1FF',
+    url: '/apps/visor-comunicaciones',
+    internalRoute: '/apps/visor-comunicaciones',
+    integrationType: 'internal',
+    requiredPermission: 'app.visor-comunicaciones.view',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-suscripcion',
     nombre: 'Suscripción de Seguros',
     descripcion:
@@ -193,6 +208,7 @@ export const MOCK_USER: User = {
     'app.sac-usuarios.operaciones',
     'app.agente-alma.view',
     'app.cheques.view',
+    'app.visor-comunicaciones.view',
     'app.emision.view',
     'app.documental.view',
     'app.pharos.view',
