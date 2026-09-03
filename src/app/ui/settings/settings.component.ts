@@ -15,6 +15,7 @@ import {
 } from '../../core/services/preferences.service';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { CuentaPharosComponent } from '../../features/suscripcion/cuenta-pharos.component';
+import { BuzonesCorreoCardComponent } from '../../shared/correo/buzones-correo-card.component';
 
 const TEMAS: { id: Theme; label: string; icon: string }[] = [
   { id: 'light', label: 'Claro', icon: 'sun' },
@@ -52,7 +53,7 @@ const AYUDA = [
 
 @Component({
   selector: 'alma-settings',
-  imports: [RouterLink, LucideAngularModule, PageHeaderComponent, CuentaPharosComponent],
+  imports: [RouterLink, LucideAngularModule, PageHeaderComponent, CuentaPharosComponent, BuzonesCorreoCardComponent],
   template: `
     <div class="mx-auto max-w-3xl">
       <a
@@ -161,46 +162,8 @@ const AYUDA = [
         <alma-cuenta-pharos />
       }
 
-      <!-- ── Conexiones para el Agente Alma (próximamente) ── -->
-      <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">
-        <div class="flex items-center gap-2">
-          <h2 class="text-sm font-semibold text-foreground">Conexiones para el Agente Alma</h2>
-          <span class="alma-badge bg-primary/10 text-primary">Próximamente</span>
-        </div>
-        <p class="mb-4 mt-1 text-xs text-muted-foreground">
-          Conecta tus cuentas para que el Agente Alma trabaje contigo de forma transversal:
-          leerá lo que te llega (con tu mismo nivel de acceso), lo cruzará con las Apps a
-          las que tienes acceso y te sugerirá acciones.
-        </p>
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="flex items-start gap-3 rounded-lg border border-dashed border-border p-3 opacity-70">
-            <span class="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
-              <lucide-icon name="mail" [size]="16" />
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-foreground">Correo (Outlook)</p>
-              <p class="text-xs text-muted-foreground">
-                Ej.: llega un reclamo de liquidación → Alma lo detecta, investiga el
-                contexto en la App de Comisiones y te sugiere la acción.
-              </p>
-            </div>
-            <button class="alma-btn alma-btn-outline h-8 text-xs" disabled>Conectar</button>
-          </div>
-          <div class="flex items-start gap-3 rounded-lg border border-dashed border-border p-3 opacity-70">
-            <span class="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
-              <lucide-icon name="plug" [size]="16" />
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-foreground">Salesforce</p>
-              <p class="text-xs text-muted-foreground">
-                Si te asignan un caso, Alma te avisa y lo cruza con la App correspondiente
-                para darte el contexto completo.
-              </p>
-            </div>
-            <button class="alma-btn alma-btn-outline h-8 text-xs" disabled>Conectar</button>
-          </div>
-        </div>
-      </section>
+      <!-- Buzones de la plataforma (visible según acceso a las Apps) -->
+      <alma-buzones-correo-card />
 
       <!-- ── Ayuda ── -->
       <section class="glass rounded-xl p-5 shadow-[var(--shadow-sm)]">

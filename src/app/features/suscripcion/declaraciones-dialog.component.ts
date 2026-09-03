@@ -165,7 +165,12 @@ function filtrarItems(
                   Peso {{ analisis()?.peso }} kg · Estatura {{ analisis()?.estatura }} m
                 </span>
               }
-              @if (analisis()?.retieneContratoPorSalud) {
+              @if (
+                analisis()?.retieneContratoPorSalud &&
+                veredicto().estado !== 'covid_sin_restriccion' &&
+                veredicto().estado !== 'covid_sin_vacuna' &&
+                veredicto().estado !== 'covid_con_vacuna'
+              ) {
                 <span
                   class="rounded-full bg-destructive/10 px-2.5 py-1 font-semibold text-destructive"
                 >
@@ -176,7 +181,33 @@ function filtrarItems(
 
             <!-- Explicación de la retención (evita la aparente contradicción
                  con "todas en No"). -->
-            @if (analisis()?.retieneContratoPorSalud) {
+            @if (veredicto().estado === 'covid_sin_restriccion') {
+              <div
+                class="rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                La única declaración positiva es una prueba COVID-19 positiva y el
+                cuestionario de enfermedades está en “No”. Es una alerta informativa: no
+                restringe la emisión ni obliga a revisión del analista por este motivo.
+              </div>
+            } @else if (veredicto().estado === 'covid_sin_vacuna') {
+              <div
+                class="rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                La cotización se retiene solo por no registrar esquema de vacunación
+                COVID-19, pero el cuestionario de enfermedades está en “No”. Es una alerta
+                informativa: no restringe la emisión ni obliga a revisión del analista por
+                este motivo.
+              </div>
+            } @else if (veredicto().estado === 'covid_con_vacuna') {
+              <div
+                class="rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                Pharos retiene la cotización por el módulo COVID-19 (el asegurado declaró su
+                esquema de vacunación), pero el cuestionario de enfermedades está en “No”.
+                Es una alerta informativa: no restringe la emisión ni obliga a revisión del
+                analista por este motivo.
+              </div>
+            } @else if (analisis()?.retieneContratoPorSalud) {
               <div
                 class="rounded-xl border border-amber-200/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
               >
@@ -282,6 +313,7 @@ export class DeclaracionesDialogComponent {
     return veredictoSalud({
       todas_negativas: a?.todasNegativas ?? null,
       covid_positivo: Boolean(a?.covidPositivo),
+      covid_vacunado: Boolean(a?.covidVacunado),
       retiene_por_salud: Boolean(a?.retieneContratoPorSalud),
     });
   });

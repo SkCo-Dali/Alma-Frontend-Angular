@@ -119,12 +119,18 @@ export interface AfiliacionDetalleApi {
     cobertura: string | null;
     estado_cobertura: string | null;
   };
+  // Cúmulo REAL del cliente (control de cúmulos vía bridge: pólizas vigentes
+  // + cotizaciones en trámite). Null = el bridge no respondió; se ocultan las
+  // filas en vez de mostrar el TotalCumulus de Pipeline, que nunca acumula.
   sumas: {
-    vida_ahorro: number | null;
-    vida_incapacidad: number | null;
-    capital_seguro: number | null;
+    crea_ahorro: number | null;
     crea_patrimonio: number | null;
+    capital_seguro: number | null;
+    vida_incapacidad: number | null;
+    crea_serenidad: number | null;
     total_cumulo: number | null;
+    polizas_vigentes: number | null;
+    en_tramite: number | null;
   };
   proceso: {
     fecha_recibida_estudio: string | null;
@@ -196,6 +202,7 @@ export interface SolicitudApi {
   declaraciones: {
     todas_negativas: boolean | null;
     covid_positivo: boolean;
+    covid_vacunado: boolean;
     retiene_por_salud: boolean;
     fecha: string;
   } | null;
@@ -236,6 +243,19 @@ export interface AnalisisDeclaracionesApi {
   estatura: string | null;
 }
 
+/** Tercero (rol) del nodo Pharos: pestaña "Terceros" de la cotización. */
+export interface TerceroApi {
+  tipo: string; // Tomador | Asegurado | Beneficiario | Pagador | Agente | Rol N
+  dRoleid: string;
+  nombre: string | null;
+  partyCode: string | null;
+  porcentaje: number | null;
+  nivel: number;
+  parentesco: string | null; // solo beneficiarios
+  visibleType: number | null;
+  activo: boolean;
+}
+
 export interface DeclaracionesApi {
   todas_negativas: boolean | null;
   fecha: string;
@@ -246,6 +266,8 @@ export interface DeclaracionesApi {
     nodeStatus: string | null;
     formularios: DeclaracionFormApi[];
     declaracionesRaiz?: DeclaracionItemApi[] | null;
+    /** Terceros del nodo (bridge nuevo; snapshots viejos no lo traen). */
+    terceros?: TerceroApi[] | null;
     sinCalibrar: number;
   }> | null;
   pharos: {
@@ -254,6 +276,73 @@ export interface DeclaracionesApi {
     wStatus: number | null;
     nodos: Array<Record<string, unknown>> | null;
   };
+}
+
+/** Fila del historial de Control Emisión del cliente (pólizas anteriores). */
+export interface HistorialClienteItemApi {
+  nro_cotizacion: string | null;
+  es_actual: boolean;
+  producto: string | null;
+  fecha_recepcion: string | null;
+  estado: string | null;
+  subestado: string | null;
+  suma_asegurada: number | null;
+  cobertura: string | null;
+  estado_cobertura: string | null;
+  contrato_pharos: string | null;
+  fecha_emision: string | null;
+  fecha_pago: string | null;
+  motivo_rechazo_retracto: string | null;
+  observaciones: string | null;
+  observaciones_reaseguro: string | null;
+  observaciones_examenes: string | null;
+}
+
+/** Producto del portafolio del cliente en Skandia (Sigscg.Contrato). */
+export interface ProductoClienteApi {
+  productCode: string | null;
+  productoDesc: string | null;
+  planProducto: string | null;
+  contrato: string | null;
+  estadoCodigo: string | null;
+  estado: string | null;
+  fechaInicio: string | null;
+  fechaTerminacion: string | null;
+}
+
+/** Plantilla de correo de suscripción (galería estilo Dali). */
+export interface CuentaCorreoApi {
+  configurado: boolean;
+  conectada: boolean;
+  estado: string | null;
+  email: string | null;
+  conectada_por: string | null;
+  buzon_esperado: string | null;
+  scopes: string;
+  /** Conectar el buzón es acto administrativo; lo decide el backend. */
+  puede_conectar: boolean;
+}
+
+// La plantilla ahora es de PLATAFORMA (shared/correo) — re-export por compat.
+export type { PlantillaCorreoApi } from '../../shared/correo/correo.api';
+import type { PlantillaCorreoApi } from '../../shared/correo/correo.api';
+
+export interface PlantillaCorreoIn {
+  nombre: string;
+  categoria?: string;
+  asunto: string;
+  cuerpo_html: string;
+}
+
+/** Correo del buzón de suscripción relacionado con el cliente. */
+export interface CorreoClienteApi {
+  asunto: string | null;
+  de: string | null;
+  de_nombre: string | null;
+  para: Array<string | null>;
+  fecha: string | null;
+  resumen: string | null;
+  enlace: string | null;
 }
 
 export interface Verificaciones {
@@ -412,6 +501,97 @@ export class SuscripcionApi {
     );
   }
 
+  /** Pólizas/cotizaciones ANTERIORES del asegurado en Control Emisión. */
+  getHistorialCliente(solicitudId: string): Promise<{ items: HistorialClienteItemApi[]; count: number }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/historial-cliente`);
+  }
+
+  /** Portafolio del cliente en Skandia (todos los cores, sin saldos). */
+  getProductosCliente(solicitudId: string): Promise<{ items: ProductoClienteApi[]; count: number }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/productos-cliente`);
+  }
+
+  /**
+   * Correos del buzón de suscripción. Sin `q` busca la cédula y la cotización
+   * del asegurado; con `q`, ese término (pestaña Historial).
+   */
+  getCorreosCliente(
+    solicitudId: string,
+    q?: string,
+  ): Promise<{ items: CorreoClienteApi[]; count: number }> {
+    const sufijo = q ? `?q=${encodeURIComponent(q)}` : '';
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correos${sufijo}`);
+  }
+
+  /** Valores reales de las variables de plantilla para la cotización. */
+  getContextoCorreo(solicitudId: string): Promise<{
+    variables: Record<string, string>;
+    descripciones: Record<string, string>;
+    para: string | null;
+    cc_director: string | null;
+  }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correo-contexto`);
+  }
+
+  /**
+   * Envía el correo de suscripción al FP (CC opcional al director), en modo
+   * libre (cuerpo de texto plano) o con plantilla (plantilla_id + mensaje;
+   * el HTML lo renderiza el servidor).
+   */
+  enviarCorreoAsesor(
+    solicitudId: string,
+    body: {
+      asunto: string;
+      cuerpo_html?: string | null;
+      cuerpo?: string | null;
+      plantilla_id?: string | null;
+      mensaje?: string | null;
+      copiar_director: boolean;
+    },
+  ): Promise<{ enviado: boolean; para: string; cc: string[] }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/correo-asesor`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  // ── Cuenta del buzón conectada (OAuth delegado, patrón Dali) ───────────────
+
+  getCuentaCorreo(): Promise<CuentaCorreoApi> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo');
+  }
+
+  conectarCuentaCorreo(code: string, redirectUri: string): Promise<{ conectada: boolean; email: string }> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo/conectar', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  }
+
+  desconectarCuentaCorreo(): Promise<void> {
+    return this.api.fetch('/api/suscripcion/cuenta-correo', { method: 'DELETE' });
+  }
+
+  // Las plantillas son de PLATAFORMA: CRUD en shared/correo/CorreoApi
+  // (/api/correo/plantillas). Aquí queda solo lo que necesita el contexto
+  // de la solicitud (render con datos reales).
+
+  /** Vista previa de la plantilla con los datos reales de la cotización. */
+  renderPlantillaCorreo(
+    solicitudId: string,
+    plantillaId: string,
+  ): Promise<{
+    asunto: string;
+    cuerpo_html: string;
+    para: string | null;
+    cc_director: string | null;
+    usa_mensaje: boolean;
+  }> {
+    return this.api.fetch(
+      `/api/suscripcion/solicitudes/${solicitudId}/correo-plantillas/${plantillaId}/render`,
+    );
+  }
+
   /** Verificación de cúmulo contra Pharos (pólizas vigentes del asegurado). */
   verificarCumulo(solicitudId: string): Promise<CumuloResultadoApi> {
     return this.api.fetch<CumuloResultadoApi>(
@@ -423,10 +603,15 @@ export class SuscripcionApi {
   emitirSolicitud(
     solicitudId: string,
     confirmacion: string,
+    opciones?: { cobertura?: 'VT' | 'VI'; observaciones?: string },
   ): Promise<{ contrato: string; advertencia: string | null }> {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/emitir`, {
       method: 'POST',
-      body: JSON.stringify({ confirmacion }),
+      body: JSON.stringify({
+        confirmacion,
+        cobertura: opciones?.cobertura ?? null,
+        observaciones: opciones?.observaciones || null,
+      }),
     });
   }
 

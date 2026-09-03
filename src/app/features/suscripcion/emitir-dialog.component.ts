@@ -125,6 +125,46 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
             {{ tarea().afiliacion?.fecha_cotizacion_pharos ?? '—' }}
           </div>
 
+          <!-- Condiciones con las que se emite: cobertura (pestaña Condiciones
+               de Pharos) + observaciones (exclusiones/condiciones → bitácora
+               de Pipeline). Pedido de Control y Emisión (ago-2026). -->
+          <fieldset class="mt-4 rounded-xl border border-border/50 p-3">
+            <legend class="px-1 text-xs font-semibold text-muted-foreground">
+              Cobertura de la póliza
+            </legend>
+            <div class="flex flex-col gap-2 text-sm">
+              <label class="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="cobertura"
+                  value="VT"
+                  [(ngModel)]="cobertura"
+                  class="h-4 w-4 accent-[var(--primary)]"
+                />
+                Vida + Incapacidad Total y Permanente
+                <span class="text-xs text-muted-foreground">(estándar)</span>
+              </label>
+              <label class="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="cobertura"
+                  value="VI"
+                  [(ngModel)]="cobertura"
+                  class="h-4 w-4 accent-[var(--primary)]"
+                />
+                Solo Vida
+                <span class="text-xs text-muted-foreground">(sin ITP)</span>
+              </label>
+            </div>
+            <textarea
+              [(ngModel)]="observaciones"
+              rows="2"
+              maxlength="1900"
+              placeholder="Observaciones de la emisión: exclusiones o condiciones de cobertura (opcional, queda en la bitácora de Pipeline)"
+              class="alma-input mt-3 w-full rounded-xl text-xs"
+            ></textarea>
+          </fieldset>
+
           <label
             class="mx-auto mt-3 flex cursor-pointer items-center gap-2 text-xs text-foreground"
           >
@@ -178,6 +218,8 @@ export class EmitirDialogComponent {
   readonly emitido = output<void>();
 
   protected acepta = false;
+  protected cobertura: 'VT' | 'VI' = 'VT';
+  protected observaciones = '';
   protected readonly cuenta = signal<CuentaPharosApi | null>(null);
   protected readonly cargandoCuenta = signal(true);
   protected readonly emitiendo = signal(false);
@@ -216,6 +258,7 @@ export class EmitirDialogComponent {
       const res = await this.api.emitirSolicitud(
         this.tarea().tarea_id,
         `Emisión aprobada por el analista — cotización ${this.tarea().nro_cotizacion}`,
+        { cobertura: this.cobertura, observaciones: this.observaciones.trim() },
       );
       this.emitida.set(res);
       this.emitido.emit();

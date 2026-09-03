@@ -20,11 +20,15 @@ import {
   apiToTarea,
   veredictoSalud,
 } from './suscripcion.domain';
+import { CorreosClienteCardComponent } from './correos-cliente-card.component';
 import { DeclaracionesDialogComponent } from './declaraciones-dialog.component';
 import { EmitirDialogComponent } from './emitir-dialog.component';
 import { EstadoPipelineDialogComponent } from './estado-pipeline-dialog.component';
 import { EvaluarModalComponent } from './evaluar-modal.component';
+import { HistorialClienteCardComponent } from './historial-cliente-card.component';
+import { ProductosClienteCardComponent } from './productos-cliente-card.component';
 import { SimuladorHostComponent } from './simulador/simulador-host.component';
+import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.component';
 
 @Component({
   selector: 'alma-detalle-solicitud',
@@ -34,11 +38,15 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
     AccessDeniedComponent,
     AlmaLoaderComponent,
     CopyButtonComponent,
+    CorreosClienteCardComponent,
     DeclaracionesDialogComponent,
     EmitirDialogComponent,
     EstadoPipelineDialogComponent,
     EvaluarModalComponent,
+    HistorialClienteCardComponent,
+    ProductosClienteCardComponent,
     SimuladorHostComponent,
+    ValidacionPharosDialogComponent,
   ],
   template: `
     @if (!puedeVer()) {
@@ -287,14 +295,25 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              [disabled]="!sel.declaraciones"
-              (click)="modal.set('declaraciones')"
-              class="alma-btn h-9 w-full rounded-xl border border-primary text-primary hover:bg-primary hover:text-white"
-            >
-              Ver cuestionario
-            </button>
+            <div class="flex flex-col gap-2">
+              <button
+                type="button"
+                [disabled]="!sel.declaraciones"
+                (click)="modal.set('declaraciones')"
+                class="alma-btn h-9 w-full rounded-xl border border-primary text-primary hover:bg-primary hover:text-white"
+              >
+                Ver cuestionario
+              </button>
+              <!-- Validación Pharos: terceros, declaraciones del producto,
+                   CertifiAportes y fechas del nodo, leídos en vivo del core. -->
+              <button
+                type="button"
+                (click)="modal.set('pharos')"
+                class="alma-btn alma-btn-outline h-9 w-full rounded-xl"
+              >
+                <lucide-icon name="shield-check" [size]="14" /> Validación Pharos
+              </button>
+            </div>
           </section>
         </div>
 
@@ -364,6 +383,16 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
           </div>
         }
 
+        <!-- ── Contexto 360 del cliente: Pipeline, portafolio y correos ── -->
+        <div class="columns-1 gap-3 md:columns-2 xl:columns-3">
+          <alma-historial-cliente-card [solicitudId]="sel.tarea_id" />
+          <alma-productos-cliente-card [solicitudId]="sel.tarea_id" />
+          <alma-correos-cliente-card
+            [solicitudId]="sel.tarea_id"
+            [nroCotizacion]="sel.nro_cotizacion"
+          />
+        </div>
+
         <!-- Modales -->
         @if (modal() === 'evaluar') {
           <alma-evaluar-modal
@@ -391,6 +420,13 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
             [tarea]="sel"
             (closed)="modal.set(null)"
             (emitido)="recargar()"
+          />
+        }
+        @if (modal() === 'pharos') {
+          <alma-validacion-pharos-dialog
+            [solicitudId]="sel.tarea_id"
+            [nroCotizacion]="sel.nro_cotizacion"
+            (closed)="modal.set(null)"
           />
         }
       </div>
@@ -422,7 +458,7 @@ export class DetalleSolicitudComponent {
   protected readonly refrescando = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly modal = signal<
-    null | 'evaluar' | 'declaraciones' | 'emitir' | 'estado'
+    null | 'evaluar' | 'declaraciones' | 'emitir' | 'estado' | 'pharos'
   >(null);
 
   // Permisos finos: manage = evaluar con el motor; emit = emitir en Pharos.
@@ -441,6 +477,7 @@ export class DetalleSolicitudComponent {
     return veredictoSalud({
       todas_negativas: d?.todas_negativas ?? null,
       covid_positivo: Boolean(d?.covid_positivo),
+      covid_vacunado: Boolean(d?.covid_vacunado),
       retiene_por_salud: Boolean(d?.retiene_por_salud),
     });
   });

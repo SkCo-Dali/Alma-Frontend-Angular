@@ -49,6 +49,7 @@ export interface MedicoFlags {
 export interface ResumenDeclaraciones {
   todas_negativas: boolean | null;
   covid_positivo: boolean;
+  covid_vacunado: boolean;
   retiene_por_salud: boolean;
   fecha: string;
 }
@@ -202,6 +203,7 @@ export function apiToTarea(dto: SolicitudApi): Tarea {
       ? {
           todas_negativas: dto.declaraciones.todas_negativas,
           covid_positivo: dto.declaraciones.covid_positivo ?? false,
+          covid_vacunado: dto.declaraciones.covid_vacunado ?? false,
           retiene_por_salud: dto.declaraciones.retiene_por_salud ?? false,
           fecha: dto.declaraciones.fecha,
         }
@@ -243,6 +245,9 @@ export const DECISION_BADGE: Record<string, string> = {
 
 export type EstadoVeredictoSalud =
   | 'positivas'
+  | 'covid_sin_restriccion'
+  | 'covid_sin_vacuna'
+  | 'covid_con_vacuna'
   | 'revision'
   | 'sin_novedades'
   | 'sin_diligenciar';
@@ -258,10 +263,17 @@ export interface VeredictoSalud {
  * Veredicto de salud COHERENTE a partir del resumen de declaraciones: si Pharos
  * marca COVID positivo o retención por salud, el caso pasa a "Requiere
  * revisión" en vez de "Sin novedades" (bug de badges contradictorios).
+ *
+ * Excepciones COVID no restrictivas (con el cuestionario de enfermedades todo en
+ * "No"): (1) la ÚNICA positiva es la prueba COVID-19 (P14) → "COVID-19 · sin
+ * restricción"; (2) hay retención por salud pero solo por no registrar esquema de
+ * vacunación COVID → "Sin vacuna COVID · sin restricción". Ninguna marca
+ * "Requiere revisión".
  */
 export function veredictoSalud(d: {
   todas_negativas: boolean | null;
   covid_positivo: boolean;
+  covid_vacunado: boolean;
   retiene_por_salud: boolean;
 }): VeredictoSalud {
   if (d.todas_negativas === false)
@@ -271,7 +283,35 @@ export function veredictoSalud(d: {
       cls: 'bg-destructive/10 text-destructive',
       icon: 'alert-triangle',
     };
-  if (d.todas_negativas === true && (d.covid_positivo || d.retiene_por_salud))
+  // La única positiva es la prueba COVID (P14): alerta no restrictiva. Debe ir
+  // ANTES de "Requiere revisión" para no restringir por la retención COVID.
+  if (d.todas_negativas === true && d.covid_positivo)
+    return {
+      estado: 'covid_sin_restriccion',
+      label: 'COVID-19',
+      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+      icon: 'info',
+    };
+  // Retención solo por no tener esquema de vacunación COVID: tampoco restrictiva.
+  if (d.todas_negativas === true && d.retiene_por_salud && !d.covid_vacunado)
+    return {
+      estado: 'covid_sin_vacuna',
+      label: 'Sin vacuna COVID',
+      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+      icon: 'info',
+    };
+  // Retención solo por el módulo COVID estando vacunado (esquema completo,
+  // enfermedades en "No"): Pharos retiene por haber diligenciado la vacunación,
+  // no por un riesgo. No restrictiva (coherente con los otros dos casos COVID).
+  if (d.todas_negativas === true && d.retiene_por_salud && d.covid_vacunado)
+    return {
+      estado: 'covid_con_vacuna',
+      label: 'Con vacuna COVID',
+      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+      icon: 'info',
+    };
+  // Fallback: retención por salud que no corresponde al módulo COVID.
+  if (d.todas_negativas === true && d.retiene_por_salud)
     return {
       estado: 'revision',
       label: 'Requiere revisión',
@@ -302,6 +342,18 @@ export const VEREDICTO_PILL: Record<string, { cls: string; icon: string }> = {
   requiere_revision: {
     cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
     icon: 'alert-triangle',
+  },
+  covid_sin_restriccion: {
+    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    icon: 'info',
+  },
+  covid_sin_vacuna: {
+    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    icon: 'info',
+  },
+  covid_con_vacuna: {
+    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    icon: 'info',
   },
   con_positivas: {
     cls: 'bg-destructive/10 text-destructive',
