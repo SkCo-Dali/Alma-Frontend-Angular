@@ -16,6 +16,7 @@ import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
+import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { Catalog } from './catalogs.api';
 import { CatalogsStore } from './catalogs.store';
 import {
@@ -31,6 +32,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
     LucideAngularModule,
     PortalDirective,
     AccessDeniedComponent,
+    AlmaLoaderComponent,
     CreateCatalogDialogComponent,
     EditCatalogDialogComponent,
     FieldsManagerDialogComponent,
@@ -68,9 +70,8 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
               <h2 class="pb-3 text-lg font-semibold">Todos los Catálogos</h2>
 
               @if (store.loading()) {
-                <div class="flex items-center justify-center py-8 text-sm">
-                  <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-                  Cargando catálogos…
+                <div class="flex items-center justify-center py-16">
+                  <alma-loader [size]="72" label="Cargando catálogos…" />
                 </div>
               } @else if (store.error(); as err) {
                 <div class="py-8 text-center text-destructive">
@@ -122,7 +123,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                             <button
                               type="button"
                               (click)="alternarMenu(c, $event)"
-                              class="h-8 w-8 rounded-full hover:bg-primary/10"
+                              class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-transparent text-foreground hover:bg-transparent hover:text-primary"
                               aria-label="Acciones del catálogo"
                             >
                               <lucide-icon name="more-horizontal" [size]="16" />
@@ -138,7 +139,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                                 <button
                                   type="button"
                                   (click)="editar(c, $event)"
-                                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
+                                  class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
                                 >
                                   <lucide-icon name="pencil" [size]="16" class="text-primary" />
                                   Editar
@@ -146,7 +147,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                                 <button
                                   type="button"
                                   (click)="alternarEstado(c, $event)"
-                                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
+                                  class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
                                 >
                                   <lucide-icon
                                     [name]="c.is_active ? 'power-off' : 'power'"
@@ -157,7 +158,7 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
                                 <button
                                   type="button"
                                   (click)="pedirBorrado(c, $event)"
-                                  class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                                  class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
                                 >
                                   <lucide-icon name="trash-2" [size]="16" />
                                   Eliminar

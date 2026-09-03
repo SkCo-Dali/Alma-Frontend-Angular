@@ -15,20 +15,10 @@ import {
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ComisionesToast } from '../comisiones-toast.service';
-import { CommissionPlan, CommissionRule } from './commission-plans.api';
+import { aFechaCalendario, CommissionPlan, CommissionRule } from './commission-plans.api';
 import { CommissionRulesApi, mapApiRuleToUI } from './commission-rules.api';
 import { CommissionRulesTableComponent } from './commission-rules-table.component';
 import { RuleDialogComponent } from './rule-dialog.component';
-
-/** ISO → yyyy-MM-dd, que es lo que acepta <input type="date">. */
-function aInputDate(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
 
 type MotivoPara = 'reject' | 'inactivate';
 
@@ -98,7 +88,7 @@ type MotivoPara = 'reject' | 'inactivate';
                 </div>
                 <div>
                   <label class="text-xs font-medium sm:text-sm" for="plan-desc">
-                    Descripción
+                    Descripción *
                   </label>
                   <textarea
                     id="plan-desc"
@@ -380,8 +370,8 @@ export class PlanEditorDialogComponent implements OnInit {
     const p = this.plan();
     this.nombre = p.name;
     this.descripcion = p.description;
-    this.inicio = aInputDate(p.startDate);
-    this.fin = aInputDate(p.endDate);
+    this.inicio = aFechaCalendario(p.startDate);
+    this.fin = aFechaCalendario(p.endDate);
     void this.cargarReglas();
   }
 
@@ -401,6 +391,13 @@ export class PlanEditorDialogComponent implements OnInit {
   }
 
   protected async guardarBorrador(): Promise<void> {
+    if (!this.nombre.trim() || !this.descripcion.trim() || !this.inicio || !this.fin) {
+      this.toast.errorGenericoConMensaje(
+        'Por favor completa todos los campos requeridos.',
+        'Error de validación',
+      );
+      return;
+    }
     this.ocupado.set(true);
     try {
       const res = await this.updatePlan()(this.plan().id, {

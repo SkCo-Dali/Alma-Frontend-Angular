@@ -305,7 +305,7 @@ export class InfoGerencialApi {
   exportCommissions(periodo?: string): Promise<void> {
     return this.http.descargar(
       `${PERFORMANCE}/excel${qs({ periodo })}`,
-      `comisiones_${periodo ?? 'todos'}.xlsx`,
+      `comisiones_${periodo ?? 'todos'}.csv`,
     );
   }
 
@@ -321,7 +321,7 @@ export class InfoGerencialApi {
   exportReport(tipo: ReportType, periodo?: string): Promise<void> {
     return this.http.descargar(
       `${REPORTS}/${this.endpoint(tipo)}/excel${qs({ periodo })}`,
-      `${tipo}_${periodo ?? 'todos'}.xlsx`,
+      `${tipo}_${periodo ?? 'todos'}.csv`,
     );
   }
 

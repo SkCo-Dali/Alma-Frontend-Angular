@@ -72,9 +72,13 @@ export type ParamValues = Record<string, string | boolean>;
           [class]="columnas() === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'"
         >
           @for (f of fields(); track f.key) {
-            <div class="space-y-2" [class.sm:col-span-full]="f.ancho === 'full'">
+            <div
+              class="space-y-2"
+              [class.sm:col-span-full]="f.ancho === 'full' || f.tipo === 'switch'"
+              [class.sm:order-last]="f.tipo === 'switch'"
+            >
               @if (f.tipo === 'switch') {
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col items-start gap-2">
                   <span class="text-sm font-medium">{{ f.label }}</span>
                   <alma-switch
                     [checked]="booleano(f.key)"
@@ -106,12 +110,12 @@ export type ParamValues = Record<string, string | boolean>;
                     }
                     <select
                       [id]="'pf-' + f.key"
-                      class="alma-input"
+                      class="alma-input cursor-pointer"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
                     >
-                      <option value="">Seleccionar…</option>
+                      <option value="">{{ f.placeholder || 'Seleccionar…' }}</option>
                       @for (o of opcionesVisibles(f); track o.value) {
                         <option [value]="o.value">{{ o.label }}</option>
                       }
@@ -131,7 +135,7 @@ export type ParamValues = Record<string, string | boolean>;
                     <input
                       [id]="'pf-' + f.key"
                       type="date"
-                      class="alma-input"
+                      class="alma-input cursor-pointer"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
@@ -141,7 +145,7 @@ export type ParamValues = Record<string, string | boolean>;
                     <div class="flex gap-2">
                       <select
                         [id]="'pf-' + f.key"
-                        class="alma-input"
+                        class="alma-input cursor-pointer"
                         [ngModel]="anioDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, $event, mesDe(f.key))"
                       >
@@ -151,7 +155,7 @@ export type ParamValues = Record<string, string | boolean>;
                         }
                       </select>
                       <select
-                        class="alma-input"
+                        class="alma-input cursor-pointer"
                         [ngModel]="mesDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, anioDe(f.key), $event)"
                       >
@@ -168,9 +172,12 @@ export type ParamValues = Record<string, string | boolean>;
                       class="alma-input"
                       [type]="f.tipo === 'email' ? 'email' : 'text'"
                       [attr.maxlength]="f.maxLength ?? null"
+                      [attr.inputmode]="modoEntrada(f)"
+                      [attr.pattern]="patronEntrada(f)"
                       [disabled]="!!f.deshabilitado"
                       [placeholder]="f.placeholder ?? ''"
                       [ngModel]="valor(f.key)"
+                      (keydown)="filtrarTecla(f, $event)"
                       (ngModelChange)="setTexto(f, $event)"
                     />
                   }
@@ -282,9 +289,37 @@ export class ParamFormDialogComponent implements OnInit {
   protected setTexto(f: ParamField, valor: string): void {
     let v = valor;
     if (f.tipo === 'numero') v = v.replace(/\D/g, '');
-    if (f.tipo === 'decimal') v = v.replace(/[^\d.]/g, '');
+    if (f.tipo === 'decimal') v = this.soloDecimal(v);
     if (f.maxLength) v = v.slice(0, f.maxLength);
     this.setValor(f.key, v);
+  }
+
+  protected filtrarTecla(f: ParamField, ev: KeyboardEvent): void {
+    if (f.tipo !== 'numero' && f.tipo !== 'decimal') return;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (ev.key.length > 1) return;
+    if (/\d/.test(ev.key)) return;
+    if (f.tipo === 'decimal' && ev.key === '.' && !this.valor(f.key).includes('.')) return;
+    ev.preventDefault();
+  }
+
+  protected modoEntrada(f: ParamField): string | null {
+    if (f.tipo === 'numero') return 'numeric';
+    if (f.tipo === 'decimal') return 'decimal';
+    return null;
+  }
+
+  protected patronEntrada(f: ParamField): string | null {
+    if (f.tipo === 'numero') return '[0-9]*';
+    if (f.tipo === 'decimal') return '[0-9]*[.]?[0-9]*';
+    return null;
+  }
+
+  private soloDecimal(valor: string): string {
+    const limpio = valor.replace(/[^\d.]/g, '');
+    const punto = limpio.indexOf('.');
+    if (punto === -1) return limpio;
+    return limpio.slice(0, punto + 1) + limpio.slice(punto + 1).replace(/\./g, '');
   }
 
   protected setBusqueda(key: string, texto: string): void {

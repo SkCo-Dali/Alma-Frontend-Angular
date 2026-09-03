@@ -5,11 +5,12 @@
 import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { FilterOption, PAGE_SIZE_OPTIONS } from './info-gerencial.api';
+import { AlmaSpinnerComponent } from '../../../shared/components/alma-spinner.component';
+import { FilterOption } from './info-gerencial.api';
 
 @Component({
   selector: 'alma-ig-table-toolbar',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaSpinnerComponent],
   template: `
     <div class="space-y-3 border-b border-border/30 bg-card p-3">
       <div class="flex flex-col items-stretch gap-2 lg:flex-row lg:items-center">
@@ -28,7 +29,7 @@ import { FilterOption, PAGE_SIZE_OPTIONS } from './info-gerencial.api';
             class="alma-btn alma-btn-outline h-10 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-medium"
           >
             @if (buscando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
+              <alma-spinner [size]="16" class="mr-2" />
             } @else {
               <lucide-icon name="search" [size]="16" class="mr-2" />
             }
@@ -52,15 +53,6 @@ import { FilterOption, PAGE_SIZE_OPTIONS } from './info-gerencial.api';
               }
             </select>
           }
-          <select
-            class="alma-input h-10 w-[80px] shrink-0"
-            [ngModel]="itemsPerPage()"
-            (ngModelChange)="itemsPerPageChange.emit(+$event)"
-          >
-            @for (s of tamanos; track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
           <button
             type="button"
             (click)="exportar.emit()"
@@ -68,11 +60,11 @@ import { FilterOption, PAGE_SIZE_OPTIONS } from './info-gerencial.api';
             class="alma-btn h-10 shrink-0 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
           >
             @if (exportando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
+              <alma-spinner [size]="16" class="mr-2" />
             } @else {
               <lucide-icon name="download" [size]="16" class="mr-2" />
             }
-            Descargar Excel
+            Descargar CSV
           </button>
         </div>
       </div>
@@ -103,7 +95,7 @@ export class IgTableToolbarComponent {
   readonly buscando = input(false);
   readonly monthFilter = input<string | undefined>(undefined);
   readonly monthOptions = input<FilterOption[]>([]);
-  readonly itemsPerPage = input.required<number>();
+  readonly itemsPerPage = input(20);
   readonly periodoLabel = input.required<string>();
   readonly totalLabel = input.required<string>();
   readonly exportando = input(false);
@@ -111,8 +103,7 @@ export class IgTableToolbarComponent {
   readonly searchChange = output<string>();
   readonly buscar = output<void>();
   readonly monthChange = output<string>();
-  readonly itemsPerPageChange = output<number>();
   readonly exportar = output<void>();
-
-  protected readonly tamanos = PAGE_SIZE_OPTIONS;
 }
+
+

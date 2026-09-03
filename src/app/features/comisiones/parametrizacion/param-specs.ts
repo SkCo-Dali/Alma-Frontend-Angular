@@ -118,14 +118,21 @@ const CONTABILIDAD: SeccionSpec = {
   ],
   campos: (ctx) => [
     { key: 'NombreCompania', label: 'Nombre Compañía', tipo: 'texto', requerido: true, deshabilitado: true },
-    { key: 'Producto', label: 'Producto', tipo: 'texto', requerido: true, deshabilitado: true },
     {
-      key: 'TipoComisionId',
-      label: 'Tipo Comisión',
-      tipo: 'select',
+      key: 'Producto',
+      label: 'Producto',
+      tipo: 'texto',
       requerido: true,
-      buscable: true,
-      opciones: ctx.planes.map((p) => ({ label: p.name, value: p.id })),
+      deshabilitado: true,
+      placeholder: 'Seleccione Tipo Comisión',
+    },
+    {
+      key: 'TipoComision',
+      label: 'Tipo Comisión',
+      tipo: 'combobox',
+      requerido: true,
+      placeholder: 'Seleccione o escriba el tipo de comisión',
+      opciones: ctx.planes.map((p) => ({ label: p.name, value: p.name })),
     },
     { key: 'Canal', label: 'Canal', tipo: 'select', requerido: true, opciones: canalOptions },
     { key: 'UnidadNegocio', label: 'Unidad de Negocio', tipo: 'numero', requerido: true, maxLength: 12 },
@@ -169,14 +176,16 @@ const CONTABILIDAD: SeccionSpec = {
     SubcuentaCuentaPorPagar: txt(v['SubcuentaCuentaPorPagar']) || '0',
     EsActivo: Boolean(v['EsActivo']),
   }),
-  // Al elegir el plan se guarda su nombre y se deduce el producto.
+  // Al elegir o escribir el plan se guarda su id y se deduce el producto.
   derivar: (key, v, ctx) => {
-    if (key !== 'TipoComisionId') return v;
-    const plan = ctx.planes.find((p) => p.id === txt(v['TipoComisionId']));
-    if (!plan) return v;
+    if (key !== 'TipoComision') return v;
+    const nombre = txt(v['TipoComision']);
+    const plan = ctx.planes.find((p) => p.name === nombre || p.id === nombre);
+    if (!plan) return { ...v, TipoComisionId: '', Producto: '' };
     return {
       ...v,
       TipoComision: plan.name,
+      TipoComisionId: plan.id,
       Producto: extractProductoFromCommissionName(plan.name),
     };
   },
@@ -214,21 +223,36 @@ const TIPOS_COMISION: SeccionSpec = {
     {
       key: 'TipoComision',
       label: 'Tipo Comisión',
-      tipo: 'select',
+      tipo: 'combobox',
       requerido: true,
-      buscable: true,
       ancho: 'full',
+      placeholder: 'Seleccione o escriba el tipo de comisión',
       opciones: ctx.planes.map((p) => ({ label: p.name, value: p.name })),
     },
     { key: 'Canal', label: 'Canal', tipo: 'select', requerido: true, opciones: canalOptions },
-    { key: 'Abreviacion', label: 'Abreviación', tipo: 'texto', requerido: true, deshabilitado: true },
-    { key: 'Producto', label: 'Producto', tipo: 'texto', requerido: true, deshabilitado: true },
+    {
+      key: 'Abreviacion',
+      label: 'Abreviación',
+      tipo: 'texto',
+      requerido: true,
+      deshabilitado: true,
+      placeholder: 'Seleccione Tipo Comisión',
+    },
+    {
+      key: 'Producto',
+      label: 'Producto',
+      tipo: 'texto',
+      requerido: true,
+      deshabilitado: true,
+      placeholder: 'Seleccione Tipo Comisión',
+    },
     {
       key: 'NombreContabilidad',
       label: 'Nombre Contabilidad',
       tipo: 'texto',
       requerido: true,
       deshabilitado: true,
+      placeholder: 'Seleccione Tipo Comisión',
       ancho: 'full',
     },
     {
@@ -270,7 +294,9 @@ const TIPOS_COMISION: SeccionSpec = {
   derivar: (key, v) => {
     if (key !== 'TipoComision') return v;
     const nombre = txt(v['TipoComision']);
-    if (!nombre) return v;
+    if (!nombre) {
+      return { ...v, Abreviacion: '', Producto: '', NombreContabilidad: '' };
+    }
     return {
       ...v,
       Abreviacion: extractAbreviacionFromCommissionName(nombre),
@@ -349,8 +375,8 @@ const DIFERIDOS_PARAM: SeccionSpec = {
     { key: 'tramo', label: 'Tramo', tipo: 'numero', requerido: true, maxLength: 1 },
     { key: 'porcentaje_diferido', label: 'Porcentaje Diferido (%)', tipo: 'decimal', requerido: true },
     { key: 'canal', label: 'Canal', tipo: 'select', requerido: true, opciones: canalOptions },
-    { key: 'estado', label: 'Estado', tipo: 'select', requerido: true, opciones: statusOptions },
-    { key: 'descripcion_estado', label: 'Descripción Estado', tipo: 'texto', deshabilitado: true },
+    { key: 'estado', label: 'Estado', tipo: 'select', requerido: true, opciones: statusOptions, placeholder: 'Seleccione estado' },
+    { key: 'descripcion_estado', label: 'Descripción Estado', tipo: 'texto', deshabilitado: true, placeholder: 'Seleccione estado' },
     { key: 'fecha_activacion', label: 'Fecha Activación', tipo: 'fecha', deshabilitado: true },
     { key: 'activo', label: 'Activo', tipo: 'switch' },
   ],

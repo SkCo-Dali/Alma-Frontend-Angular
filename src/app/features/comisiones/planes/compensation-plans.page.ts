@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
+import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { BusquedaDebounceComponent } from '../ui/busqueda-debounce.component';
 import {
   ALL_STATUSES,
@@ -23,6 +24,7 @@ import { PlansTableComponent } from './plans-table.component';
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
+    AlmaLoaderComponent,
     BusquedaDebounceComponent,
     CreatePlanDialogComponent,
     PlansTableComponent,
@@ -90,9 +92,8 @@ import { PlansTableComponent } from './plans-table.component';
         </div>
 
         @if (store.loading()) {
-          <div class="flex items-center justify-center py-8 text-sm">
-            <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-            Cargando planes de comisiones…
+          <div class="flex items-center justify-center py-16">
+            <alma-loader [size]="72" label="Cargando planes de comisiones…" />
           </div>
         } @else if (store.error(); as err) {
           <div class="py-8 text-center text-destructive">

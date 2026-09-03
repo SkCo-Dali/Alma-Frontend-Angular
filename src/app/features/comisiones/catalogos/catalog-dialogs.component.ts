@@ -45,7 +45,8 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
               id="cat-name"
               class="alma-input"
               placeholder="ej., Pólizas"
-              [(ngModel)]="nombre"
+              [ngModel]="nombre()"
+              (ngModelChange)="nombre.set($event)"
             />
           </div>
 
@@ -119,7 +120,7 @@ export class CreateCatalogDialogComponent {
 
   private readonly store = inject(CatalogsStore);
 
-  protected nombre = '';
+  protected readonly nombre = signal('');
   protected descripcion = '';
   protected rutaOrigen = '';
   protected readonly activo = signal(true);
@@ -127,7 +128,7 @@ export class CreateCatalogDialogComponent {
   protected readonly guardando = signal(false);
 
   protected readonly puedeGuardar = computed(
-    () => this.nombre.trim().length > 0 && camposCompletos(this.campos()),
+    () => this.nombre().trim().length > 0 && camposCompletos(this.campos()),
   );
 
   protected async crear(): Promise<void> {
@@ -135,7 +136,7 @@ export class CreateCatalogDialogComponent {
     this.guardando.set(true);
     try {
       const catalogo = await this.store.crear({
-        name: this.nombre.trim(),
+        name: this.nombre().trim(),
         description: this.descripcion,
         source_path: this.rutaOrigen,
         is_active: this.activo(),

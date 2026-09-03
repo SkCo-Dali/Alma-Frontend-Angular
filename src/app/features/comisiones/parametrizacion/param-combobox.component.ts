@@ -31,7 +31,7 @@ const MAX_VISIBLES = 80;
     <div class="relative">
       <input
         #inputEl
-        class="alma-input pr-9"
+        class="alma-input cursor-text pr-9"
         [id]="inputId()"
         [disabled]="disabled()"
         [placeholder]="placeholder()"
@@ -45,12 +45,12 @@ const MAX_VISIBLES = 80;
       <button
         type="button"
         tabindex="-1"
-        class="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+        class="absolute right-1 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed"
         [disabled]="disabled()"
         (mousedown)="$event.preventDefault(); toggle()"
         [attr.aria-label]="'Abrir opciones'"
       >
-        <lucide-icon name="chevrons-up-down" [size]="14" />
+        <lucide-icon name="chevron-down" [size]="16" />
       </button>
     </div>
 
@@ -58,14 +58,14 @@ const MAX_VISIBLES = 80;
       <div
         #panel
         almaPortal
-        class="surface-solid fixed z-[125] overflow-hidden rounded-xl border border-border shadow-[var(--shadow-lg)]"
+        class="surface-solid fixed z-[125] overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-lg)]"
         [style.top.px]="pos().top"
         [style.left.px]="pos().left"
         [style.width.px]="pos().width"
       >
-        <div class="max-h-56 overflow-y-auto p-1">
+        <div class="max-h-60 overflow-y-auto p-1.5">
           @if (visibles().length === 0) {
-            <p class="px-2 py-3 text-center text-xs text-muted-foreground">
+            <p class="px-3 py-3 text-center text-xs text-muted-foreground">
               Sin coincidencias. Puedes dejar el texto escrito.
             </p>
           }
@@ -73,8 +73,9 @@ const MAX_VISIBLES = 80;
             <button
               type="button"
               (mousedown)="elegir(o); $event.preventDefault()"
-              class="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
-              [class.bg-accent]="o.value === value()"
+              class="flex w-full cursor-pointer items-center rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+              [class.bg-muted]="o.value === value()"
+              [class.font-medium]="o.value === value()"
             >
               {{ o.label }}
             </button>
