@@ -144,12 +144,18 @@ export function mapApiPlanToUI(api: ApiCommissionPlan): CommissionPlan {
   };
 }
 
-/** Fecha para el API: inicio a las 00:00 y fin a las 23:59:59.999. */
+/** Fecha de calendario (yyyy-MM-dd) → ISO UTC del mismo día, sin corrimiento por zona. */
 export function formatDateForAPI(dateString: string, isEndDate = false): string {
-  const date = new Date(dateString);
-  if (isEndDate) date.setHours(23, 59, 59, 999);
-  else date.setHours(0, 0, 0, 0);
-  return date.toISOString();
+  const ymd = dateString.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return dateString;
+  return isEndDate ? `${ymd}T23:59:59.999Z` : `${ymd}T00:00:00.000Z`;
+}
+
+/** ISO o yyyy-MM-dd → yyyy-MM-dd del calendario enviado, sin usar la zona local. */
+export function aFechaCalendario(iso?: string): string {
+  if (!iso) return '';
+  const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
 }
 
 // ── Cliente ─────────────────────────────────────────────────────────────────

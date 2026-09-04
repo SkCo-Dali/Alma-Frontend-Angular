@@ -37,7 +37,7 @@ import { CommissionPlan } from './commission-plans.api';
           </div>
 
           <div>
-            <label class="text-sm font-medium" for="new-plan-desc">Descripción</label>
+            <label class="text-sm font-medium" for="new-plan-desc">Descripción *</label>
             <textarea
               id="new-plan-desc"
               class="alma-input mt-1"

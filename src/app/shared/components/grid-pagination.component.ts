@@ -17,7 +17,7 @@ import { LucideAngularModule } from 'lucide-angular';
         >
           <span class="text-xs font-medium text-muted-foreground sm:text-sm">Mostrar:</span>
           <select
-            class="alma-input h-8 w-16 rounded-lg px-[10px] sm:w-20"
+            class="alma-input h-8 w-16 cursor-pointer rounded-lg px-[10px] sm:w-20"
             [value]="itemsPerPage()"
             (change)="itemsPerPageChange.emit(+$any($event.target).value)"
           >
@@ -43,7 +43,7 @@ import { LucideAngularModule } from 'lucide-angular';
             [class]="
               currentPage() === 1
                 ? 'cursor-not-allowed bg-muted text-muted-foreground'
-                : 'bg-primary text-white hover:opacity-90 active:scale-95'
+                : 'cursor-pointer bg-primary text-white hover:opacity-90 active:scale-95'
             "
             [disabled]="currentPage() === 1"
             (click)="pageChange.emit(currentPage() - 1)"
@@ -55,10 +55,13 @@ import { LucideAngularModule } from 'lucide-angular';
           <div class="flex items-center gap-0.5 px-1">
             @for (p of paginas(); track $index) {
               @if (p === null) {
-                <span class="px-1.5 py-1 text-[10px] text-muted-foreground">...</span>
+                <span
+                  class="inline-flex h-7 min-w-[1.75rem] items-center justify-center text-[10px] leading-none text-muted-foreground"
+                  >…</span
+                >
               } @else {
                 <button
-                  class="h-7 min-w-[1.75rem] rounded-lg px-1 text-xs transition-all"
+                  class="h-7 min-w-[1.75rem] cursor-pointer rounded-lg px-1 text-xs transition-all"
                   [class]="
                     currentPage() === p
                       ? 'bg-primary/10 font-bold text-primary'
@@ -77,7 +80,7 @@ import { LucideAngularModule } from 'lucide-angular';
             [class]="
               currentPage() === totalPages()
                 ? 'cursor-not-allowed bg-muted text-muted-foreground'
-                : 'bg-primary text-white hover:opacity-90 active:scale-95'
+                : 'cursor-pointer bg-primary text-white hover:opacity-90 active:scale-95'
             "
             [disabled]="currentPage() === totalPages()"
             (click)="pageChange.emit(currentPage() + 1)"
@@ -104,8 +107,8 @@ export class GridPaginationComponent {
   readonly pageChange = output<number>();
   readonly itemsPerPageChange = output<number>();
 
-  protected readonly desde = computed(
-    () => (this.currentPage() - 1) * this.itemsPerPage() + 1,
+  protected readonly desde = computed(() =>
+    this.total() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1,
   );
   protected readonly hasta = computed(() =>
     Math.min(this.currentPage() * this.itemsPerPage(), this.total()),

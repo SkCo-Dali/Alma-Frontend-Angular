@@ -4,6 +4,7 @@
 
 import { Component, computed, input, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSpinnerComponent } from '../../../shared/components/alma-spinner.component';
 import {
   CanalDatum,
   MesDatum,
@@ -30,7 +31,7 @@ function polar(cx: number, cy: number, r: number, ang: number): [number, number]
 
 @Component({
   selector: 'alma-ig-charts',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, AlmaSpinnerComponent],
   template: `
     @if (loading()) {
       <div class="grid grid-cols-1 gap-4 pt-4 xl:grid-cols-3">
@@ -38,7 +39,7 @@ function polar(cx: number, cy: number, r: number, ang: number): [number, number]
           <div
             class="flex h-[280px] items-center justify-center rounded-xl border border-border/30 bg-card"
           >
-            <lucide-icon name="loader-2" [size]="28" class="animate-spin text-muted-foreground" />
+            <alma-spinner [size]="28" class="text-muted-foreground" />
           </div>
         }
       </div>

@@ -687,7 +687,7 @@ export class EjecucionMotorStore implements OnDestroy {
 
   async exportarExcel(tab: MotorDataTab): Promise<void> {
     const f = this.filtros(tab);
-    this.toast.ok('Generando Excel', 'Descarga en progreso…');
+    this.toast.ok('Generando CSV', 'Descarga en progreso…');
     try {
       if (tab === 'correos') {
         const c = f as FiltrosCorreos;
@@ -697,19 +697,19 @@ export class EjecucionMotorStore implements OnDestroy {
             segmento: c.segmento || undefined,
             estado: c.estado || undefined,
           },
-          `correos_${c.periodo || 'todos'}.xlsx`,
+          `correos_${c.periodo || 'todos'}.csv`,
         );
       } else {
         const c = f as FiltrosComisiones;
         await this.api.exportTabla(
           tab as MotorTableTab,
           { compania: c.compania || undefined, periodo: c.periodo || undefined },
-          `${tab}_${c.periodo || 'todos'}.xlsx`,
+          `${tab}_${c.periodo || 'todos'}.csv`,
         );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Error desconocido';
-      this.toast.errorGenericoConMensaje(msg, 'Error al descargar Excel');
+      this.toast.errorGenericoConMensaje(msg, 'Error al descargar CSV');
     }
   }
 

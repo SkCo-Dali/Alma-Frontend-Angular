@@ -171,7 +171,7 @@ export class InfoGerencialStore {
     } catch (e) {
       this.toast.errorGenerico(
         'fetch',
-        e instanceof Error ? e.message : 'No se pudo descargar el archivo Excel',
+        e instanceof Error ? e.message : 'No se pudo descargar el archivo CSV',
       );
     }
   }
@@ -238,7 +238,7 @@ export class InfoGerencialStore {
     } catch (e) {
       this.toast.errorGenerico(
         'fetch',
-        e instanceof Error ? e.message : 'No se pudo descargar el archivo Excel',
+        e instanceof Error ? e.message : 'No se pudo descargar el archivo CSV',
       );
     }
   }

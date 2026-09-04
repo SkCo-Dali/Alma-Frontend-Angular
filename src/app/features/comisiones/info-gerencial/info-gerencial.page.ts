@@ -60,7 +60,7 @@ import { InfoGerencialStore } from './info-gerencial.store';
               <button
                 type="button"
                 (click)="tab.set('desempeno')"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
+                class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
                 [class]="
                   tab() === 'desempeno'
                     ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
@@ -73,7 +73,7 @@ import { InfoGerencialStore } from './info-gerencial.store';
               <button
                 type="button"
                 (click)="irAReportes()"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
+                class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all"
                 [class]="
                   tab() === 'reportes'
                     ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
@@ -141,7 +141,6 @@ import { InfoGerencialStore } from './info-gerencial.store';
                     (searchChange)="busquedaComisiones.set($event)"
                     (buscar)="store.cargarComisiones({ page: 1, search: busquedaComisiones().trim() || undefined })"
                     (monthChange)="store.cargarComisiones({ page: 1, selectedPeriodo: $event })"
-                    (itemsPerPageChange)="store.cargarComisiones({ page: 1, pageSize: $event })"
                     (exportar)="exportarComisiones()"
                   />
 
@@ -177,7 +176,7 @@ import { InfoGerencialStore } from './info-gerencial.store';
                       <button
                         type="button"
                         (click)="cambiarReporte(r.value)"
-                        class="whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
+                        class="cursor-pointer whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
                         [class]="
                           store.reporteActivo() === r.value
                             ? 'bg-primary text-white shadow-sm'
@@ -203,7 +202,6 @@ import { InfoGerencialStore } from './info-gerencial.store';
                     (searchChange)="busquedaReporte.set($event)"
                     (buscar)="store.cargarReporte({ page: 1, search: busquedaReporte().trim() || undefined })"
                     (monthChange)="store.cargarReporte({ page: 1, selectedPeriodo: $event })"
-                    (itemsPerPageChange)="store.cargarReporte({ page: 1, pageSize: $event })"
                     (exportar)="exportarReporte()"
                   />
 
