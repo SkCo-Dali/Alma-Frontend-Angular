@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
+import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { CommissionPlansApi } from '../planes/commission-plans.api';
 import {
   ParamField,
@@ -30,6 +31,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
+    AlmaLoaderComponent,
     ParamTableComponent,
     ParamFormDialogComponent,
   ],
@@ -51,7 +53,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
 
         <!-- Pestañas: selector en móvil, pills en escritorio -->
         <select
-          class="alma-input lg:hidden"
+          class="alma-input cursor-pointer lg:hidden"
           [ngModel]="vista()"
           (ngModelChange)="cambiarVista($event)"
         >
@@ -67,7 +69,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
             <button
               type="button"
               (click)="cambiarVista(v.value)"
-              class="whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-all"
+              class="cursor-pointer whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-all"
               [class]="
                 vista() === v.value
                   ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
@@ -152,7 +154,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
                   <button
                     type="button"
                     (click)="setCategoria(id, c)"
-                    class="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all"
+                    class="flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all"
                     [class]="
                       categoria(id) === c
                         ? 'border-transparent bg-primary text-primary-foreground shadow-sm'
@@ -176,9 +178,8 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
             }
 
             @if (store.loading()[id]) {
-              <div class="flex items-center justify-center py-10 text-sm text-muted-foreground">
-                <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-                Cargando registros…
+              <div class="flex items-center justify-center py-16">
+                <alma-loader [size]="72" label="Cargando registros…" />
               </div>
             } @else {
               @if (id === 'casosEspeciales' && store.errorCasosEspeciales()) {

@@ -13,6 +13,7 @@ import {
   signal,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
 import { Catalog, CatalogField } from './catalogs.api';
@@ -37,6 +38,7 @@ const COLOR_TIPO: Record<string, string> = {
   selector: 'alma-fields-manager-dialog',
   imports: [
     LucideAngularModule,
+    AlmaLoaderComponent,
     PortalDirective,
     CreateFieldsDialogComponent,
     EditFieldDialogComponent,
@@ -70,8 +72,7 @@ const COLOR_TIPO: Record<string, string> = {
         <div class="mt-4 min-h-0 flex-1 overflow-auto">
           @if (cargando()) {
             <div class="flex items-center justify-center py-12 text-sm text-muted-foreground">
-              <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-              Cargando campos…
+              <alma-loader [size]="56" label="Cargando campos…" />
             </div>
           } @else if (campos().length === 0) {
             <div class="py-8 text-center text-sm text-muted-foreground">
@@ -143,7 +144,7 @@ const COLOR_TIPO: Record<string, string> = {
                         <button
                           type="button"
                           (click)="abrirMenu(f.id, $event)"
-                          class="h-8 w-8 rounded-full hover:bg-primary/10"
+                          class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-transparent text-foreground hover:bg-transparent hover:text-primary"
                           aria-label="Acciones del campo"
                         >
                           <lucide-icon name="more-horizontal" [size]="16" />

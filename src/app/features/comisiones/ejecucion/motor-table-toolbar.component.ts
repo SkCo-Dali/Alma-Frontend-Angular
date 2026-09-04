@@ -5,17 +5,17 @@
 import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSpinnerComponent } from '../../../shared/components/alma-spinner.component';
 import {
   MOTOR_COMPANY_FILTER_OPTIONS,
   MOTOR_ESTADO_CORREO_OPTIONS,
-  MOTOR_PAGE_SIZE_OPTIONS,
   formatMotorPeriodo,
   formatMotorSegmentoLabel,
 } from './motor.api';
 
 @Component({
   selector: 'alma-motor-table-toolbar',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule, AlmaSpinnerComponent],
   template: `
     <div class="space-y-3 border-b border-border/30 bg-card p-3 sm:p-4">
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -84,7 +84,7 @@ import {
             class="alma-btn alma-btn-primary h-10 rounded-lg px-4 text-sm"
           >
             @if (cargando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
+              <alma-spinner [size]="16" class="mr-2" />
             }
             Filtrar
           </button>
@@ -99,15 +99,6 @@ import {
         </div>
 
         <div class="flex items-center gap-2">
-          <select
-            class="alma-input h-10 w-[80px] shrink-0"
-            [ngModel]="itemsPerPage()"
-            (ngModelChange)="itemsPerPageChange.emit(+$event)"
-          >
-            @for (s of tamanos; track s) {
-              <option [value]="s">{{ s }}</option>
-            }
-          </select>
           <button
             type="button"
             (click)="exportar.emit()"
@@ -115,11 +106,11 @@ import {
             class="alma-btn h-10 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
           >
             @if (exportando()) {
-              <lucide-icon name="loader-2" [size]="16" class="mr-2 animate-spin" />
+              <alma-spinner [size]="16" class="mr-2" />
             } @else {
               <lucide-icon name="download" [size]="16" class="mr-2" />
             }
-            Descargar Excel
+            Descargar CSV
           </button>
         </div>
       </div>
@@ -135,7 +126,7 @@ export class MotorTableToolbarComponent {
   readonly segmento = input('');
   readonly estado = input('');
   readonly roles = input<string[]>([]);
-  readonly itemsPerPage = input.required<number>();
+  readonly itemsPerPage = input(20);
   readonly cargando = input(false);
   readonly exportando = input(false);
 
@@ -144,11 +135,9 @@ export class MotorTableToolbarComponent {
   readonly filtrar = output<void>();
   readonly limpiar = output<void>();
   readonly exportar = output<void>();
-  readonly itemsPerPageChange = output<number>();
 
   protected readonly companias = MOTOR_COMPANY_FILTER_OPTIONS;
   protected readonly estados = MOTOR_ESTADO_CORREO_OPTIONS;
-  protected readonly tamanos = MOTOR_PAGE_SIZE_OPTIONS;
 
   protected etiquetaPeriodo(p: string): string {
     return formatMotorPeriodo(p);

@@ -68,7 +68,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
         <div class="w-full bg-[var(--table-surface)]">
           <div
             class="scrollbar w-full overflow-auto bg-[var(--table-surface)]"
-            style="height: calc(100dvh - 260px); min-height: 240px"
+            style="max-height: calc(100dvh - 200px); min-height: 280px"
           >
             <div class="w-full min-w-[1000px] bg-[var(--table-surface)]">
               <table class="alma-table w-full border-separate border-spacing-0">
@@ -166,7 +166,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                         <button
                           type="button"
                           (click)="abrirMenu(p.id, $event)"
-                          class="h-8 w-8 rounded-full transition-all hover:bg-primary/10 hover:text-primary"
+                          class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-transparent text-foreground hover:bg-transparent hover:text-primary"
                           aria-label="Acciones del plan"
                         >
                           <lucide-icon name="more-horizontal" [size]="16" />
@@ -186,7 +186,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                             <button
                               type="button"
                               (click)="editar(p)"
-                              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
+                              class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/50"
                             >
                               <lucide-icon name="pencil" [size]="16" class="text-primary" />
                               Editar Plan
@@ -194,7 +194,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                             <button
                               type="button"
                               (click)="porBorrar.set(p); menu.set(null)"
-                              class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                              class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
                             >
                               <lucide-icon name="trash-2" [size]="16" />
                               Eliminar Plan
