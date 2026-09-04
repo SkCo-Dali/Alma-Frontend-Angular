@@ -82,7 +82,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               <button
                 type="button"
                 (click)="cambiarTab(t.value)"
-                class="flex items-center gap-2 whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
+                class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full px-2 py-2.5 text-sm font-semibold transition-colors"
                 [class]="
                   tab() === t.value
                     ? 'bg-card text-foreground shadow-[var(--shadow-sm)]'
@@ -131,7 +131,6 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
                   (filtrar)="store.aplicarFiltros(dataTab)"
                   (limpiar)="store.limpiarFiltros(dataTab)"
                   (exportar)="exportar(dataTab)"
-                  (itemsPerPageChange)="store.cambiarTamanoPagina(dataTab, $event)"
                 />
 
                 <alma-motor-data-table

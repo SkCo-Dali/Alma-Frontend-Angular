@@ -13,12 +13,14 @@ import {
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import { ParamComboboxComponent } from './param-combobox.component';
 
 export type ParamFieldTipo =
   | 'texto'
   | 'numero'
   | 'decimal'
   | 'select'
+  | 'combobox'
   | 'switch'
   | 'fecha'
   | 'periodo'
@@ -49,7 +51,7 @@ export type ParamValues = Record<string, string | boolean>;
 
 @Component({
   selector: 'alma-param-form-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent, ParamComboboxComponent],
   template: `
     <div
       class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
@@ -70,9 +72,13 @@ export type ParamValues = Record<string, string | boolean>;
           [class]="columnas() === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'"
         >
           @for (f of fields(); track f.key) {
-            <div class="space-y-2" [class.sm:col-span-full]="f.ancho === 'full'">
+            <div
+              class="space-y-2"
+              [class.sm:col-span-full]="f.ancho === 'full' || f.tipo === 'switch'"
+              [class.sm:order-last]="f.tipo === 'switch'"
+            >
               @if (f.tipo === 'switch') {
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col items-start gap-2">
                   <span class="text-sm font-medium">{{ f.label }}</span>
                   <alma-switch
                     [checked]="booleano(f.key)"
@@ -104,22 +110,32 @@ export type ParamValues = Record<string, string | boolean>;
                     }
                     <select
                       [id]="'pf-' + f.key"
-                      class="alma-input"
+                      class="alma-input cursor-pointer"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
                     >
-                      <option value="">Seleccionar…</option>
+                      <option value="">{{ f.placeholder || 'Seleccionar…' }}</option>
                       @for (o of opcionesVisibles(f); track o.value) {
                         <option [value]="o.value">{{ o.label }}</option>
                       }
                     </select>
                   }
+                  @case ('combobox') {
+                    <alma-param-combobox
+                      [inputId]="'pf-' + f.key"
+                      [value]="valor(f.key)"
+                      [opciones]="f.opciones ?? []"
+                      [disabled]="!!f.deshabilitado"
+                      [placeholder]="f.placeholder ?? 'Seleccionar o escribir…'"
+                      (valueChange)="setValor(f.key, $event)"
+                    />
+                  }
                   @case ('fecha') {
                     <input
                       [id]="'pf-' + f.key"
                       type="date"
-                      class="alma-input"
+                      class="alma-input cursor-pointer"
                       [disabled]="!!f.deshabilitado"
                       [ngModel]="valor(f.key)"
                       (ngModelChange)="setValor(f.key, $event)"
@@ -129,7 +145,7 @@ export type ParamValues = Record<string, string | boolean>;
                     <div class="flex gap-2">
                       <select
                         [id]="'pf-' + f.key"
-                        class="alma-input"
+                        class="alma-input cursor-pointer"
                         [ngModel]="anioDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, $event, mesDe(f.key))"
                       >
@@ -139,7 +155,7 @@ export type ParamValues = Record<string, string | boolean>;
                         }
                       </select>
                       <select
-                        class="alma-input"
+                        class="alma-input cursor-pointer"
                         [ngModel]="mesDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, anioDe(f.key), $event)"
                       >
@@ -156,9 +172,12 @@ export type ParamValues = Record<string, string | boolean>;
                       class="alma-input"
                       [type]="f.tipo === 'email' ? 'email' : 'text'"
                       [attr.maxlength]="f.maxLength ?? null"
+                      [attr.inputmode]="modoEntrada(f)"
+                      [attr.pattern]="patronEntrada(f)"
                       [disabled]="!!f.deshabilitado"
                       [placeholder]="f.placeholder ?? ''"
                       [ngModel]="valor(f.key)"
+                      (keydown)="filtrarTecla(f, $event)"
                       (ngModelChange)="setTexto(f, $event)"
                     />
                   }
@@ -216,6 +235,8 @@ export class ParamFormDialogComponent implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly estado = signal<ParamValues>({});
   protected readonly busqueda = signal<Record<string, string>>({});
+  /** Año/mes elegidos aunque el YYYYMM aún no esté completo. */
+  private readonly periodoDraft = signal<Record<string, { anio: string; mes: string }>>({});
 
   protected readonly meses = [
     { label: 'Enero', value: '01' },
@@ -239,7 +260,16 @@ export class ParamFormDialogComponent implements OnInit {
   })();
 
   ngOnInit(): void {
-    this.estado.set({ ...this.valores() });
+    const inicial = { ...this.valores() };
+    const drafts: Record<string, { anio: string; mes: string }> = {};
+    for (const f of this.fields()) {
+      if (f.tipo !== 'periodo') continue;
+      const n = digitosPeriodo(this.comoTexto(inicial[f.key]));
+      drafts[f.key] = { anio: n.slice(0, 4), mes: n.slice(4, 6) };
+      if (n.length === 6) inicial[f.key] = n;
+    }
+    this.estado.set(inicial);
+    this.periodoDraft.set(drafts);
   }
 
   protected valor(key: string): string {
@@ -259,9 +289,37 @@ export class ParamFormDialogComponent implements OnInit {
   protected setTexto(f: ParamField, valor: string): void {
     let v = valor;
     if (f.tipo === 'numero') v = v.replace(/\D/g, '');
-    if (f.tipo === 'decimal') v = v.replace(/[^\d.]/g, '');
+    if (f.tipo === 'decimal') v = this.soloDecimal(v);
     if (f.maxLength) v = v.slice(0, f.maxLength);
     this.setValor(f.key, v);
+  }
+
+  protected filtrarTecla(f: ParamField, ev: KeyboardEvent): void {
+    if (f.tipo !== 'numero' && f.tipo !== 'decimal') return;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (ev.key.length > 1) return;
+    if (/\d/.test(ev.key)) return;
+    if (f.tipo === 'decimal' && ev.key === '.' && !this.valor(f.key).includes('.')) return;
+    ev.preventDefault();
+  }
+
+  protected modoEntrada(f: ParamField): string | null {
+    if (f.tipo === 'numero') return 'numeric';
+    if (f.tipo === 'decimal') return 'decimal';
+    return null;
+  }
+
+  protected patronEntrada(f: ParamField): string | null {
+    if (f.tipo === 'numero') return '[0-9]*';
+    if (f.tipo === 'decimal') return '[0-9]*[.]?[0-9]*';
+    return null;
+  }
+
+  private soloDecimal(valor: string): string {
+    const limpio = valor.replace(/[^\d.]/g, '');
+    const punto = limpio.indexOf('.');
+    if (punto === -1) return limpio;
+    return limpio.slice(0, punto + 1) + limpio.slice(punto + 1).replace(/\./g, '');
   }
 
   protected setBusqueda(key: string, texto: string): void {
@@ -276,14 +334,16 @@ export class ParamFormDialogComponent implements OnInit {
   }
 
   protected anioDe(key: string): string {
-    return this.valor(key).slice(0, 4);
+    return this.periodoDraft()[key]?.anio ?? '';
   }
 
   protected mesDe(key: string): string {
-    return this.valor(key).slice(4, 6);
+    return this.periodoDraft()[key]?.mes ?? '';
   }
 
+  /** Año y mes se guardan por separado hasta que ambos estén; si no, el valor se vaciaba al elegir el primero. */
   protected setPeriodo(key: string, anio: string, mes: string): void {
+    this.periodoDraft.update((prev) => ({ ...prev, [key]: { anio, mes } }));
     this.setValor(key, anio && mes ? `${anio}${mes}` : '');
   }
 
@@ -294,6 +354,13 @@ export class ParamFormDialogComponent implements OnInit {
     for (const f of this.fields()) {
       const valor = v[f.key];
       const texto = typeof valor === 'string' ? valor.trim() : '';
+
+      if (f.tipo === 'periodo') {
+        if (f.requerido && !periodoCompleto(texto)) {
+          errs[f.key] = `${f.label} es obligatorio`;
+        }
+        continue;
+      }
 
       if (f.requerido && f.tipo !== 'switch' && !texto) {
         errs[f.key] = `${f.label} es obligatorio`;
@@ -334,4 +401,20 @@ export class ParamFormDialogComponent implements OnInit {
     if (this.guardando()) return;
     this.closed.emit();
   }
+
+  private comoTexto(v: string | boolean | undefined): string {
+    if (v === undefined || v === null || typeof v === 'boolean') return '';
+    return String(v);
+  }
+}
+
+function digitosPeriodo(v: string): string {
+  return v.replace(/\D/g, '').slice(0, 6);
+}
+
+function periodoCompleto(v: string): boolean {
+  const d = digitosPeriodo(v);
+  if (d.length !== 6) return false;
+  const mes = Number(d.slice(4, 6));
+  return mes >= 1 && mes <= 12;
 }

@@ -4,6 +4,7 @@
 
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
 import { ColumnFilterComponent } from '../ui/column-filter.component';
 import {
@@ -30,16 +31,19 @@ const COLOR_ESTADO: Record<string, string> = {
   selector: 'alma-motor-data-table',
   imports: [
     LucideAngularModule,
+    AlmaLoaderComponent,
     GridPaginationComponent,
     ColumnFilterComponent,
     SortableTableHeadComponent,
   ],
   template: `
-    <div class="flex h-[480px] max-h-[480px] min-h-0 flex-col">
+    <div
+      class="flex min-h-0 flex-col"
+      style="max-height: calc(100dvh - 200px); min-height: 280px"
+    >
       @if (loading()) {
-        <div class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          <lucide-icon name="loader-2" [size]="24" class="mr-2 animate-spin" />
-          Cargando datos…
+        <div class="flex flex-1 items-center justify-center py-16">
+          <alma-loader [size]="72" label="Cargando registros…" />
         </div>
       } @else {
         <div class="scrollbar min-h-0 flex-1 overflow-auto">
@@ -111,7 +115,7 @@ const COLOR_ESTADO: Record<string, string> = {
                             type="button"
                             [disabled]="!esPendiente(row)"
                             (click)="editar.emit(row)"
-                            class="h-7 w-7 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 disabled:opacity-30 dark:bg-sky-500/10 dark:text-sky-300"
+                            class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-sky-500/10 dark:text-sky-300"
                             aria-label="Editar destinatario"
                           >
                             <lucide-icon name="pencil" [size]="14" />
@@ -120,7 +124,7 @@ const COLOR_ESTADO: Record<string, string> = {
                             type="button"
                             [disabled]="!esPendiente(row)"
                             (click)="excluir.emit(row)"
-                            class="h-7 w-7 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:opacity-30"
+                            class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-30"
                             aria-label="Excluir del envío"
                           >
                             <lucide-icon name="x" [size]="14" />
