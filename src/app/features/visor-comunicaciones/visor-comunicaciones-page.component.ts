@@ -11,7 +11,8 @@ import { EmlAttachment, ParsedEml } from './eml.types';
 import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
 import { BandejaComunicacionesComponent } from './bandeja-comunicaciones.component';
-import { COMUNICACIONES_MOCK, ComunicacionRef } from './comunicaciones.mock';
+import { ComunicacionRef } from './comunicaciones.mock';
+import { ComunicacionesService } from './comunicaciones.service';
 
 type Modo = 'correo' | 'adjuntos' | 'detalles';
 
@@ -219,20 +220,31 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
             {{ error() }}
           </p>
         }
-        <alma-bandeja-comunicaciones
-          class="min-h-0 flex-1"
-          [comunicaciones]="comunicaciones"
-          [abriendoId]="abriendoId()"
-          (abrir)="abrir($event)"
-        />
+        @if (cargandoLista()) {
+          <div class="glass flex min-h-0 flex-1 items-center justify-center rounded-2xl shadow-[var(--shadow-sm)]">
+            <span class="flex items-center gap-2 text-sm text-muted-foreground">
+              <lucide-icon name="loader-2" [size]="18" class="animate-spin text-primary" />
+              Cargando bandeja…
+            </span>
+          </div>
+        } @else {
+          <alma-bandeja-comunicaciones
+            class="min-h-0 flex-1"
+            [comunicaciones]="comunicaciones()"
+            [abriendoId]="abriendoId()"
+            (abrir)="abrir($event)"
+          />
+        }
       }
     </div>
   `,
 })
 export class VisorComunicacionesPageComponent {
   private readonly eml = inject(EmlService);
+  private readonly comService = inject(ComunicacionesService);
 
-  protected readonly comunicaciones = COMUNICACIONES_MOCK;
+  protected readonly comunicaciones = signal<ComunicacionRef[]>([]);
+  protected readonly cargandoLista = signal(true);
   protected readonly parsed = signal<ParsedEml | null>(null);
   protected readonly abriendoId = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -252,6 +264,18 @@ export class VisorComunicacionesPageComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.eml.revoke(this.parsed()));
+    void this.cargarLista();
+  }
+
+  private async cargarLista(): Promise<void> {
+    this.cargandoLista.set(true);
+    try {
+      this.comunicaciones.set(await this.comService.listar());
+    } catch {
+      this.error.set('No se pudo cargar la bandeja de comunicaciones.');
+    } finally {
+      this.cargandoLista.set(false);
+    }
   }
 
   protected async abrir(c: ComunicacionRef): Promise<void> {
@@ -259,9 +283,7 @@ export class VisorComunicacionesPageComponent {
     this.error.set(null);
     this.abriendoId.set(c.id);
     try {
-      const resp = await fetch(c.archivo);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const buffer = await resp.arrayBuffer();
+      const buffer = await this.comService.obtenerEml(c);
       const nuevo = await this.eml.parse(buffer);
       this.eml.revoke(this.parsed());
       this.parsed.set(nuevo);
