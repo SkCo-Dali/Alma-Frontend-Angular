@@ -1,0 +1,33 @@
+From: Servicio al Cliente Skandia <servicioalcliente@skandia.co>
+To: cliente@email.com
+Subject: Confirmacion de radicacion de tu solicitud #SC-48213
+Date: Mon, 01 Sep 2026 08:42:00 -0500
+Message-ID: <sc-48213@skandia.co>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="ALT1"
+
+--ALT1
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hemos radicado tu solicitud #SC-48213. Tiempo estimado de respuesta: 3 dias habiles.
+
+--ALT1
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<html><body style="margin:0;background:#eef2f5;font-family:Arial,Helvetica,sans-serif;color:#333">
+  <div style="max-width:560px;margin:0 auto;background:#fff">
+    <div style="background:#00723F;padding:20px 28px;color:#fff;font-size:18px;font-weight:bold">Skandia</div>
+    <div style="padding:28px">
+      <h2 style="color:#00723F;margin:0 0 12px">Confirmacion de radicacion</h2>
+      <p>Hola,</p>
+      <p>Hemos recibido tu solicitud <b>#SC-48213</b> el 1 de septiembre de 2026. Nuestro equipo de Servicio al Cliente ya la esta gestionando.</p>
+      <p>Tiempo estimado de respuesta: <b>3 dias habiles</b>. Te avisaremos por este medio cuando tengamos novedades.</p>
+      <p style="margin-top:24px">Gracias por confiar en Skandia.</p>
+      <p style="color:#888;font-size:12px;margin-top:24px">Este es un mensaje automatico, por favor no respondas a este correo.</p>
+    </div>
+  </div>
+</body></html>
+
+--ALT1--

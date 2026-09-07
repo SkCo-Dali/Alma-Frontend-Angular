@@ -34,6 +34,14 @@ export const routes: Routes = [
       ),
     title: 'Agente Alma — ALMA',
   },
+  {
+    path: 'apps/visor-comunicaciones',
+    loadComponent: () =>
+      import('./features/visor-comunicaciones/visor-comunicaciones-page.component').then(
+        (m) => m.VisorComunicacionesPageComponent,
+      ),
+    title: 'Visor de comunicaciones — ALMA',
+  },
   // App Suscripción de Seguros: landing de tiles + subpáginas de-anidadas
   // (bandeja, config del motor, config del simulador y detalle por id).
   {
