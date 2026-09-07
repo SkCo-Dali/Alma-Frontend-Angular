@@ -1,12 +1,11 @@
 // Tabla genérica de las pestañas de datos del motor: columnas dinámicas (las que
-// devuelve el API), numeración de fila, orden y filtro por columna en cliente sobre la
-// página cargada, y paginación del servidor.
+// devuelve el API), numeración de fila, orden en cliente sobre la página cargada,
+// y paginación del servidor.
 
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
-import { ColumnFilterComponent } from '../ui/column-filter.component';
 import {
   SortDirection,
   SortableTableHeadComponent,
@@ -33,7 +32,6 @@ const COLOR_ESTADO: Record<string, string> = {
     LucideAngularModule,
     AlmaLoaderComponent,
     GridPaginationComponent,
-    ColumnFilterComponent,
     SortableTableHeadComponent,
   ],
   template: `
@@ -66,15 +64,7 @@ const COLOR_ESTADO: Record<string, string> = {
                         [currentSortKey]="sort().key"
                         [direction]="sort().direction"
                         (sorted)="ordenar($event)"
-                      >
-                        <alma-column-filter
-                          [column]="col"
-                          [label]="etiqueta(col)"
-                          [valores]="valoresDe(col)"
-                          [currentFilters]="filtrosDe(col)"
-                          (filterChange)="cambiarFiltro($event.column, $event.values)"
-                        />
-                      </alma-sortable-th>
+                      />
                     </th>
                   }
                   @if (conAcciones()) {
@@ -113,7 +103,7 @@ const COLOR_ESTADO: Record<string, string> = {
                         <div class="flex items-center justify-center gap-1">
                           <button
                             type="button"
-                            [disabled]="!esPendiente(row)"
+                            [disabled]="!puedeActuar(row)"
                             (click)="editar.emit(row)"
                             class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-sky-500/10 dark:text-sky-300"
                             aria-label="Editar destinatario"
@@ -122,7 +112,7 @@ const COLOR_ESTADO: Record<string, string> = {
                           </button>
                           <button
                             type="button"
-                            [disabled]="!esPendiente(row)"
+                            [disabled]="!puedeActuar(row)"
                             (click)="excluir.emit(row)"
                             class="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 disabled:cursor-not-allowed disabled:opacity-30"
                             aria-label="Excluir del envío"
@@ -172,8 +162,6 @@ export class MotorDataTableComponent {
   /** Etiquetas visibles distintas al nombre de columna (la clave no cambia). */
   readonly columnLabels = input<Record<string, string>>({});
   readonly conAcciones = input(false);
-  /** Al subir, se limpian los filtros de columna (cambio de filtros arriba). */
-  readonly filtersResetKey = input(0);
 
   readonly pageChange = output<number>();
   readonly pageSizeChange = output<number>();
@@ -185,27 +173,12 @@ export class MotorDataTableComponent {
     key: '',
     direction: null,
   });
-  private readonly columnFilters = signal<Record<string, string[]>>({});
 
   private readonly objetos = computed(() => motorRowsToObjects(this.columns(), this.rows()));
 
-  protected readonly filas = computed(() => {
-    const filtros = Object.entries(this.columnFilters());
-    const filtradas = this.objetos().filter((row) =>
-      filtros.every(
-        ([col, valores]) =>
-          valores.length === 0 || valores.includes(formatMotorCellValue(row[col])),
-      ),
-    );
-    return sortMotorRows(filtradas, this.sort().key, this.sort().direction);
-  });
-
-  constructor() {
-    effect(() => {
-      this.filtersResetKey();
-      this.columnFilters.set({});
-    });
-  }
+  protected readonly filas = computed(() =>
+    sortMotorRows(this.objetos(), this.sort().key, this.sort().direction),
+  );
 
   protected etiqueta(col: string): string {
     return this.columnLabels()[col] ?? col;
@@ -213,23 +186,6 @@ export class MotorDataTableComponent {
 
   protected valor(row: MotorTableRow, col: string): string {
     return formatMotorCellValue(row[col]);
-  }
-
-  protected valoresDe(col: string): string[] {
-    return this.objetos().map((r) => formatMotorCellValue(r[col]));
-  }
-
-  protected filtrosDe(col: string): string[] {
-    return this.columnFilters()[col] ?? [];
-  }
-
-  protected cambiarFiltro(col: string, valores: string[]): void {
-    this.columnFilters.update((prev) => {
-      const next = { ...prev };
-      if (valores.length === 0) delete next[col];
-      else next[col] = valores;
-      return next;
-    });
   }
 
   /** asc → desc → sin orden. */
@@ -246,8 +202,8 @@ export class MotorDataTableComponent {
     return COLOR_ESTADO[estado] || 'bg-muted text-muted-foreground';
   }
 
-  /** Solo los correos pendientes se pueden editar o excluir. */
-  protected esPendiente(row: MotorTableRow): boolean {
-    return row['EstadoEnvio'] === 'Pendiente';
+  /** Enviados no se editan ni excluyen; Pendiente, Excluido y Error sí. */
+  protected puedeActuar(row: MotorTableRow): boolean {
+    return row['EstadoEnvio'] !== 'Enviado';
   }
 }
