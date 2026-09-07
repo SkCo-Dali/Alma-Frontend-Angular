@@ -88,13 +88,18 @@ type Tab = 'information' | 'rule' | 'preview';
         @if (tab() === 'information') {
           <div class="mt-4 space-y-4">
             <div>
-              <label class="text-sm font-medium" for="rule-name">Nombre *</label>
+              <label class="text-sm font-medium" for="rule-name">
+                Nombre <span class="text-destructive">*</span>
+              </label>
               <input
                 id="rule-name"
                 class="alma-input mt-1"
                 placeholder="AIS_FRONT1_OMPEV_MASTER"
                 [(ngModel)]="nombre"
               />
+              @if (!nombre.trim()) {
+                <p class="mt-1 text-xs text-destructive">Nombre es obligatorio</p>
+              }
             </div>
             <div>
               <label class="text-sm font-medium" for="rule-desc">Descripción</label>
@@ -113,7 +118,9 @@ type Tab = 'information' | 'rule' | 'preview';
         @if (tab() === 'rule') {
           <div class="mt-4 space-y-4">
             <div>
-              <label class="text-sm font-medium" for="rule-catalog">Catálogo *</label>
+              <label class="text-sm font-medium" for="rule-catalog">
+                Catálogo <span class="text-destructive">*</span>
+              </label>
               <select
                 id="rule-catalog"
                 class="alma-input mt-1"
@@ -132,13 +139,18 @@ type Tab = 'information' | 'rule' | 'preview';
                   <option [value]="c.id">{{ c.name }}</option>
                 }
               </select>
+              @if (!catalogo()) {
+                <p class="mt-1 text-xs text-destructive">Catálogo es obligatorio</p>
+              }
             </div>
 
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 sm:gap-6">
               <!-- Fórmula -->
               <div>
                 <div class="mb-2 flex items-center justify-between">
-                  <label class="text-sm font-medium" for="rule-formula">Fórmula</label>
+                  <label class="text-sm font-medium" for="rule-formula">
+                    Fórmula <span class="text-destructive">*</span>
+                  </label>
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-medium text-muted-foreground">Funciones:</span>
                     <select
@@ -161,6 +173,9 @@ type Tab = 'information' | 'rule' | 'preview';
                   placeholder="1.30 / 100 * record.ValorBase * 25 / 100"
                   [(ngModel)]="formula"
                 ></textarea>
+                @if (!formula.trim()) {
+                  <p class="mt-1 text-xs text-destructive">Fórmula es obligatorio</p>
+                }
                 <div class="mt-2 flex flex-wrap gap-1">
                   @for (op of operadores; track op.symbol) {
                     <button
@@ -404,7 +419,7 @@ type Tab = 'information' | 'rule' | 'preview';
           <button
             type="button"
             (click)="guardar()"
-            [disabled]="guardando()"
+            [disabled]="guardando() || !puedeGuardar()"
             class="alma-btn alma-btn-primary w-full sm:w-auto"
           >
             {{ textoGuardar() }}
@@ -465,6 +480,14 @@ export class RuleDialogComponent implements OnInit {
     if (this.guardando()) return this.esEdicion() ? 'Actualizando…' : 'Creando…';
     return this.esEdicion() ? 'Actualizar Regla' : 'Guardar';
   });
+
+  protected puedeGuardar(): boolean {
+    return (
+      this.nombre.trim().length > 0 &&
+      this.formula.trim().length > 0 &&
+      !!this.catalogo()
+    );
+  }
 
   constructor() {
     // Al elegir catálogo se piden sus campos (una sola vez por catálogo).
@@ -699,12 +722,8 @@ export class RuleDialogComponent implements OnInit {
   // ── Guardar ───────────────────────────────────────────────────────────────
 
   protected async guardar(): Promise<void> {
-    if (!this.nombre || !this.formula || !this.catalogo()) {
-      this.toast.errorGenericoConMensaje(
-        'Por favor completa todos los campos requeridos (Nombre, Fórmula, Catálogo).',
-        'Error de validación',
-      );
-      this.tab.set(!this.nombre ? 'information' : 'rule');
+    if (!this.puedeGuardar()) {
+      this.tab.set(!this.nombre.trim() ? 'information' : 'rule');
       return;
     }
 

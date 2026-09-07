@@ -1,11 +1,9 @@
 // Tabla de columnas dinámicas de Métricas y Reportes: numeración, encabezados ordenables
-// con filtro por columna sobre la página cargada, formato de moneda por columna y
-// paginación del servidor.
+// en cliente sobre la página cargada, formato de moneda por columna y paginación del servidor.
 
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
-import { ColumnFilterComponent } from '../ui/column-filter.component';
 import {
   SortDirection,
   SortableTableHeadComponent,
@@ -23,7 +21,6 @@ import {
   imports: [
     AlmaLoaderComponent,
     GridPaginationComponent,
-    ColumnFilterComponent,
     SortableTableHeadComponent,
   ],
   template: `
@@ -56,15 +53,7 @@ import {
                         [currentSortKey]="sort().key"
                         [direction]="sort().direction"
                         (sorted)="ordenar($event)"
-                      >
-                        <alma-column-filter
-                          [column]="col"
-                          [label]="etiqueta(col)"
-                          [valores]="valoresDe(col)"
-                          [currentFilters]="filtrosDe(col)"
-                          (filterChange)="cambiarFiltro($event.column, $event.values)"
-                        />
-                      </alma-sortable-th>
+                      />
                     </th>
                   }
                 </tr>
@@ -124,8 +113,6 @@ export class IgTableComponent {
   readonly etiquetaDe = input.required<(col: string) => string>();
   /** Columnas que se pintan como moneda. */
   readonly columnasMoneda = input<Set<string>>(new Set(['ValorComision']));
-  /** Al cambiar, se limpian los filtros de columna. */
-  readonly filtersResetKey = input(0);
 
   readonly pageChange = output<number>();
   readonly pageSizeChange = output<number>();
@@ -135,15 +122,6 @@ export class IgTableComponent {
     key: '',
     direction: null,
   });
-  private readonly columnFilters = signal<Record<string, string[]>>({});
-
-  constructor() {
-    effect(() => {
-      this.filtersResetKey();
-      this.columnFilters.set({});
-      this.sort.set({ key: '', direction: null });
-    });
-  }
 
   protected etiqueta(col: string): string {
     return this.etiquetaDe()(col);
@@ -169,23 +147,6 @@ export class IgTableComponent {
     return String(v);
   }
 
-  protected valoresDe(col: string): string[] {
-    return this.rows().map((r) => this.celda(r, col));
-  }
-
-  protected filtrosDe(col: string): string[] {
-    return this.columnFilters()[col] ?? [];
-  }
-
-  protected cambiarFiltro(col: string, valores: string[]): void {
-    this.columnFilters.update((prev) => {
-      const next = { ...prev };
-      if (valores.length === 0) delete next[col];
-      else next[col] = valores;
-      return next;
-    });
-  }
-
   protected ordenar(key: string): void {
     this.sort.update((prev) => {
       let direction: SortDirection = 'asc';
@@ -195,15 +156,9 @@ export class IgTableComponent {
     });
   }
 
-  /** Filtra por columna y ordena (numérico cuando ambos valores lo son). */
+  /** Ordena en cliente (numérico cuando ambos valores lo son). */
   protected readonly filas = computed(() => {
-    const filtros = Object.entries(this.columnFilters());
-    const filas = this.rows().filter((row) =>
-      filtros.every(
-        ([col, valores]) => valores.length === 0 || valores.includes(this.celda(row, col)),
-      ),
-    );
-
+    const filas = this.rows();
     const { key, direction } = this.sort();
     if (!key || !direction) return filas;
     return [...filas].sort((a, b) => {
