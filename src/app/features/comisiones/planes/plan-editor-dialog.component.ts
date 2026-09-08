@@ -78,17 +78,22 @@ type MotivoPara = 'reject' | 'inactivate';
               </h3>
               <div class="space-y-4">
                 <div>
-                  <label class="text-xs font-medium sm:text-sm" for="plan-name">Nombre*</label>
+                  <label class="text-xs font-medium sm:text-sm" for="plan-name">
+                    Nombre <span class="text-destructive">*</span>
+                  </label>
                   <input
                     id="plan-name"
                     class="alma-input mt-1"
                     placeholder="Ingrese el nombre del plan"
                     [(ngModel)]="nombre"
                   />
+                  @if (!nombre.trim()) {
+                    <p class="mt-1 text-xs text-destructive">Nombre es obligatorio</p>
+                  }
                 </div>
                 <div>
                   <label class="text-xs font-medium sm:text-sm" for="plan-desc">
-                    Descripción *
+                    Descripción <span class="text-destructive">*</span>
                   </label>
                   <textarea
                     id="plan-desc"
@@ -97,17 +102,23 @@ type MotivoPara = 'reject' | 'inactivate';
                     placeholder="Ingrese la descripción del plan"
                     [(ngModel)]="descripcion"
                   ></textarea>
+                  @if (!descripcion.trim()) {
+                    <p class="mt-1 text-xs text-destructive">Descripción es obligatorio</p>
+                  }
                 </div>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium sm:text-sm" for="plan-start">
-                      Fecha de Inicio *
+                      Fecha de Inicio <span class="text-destructive">*</span>
                     </label>
                     <input id="plan-start" type="date" class="alma-input" [(ngModel)]="inicio" />
+                    @if (!inicio) {
+                      <p class="text-xs text-destructive">Fecha de Inicio es obligatorio</p>
+                    }
                   </div>
                   <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-medium sm:text-sm" for="plan-end">
-                      Fecha de Fin *
+                      Fecha de Fin <span class="text-destructive">*</span>
                     </label>
                     <input
                       id="plan-end"
@@ -116,6 +127,9 @@ type MotivoPara = 'reject' | 'inactivate';
                       [min]="inicio"
                       [(ngModel)]="fin"
                     />
+                    @if (!fin) {
+                      <p class="text-xs text-destructive">Fecha de Fin es obligatorio</p>
+                    }
                   </div>
                 </div>
               </div>
@@ -227,7 +241,7 @@ type MotivoPara = 'reject' | 'inactivate';
               <button
                 type="button"
                 (click)="guardarBorrador()"
-                [disabled]="ocupado()"
+                [disabled]="ocupado() || !puedeGuardar()"
                 class="alma-btn rounded-xl border border-primary bg-primary/10 text-primary hover:bg-primary/20"
               >
                 {{ ocupado() ? 'Guardando…' : 'Guardar como Borrador' }}
@@ -366,6 +380,15 @@ export class PlanEditorDialogComponent implements OnInit {
 
   protected readonly esBorrador = computed(() => this.plan().status === 'draft');
 
+  protected puedeGuardar(): boolean {
+    return (
+      this.nombre.trim().length > 0 &&
+      this.descripcion.trim().length > 0 &&
+      !!this.inicio &&
+      !!this.fin
+    );
+  }
+
   ngOnInit(): void {
     const p = this.plan();
     this.nombre = p.name;
@@ -391,18 +414,12 @@ export class PlanEditorDialogComponent implements OnInit {
   }
 
   protected async guardarBorrador(): Promise<void> {
-    if (!this.nombre.trim() || !this.descripcion.trim() || !this.inicio || !this.fin) {
-      this.toast.errorGenericoConMensaje(
-        'Por favor completa todos los campos requeridos.',
-        'Error de validación',
-      );
-      return;
-    }
+    if (!this.puedeGuardar()) return;
     this.ocupado.set(true);
     try {
       const res = await this.updatePlan()(this.plan().id, {
-        name: this.nombre,
-        description: this.descripcion,
+        name: this.nombre.trim(),
+        description: this.descripcion.trim(),
         startDate: this.inicio || undefined,
         endDate: this.fin || undefined,
       });
