@@ -115,8 +115,29 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                 </button>
               }
               <!-- Aprobar y emitir: solo con permiso emit; habilitado cuando la
-                   cotización es emitible (creada HOY, sin contrato, no emitida). -->
+                   cotización es emitible (PharosDate hoy o posterior, sin
+                   contrato, no emitida). El flag lo calcula el backend. -->
               @if (puedeEmitir()) {
+                <!-- Refresco puntual: si la cotización aún no es emitible (p. ej.
+                     el analista acaba de cambiar la fecha en Pharos para emitir
+                     con fecha posterior), la relee desde Pharos sin esperar el
+                     tick de 5 min del worker. -->
+                @if (!sel.afiliacion?.emitible) {
+                  <button
+                    type="button"
+                    [disabled]="refrescandoPharos()"
+                    (click)="refrescarDesdePharos()"
+                    class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
+                    title="Vuelve a leer la cotización desde Pharos (útil si acabas de cambiar la fecha allá)"
+                  >
+                    <lucide-icon
+                      name="refresh-cw"
+                      [size]="16"
+                      [class.animate-spin]="refrescandoPharos()"
+                    />
+                    {{ refrescandoPharos() ? 'Actualizando…' : 'Actualizar desde Pharos' }}
+                  </button>
+                }
                 <span
                   class="inline-flex"
                   [title]="
@@ -136,6 +157,11 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                 </span>
               }
             </div>
+            @if (avisoPharos(); as aviso) {
+              <p class="mt-1.5 basis-full text-right text-xs text-muted-foreground">
+                {{ aviso }}
+              </p>
+            }
           </div>
 
           <div class="mt-2 min-w-0">
@@ -460,6 +486,9 @@ export class DetalleSolicitudComponent {
   protected readonly modal = signal<
     null | 'evaluar' | 'declaraciones' | 'emitir' | 'estado' | 'pharos'
   >(null);
+  // Refresco puntual desde Pharos (bajo demanda, sin esperar el tick de 5 min).
+  protected readonly refrescandoPharos = signal(false);
+  protected readonly avisoPharos = signal<string | null>(null);
 
   // Permisos finos: manage = evaluar con el motor; emit = emitir en Pharos.
   protected readonly puedeVer = computed(() =>
@@ -545,6 +574,35 @@ export class DetalleSolicitudComponent {
     } finally {
       this.refrescando.set(false);
       this.cargando.set(false);
+    }
+  }
+
+  /**
+   * Refresco puntual de la cotización desde Pharos/afiliaciones, bajo demanda.
+   * Para cuando el analista actualizó la fecha en Pharos (emisión con fecha
+   * posterior) y necesita que Alma la vea sin esperar el tick de 5 min. No
+   * destruye la página en caso de error: solo muestra un aviso junto al botón.
+   */
+  protected async refrescarDesdePharos(): Promise<void> {
+    this.refrescandoPharos.set(true);
+    this.avisoPharos.set(null);
+    try {
+      const res = await this.api.refrescarSolicitud(this.solicitudId());
+      this.tarea.set(apiToTarea(res.solicitud));
+      // Refresca también el panel de detalle de afiliación (no bloquea).
+      this.afiliacion.set(
+        await this.api.getAfiliacion(this.solicitudId()).catch(() => null),
+      );
+      const afi = res.solicitud.afiliacion;
+      this.avisoPharos.set(
+        afi?.emitible
+          ? 'Actualizado desde Pharos: ya puedes emitir.'
+          : (afi?.motivo_no_emitible ?? res.motivo ?? 'Actualizado desde Pharos.'),
+      );
+    } catch (e) {
+      this.avisoPharos.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.refrescandoPharos.set(false);
     }
   }
 }
