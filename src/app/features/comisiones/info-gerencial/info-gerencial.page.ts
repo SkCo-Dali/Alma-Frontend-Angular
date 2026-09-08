@@ -215,7 +215,6 @@ import { InfoGerencialStore } from './info-gerencial.store';
                     [totalRecords]="store.reporte()?.total_records ?? 0"
                     [etiquetaDe]="etiquetaReporte"
                     [columnasMoneda]="columnasMoneda"
-                    [filtersResetKey]="resetFiltrosReporte()"
                     (pageChange)="store.cargarReporte({ page: $event })"
                     (pageSizeChange)="store.cargarReporte({ page: 1, pageSize: $event })"
                   />
@@ -256,7 +255,6 @@ export class InfoGerencialPageComponent implements OnInit {
   protected readonly busquedaComisiones = signal('');
   protected readonly busquedaReporte = signal('');
   protected readonly exportando = signal(false);
-  protected readonly resetFiltrosReporte = signal(0);
   private reportesCargados = false;
 
   protected readonly tieneAcceso = computed(() =>
@@ -317,7 +315,6 @@ export class InfoGerencialPageComponent implements OnInit {
 
   protected cambiarReporte(tipo: ReportType): void {
     this.busquedaReporte.set('');
-    this.resetFiltrosReporte.update((n) => n + 1);
     this.store.cambiarReporte(tipo);
   }
 

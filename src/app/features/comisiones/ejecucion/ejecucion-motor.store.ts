@@ -160,14 +160,6 @@ export class EjecucionMotorStore implements OnDestroy {
   readonly filtrosMant = signal<FiltrosComisiones>(filtrosComisionesVacios());
   readonly filtrosCorreos = signal<FiltrosCorreos>(filtrosCorreosVacios());
 
-  /** Sube al cambiar filtros para que las tablas limpien sus filtros de columna. */
-  readonly filterResetKeys = signal<Record<MotorDataTab, number>>({
-    pre: 0,
-    post: 0,
-    mant: 0,
-    correos: 0,
-  });
-
   readonly tableData = signal<Record<MotorDataTab, TableState>>({
     pre: tablaVacia(),
     post: tablaVacia(),
@@ -672,7 +664,6 @@ export class EjecucionMotorStore implements OnDestroy {
   }
 
   limpiarFiltros(tab: MotorDataTab): void {
-    this.filterResetKeys.update((prev) => ({ ...prev, [tab]: prev[tab] + 1 }));
     void this.reiniciarYCargar(tab);
   }
 

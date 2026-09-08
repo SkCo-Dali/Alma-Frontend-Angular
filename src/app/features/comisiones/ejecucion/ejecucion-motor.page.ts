@@ -143,7 +143,6 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
                   [totalRecords]="estado.total"
                   [columnLabels]="dataTab === 'correos' ? { IdTercero: 'Id' } : {}"
                   [conAcciones]="dataTab === 'correos'"
-                  [filtersResetKey]="store.filterResetKeys()[dataTab]"
                   (pageChange)="store.cambiarPagina(dataTab, $event)"
                   (pageSizeChange)="store.cambiarTamanoPagina(dataTab, $event)"
                   (editar)="abrirEdicionCorreo($event)"
@@ -343,7 +342,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             <div
               class="mt-4 rounded-xl border border-border/50 bg-muted/30 p-3 text-center text-xs text-muted-foreground"
             >
-              Esta acción solo aplica si el registro está en estado <strong>Pendiente</strong>.
+              Esta acción no aplica a registros en estado <strong>Enviado</strong>.
             </div>
             <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button

@@ -79,6 +79,9 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
                 [ngModel]="f.field_name"
                 (ngModelChange)="actualizar(i, { field_name: $event })"
               />
+              @if (!f.field_name.trim()) {
+                <p class="text-xs text-destructive">Nombre del Campo es obligatorio</p>
+              }
             </div>
 
             <div class="space-y-2">
@@ -95,6 +98,9 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
                   <option [value]="t">{{ t }}</option>
                 }
               </select>
+              @if (!f.field_type) {
+                <p class="text-xs text-destructive">Tipo de Campo es obligatorio</p>
+              }
             </div>
 
             <div class="space-y-2">
@@ -108,6 +114,9 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
                 [ngModel]="f.display_name"
                 (ngModelChange)="actualizar(i, { display_name: $event })"
               />
+              @if (!f.display_name?.trim()) {
+                <p class="text-xs text-destructive">Nombre para Mostrar es obligatorio</p>
+              }
             </div>
 
             <div class="space-y-2">
@@ -136,6 +145,9 @@ export function camposCompletos(campos: CreateCatalogFieldRequest[]): boolean {
               [ngModel]="f.description"
               (ngModelChange)="actualizar(i, { description: $event })"
             ></textarea>
+            @if (!f.description?.trim()) {
+              <p class="text-xs text-destructive">Descripción es obligatorio</p>
+            }
           </div>
 
           <div class="flex gap-6">

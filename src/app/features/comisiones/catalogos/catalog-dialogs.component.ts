@@ -48,6 +48,9 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
               [ngModel]="nombre()"
               (ngModelChange)="nombre.set($event)"
             />
+            @if (!nombre().trim()) {
+              <p class="text-xs text-destructive">Nombre del Catálogo es obligatorio</p>
+            }
           </div>
 
           <div class="space-y-2">
@@ -183,6 +186,9 @@ export class CreateCatalogDialogComponent {
               Nombre <span class="text-destructive">*</span>
             </label>
             <input id="edit-cat-name" class="alma-input" [(ngModel)]="nombre" />
+            @if (!nombre.trim()) {
+              <p class="text-xs text-destructive">Nombre es obligatorio</p>
+            }
           </div>
           <div class="space-y-2">
             <label class="text-sm font-medium" for="edit-cat-desc">Descripción</label>
@@ -362,6 +368,9 @@ export class CreateFieldsDialogComponent {
                 Nombre del Campo <span class="text-destructive">*</span>
               </label>
               <input id="ef-name" class="alma-input" [(ngModel)]="nombre" />
+              @if (!nombre.trim()) {
+                <p class="text-xs text-destructive">Nombre del Campo es obligatorio</p>
+              }
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium" for="ef-type">
@@ -377,10 +386,18 @@ export class CreateFieldsDialogComponent {
                   <option [value]="t">{{ t }}</option>
                 }
               </select>
+              @if (!tipo()) {
+                <p class="text-xs text-destructive">Tipo de Campo es obligatorio</p>
+              }
             </div>
             <div class="space-y-2">
-              <label class="text-sm font-medium" for="ef-display">Nombre para Mostrar</label>
+              <label class="text-sm font-medium" for="ef-display">
+                Nombre para Mostrar <span class="text-destructive">*</span>
+              </label>
               <input id="ef-display" class="alma-input" [(ngModel)]="etiqueta" />
+              @if (!etiqueta.trim()) {
+                <p class="text-xs text-destructive">Nombre para Mostrar es obligatorio</p>
+              }
             </div>
             <div class="space-y-2">
               <label class="text-sm font-medium" for="ef-example">Valor de Ejemplo</label>
@@ -389,13 +406,18 @@ export class CreateFieldsDialogComponent {
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-medium" for="ef-desc">Descripción</label>
+            <label class="text-sm font-medium" for="ef-desc">
+              Descripción <span class="text-destructive">*</span>
+            </label>
             <textarea
               id="ef-desc"
               class="alma-input"
               rows="2"
               [(ngModel)]="descripcion"
             ></textarea>
+            @if (!descripcion.trim()) {
+              <p class="text-xs text-destructive">Descripción es obligatorio</p>
+            }
           </div>
 
           <div class="flex gap-6">
@@ -430,7 +452,7 @@ export class CreateFieldsDialogComponent {
           <button
             type="button"
             (click)="guardar()"
-            [disabled]="guardando() || !nombre.trim()"
+            [disabled]="guardando() || !puedeGuardar()"
             class="alma-btn alma-btn-primary"
           >
             {{ guardando() ? 'Guardando…' : 'Guardar Cambios' }}
@@ -458,6 +480,15 @@ export class EditFieldDialogComponent implements OnInit {
   protected readonly filtrable = signal(false);
   protected readonly visible = signal(true);
 
+  protected puedeGuardar(): boolean {
+    return (
+      this.nombre.trim().length > 0 &&
+      !!this.tipo() &&
+      this.etiqueta.trim().length > 0 &&
+      this.descripcion.trim().length > 0
+    );
+  }
+
   ngOnInit(): void {
     const f = this.field();
     this.nombre = f.field_name;
@@ -470,7 +501,7 @@ export class EditFieldDialogComponent implements OnInit {
   }
 
   protected async guardar(): Promise<void> {
-    if (!this.nombre.trim()) return;
+    if (!this.puedeGuardar()) return;
     this.guardando.set(true);
     try {
       const ok = await this.store.actualizarCampo(this.catalogId(), this.field().id, {
