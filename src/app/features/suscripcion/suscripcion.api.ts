@@ -615,6 +615,20 @@ export class SuscripcionApi {
     });
   }
 
+  /**
+   * Refresco puntual de la cotización desde Pharos/afiliaciones, bajo demanda.
+   * Para cuando el analista actualiza la fecha en Pharos (emisión con fecha
+   * posterior) y necesita que Alma lo vea sin esperar el tick de 5 min del
+   * worker. Devuelve el detalle con 'emitible' / 'motivo_no_emitible' frescos.
+   */
+  refrescarSolicitud(
+    solicitudId: string,
+  ): Promise<{ actualizada: boolean; motivo: string | null; solicitud: SolicitudApi }> {
+    return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/refrescar`, {
+      method: 'POST',
+    });
+  }
+
   // ── Cuenta de Pharos del usuario (emisión a su nombre) ────────────────────
 
   getCuentaPharos(): Promise<CuentaPharosApi> {
