@@ -118,11 +118,17 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                    cotización es emitible (PharosDate hoy o posterior, sin
                    contrato, no emitida). El flag lo calcula el backend. -->
               @if (puedeEmitir()) {
-                <!-- Refresco puntual: si la cotización aún no es emitible (p. ej.
-                     el analista acaba de cambiar la fecha en Pharos para emitir
-                     con fecha posterior), la relee desde Pharos sin esperar el
-                     tick de 5 min del worker. -->
-                @if (!sel.afiliacion?.emitible) {
+                <!-- Refresco puntual: solo en el caso accionable — hay cotización
+                     de Pharos, aún no es emitible y NO está ya emitida (sin
+                     contrato). Típico: el analista cambió la fecha en Pharos para
+                     emitir con fecha posterior y no quiere esperar el tick de 5
+                     min. No se muestra en pólizas ya emitidas ni en solicitudes
+                     sin cotización de Pharos (refrescar no ayudaría). -->
+                @if (
+                  sel.afiliacion &&
+                  !sel.afiliacion.emitible &&
+                  !sel.afiliacion.contrato_pharos
+                ) {
                   <button
                     type="button"
                     [disabled]="refrescandoPharos()"
