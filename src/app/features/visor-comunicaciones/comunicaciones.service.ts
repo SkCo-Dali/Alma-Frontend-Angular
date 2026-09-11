@@ -1,10 +1,11 @@
-// Fuente de datos de las comunicaciones. Hoy devuelve el MOCK del índice; cuando el
-// backend esté desplegado se pone `usarMock = false` y ya queda conectado al contrato
-// real (ver docs/backend/). La UI (bandeja + visor) NO cambia: consume este servicio.
+// Fuente de datos de las comunicaciones. Conectado al backend real de Alma
+// (alma-backend: app/api/Comunicaciones). La UI (bandeja + visor) NO cambia:
+// consume este servicio. Poner `usarMock = true` para volver a los datos de
+// ejemplo locales (sin backend).
 //
-// Contrato backend (FastAPI, docs/backend/comunicaciones.py):
-//   GET /api/comunicaciones            -> { data: ComunicacionRef[], next: string|null }
-//   GET /api/comunicaciones/{id}/eml   -> bytes del .eml (autenticado con token de Alma)
+// Contrato backend (FastAPI):
+//   GET /api/comunicaciones?limit=&cursor=  -> { data: ComunicacionRef[], next: string|null }
+//   GET /api/comunicaciones/{id}/eml        -> bytes del .eml (autenticado con token de Alma)
 
 import { inject, Injectable } from '@angular/core';
 import { environment } from '@env/environment';
@@ -19,17 +20,31 @@ export class ComunicacionesService {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
 
-  /** ⚙️ Cambiar a false cuando el backend de comunicaciones esté disponible. */
-  private readonly usarMock = true;
+  /** ⚙️ true = datos de ejemplo locales; false = backend real (/api/comunicaciones). */
+  private readonly usarMock = false;
 
   /** Índice de comunicaciones (metadatos + puntero al .eml). */
   async listar(): Promise<ComunicacionRef[]> {
     if (this.usarMock) return COMUNICACIONES_MOCK;
-    // TODO(paginación): usar `next` para páginas siguientes cuando haya volumen.
-    const r = await this.api.fetch<{ data: ComunicacionRef[]; next: string | null }>(
-      '/api/comunicaciones',
-    );
-    return r.data;
+    // La bandeja filtra/ordena 100% en cliente, así que traemos TODAS las
+    // páginas siguiendo `next`. Tope de seguridad para no pedir sin límite
+    // (200/pág × 50 = 10k comunicaciones); si se rebasa, la UI muestra las
+    // primeras y habría que migrar a filtrado/paginación en servidor.
+    const LIMITE_POR_PAGINA = 200; // máximo que acepta el backend
+    const MAX_PAGINAS = 50;
+    const acumulado: ComunicacionRef[] = [];
+    let cursor: string | null = null;
+    for (let i = 0; i < MAX_PAGINAS; i++) {
+      const qs = new URLSearchParams({ limit: String(LIMITE_POR_PAGINA) });
+      if (cursor) qs.set('cursor', cursor);
+      const r = await this.api.fetch<{ data: ComunicacionRef[]; next: string | null }>(
+        `/api/comunicaciones?${qs.toString()}`,
+      );
+      acumulado.push(...r.data);
+      cursor = r.next;
+      if (!cursor) break;
+    }
+    return acumulado;
   }
 
   /** Bytes del .eml de una comunicación (para parsear/render en el visor). */
