@@ -23,8 +23,15 @@ export class ComunicacionesService {
   /** ⚙️ true = datos de ejemplo locales; false = backend real (/api/comunicaciones). */
   private readonly usarMock = false;
 
-  /** Índice de comunicaciones (metadatos + puntero al .eml). */
-  async listar(): Promise<ComunicacionRef[]> {
+  /**
+   * Índice de comunicaciones (metadatos + puntero al .eml).
+   *
+   * `onProgreso` (opcional) recibe el acumulado tras CADA página. La bandeja lo
+   * usa para pintar apenas llega la primera página y no dejar al usuario en
+   * "cargando" mientras llegan miles de correos (render progresivo); el resto se
+   * sigue acumulando en background. Sin callback, se comporta como antes.
+   */
+  async listar(onProgreso?: (parcial: ComunicacionRef[]) => void): Promise<ComunicacionRef[]> {
     if (this.usarMock) return COMUNICACIONES_MOCK;
     // La bandeja filtra/ordena 100% en cliente, así que traemos TODAS las
     // páginas siguiendo `next`. Tope de seguridad para no pedir sin límite
@@ -41,6 +48,7 @@ export class ComunicacionesService {
         `/api/comunicaciones?${qs.toString()}`,
       );
       acumulado.push(...r.data);
+      onProgreso?.(acumulado.slice()); // copia: nueva referencia para disparar el signal
       cursor = r.next;
       if (!cursor) break;
     }

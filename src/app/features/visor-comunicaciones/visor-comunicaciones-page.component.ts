@@ -270,7 +270,15 @@ export class VisorComunicacionesPageComponent {
   private async cargarLista(): Promise<void> {
     this.cargandoLista.set(true);
     try {
-      this.comunicaciones.set(await this.comService.listar());
+      // Render progresivo: pintamos la bandeja con la primera página y dejamos
+      // de mostrar "cargando"; las páginas siguientes engrosan la lista en
+      // background (con miles de correos, esperar a todas dejaba la pantalla
+      // en blanco mucho tiempo).
+      const todas = await this.comService.listar((parcial) => {
+        this.comunicaciones.set(parcial);
+        this.cargandoLista.set(false);
+      });
+      this.comunicaciones.set(todas);
     } catch {
       this.error.set('No se pudo cargar la bandeja de comunicaciones.');
     } finally {
