@@ -103,6 +103,15 @@ function leerAnchoGuardado(): number {
             <lucide-icon name="x" [size]="15" /> Limpiar
           </button>
         }
+        @if (opcionesError()) {
+          <span
+            class="inline-flex items-center gap-1 text-xs text-muted-foreground"
+            title="No se pudieron cargar todas las campañas y fechas; se muestran solo las de los resultados actuales."
+          >
+            <lucide-icon name="alert-triangle" [size]="13" />
+            Filtros limitados a los resultados
+          </span>
+        }
       </div>
 
       <!-- ── Master-detail ── -->
@@ -416,6 +425,8 @@ export class VisorComunicacionesPageComponent {
   // Opciones de filtros: preferimos las del servidor (TODA la base); si aún no
   // llegan, caemos a las derivadas de lo cargado (fallback).
   protected readonly opcionesSrv = signal<OpcionesFiltros>({ campanas: [], fechas: [] });
+  /** true si no se pudieron cargar las opciones del servidor (se usa el fallback). */
+  protected readonly opcionesError = signal(false);
   private readonly campanasDistintas = computed(() =>
     [...new Set(this.resultados().map((c) => c.campana).filter((x): x is string => !!x))].sort(),
   );
@@ -480,8 +491,16 @@ export class VisorComunicacionesPageComponent {
     // Opciones de filtros de TODA la base (si falla, quedan los fallback).
     void this.comService
       .opciones()
-      .then((o) => this.opcionesSrv.set(o))
-      .catch(() => {});
+      .then((o) => {
+        this.opcionesSrv.set(o);
+        this.opcionesError.set(false);
+      })
+      .catch((e) => {
+        // No romper la pantalla: se usan los valores derivados de lo cargado,
+        // pero el usuario debe saber que los filtros están limitados.
+        console.error('[visor-comunicaciones] no se pudieron cargar las opciones de filtros', e);
+        this.opcionesError.set(true);
+      });
 
     void this.cargarLista();
   }
