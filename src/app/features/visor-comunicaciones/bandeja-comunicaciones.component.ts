@@ -2,11 +2,12 @@
 // encabezados con menú por columna (ordenar + filtrar por valores). Emite `abrir`
 // al elegir una fila. Es cliente 100% (el índice hoy es mock del storage).
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ComunicacionRef } from './comunicaciones.mock';
 import { EmlService } from './eml.service';
 import { ColMenuComponent } from './col-menu.component';
+import { GridPaginationComponent } from '../../shared/components/grid-pagination.component';
 
 type Campo = 'remitente' | 'destinatarios' | 'asunto' | 'tipo' | 'fecha' | 'adjuntos' | 'tamano';
 
@@ -22,7 +23,7 @@ interface Columna {
 
 @Component({
   selector: 'alma-bandeja-comunicaciones',
-  imports: [LucideAngularModule, ColMenuComponent],
+  imports: [LucideAngularModule, ColMenuComponent, GridPaginationComponent],
   template: `
     <div class="glass flex h-full flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]">
       <!-- Cabecera + buscador -->
@@ -89,7 +90,7 @@ interface Columna {
             </tr>
           </thead>
           <tbody>
-            @for (c of filtradas(); track c.id) {
+            @for (c of pagina(); track c.id) {
               <tr
                 (click)="abrir.emit(c)"
                 class="cursor-pointer transition-colors hover:bg-accent"
@@ -147,10 +148,18 @@ interface Columna {
         </table>
       </div>
 
-      <!-- Pie: conteo -->
-      <div class="shrink-0 border-t border-border/60 px-5 py-2 text-xs text-muted-foreground">
-        {{ filtradas().length }} de {{ comunicaciones().length }} comunicaciones
-      </div>
+      <!-- Pie: paginación (igual que la bandeja de cotizaciones) -->
+      <alma-grid-pagination
+        class="shrink-0"
+        [currentPage]="currentPage()"
+        [totalPages]="totalPages() || 1"
+        [total]="total()"
+        [itemsPerPage]="pageSize()"
+        [pageSizeOptions]="pageSizes"
+        surfaceClass="bg-transparent"
+        (pageChange)="currentPage.set($event)"
+        (itemsPerPageChange)="pageSize.set($event)"
+      />
     </div>
   `,
   styles: `:host { display: block; height: 100%; }`,
@@ -170,6 +179,22 @@ export class BandejaComunicacionesComponent {
   });
   protected readonly sortField = signal<Campo>('fecha');
   protected readonly sortDir = signal<'asc' | 'desc'>('desc');
+
+  // Paginación en cliente (mismo paginador que la bandeja de cotizaciones).
+  protected readonly pageSizes = [10, 25, 50, 100];
+  protected readonly pageSize = signal(10);
+  protected readonly currentPage = signal(1);
+
+  constructor() {
+    // Al cambiar filtros/búsqueda/rango o el tamaño de página, volver a la página 1.
+    effect(() => {
+      this.q();
+      this.filtros();
+      this.fechaRango();
+      this.pageSize();
+      this.currentPage.set(1);
+    });
+  }
 
   protected readonly columnas: Columna[] = [
     { campo: 'remitente', label: 'Remitente', filtrable: true },
@@ -223,6 +248,14 @@ export class BandejaComunicacionesComponent {
         else r = String(a[field]).localeCompare(String(b[field]), 'es');
         return r * dir;
       });
+  });
+
+  // Total tras filtros y la porción visible de la página actual.
+  protected readonly total = computed(() => this.filtradas().length);
+  protected readonly totalPages = computed(() => Math.ceil(this.total() / this.pageSize()));
+  protected readonly pagina = computed(() => {
+    const inicio = (this.currentPage() - 1) * this.pageSize();
+    return this.filtradas().slice(inicio, inicio + this.pageSize());
   });
 
   protected ordenar(campo: Campo, dir: 'asc' | 'desc'): void {
