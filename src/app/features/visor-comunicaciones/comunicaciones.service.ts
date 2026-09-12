@@ -41,35 +41,24 @@ export class ComunicacionesService {
 
   /**
    * Busca envíos (Cosmos `send-mail`) filtrando en SERVIDOR por texto
-   * (correo/asunto), campaña y rango de fechas. Sigue `next` acumulando páginas
-   * hasta un tope de seguridad; `onProgreso` recibe el parcial tras cada página
-   * para pintar apenas llega la primera.
+   * (correo/asunto), campaña y rango de fechas. Devuelve UNA página (por defecto
+   * los 50 más recientes que coincidan). `hayMas` indica si el resultado se topó
+   * con el límite (conviene afinar la búsqueda).
    */
   async buscar(
     opts: BusquedaEnvios = {},
-    onProgreso?: (parcial: ComunicacionRef[]) => void,
-  ): Promise<ComunicacionRef[]> {
-    if (this.usarMock) return COMUNICACIONES_MOCK;
-    const LIMITE_POR_PAGINA = 200;
-    const MAX_PAGINAS = 25; // tope ~5.000; una consulta por cliente trae pocos
-    const acumulado: ComunicacionRef[] = [];
-    let cursor: number | null = null;
-    for (let i = 0; i < MAX_PAGINAS; i++) {
-      const qs = new URLSearchParams({ limit: String(LIMITE_POR_PAGINA) });
-      if (opts.q) qs.set('q', opts.q);
-      if (opts.campana) qs.set('campana', opts.campana);
-      if (opts.desde) qs.set('desde', opts.desde);
-      if (opts.hasta) qs.set('hasta', opts.hasta);
-      if (cursor != null) qs.set('cursor', String(cursor));
-      const r = await this.api.fetch<{ data: ComunicacionRef[]; next: number | null }>(
-        `/api/comunicaciones?${qs.toString()}`,
-      );
-      acumulado.push(...r.data);
-      onProgreso?.(acumulado.slice());
-      cursor = r.next;
-      if (cursor == null) break;
-    }
-    return acumulado;
+    limit = 50,
+  ): Promise<{ items: ComunicacionRef[]; hayMas: boolean }> {
+    if (this.usarMock) return { items: COMUNICACIONES_MOCK, hayMas: false };
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (opts.q) qs.set('q', opts.q);
+    if (opts.campana) qs.set('campana', opts.campana);
+    if (opts.desde) qs.set('desde', opts.desde);
+    if (opts.hasta) qs.set('hasta', opts.hasta);
+    const r = await this.api.fetch<{ data: ComunicacionRef[]; next: number | null }>(
+      `/api/comunicaciones?${qs.toString()}`,
+    );
+    return { items: r.data, hayMas: r.next != null };
   }
 
   /** Traza de entrega/engagement de un envío (por su id = messageId). */
