@@ -11,8 +11,10 @@ import { EmlAttachment, ParsedEml } from './eml.types';
 import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
 import { BandejaComunicacionesComponent } from './bandeja-comunicaciones.component';
+import { AdminCampanasComponent } from './admin-campanas.component';
 import { ComunicacionRef } from './comunicaciones.mock';
 import { ComunicacionesService } from './comunicaciones.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 type Modo = 'correo' | 'adjuntos' | 'detalles';
 
@@ -24,6 +26,7 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
     EmailFrameComponent,
     AttachmentPreviewComponent,
     BandejaComunicacionesComponent,
+    AdminCampanasComponent,
   ],
   template: `
     <div data-full-bleed class="flex flex-col gap-3" [style.height]="'calc(100dvh - 8.5rem)'">
@@ -44,6 +47,26 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
           >
             <lucide-icon name="inbox" [size]="16" />
             Bandeja
+          </button>
+        }
+        @if (!parsed() && vista() === 'admin') {
+          <button
+            type="button"
+            (click)="verBandeja()"
+            class="glass inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+          >
+            <lucide-icon name="inbox" [size]="16" />
+            Bandeja
+          </button>
+        }
+        @if (esAdmin() && !parsed() && vista() === 'bandeja') {
+          <button
+            type="button"
+            (click)="vista.set('admin')"
+            class="glass ml-auto inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+          >
+            <lucide-icon name="settings" [size]="16" />
+            Administrar campañas
           </button>
         }
       </div>
@@ -212,8 +235,11 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
             </div>
           </section>
         </div>
+      } @else if (vista() === 'admin') {
+        <!-- ── Administración de campañas (solo admins) ── -->
+        <alma-admin-campanas class="min-h-0 flex-1" />
       } @else {
-        <!-- ── Bandeja (mock del storage) ── -->
+        <!-- ── Bandeja ── -->
         @if (error()) {
           <p class="flex shrink-0 items-center gap-1.5 text-xs text-destructive">
             <lucide-icon name="alert-triangle" [size]="14" />
@@ -242,6 +268,14 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
 export class VisorComunicacionesPageComponent {
   private readonly eml = inject(EmlService);
   private readonly comService = inject(ComunicacionesService);
+  private readonly auth = inject(AuthService);
+
+  /** Vista de la pantalla base (cuando no hay un correo abierto). */
+  protected readonly vista = signal<'bandeja' | 'admin'>('bandeja');
+  /** Admin de la App: puede gestionar qué campañas se traen. */
+  protected readonly esAdmin = computed(() =>
+    this.auth.hasPermission('app.visor-comunicaciones.admin'),
+  );
 
   protected readonly comunicaciones = signal<ComunicacionRef[]>([]);
   protected readonly cargandoLista = signal(true);
@@ -303,6 +337,10 @@ export class VisorComunicacionesPageComponent {
     } finally {
       this.abriendoId.set(null);
     }
+  }
+
+  protected verBandeja(): void {
+    this.vista.set('bandeja');
   }
 
   protected volverBandeja(): void {
