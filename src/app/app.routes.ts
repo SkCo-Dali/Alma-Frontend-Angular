@@ -70,6 +70,14 @@ export const routes: Routes = [
     title: 'Configuración del motor — ALMA',
   },
   {
+    path: 'apps/suscripcion/reporteria',
+    loadComponent: () =>
+      import('./features/suscripcion/reporteria/reporteria-page.component').then(
+        (m) => m.ReporteriaPageComponent,
+      ),
+    title: 'Auditoría y reportería — ALMA',
+  },
+  {
     // Retorno del OAuth delegado del buzón de suscripción (redirect URI de
     // las apps de Entra). Fuera de /apps/suscripcion para no chocar con
     // :solicitudId y sobrevivir a cambios de esa jerarquía.
