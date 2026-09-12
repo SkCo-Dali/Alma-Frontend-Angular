@@ -9,7 +9,15 @@ import { EmlService } from './eml.service';
 import { ColMenuComponent } from './col-menu.component';
 import { GridPaginationComponent } from '../../shared/components/grid-pagination.component';
 
-type Campo = 'remitente' | 'destinatarios' | 'asunto' | 'tipo' | 'fecha' | 'adjuntos' | 'tamano';
+type Campo =
+  | 'remitente'
+  | 'destinatarios'
+  | 'asunto'
+  | 'tipo'
+  | 'estado'
+  | 'fecha'
+  | 'adjuntos'
+  | 'tamano';
 
 interface Columna {
   campo: Campo;
@@ -114,6 +122,13 @@ interface Columna {
                 <td class="hidden border-b border-border/50 px-4 py-2.5 md:table-cell">
                   <span class="alma-badge" [class]="claseTipo(c.tipo)">{{ c.tipo }}</span>
                 </td>
+                <td class="hidden border-b border-border/50 px-4 py-2.5 lg:table-cell">
+                  @if (c.estado) {
+                    <span class="alma-badge" [class]="claseEstado(c.estado)">{{ c.estado }}</span>
+                  } @else {
+                    <span class="text-xs text-muted-foreground/40">—</span>
+                  }
+                </td>
                 <td
                   class="hidden whitespace-nowrap border-b border-border/50 px-4 py-2.5 text-muted-foreground sm:table-cell"
                 >
@@ -136,7 +151,7 @@ interface Columna {
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="px-4 py-16 text-center">
+                <td colspan="8" class="px-4 py-16 text-center">
                   <div class="flex flex-col items-center gap-2">
                     <lucide-icon name="inbox" [size]="28" class="text-muted-foreground/40" />
                     <p class="text-sm text-muted-foreground">No hay comunicaciones que coincidan.</p>
@@ -201,6 +216,7 @@ export class BandejaComunicacionesComponent {
     { campo: 'destinatarios', label: 'Destinatarios', clase: 'hidden xl:table-cell' },
     { campo: 'asunto', label: 'Asunto' },
     { campo: 'tipo', label: 'Tipo', filtrable: true, clase: 'hidden md:table-cell' },
+    { campo: 'estado', label: 'Estado', clase: 'hidden lg:table-cell' },
     { campo: 'fecha', label: 'Fecha', esFecha: true, clase: 'hidden sm:table-cell' },
     { campo: 'adjuntos', label: 'Adjuntos', clase: 'text-center' },
     { campo: 'tamano', label: 'Tamaño', clase: 'hidden text-right lg:table-cell' },
@@ -276,6 +292,17 @@ export class BandejaComunicacionesComponent {
       default:
         return 'bg-muted text-muted-foreground';
     }
+  }
+
+  protected claseEstado(estado: string): string {
+    const e = estado.toLowerCase();
+    if (e.includes('succ') || e.includes('deliver') || e.includes('entreg')) {
+      return 'bg-[#10b981]/12 text-[#047857] dark:text-[#34d399]';
+    }
+    if (e.includes('fail') || e.includes('bounce') || e.includes('error') || e.includes('rebot')) {
+      return 'bg-destructive/12 text-destructive';
+    }
+    return 'bg-muted text-muted-foreground';
   }
 
   protected fechaCorta(iso: string): string {

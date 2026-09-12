@@ -1,9 +1,10 @@
-// Visor de comunicaciones (EML). Entrada: una BANDEJA (mock del storage de Azure)
-// con las comunicaciones; al abrir una se muestra como documento, sin exponer MIME,
-// con panel INFORMACIÓN a la izquierda y tres modos: Vista correo · Adjuntos ·
-// Detalles técnicos. El shell aporta header y dock; esta página llena la altura.
+// Visor de comunicaciones: app de CONSULTA de envíos (no una bandeja de trabajo).
+// Se busca por correo/asunto (filtro en servidor sobre Cosmos send-mail); al abrir
+// un envío se ve el correo como documento (panel INFORMACIÓN con estado/póliza) y
+// su TRAZA de entrega/engagement (report-received): Entregado, Abierto, Clic, etc.
 
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { EmlService } from './eml.service';
@@ -11,22 +12,20 @@ import { EmlAttachment, ParsedEml } from './eml.types';
 import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
 import { BandejaComunicacionesComponent } from './bandeja-comunicaciones.component';
-import { AdminCampanasComponent } from './admin-campanas.component';
 import { ComunicacionRef } from './comunicaciones.mock';
-import { ComunicacionesService } from './comunicaciones.service';
-import { AuthService } from '../../core/auth/auth.service';
+import { ComunicacionesService, EventoTraza } from './comunicaciones.service';
 
-type Modo = 'correo' | 'adjuntos' | 'detalles';
+type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
 
 @Component({
   selector: 'alma-visor-comunicaciones-page',
   imports: [
+    FormsModule,
     RouterLink,
     LucideAngularModule,
     EmailFrameComponent,
     AttachmentPreviewComponent,
     BandejaComunicacionesComponent,
-    AdminCampanasComponent,
   ],
   template: `
     <div data-full-bleed class="flex flex-col gap-3" [style.height]="'calc(100dvh - 8.5rem)'">
@@ -45,34 +44,14 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
             (click)="volverBandeja()"
             class="glass inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
           >
-            <lucide-icon name="inbox" [size]="16" />
-            Bandeja
-          </button>
-        }
-        @if (!parsed() && vista() === 'admin') {
-          <button
-            type="button"
-            (click)="verBandeja()"
-            class="glass inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-          >
-            <lucide-icon name="inbox" [size]="16" />
-            Bandeja
-          </button>
-        }
-        @if (esAdmin() && !parsed() && vista() === 'bandeja') {
-          <button
-            type="button"
-            (click)="vista.set('admin')"
-            class="glass ml-auto inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-          >
-            <lucide-icon name="settings" [size]="16" />
-            Administrar campañas
+            <lucide-icon name="arrow-left" [size]="16" />
+            Volver a resultados
           </button>
         }
       </div>
 
       @if (parsed(); as eml) {
-        <!-- ── Visor ── -->
+        <!-- ── Visor de un envío ── -->
         <div class="flex min-h-0 flex-1 gap-4">
           <!-- Panel INFORMACIÓN -->
           <aside
@@ -81,6 +60,28 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
             <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Información
             </p>
+
+            @if (refActual(); as r) {
+              <p class="mt-4 text-[11px] font-medium text-muted-foreground">Estado del envío</p>
+              <span
+                class="mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                [class]="claseEstado(r.estado)"
+              >
+                <lucide-icon [name]="iconoEstado(r.estado)" [size]="12" />
+                {{ r.estado || '—' }}
+              </span>
+              @if (r.error) {
+                <p class="mt-1 break-words text-[11px] text-destructive">{{ r.error }}</p>
+              }
+              @if (r.poliza) {
+                <p class="mt-3 text-[11px] font-medium text-muted-foreground">Póliza</p>
+                <p class="text-sm text-foreground">{{ r.poliza }}</p>
+              }
+              @if (r.campana) {
+                <p class="mt-3 text-[11px] font-medium text-muted-foreground">Campaña</p>
+                <p class="break-words text-xs text-foreground">{{ r.campana }}</p>
+              }
+            }
 
             <p class="mt-4 text-[11px] font-medium text-muted-foreground">De</p>
             @if (eml.from; as f) {
@@ -95,13 +96,6 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
               <p class="break-words text-xs text-foreground">{{ t.address }}</p>
             } @empty {
               <p class="text-sm text-muted-foreground">—</p>
-            }
-
-            @if (eml.cc.length) {
-              <p class="mt-4 text-[11px] font-medium text-muted-foreground">CC</p>
-              @for (c of eml.cc; track c.address) {
-                <p class="break-words text-xs text-foreground">{{ c.address }}</p>
-              }
             }
 
             <p class="mt-4 text-[11px] font-medium text-muted-foreground">Fecha</p>
@@ -133,7 +127,7 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
               class="alma-btn alma-btn-outline mt-auto h-9 rounded-xl text-xs"
             >
               <lucide-icon name="arrow-left" [size]="15" />
-              Volver a la bandeja
+              Volver a resultados
             </button>
           </aside>
 
@@ -157,6 +151,11 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
                   >
                     <lucide-icon [name]="m.icon" [size]="16" />
                     {{ m.label }}
+                    @if (m.id === 'traza' && traza().length) {
+                      <span class="rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
+                        {{ traza().length }}
+                      </span>
+                    }
                   </button>
                 }
               </div>
@@ -200,6 +199,51 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
                     </div>
                   }
                 }
+                @case ('traza') {
+                  <div class="h-full overflow-auto p-5">
+                    @if (cargandoTraza()) {
+                      <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                        <lucide-icon name="loader-2" [size]="18" class="animate-spin text-primary" />
+                        Cargando traza…
+                      </div>
+                    } @else if (traza().length === 0) {
+                      <div class="flex h-full flex-col items-center justify-center gap-2 text-center">
+                        <lucide-icon name="history" [size]="28" class="text-muted-foreground/50" />
+                        <p class="text-sm text-muted-foreground">
+                          Sin eventos de entrega registrados para este envío.
+                        </p>
+                      </div>
+                    } @else {
+                      <ol class="relative ml-3 border-l border-border/60">
+                        @for (e of traza(); track $index) {
+                          <li class="mb-5 ml-5">
+                            <span
+                              class="absolute -left-[9px] flex h-4 w-4 items-center justify-center rounded-full ring-4 ring-[var(--surface)]"
+                              [class]="claseEvento(e)"
+                            >
+                              <lucide-icon [name]="iconoEvento(e)" [size]="10" class="text-white" />
+                            </span>
+                            <p class="text-sm font-medium text-foreground">{{ etiquetaEvento(e) }}</p>
+                            <p class="text-xs text-muted-foreground">{{ fechaLarga(e.fecha) }}</p>
+                            @if (e.contexto) {
+                              <a
+                                [href]="e.contexto"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="mt-0.5 inline-flex items-center gap-1 break-all text-xs text-primary hover:underline"
+                              >
+                                <lucide-icon name="external-link" [size]="12" />{{ e.contexto }}
+                              </a>
+                            }
+                            @if (e.userAgent) {
+                              <p class="mt-0.5 break-all text-[11px] text-muted-foreground/70">{{ e.userAgent }}</p>
+                            }
+                          </li>
+                        }
+                      </ol>
+                    }
+                  </div>
+                }
                 @case ('detalles') {
                   <div class="h-full overflow-auto p-5">
                     <div class="mb-4 grid gap-3 sm:grid-cols-2">
@@ -235,11 +279,25 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
             </div>
           </section>
         </div>
-      } @else if (vista() === 'admin') {
-        <!-- ── Administración de campañas (solo admins) ── -->
-        <alma-admin-campanas class="min-h-0 flex-1" />
       } @else {
-        <!-- ── Bandeja ── -->
+        <!-- ── Búsqueda de envíos ── -->
+        <form
+          class="glass flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 shadow-[var(--shadow-sm)]"
+          (submit)="$event.preventDefault(); ejecutarBusqueda()"
+        >
+          <lucide-icon name="search" [size]="18" class="shrink-0 text-muted-foreground" />
+          <input
+            [(ngModel)]="terminoInput"
+            name="q"
+            type="search"
+            placeholder="Buscar envíos por correo del cliente o asunto…"
+            class="h-9 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <button type="submit" class="alma-btn alma-btn-primary h-9 rounded-lg px-4 text-sm">
+            Buscar
+          </button>
+        </form>
+
         @if (error()) {
           <p class="flex shrink-0 items-center gap-1.5 text-xs text-destructive">
             <lucide-icon name="alert-triangle" [size]="14" />
@@ -250,7 +308,7 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
           <div class="glass flex min-h-0 flex-1 items-center justify-center rounded-2xl shadow-[var(--shadow-sm)]">
             <span class="flex items-center gap-2 text-sm text-muted-foreground">
               <lucide-icon name="loader-2" [size]="18" class="animate-spin text-primary" />
-              Cargando bandeja…
+              Cargando envíos…
             </span>
           </div>
         } @else {
@@ -268,23 +326,22 @@ type Modo = 'correo' | 'adjuntos' | 'detalles';
 export class VisorComunicacionesPageComponent {
   private readonly eml = inject(EmlService);
   private readonly comService = inject(ComunicacionesService);
-  private readonly auth = inject(AuthService);
-
-  /** Vista de la pantalla base (cuando no hay un correo abierto). */
-  protected readonly vista = signal<'bandeja' | 'admin'>('bandeja');
-  /** Admin de la App: puede gestionar qué campañas se traen. */
-  protected readonly esAdmin = computed(() =>
-    this.auth.hasPermission('app.visor-comunicaciones.admin'),
-  );
 
   protected readonly comunicaciones = signal<ComunicacionRef[]>([]);
   protected readonly cargandoLista = signal(true);
   protected readonly parsed = signal<ParsedEml | null>(null);
+  protected readonly refActual = signal<ComunicacionRef | null>(null);
   protected readonly abriendoId = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly modo = signal<Modo>('correo');
   protected readonly cargarRemoto = signal(false);
   private readonly adjuntoSel = signal<EmlAttachment | null>(null);
+
+  protected terminoInput = '';
+
+  // Traza del envío abierto.
+  protected readonly traza = signal<EventoTraza[]>([]);
+  protected readonly cargandoTraza = signal(false);
 
   protected readonly adjuntoActivo = computed(
     () => this.adjuntoSel() ?? this.parsed()?.attachments[0] ?? null,
@@ -293,6 +350,7 @@ export class VisorComunicacionesPageComponent {
   protected readonly modos: { id: Modo; label: string; icon: string }[] = [
     { id: 'correo', label: 'Vista correo', icon: 'mail' },
     { id: 'adjuntos', label: 'Adjuntos', icon: 'paperclip' },
+    { id: 'traza', label: 'Traza del envío', icon: 'history' },
     { id: 'detalles', label: 'Detalles técnicos', icon: 'sliders-horizontal' },
   ];
 
@@ -301,20 +359,22 @@ export class VisorComunicacionesPageComponent {
     void this.cargarLista();
   }
 
-  private async cargarLista(): Promise<void> {
+  protected ejecutarBusqueda(): void {
+    void this.cargarLista(this.terminoInput.trim());
+  }
+
+  private async cargarLista(q = ''): Promise<void> {
     this.cargandoLista.set(true);
+    this.error.set(null);
+    this.comunicaciones.set([]);
     try {
-      // Render progresivo: pintamos la bandeja con la primera página y dejamos
-      // de mostrar "cargando"; las páginas siguientes engrosan la lista en
-      // background (con miles de correos, esperar a todas dejaba la pantalla
-      // en blanco mucho tiempo).
-      const todas = await this.comService.listar((parcial) => {
+      const todas = await this.comService.buscar({ q: q || undefined }, (parcial) => {
         this.comunicaciones.set(parcial);
         this.cargandoLista.set(false);
       });
       this.comunicaciones.set(todas);
     } catch {
-      this.error.set('No se pudo cargar la bandeja de comunicaciones.');
+      this.error.set('No se pudo consultar los envíos.');
     } finally {
       this.cargandoLista.set(false);
     }
@@ -329,9 +389,11 @@ export class VisorComunicacionesPageComponent {
       const nuevo = await this.eml.parse(buffer);
       this.eml.revoke(this.parsed());
       this.parsed.set(nuevo);
+      this.refActual.set(c);
       this.adjuntoSel.set(null);
       this.modo.set('correo');
       this.cargarRemoto.set(false);
+      void this.cargarTraza(c.id);
     } catch {
       this.error.set('No se pudo abrir la comunicación. Intenta de nuevo.');
     } finally {
@@ -339,13 +401,23 @@ export class VisorComunicacionesPageComponent {
     }
   }
 
-  protected verBandeja(): void {
-    this.vista.set('bandeja');
+  private async cargarTraza(id: string): Promise<void> {
+    this.traza.set([]);
+    this.cargandoTraza.set(true);
+    try {
+      this.traza.set(await this.comService.traza(id));
+    } catch {
+      this.traza.set([]);
+    } finally {
+      this.cargandoTraza.set(false);
+    }
   }
 
   protected volverBandeja(): void {
     this.eml.revoke(this.parsed());
     this.parsed.set(null);
+    this.refActual.set(null);
+    this.traza.set([]);
     this.adjuntoSel.set(null);
     this.modo.set('correo');
     this.cargarRemoto.set(false);
@@ -378,5 +450,53 @@ export class VisorComunicacionesPageComponent {
       default:
         return 'paperclip';
     }
+  }
+
+  // ── Estado del envío ──
+  protected claseEstado(estado?: string): string {
+    const e = (estado || '').toLowerCase();
+    if (e.includes('succ') || e.includes('deliver') || e.includes('entreg')) {
+      return 'bg-[#10b981]/12 text-[#047857] dark:text-[#34d399]';
+    }
+    if (e.includes('fail') || e.includes('bounce') || e.includes('error') || e.includes('rebot')) {
+      return 'bg-destructive/12 text-destructive';
+    }
+    return 'bg-muted text-muted-foreground';
+  }
+
+  protected iconoEstado(estado?: string): string {
+    const e = (estado || '').toLowerCase();
+    if (e.includes('succ') || e.includes('deliver') || e.includes('entreg')) return 'check-circle-2';
+    if (e.includes('fail') || e.includes('bounce') || e.includes('error') || e.includes('rebot')) return 'x-circle';
+    return 'circle-dashed';
+  }
+
+  // ── Eventos de la traza ──
+  protected etiquetaEvento(e: EventoTraza): string {
+    const est = (e.estado || '').toLowerCase();
+    if (e.tipo === 'Engagement') {
+      if (est === 'click') return 'Clic en un enlace';
+      if (est === 'view' || est === 'open') return 'Correo abierto';
+      return `Engagement: ${e.estado}`;
+    }
+    if (e.tipo === 'Entrega') return `Entrega: ${e.estado}`;
+    return `${e.tipo}: ${e.estado}`;
+  }
+
+  protected claseEvento(e: EventoTraza): string {
+    const est = (e.estado || '').toLowerCase();
+    if (est.includes('bounce') || est.includes('fail') || est.includes('rebot')) return 'bg-destructive';
+    if (est === 'click' || est === 'view' || est === 'open') return 'bg-primary';
+    if (est.includes('deliver') || est.includes('entreg')) return 'bg-[#10b981]';
+    return 'bg-muted-foreground';
+  }
+
+  protected iconoEvento(e: EventoTraza): string {
+    const est = (e.estado || '').toLowerCase();
+    if (est === 'click') return 'external-link';
+    if (est === 'view' || est === 'open') return 'eye';
+    if (est.includes('bounce') || est.includes('fail') || est.includes('rebot')) return 'x-circle';
+    if (est.includes('deliver') || est.includes('entreg')) return 'check-circle-2';
+    return 'send';
   }
 }
