@@ -3,7 +3,7 @@
 // resultados (top 50, Cosmos send-mail). Derecha: detalle del envío seleccionado
 // (correo, adjuntos, TRAZA de entrega/engagement, detalles) o un estado inicial.
 
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
@@ -15,6 +15,20 @@ import { ComunicacionRef } from './comunicaciones.mock';
 import { ComunicacionesService, EventoTraza } from './comunicaciones.service';
 
 type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
+
+const ANCHO_LISTA_MIN = 360;
+const ANCHO_LISTA_MAX = 800;
+const ANCHO_LISTA_KEY = 'visor-comunicaciones.anchoLista';
+
+function leerAnchoGuardado(): number {
+  try {
+    const v = Number(localStorage.getItem(ANCHO_LISTA_KEY));
+    if (v >= ANCHO_LISTA_MIN && v <= ANCHO_LISTA_MAX) return v;
+  } catch {
+    /* localStorage no disponible */
+  }
+  return ANCHO_LISTA_MIN;
+}
 
 @Component({
   selector: 'alma-visor-comunicaciones-page',
@@ -86,7 +100,8 @@ type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
       <div class="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
         <!-- Lista -->
         <aside
-          class="glass flex max-h-[40vh] w-full shrink-0 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-sm)] md:max-h-none md:w-[360px]"
+          class="glass flex max-h-[40vh] w-full shrink-0 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-sm)] md:max-h-none"
+          [style.width.px]="esDesktop() ? anchoLista() : null"
         >
           <header class="shrink-0 border-b border-border/60 px-4 py-3">
             <p class="text-sm font-bold text-foreground">Envíos</p>
@@ -139,6 +154,14 @@ type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
             }
           </div>
         </aside>
+
+        <!-- Divisor arrastrable (solo desktop) -->
+        <div
+          class="hidden w-1.5 shrink-0 cursor-col-resize touch-none self-stretch rounded-full bg-border/40 transition-colors hover:bg-primary/40 md:block"
+          (pointerdown)="onResizeStart($event)"
+          (pointermove)="onResizeMove($event)"
+          title="Arrastra para ajustar el ancho de la lista"
+        ></div>
 
         <!-- Detalle -->
         <section class="glass flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]">
@@ -347,6 +370,14 @@ export class VisorComunicacionesPageComponent {
   protected desdeInput = '';
   protected hastaInput = '';
 
+  // Ancho de la lista (redimensionable en desktop; mínimo = ANCHO_LISTA_MIN).
+  protected readonly anchoLista = signal(leerAnchoGuardado());
+  protected readonly esDesktop = signal(
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+  );
+  private arrastreX = 0;
+  private anchoInicial = 0;
+
   protected readonly resultados = signal<ComunicacionRef[]>([]);
   protected readonly hayMas = signal(false);
   protected readonly cargandoLista = signal(true);
@@ -382,8 +413,40 @@ export class VisorComunicacionesPageComponent {
   ];
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.eml.revoke(this.parsed()));
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.eml.revoke(this.parsed()));
+
+    // Seguir el breakpoint desktop para aplicar el ancho variable solo en fila.
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onMq = () => this.esDesktop.set(mq.matches);
+    mq.addEventListener('change', onMq);
+    destroyRef.onDestroy(() => mq.removeEventListener('change', onMq));
+
+    // Persistir el ancho elegido.
+    effect(() => {
+      const w = this.anchoLista();
+      try {
+        localStorage.setItem(ANCHO_LISTA_KEY, String(w));
+      } catch {
+        /* localStorage no disponible */
+      }
+    });
+
     void this.cargarLista();
+  }
+
+  protected onResizeStart(ev: PointerEvent): void {
+    ev.preventDefault();
+    this.arrastreX = ev.clientX;
+    this.anchoInicial = this.anchoLista();
+    (ev.target as HTMLElement).setPointerCapture(ev.pointerId);
+  }
+
+  protected onResizeMove(ev: PointerEvent): void {
+    if (!(ev.buttons & 1)) return; // solo mientras se mantiene presionado
+    const dx = ev.clientX - this.arrastreX;
+    const nuevo = Math.min(ANCHO_LISTA_MAX, Math.max(ANCHO_LISTA_MIN, this.anchoInicial + dx));
+    this.anchoLista.set(nuevo);
   }
 
   protected hayFiltros(): boolean {
