@@ -35,6 +35,8 @@ export interface ResumenReporteria {
   /** Evaluaciones totales (actividad del motor), no una por solicitud. */
   evaluaciones: number;
   emisionAutomatica: number;
+  /** Resultado del motor al que está acotado el resumen (null = todos). */
+  decision: string | null;
   estados: ConteoEstado[];
   decisiones: ConteoDecision[];
   tiempoEmision: TiempoEmision;
@@ -83,11 +85,15 @@ export class ReporteriaApi {
     return s ? `?${s}` : '';
   }
 
-  /** Indicadores agregados del periodo. */
+  /**
+   * Indicadores agregados del periodo. `decision` acota el universo al
+   * resultado del motor elegido; `decisiones` vuelve siempre completo (es el
+   * selector), el resto de indicadores sí queda acotado.
+   */
   resumen(f: FiltrosReporteria = {}): Promise<ResumenReporteria> {
-    const { desde, hasta } = f;
+    const { desde, hasta, decision } = f;
     return this.api.fetch<ResumenReporteria>(
-      `/api/suscripcion/reporteria/resumen${this.qs({ desde, hasta })}`,
+      `/api/suscripcion/reporteria/resumen${this.qs({ desde, hasta, decision })}`,
     );
   }
 
