@@ -11,6 +11,7 @@ import { EmlService } from './eml.service';
 import { EmlAttachment, ParsedEml } from './eml.types';
 import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
+import { ColMenuComponent } from './col-menu.component';
 import { ComunicacionRef } from './comunicaciones.mock';
 import { ComunicacionesService, EventoTraza } from './comunicaciones.service';
 
@@ -38,6 +39,7 @@ function leerAnchoGuardado(): number {
     LucideAngularModule,
     EmailFrameComponent,
     AttachmentPreviewComponent,
+    ColMenuComponent,
   ],
   template: `
     <div data-full-bleed class="flex flex-col gap-3" [style.height]="'calc(100dvh - 8.5rem)'">
@@ -65,30 +67,37 @@ function leerAnchoGuardado(): number {
           />
         </form>
 
-        <input
-          [(ngModel)]="campanaInput"
-          name="campana"
-          type="text"
-          placeholder="Campaña"
-          class="glass h-9 w-36 rounded-xl px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
-        />
-        <input
-          [(ngModel)]="desdeInput"
-          name="desde"
-          type="date"
-          class="glass h-9 rounded-xl px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          title="Desde"
-        />
-        <input
-          [(ngModel)]="hastaInput"
-          name="hasta"
-          type="date"
-          class="glass h-9 rounded-xl px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-          title="Hasta"
-        />
         <button type="button" (click)="buscar()" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm">
           Buscar
         </button>
+
+        <!-- Filtros (refinan los resultados cargados, estilo cotizaciones) -->
+        <div class="glass flex h-9 items-center gap-1.5 rounded-xl px-3">
+          <lucide-icon name="megaphone" [size]="14" class="text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Campaña</span>
+          <alma-col-menu
+            [sortActive]="sortField() === 'campana'"
+            [sortDir]="sortDir()"
+            [valores]="campanasDistintas()"
+            [seleccion]="filtroCampana()"
+            (sort)="ordenar('campana', $event)"
+            (filtrar)="filtroCampana.set($event)"
+          />
+        </div>
+        <div class="glass flex h-9 items-center gap-1.5 rounded-xl px-3">
+          <lucide-icon name="calendar-clock" [size]="14" class="text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Fecha</span>
+          <alma-col-menu
+            [sortActive]="sortField() === 'fecha'"
+            [sortDir]="sortDir()"
+            [esFecha]="true"
+            [fechas]="fechasLista()"
+            [fechaActiva]="!!(rangoFecha().desde || rangoFecha().hasta)"
+            (sort)="ordenar('fecha', $event)"
+            (rango)="rangoFecha.set($event)"
+          />
+        </div>
+
         @if (hayFiltros()) {
           <button type="button" (click)="limpiar()" class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-sm">
             <lucide-icon name="x" [size]="15" /> Limpiar
@@ -106,8 +115,8 @@ function leerAnchoGuardado(): number {
           <header class="shrink-0 border-b border-border/60 px-4 py-3">
             <p class="text-sm font-bold text-foreground">Envíos</p>
             <p class="text-xs text-muted-foreground">
-              {{ resultados().length }}{{ hayMas() ? '+' : '' }}
-              {{ resultados().length === 1 ? 'resultado' : 'resultados' }}
+              {{ resultadosFiltrados().length }}{{ hayMas() ? '+' : '' }}
+              {{ resultadosFiltrados().length === 1 ? 'resultado' : 'resultados' }}
             </p>
           </header>
           <div class="min-h-0 flex-1 overflow-auto">
@@ -120,7 +129,7 @@ function leerAnchoGuardado(): number {
                 <lucide-icon name="alert-triangle" [size]="14" /> {{ error() }}
               </p>
             } @else {
-              @for (c of resultados(); track c.id) {
+              @for (c of resultadosFiltrados(); track c.id) {
                 <button
                   type="button"
                   (click)="seleccionar(c)"
@@ -366,9 +375,15 @@ export class VisorComunicacionesPageComponent {
 
   // Filtros (bindeados al formulario superior).
   protected qInput = '';
-  protected campanaInput = '';
-  protected desdeInput = '';
-  protected hastaInput = '';
+
+  // Filtros que refinan (client-side) los resultados cargados.
+  protected readonly filtroCampana = signal<string[]>([]);
+  protected readonly rangoFecha = signal<{ desde: string | null; hasta: string | null }>({
+    desde: null,
+    hasta: null,
+  });
+  protected readonly sortField = signal<'fecha' | 'campana'>('fecha');
+  protected readonly sortDir = signal<'asc' | 'desc'>('desc');
 
   // Ancho de la lista (redimensionable en desktop; mínimo = ANCHO_LISTA_MIN).
   protected readonly anchoLista = signal(leerAnchoGuardado());
@@ -397,6 +412,38 @@ export class VisorComunicacionesPageComponent {
   protected readonly adjuntoActivo = computed(
     () => this.adjuntoSel() ?? this.parsed()?.attachments[0] ?? null,
   );
+
+  // Valores/fechas para los desplegables (derivados de lo cargado).
+  protected readonly campanasDistintas = computed(() =>
+    [...new Set(this.resultados().map((c) => c.campana).filter((x): x is string => !!x))].sort(),
+  );
+  protected readonly fechasLista = computed(() =>
+    this.resultados()
+      .map((c) => c.fecha)
+      .filter((x): x is string => !!x),
+  );
+  // Resultados tras aplicar campaña/rango de fecha (client-side) y orden.
+  protected readonly resultadosFiltrados = computed(() => {
+    const camp = new Set(this.filtroCampana());
+    const { desde, hasta } = this.rangoFecha();
+    const dir = this.sortDir() === 'asc' ? 1 : -1;
+    const field = this.sortField();
+    return this.resultados()
+      .filter((c) => {
+        if (camp.size && !(c.campana && camp.has(c.campana))) return false;
+        const dia = (c.fecha || '').slice(0, 10);
+        if (desde && (!dia || dia < desde)) return false;
+        if (hasta && (!dia || dia > hasta)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const r =
+          field === 'fecha'
+            ? (a.fecha || '').localeCompare(b.fecha || '')
+            : (a.campana || '').localeCompare(b.campana || '', 'es');
+        return r * dir;
+      });
+  });
 
   protected readonly modos: { id: Modo; label: string; icon: string }[] = [
     { id: 'correo', label: 'Vista correo', icon: 'mail' },
@@ -450,7 +497,8 @@ export class VisorComunicacionesPageComponent {
   }
 
   protected hayFiltros(): boolean {
-    return !!(this.qInput || this.campanaInput || this.desdeInput || this.hastaInput);
+    const { desde, hasta } = this.rangoFecha();
+    return !!(this.qInput || this.filtroCampana().length || desde || hasta);
   }
 
   protected buscar(): void {
@@ -458,20 +506,22 @@ export class VisorComunicacionesPageComponent {
   }
 
   protected limpiar(): void {
-    this.qInput = this.campanaInput = this.desdeInput = this.hastaInput = '';
+    this.qInput = '';
+    this.filtroCampana.set([]);
+    this.rangoFecha.set({ desde: null, hasta: null });
     void this.cargarLista();
+  }
+
+  protected ordenar(campo: 'fecha' | 'campana', dir: 'asc' | 'desc'): void {
+    this.sortField.set(campo);
+    this.sortDir.set(dir);
   }
 
   private async cargarLista(): Promise<void> {
     this.cargandoLista.set(true);
     this.error.set(null);
     try {
-      const { items, hayMas } = await this.comService.buscar({
-        q: this.qInput.trim() || undefined,
-        campana: this.campanaInput.trim() || undefined,
-        desde: this.desdeInput || undefined,
-        hasta: this.hastaInput || undefined,
-      });
+      const { items, hayMas } = await this.comService.buscar({ q: this.qInput.trim() || undefined });
       this.resultados.set(items);
       this.hayMas.set(hayMas);
     } catch {
