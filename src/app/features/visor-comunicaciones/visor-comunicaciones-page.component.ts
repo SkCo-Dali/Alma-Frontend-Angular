@@ -13,7 +13,7 @@ import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
 import { ColMenuComponent } from './col-menu.component';
 import { ComunicacionRef } from './comunicaciones.mock';
-import { ComunicacionesService, EventoTraza } from './comunicaciones.service';
+import { ComunicacionesService, EventoTraza, OpcionesFiltros } from './comunicaciones.service';
 
 type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
 
@@ -78,10 +78,10 @@ function leerAnchoGuardado(): number {
           <alma-col-menu
             [sortActive]="sortField() === 'campana'"
             [sortDir]="sortDir()"
-            [valores]="campanasDistintas()"
+            [valores]="campanasOpciones()"
             [seleccion]="filtroCampana()"
             (sort)="ordenar('campana', $event)"
-            (filtrar)="filtroCampana.set($event)"
+            (filtrar)="onCampana($event)"
           />
         </div>
         <div class="glass flex h-9 items-center gap-1.5 rounded-xl px-3">
@@ -91,10 +91,10 @@ function leerAnchoGuardado(): number {
             [sortActive]="sortField() === 'fecha'"
             [sortDir]="sortDir()"
             [esFecha]="true"
-            [fechas]="fechasLista()"
+            [fechas]="fechasOpciones()"
             [fechaActiva]="!!(rangoFecha().desde || rangoFecha().hasta)"
             (sort)="ordenar('fecha', $event)"
-            (rango)="rangoFecha.set($event)"
+            (rango)="onRango($event)"
           />
         </div>
 
@@ -413,36 +413,34 @@ export class VisorComunicacionesPageComponent {
     () => this.adjuntoSel() ?? this.parsed()?.attachments[0] ?? null,
   );
 
-  // Valores/fechas para los desplegables (derivados de lo cargado).
-  protected readonly campanasDistintas = computed(() =>
+  // Opciones de filtros: preferimos las del servidor (TODA la base); si aún no
+  // llegan, caemos a las derivadas de lo cargado (fallback).
+  protected readonly opcionesSrv = signal<OpcionesFiltros>({ campanas: [], fechas: [] });
+  private readonly campanasDistintas = computed(() =>
     [...new Set(this.resultados().map((c) => c.campana).filter((x): x is string => !!x))].sort(),
   );
-  protected readonly fechasLista = computed(() =>
+  private readonly fechasLista = computed(() =>
     this.resultados()
       .map((c) => c.fecha)
       .filter((x): x is string => !!x),
   );
-  // Resultados tras aplicar campaña/rango de fecha (client-side) y orden.
+  protected readonly campanasOpciones = computed(() =>
+    this.opcionesSrv().campanas.length ? this.opcionesSrv().campanas : this.campanasDistintas(),
+  );
+  protected readonly fechasOpciones = computed(() =>
+    this.opcionesSrv().fechas.length ? this.opcionesSrv().fechas : this.fechasLista(),
+  );
+  // La lista solo se ORDENA en cliente; campaña y fecha se filtran en el servidor.
   protected readonly resultadosFiltrados = computed(() => {
-    const camp = new Set(this.filtroCampana());
-    const { desde, hasta } = this.rangoFecha();
     const dir = this.sortDir() === 'asc' ? 1 : -1;
     const field = this.sortField();
-    return this.resultados()
-      .filter((c) => {
-        if (camp.size && !(c.campana && camp.has(c.campana))) return false;
-        const dia = (c.fecha || '').slice(0, 10);
-        if (desde && (!dia || dia < desde)) return false;
-        if (hasta && (!dia || dia > hasta)) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        const r =
-          field === 'fecha'
-            ? (a.fecha || '').localeCompare(b.fecha || '')
-            : (a.campana || '').localeCompare(b.campana || '', 'es');
-        return r * dir;
-      });
+    return [...this.resultados()].sort((a, b) => {
+      const r =
+        field === 'fecha'
+          ? (a.fecha || '').localeCompare(b.fecha || '')
+          : (a.campana || '').localeCompare(b.campana || '', 'es');
+      return r * dir;
+    });
   });
 
   protected readonly modos: { id: Modo; label: string; icon: string }[] = [
@@ -479,6 +477,22 @@ export class VisorComunicacionesPageComponent {
       }
     });
 
+    // Opciones de filtros de TODA la base (si falla, quedan los fallback).
+    void this.comService
+      .opciones()
+      .then((o) => this.opcionesSrv.set(o))
+      .catch(() => {});
+
+    void this.cargarLista();
+  }
+
+  protected onCampana(sel: string[]): void {
+    this.filtroCampana.set(sel);
+    void this.cargarLista();
+  }
+
+  protected onRango(r: { desde: string | null; hasta: string | null }): void {
+    this.rangoFecha.set(r);
     void this.cargarLista();
   }
 
@@ -521,7 +535,14 @@ export class VisorComunicacionesPageComponent {
     this.cargandoLista.set(true);
     this.error.set(null);
     try {
-      const { items, hayMas } = await this.comService.buscar({ q: this.qInput.trim() || undefined });
+      const { desde, hasta } = this.rangoFecha();
+      const campanas = this.filtroCampana();
+      const { items, hayMas } = await this.comService.buscar({
+        q: this.qInput.trim() || undefined,
+        campanas: campanas.length ? campanas : undefined,
+        desde: desde || undefined,
+        hasta: hasta || undefined,
+      });
       this.resultados.set(items);
       this.hayMas.set(hayMas);
     } catch {

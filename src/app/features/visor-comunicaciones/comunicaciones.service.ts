@@ -26,9 +26,15 @@ export interface EventoTraza {
 
 export interface BusquedaEnvios {
   q?: string;
-  campana?: string;
+  campanas?: string[];
   desde?: string;
   hasta?: string;
+}
+
+/** Valores para los desplegables de filtros (toda la base). */
+export interface OpcionesFiltros {
+  campanas: string[];
+  fechas: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,13 +58,19 @@ export class ComunicacionesService {
     if (this.usarMock) return { items: COMUNICACIONES_MOCK, hayMas: false };
     const qs = new URLSearchParams({ limit: String(limit) });
     if (opts.q) qs.set('q', opts.q);
-    if (opts.campana) qs.set('campana', opts.campana);
+    (opts.campanas ?? []).forEach((c) => qs.append('campana', c));
     if (opts.desde) qs.set('desde', opts.desde);
     if (opts.hasta) qs.set('hasta', opts.hasta);
     const r = await this.api.fetch<{ data: ComunicacionRef[]; next: number | null }>(
       `/api/comunicaciones?${qs.toString()}`,
     );
     return { items: r.data, hayMas: r.next != null };
+  }
+
+  /** Opciones de filtros (todas las campañas y días de la base). */
+  async opciones(): Promise<OpcionesFiltros> {
+    if (this.usarMock) return { campanas: [], fechas: [] };
+    return this.api.fetch<OpcionesFiltros>('/api/comunicaciones/opciones');
   }
 
   /** Traza de entrega/engagement de un envío (por su id = messageId). */
