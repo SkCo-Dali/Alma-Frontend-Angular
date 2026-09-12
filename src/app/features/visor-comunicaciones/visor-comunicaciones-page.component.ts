@@ -352,7 +352,7 @@ function leerAnchoGuardado(): number {
                 Ingresa un correo electrónico y utiliza los filtros para encontrar las
                 comunicaciones enviadas en nuestras campañas.
               </p>
-              <div class="mt-8 grid w-full max-w-2xl grid-cols-2 gap-6 border-t border-border/60 pt-8 sm:grid-cols-4">
+              <div class="mt-8 grid w-full max-w-2xl grid-cols-1 gap-6 border-t border-border/60 pt-8 sm:grid-cols-3">
                 @for (h of hints; track h.label) {
                   <div class="flex flex-col items-center gap-2 text-center">
                     <div class="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10">
@@ -454,7 +454,6 @@ export class VisorComunicacionesPageComponent {
     { label: 'Visualiza el correo completo', icon: 'mail' },
     { label: 'Revisa sus adjuntos', icon: 'paperclip' },
     { label: 'Consulta detalles técnicos', icon: 'info' },
-    { label: 'Analiza el contenido con Alma', icon: 'sparkles' },
   ];
 
   constructor() {
