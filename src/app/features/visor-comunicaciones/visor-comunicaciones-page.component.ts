@@ -13,7 +13,7 @@ import { EmailFrameComponent } from './email-frame.component';
 import { AttachmentPreviewComponent } from './attachment-preview.component';
 import { ColMenuComponent } from './col-menu.component';
 import { ComunicacionRef } from './comunicaciones.mock';
-import { ComunicacionesService, EventoTraza, OpcionesFiltros } from './comunicaciones.service';
+import { ComunicacionesService, EventoTraza, KpisEnvios, OpcionesFiltros } from './comunicaciones.service';
 
 type Modo = 'correo' | 'adjuntos' | 'traza' | 'detalles';
 
@@ -104,6 +104,23 @@ function leerAnchoGuardado(): number {
           </button>
         }
       </div>
+
+      <!-- ── Indicadores del conjunto filtrado ── -->
+      @if (cards().length) {
+        <div class="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          @for (k of cards(); track k.label) {
+            <div class="glass rounded-xl px-3 py-2 shadow-[var(--shadow-sm)]" [class.opacity-60]="cargandoKpis()">
+              <p class="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <lucide-icon [name]="k.icon" [size]="12" /> {{ k.label }}
+              </p>
+              <p class="text-lg font-bold tabular-nums" [class]="k.clase">{{ k.valor }}</p>
+              @if (k.sub) {
+                <p class="truncate text-[11px] text-muted-foreground/70" [title]="k.sub">{{ k.sub }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
 
       <!-- ── Master-detail ── -->
       <div class="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
@@ -415,6 +432,9 @@ export class VisorComunicacionesPageComponent {
 
   // Opciones de filtros: preferimos las del servidor (TODA la base); si aún no
   // llegan, caemos a las derivadas de lo cargado (fallback).
+  protected readonly kpis = signal<KpisEnvios | null>(null);
+  protected readonly cargandoKpis = signal(false);
+
   protected readonly opcionesSrv = signal<OpcionesFiltros>({ campanas: [], fechas: [] });
   private readonly campanasDistintas = computed(() =>
     [...new Set(this.resultados().map((c) => c.campana).filter((x): x is string => !!x))].sort(),
@@ -430,6 +450,40 @@ export class VisorComunicacionesPageComponent {
   protected readonly fechasOpciones = computed(() =>
     this.opcionesSrv().fechas.length ? this.opcionesSrv().fechas : this.fechasLista(),
   );
+  /** Cards de indicadores del conjunto filtrado. Vacío hasta la primera carga;
+   *  en recargas se mantienen los valores previos para no parpadear. */
+  protected readonly cards = computed(() => {
+    const k = this.kpis();
+    if (!k) return [];
+    const num = (n: number) => n.toLocaleString('es-CO');
+    const pct = (n: number | null) =>
+      k.envios > 0 && n != null ? `${Math.round((n / k.envios) * 100)}% de los envíos` : '';
+    const sinEngagement = `Afina el filtro (máx. ${num(k.topeEngagement)})`;
+    return [
+      { label: 'Envíos', icon: 'send', valor: num(k.envios), sub: '', clase: 'text-foreground' },
+      {
+        label: 'Exitosos', icon: 'check-circle-2', valor: num(k.exitosos),
+        sub: pct(k.exitosos), clase: 'text-[#047857] dark:text-[#34d399]',
+      },
+      {
+        label: 'Fallidos', icon: 'x-circle', valor: num(k.fallidos), sub: pct(k.fallidos),
+        clase: k.fallidos > 0 ? 'text-destructive' : 'text-foreground',
+      },
+      {
+        label: 'Aperturas', icon: 'eye',
+        valor: k.aperturas == null ? '—' : num(k.aperturas),
+        sub: k.aperturas == null ? sinEngagement : pct(k.aperturas),
+        clase: 'text-primary',
+      },
+      {
+        label: 'Clics', icon: 'external-link',
+        valor: k.clics == null ? '—' : num(k.clics),
+        sub: k.clics == null ? sinEngagement : pct(k.clics),
+        clase: 'text-primary',
+      },
+    ];
+  });
+
   // La lista solo se ORDENA en cliente; campaña y fecha se filtran en el servidor.
   protected readonly resultadosFiltrados = computed(() => {
     const dir = this.sortDir() === 'asc' ? 1 : -1;
@@ -544,11 +598,34 @@ export class VisorComunicacionesPageComponent {
       });
       this.resultados.set(items);
       this.hayMas.set(hayMas);
+      void this.cargarKpis();
     } catch {
       this.error.set('No se pudo consultar los envíos.');
       this.resultados.set([]);
     } finally {
       this.cargandoLista.set(false);
+    }
+  }
+
+  /** KPIs del mismo conjunto filtrado; no bloquea el listado. */
+  private async cargarKpis(): Promise<void> {
+    this.cargandoKpis.set(true);
+    try {
+      const { desde, hasta } = this.rangoFecha();
+      const campanas = this.filtroCampana();
+      this.kpis.set(
+        await this.comService.kpis({
+          q: this.qInput.trim() || undefined,
+          campanas: campanas.length ? campanas : undefined,
+          desde: desde || undefined,
+          hasta: hasta || undefined,
+        }),
+      );
+    } catch (e) {
+      console.error('[visor-comunicaciones] no se pudieron cargar los indicadores', e);
+      this.kpis.set(null);
+    } finally {
+      this.cargandoKpis.set(false);
     }
   }
 

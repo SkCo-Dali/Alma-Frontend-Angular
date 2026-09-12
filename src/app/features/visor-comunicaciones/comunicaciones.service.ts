@@ -31,6 +31,18 @@ export interface BusquedaEnvios {
   hasta?: string;
 }
 
+/** Indicadores del conjunto filtrado. `aperturas`/`clics` van en null cuando el
+ *  conjunto excede `topeEngagement` (ver backend: el cruce por messageId no escala). */
+export interface KpisEnvios {
+  envios: number;
+  exitosos: number;
+  fallidos: number;
+  aperturas: number | null;
+  clics: number | null;
+  engagementParcial: boolean;
+  topeEngagement: number;
+}
+
 /** Valores para los desplegables de filtros (toda la base). */
 export interface OpcionesFiltros {
   campanas: string[];
@@ -65,6 +77,17 @@ export class ComunicacionesService {
       `/api/comunicaciones?${qs.toString()}`,
     );
     return { items: r.data, hayMas: r.next != null };
+  }
+
+  /** Indicadores del conjunto filtrado (mismos filtros que `buscar`). */
+  async kpis(opts: BusquedaEnvios = {}): Promise<KpisEnvios> {
+    const qs = new URLSearchParams();
+    if (opts.q) qs.set('q', opts.q);
+    (opts.campanas ?? []).forEach((c) => qs.append('campana', c));
+    if (opts.desde) qs.set('desde', opts.desde);
+    if (opts.hasta) qs.set('hasta', opts.hasta);
+    const s = qs.toString();
+    return this.api.fetch<KpisEnvios>(`/api/comunicaciones/kpis${s ? '?' + s : ''}`);
   }
 
   /** Opciones de filtros (todas las campañas y días de la base). */
