@@ -55,10 +55,24 @@ import {
             class="border-none bg-transparent text-sm text-foreground outline-none"
           />
         </label>
+        <label class="glass flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground">
+          Resultado
+          <select
+            [ngModel]="decisionInput"
+            (ngModelChange)="onDecision($event)"
+            name="decision"
+            class="max-w-[180px] border-none bg-transparent text-sm text-foreground outline-none"
+          >
+            <option value="">Todos</option>
+            @for (d of resumen()?.decisiones ?? []; track d.decision) {
+              <option [value]="d.decision">{{ d.decision }}</option>
+            }
+          </select>
+        </label>
         <button type="button" (click)="aplicar()" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm">
           Aplicar
         </button>
-        @if (desdeInput || hastaInput) {
+        @if (desdeInput || hastaInput || decisionInput) {
           <button type="button" (click)="limpiarPeriodo()" class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-sm">
             <lucide-icon name="x" [size]="15" /> Limpiar
           </button>
@@ -68,6 +82,17 @@ import {
       @if (error()) {
         <p class="flex items-center gap-1.5 text-xs text-destructive">
           <lucide-icon name="alert-triangle" [size]="14" /> {{ error() }}
+        </p>
+      }
+
+      @if (decisionInput) {
+        <p
+          class="glass flex w-fit max-w-full flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] text-muted-foreground shadow-[var(--shadow-sm)]"
+        >
+          <lucide-icon name="filter" [size]="12" class="text-primary" />
+          Indicadores acotados a
+          <span class="font-semibold text-foreground">{{ decisionInput }}</span>
+          — la distribución por resultado del motor sigue mostrando todo el periodo.
         </p>
       }
 
@@ -96,17 +121,29 @@ import {
             Última decisión de cada solicitud (una solicitud puede re-evaluarse varias veces).
           </p>
           @for (d of resumen()?.decisiones ?? []; track d.decision) {
-            <div class="mb-2">
+            <button
+              type="button"
+              (click)="onDecision(d.decision === decisionInput ? '' : d.decision)"
+              class="mb-2 block w-full rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-accent/60"
+              [class.bg-accent]="d.decision === decisionInput"
+              [title]="d.decision === decisionInput ? 'Quitar el filtro' : 'Acotar los indicadores a ' + d.decision"
+            >
               <div class="flex items-baseline justify-between gap-2 text-xs">
-                <span class="min-w-0 truncate text-foreground" [title]="d.decision">{{ d.decision }}</span>
+                <span class="min-w-0 truncate text-foreground" [class.font-semibold]="d.decision === decisionInput">
+                  {{ d.decision }}
+                </span>
                 <span class="shrink-0 tabular-nums text-muted-foreground">
-                  {{ d.total }} · {{ porcentaje(d.total, resumen()?.solicitudes ?? 0) }}
+                  {{ d.total }} · {{ porcentaje(d.total, totalDecisiones()) }}
                 </span>
               </div>
               <div class="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full bg-primary" [style.width.%]="ancho(d.total, maxDecision())"></div>
+                <div
+                  class="h-full rounded-full"
+                  [class]="d.decision === decisionInput || !decisionInput ? 'bg-primary' : 'bg-primary/35'"
+                  [style.width.%]="ancho(d.total, maxDecision())"
+                ></div>
               </div>
-            </div>
+            </button>
           } @empty {
             <p class="text-sm text-muted-foreground">Sin evaluaciones en el periodo.</p>
           }
@@ -114,7 +151,10 @@ import {
 
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-3 text-sm font-bold text-foreground">Estado actual de las solicitudes</h2>
-          <p class="mb-3 text-[11px] text-muted-foreground">Dónde están hoy las pólizas del periodo.</p>
+          <p class="mb-3 text-[11px] text-muted-foreground">
+            Dónde están hoy las pólizas
+            {{ decisionInput ? 'con ese resultado del motor' : 'del periodo' }}.
+          </p>
           @for (e of resumen()?.estados ?? []; track e.estado) {
             <div class="mb-2">
               <div class="flex items-baseline justify-between gap-2 text-xs">
@@ -212,6 +252,9 @@ import {
           <h2 class="text-sm font-bold text-foreground">Auditoría</h2>
           <p class="text-[11px] text-muted-foreground">
             Cada solicitud con su última decisión, quién la evaluó y su tiempo hasta emisión.
+            @if (decisionInput) {
+              <span> Acotada a <span class="font-medium text-foreground">{{ decisionInput }}</span>.</span>
+            }
           </p>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <div class="glass flex h-8 min-w-[200px] flex-1 items-center gap-2 rounded-lg px-2.5">
@@ -224,16 +267,10 @@ import {
                 class="h-full flex-1 border-none bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <select [(ngModel)]="estadoInput" name="estado" class="alma-input h-8 rounded-lg px-2 text-xs">
+            <select [(ngModel)]="estadoInput" name="estado" class="alma-input h-8 w-44 rounded-lg px-2 text-xs">
               <option value="">Todos los estados</option>
               @for (e of resumen()?.estados ?? []; track e.estado) {
                 <option [value]="e.estado">{{ e.estado }}</option>
-              }
-            </select>
-            <select [(ngModel)]="decisionInput" name="decision" class="alma-input h-8 rounded-lg px-2 text-xs">
-              <option value="">Todas las decisiones</option>
-              @for (d of resumen()?.decisiones ?? []; track d.decision) {
-                <option [value]="d.decision">{{ d.decision }}</option>
               }
             </select>
             <input
@@ -329,10 +366,11 @@ export class ReporteriaPageComponent {
   // Periodo (aplica a TODOS los indicadores y a la auditoría).
   protected desdeInput = '';
   protected hastaInput = '';
+  /** Resultado del motor (última decisión): acota indicadores Y auditoría. */
+  protected decisionInput = '';
   // Filtros propios de la tabla de auditoría.
   protected qInput = '';
   protected estadoInput = '';
-  protected decisionInput = '';
   protected analistaInput = '';
 
   protected readonly resumen = signal<ResumenReporteria | null>(null);
@@ -365,6 +403,10 @@ export class ReporteriaPageComponent {
   protected readonly maxEstado = computed(() =>
     Math.max(1, ...(this.resumen()?.estados ?? []).map((e) => e.total)),
   );
+  /** Total de la distribución por resultado (no se acota: es el selector). */
+  protected readonly totalDecisiones = computed(() =>
+    (this.resumen()?.decisiones ?? []).reduce((a, d) => a + d.total, 0),
+  );
   protected readonly maxAlerta = computed(() => this.maxDe(this.resumen()?.topAlertas));
   protected readonly maxExclusion = computed(() => this.maxDe(this.resumen()?.topExclusiones));
 
@@ -386,14 +428,18 @@ export class ReporteriaPageComponent {
     void this.cargar();
   }
 
-  private filtrosPeriodo(): FiltrosReporteria {
-    return { desde: this.desdeInput || undefined, hasta: this.hastaInput || undefined };
+  /** Lo que comparten los indicadores y la tabla: periodo + resultado del motor. */
+  private filtrosBase(): FiltrosReporteria {
+    return {
+      desde: this.desdeInput || undefined,
+      hasta: this.hastaInput || undefined,
+      decision: this.decisionInput || undefined,
+    };
   }
 
   private filtrosAuditoria(): FiltrosReporteria {
     return {
-      ...this.filtrosPeriodo(),
-      decision: this.decisionInput || undefined,
+      ...this.filtrosBase(),
       estado: this.estadoInput || undefined,
       analista: this.analistaInput.trim() || undefined,
       q: this.qInput.trim() || undefined,
@@ -404,7 +450,7 @@ export class ReporteriaPageComponent {
     this.error.set(null);
     this.cargandoResumen.set(true);
     try {
-      this.resumen.set(await this.api.resumen(this.filtrosPeriodo()));
+      this.resumen.set(await this.api.resumen(this.filtrosBase()));
     } catch (e) {
       console.error('[reporteria] no se pudo cargar el resumen', e);
       this.error.set('No se pudieron cargar los indicadores.');
@@ -438,6 +484,16 @@ export class ReporteriaPageComponent {
   protected limpiarPeriodo(): void {
     this.desdeInput = '';
     this.hastaInput = '';
+    this.decisionInput = '';
+    void this.cargar();
+  }
+
+  /** Cambiar el resultado del motor recarga indicadores y auditoría. */
+  protected onDecision(valor: string): void {
+    if (valor === this.decisionInput) return;
+    this.decisionInput = valor;
+    // El estado que se venía filtrando puede no existir en el nuevo universo.
+    this.estadoInput = '';
     void this.cargar();
   }
 
@@ -460,6 +516,9 @@ export class ReporteriaPageComponent {
   }
 
   private devoluciones(r: ResumenReporteria): number {
+    // `decisiones` viene sin acotar (es el selector): si hay un resultado
+    // elegido, la card habla de ese universo, no del periodo completo.
+    if (r.decision) return r.decision.toLowerCase().includes('devoluc') ? r.solicitudes : 0;
     return (r.decisiones ?? [])
       .filter((d) => (d.decision || '').toLowerCase().includes('devoluc'))
       .reduce((a, d) => a + d.total, 0);
