@@ -7,11 +7,11 @@ import { Component, ElementRef, ViewChild, computed, input, output, signal } fro
 import { LucideAngularModule } from 'lucide-angular';
 import { PortalDirective } from '../../shared/portal.directive';
 import { colocarPanel } from '../../shared/popover-position';
-import { DateFilterComunicacionesComponent } from './date-filter-comunicaciones.component';
+import { DateFilterPopoverComponent } from '../../shared/components/date-filter-popover.component';
 
 @Component({
   selector: 'alma-col-menu',
-  imports: [LucideAngularModule, PortalDirective, DateFilterComunicacionesComponent],
+  imports: [LucideAngularModule, PortalDirective, DateFilterPopoverComponent],
   template: `
     <button
       #boton
@@ -72,7 +72,7 @@ import { DateFilterComunicacionesComponent } from './date-filter-comunicaciones.
         @if (esFecha()) {
           <div class="border-t border-border/60"></div>
           <div class="p-2">
-            <alma-date-filter-comunicaciones
+            <alma-date-filter-popover
               [fechas]="fechas()"
               (aplicado)="onFecha($event)"
               (cerrar)="cerrar()"
