@@ -10,9 +10,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
+import { FiltroPeriodoComponent } from './filtro-periodo.component';
+import { FiltroValoresComponent, OpcionFiltro } from './filtro-valores.component';
 import {
   ConteoValor,
   FiltrosReporteria,
+  OpcionesReporteria,
   PaginaAuditoria,
   ReporteriaApi,
   ResumenReporteria,
@@ -25,7 +28,14 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
 @Component({
   selector: 'alma-reporteria-page',
-  imports: [FormsModule, RouterLink, LucideAngularModule, GridPaginationComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    LucideAngularModule,
+    GridPaginationComponent,
+    FiltroPeriodoComponent,
+    FiltroValoresComponent,
+  ],
   template: `
     <div data-full-bleed class="flex flex-col gap-3 pb-6">
       <!-- ── Encabezado + periodo ── -->
@@ -42,41 +52,20 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           Auditoría y reportería
         </h1>
 
-        <label class="glass flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground">
-          Desde
-          <input
-            [(ngModel)]="desdeInput"
-            name="desde"
-            type="date"
-            class="border-none bg-transparent text-sm text-foreground outline-none"
-          />
-        </label>
-        <label class="glass flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground">
-          Hasta
-          <input
-            [(ngModel)]="hastaInput"
-            name="hasta"
-            type="date"
-            class="border-none bg-transparent text-sm text-foreground outline-none"
-          />
-        </label>
-        <label class="glass flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm text-muted-foreground">
-          Resultado
-          <select
-            [ngModel]="decisionInput"
-            (ngModelChange)="onDecision($event)"
-            name="decision"
-            class="max-w-[180px] border-none bg-transparent text-sm text-foreground outline-none"
-          >
-            <option value="">Todos</option>
-            @for (d of resumen()?.decisiones ?? []; track d.decision) {
-              <option [value]="d.decision">{{ d.decision }}</option>
-            }
-          </select>
-        </label>
-        <button type="button" (click)="aplicar()" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm">
-          Aplicar
-        </button>
+        <alma-filtro-periodo
+          [fechas]="fechasArbol()"
+          [desde]="desdeInput"
+          [hasta]="hastaInput"
+          (rango)="onRango($event)"
+        />
+        <alma-filtro-valores
+          etiqueta="Resultado"
+          icono="sliders-horizontal"
+          todosLabel="Todos"
+          [opciones]="opcionesDecision()"
+          [seleccion]="decisionInput"
+          (seleccionar)="onDecision($event)"
+        />
         @if (desdeInput || hastaInput || decisionInput) {
           <button type="button" (click)="limpiarPeriodo()" class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-sm">
             <lucide-icon name="x" [size]="15" /> Limpiar
@@ -272,12 +261,13 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                 class="h-full flex-1 border-none bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <select [(ngModel)]="estadoInput" name="estado" class="alma-input h-8 w-44 rounded-lg px-2 text-xs">
-              <option value="">Todos los estados</option>
-              @for (e of resumen()?.estados ?? []; track e.estado) {
-                <option [value]="e.estado">{{ e.estado }}</option>
-              }
-            </select>
+            <alma-filtro-valores
+              etiqueta="Estado"
+              todosLabel="Todos"
+              [opciones]="opcionesEstado()"
+              [seleccion]="estadoInput"
+              (seleccionar)="onEstado($event)"
+            />
             <input
               [(ngModel)]="analistaInput"
               name="analista"
@@ -385,6 +375,7 @@ export class ReporteriaPageComponent {
   protected analistaInput = '';
 
   protected readonly resumen = signal<ResumenReporteria | null>(null);
+  protected readonly opciones = signal<OpcionesReporteria | null>(null);
   protected readonly auditoria = signal<PaginaAuditoria | null>(null);
   protected readonly cargandoResumen = signal(false);
   protected readonly cargandoAuditoria = signal(false);
@@ -414,6 +405,23 @@ export class ReporteriaPageComponent {
   protected readonly maxEstado = computed(() =>
     Math.max(1, ...(this.resumen()?.estados ?? []).map((e) => e.total)),
   );
+  /** Días con solicitudes, repetidos por su conteo: así los cuenta el árbol. */
+  protected readonly fechasArbol = computed(() =>
+    (this.opciones()?.fechas ?? []).flatMap((f) => Array<string>(f.total).fill(f.fecha)),
+  );
+  /** Opciones del desplegable de resultado. Se toman del resumen, no de
+   *  /opciones, para que los conteos sean los del periodo y cuadren con las
+   *  barras de al lado; /opciones queda de respaldo si el resumen falló. */
+  protected readonly opcionesDecision = computed<OpcionFiltro[]>(() =>
+    (this.resumen()?.decisiones ?? this.opciones()?.decisiones ?? []).map((d) => ({
+      valor: d.decision,
+      total: d.total,
+    })),
+  );
+  protected readonly opcionesEstado = computed<OpcionFiltro[]>(() =>
+    (this.resumen()?.estados ?? []).map((e) => ({ valor: e.estado, total: e.total })),
+  );
+
   /** Total de la distribución por resultado (no se acota: es el selector). */
   protected readonly totalDecisiones = computed(() =>
     (this.resumen()?.decisiones ?? []).reduce((a, d) => a + d.total, 0),
@@ -437,6 +445,18 @@ export class ReporteriaPageComponent {
 
   constructor() {
     void this.cargar();
+    void this.cargarOpciones();
+  }
+
+  /** Los filtros no dependen del periodo, así que se piden una sola vez. */
+  private async cargarOpciones(): Promise<void> {
+    try {
+      this.opciones.set(await this.api.opciones());
+    } catch (e) {
+      // Sin esto la vista sigue sirviendo: los desplegables se alimentan del
+      // resumen y el árbol de fechas queda vacío (quedan los presets).
+      console.error('[reporteria] no se pudieron cargar las opciones de filtros', e);
+    }
   }
 
   /** Lo que comparten los indicadores y la tabla: periodo + resultado del motor. */
@@ -488,8 +508,18 @@ export class ReporteriaPageComponent {
     }
   }
 
-  protected aplicar(): void {
+  /** Nuevo periodo desde el popover de fechas: recarga todo. */
+  protected onRango(r: { desde: string; hasta: string }): void {
+    if (r.desde === this.desdeInput && r.hasta === this.hastaInput) return;
+    this.desdeInput = r.desde;
+    this.hastaInput = r.hasta;
     void this.cargar();
+  }
+
+  protected onEstado(valor: string): void {
+    if (valor === this.estadoInput) return;
+    this.estadoInput = valor;
+    void this.cargarAuditoria(1);
   }
 
   protected limpiarPeriodo(): void {

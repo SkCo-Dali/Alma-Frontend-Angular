@@ -63,6 +63,18 @@ export interface PaginaAuditoria {
   next: number | null;
 }
 
+export interface DiaConSolicitudes {
+  fecha: string;
+  total: number;
+}
+
+/** Valores de los filtros (toda la base, sin acotar por lo que ya esté aplicado). */
+export interface OpcionesReporteria {
+  fechas: DiaConSolicitudes[];
+  decisiones: ConteoDecision[];
+  estados: ConteoEstado[];
+}
+
 export interface FiltrosReporteria {
   desde?: string;
   hasta?: string;
@@ -95,6 +107,11 @@ export class ReporteriaApi {
     return this.api.fetch<ResumenReporteria>(
       `/api/suscripcion/reporteria/resumen${this.qs({ desde, hasta, decision })}`,
     );
+  }
+
+  /** Valores para los desplegables y el árbol de fechas. */
+  opciones(): Promise<OpcionesReporteria> {
+    return this.api.fetch<OpcionesReporteria>('/api/suscripcion/reporteria/opciones');
   }
 
   /** Traza fila por fila, filtrable y paginada (`cursor` = offset). */
