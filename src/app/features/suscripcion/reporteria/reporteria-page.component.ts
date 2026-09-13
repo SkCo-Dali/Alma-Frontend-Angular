@@ -18,6 +18,11 @@ import {
   ResumenReporteria,
 } from './reporteria.api';
 
+/** La auditoría se lee en hora de Colombia, no en la del equipo de quien mira:
+ *  es un registro de cuándo pasaron las cosas en la operación, y dos personas
+ *  mirando la misma fila tienen que ver la misma hora. El backend manda UTC. */
+const ZONA = { timeZone: 'America/Bogota' } as const;
+
 @Component({
   selector: 'alma-reporteria-page',
   imports: [FormsModule, RouterLink, LucideAngularModule, GridPaginationComponent],
@@ -327,9 +332,15 @@ import {
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       {{ fecha(f.fechaIngreso) }}
+                      @if (hora(f.fechaIngreso); as h) {
+                        <span class="ml-1 tabular-nums text-muted-foreground/70">{{ h }}</span>
+                      }
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       {{ fecha(f.fechaEmision) }}
+                      @if (hora(f.fechaEmision); as h) {
+                        <span class="ml-1 tabular-nums text-muted-foreground/70">{{ h }}</span>
+                      }
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-right text-xs tabular-nums text-foreground">
                       {{ duracion(f.minutosAEmision) }}
@@ -545,7 +556,15 @@ export class ReporteriaPageComponent {
     if (!iso) return '—';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('es-CO', { ...ZONA, day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /** Hora del ingreso/emisión. Vacío si no hay fecha. */
+  protected hora(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('es-CO', { ...ZONA, hour: '2-digit', minute: '2-digit' });
   }
 
   protected colorEstado(estado: string): string {
