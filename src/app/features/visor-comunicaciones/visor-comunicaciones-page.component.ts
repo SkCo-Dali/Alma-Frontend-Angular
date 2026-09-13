@@ -458,6 +458,13 @@ export class VisorComunicacionesPageComponent {
     const num = (n: number) => n.toLocaleString('es-CO');
     const pct = (n: number | null) =>
       k.envios > 0 && n != null ? `${Math.round((n / k.envios) * 100)}% de los envíos` : '';
+    // Apertura y clic se miden sobre los ENTREGADOS, no sobre los envíos: un
+    // correo que rebotó no tuvo ocasión de abrirse y dividir por él subestima
+    // la tasa real.
+    const pctEntregados = (n: number | null) =>
+      k.exitosos > 0 && n != null
+        ? `${Math.round((n / k.exitosos) * 100)}% de los entregados`
+        : '';
     const sinEngagement = `Afina el filtro (máx. ${num(k.topeEngagement)})`;
     return [
       { label: 'Envíos', icon: 'send', valor: num(k.envios), sub: '', clase: 'text-foreground' },
@@ -472,13 +479,13 @@ export class VisorComunicacionesPageComponent {
       {
         label: 'Aperturas', icon: 'eye',
         valor: k.aperturas == null ? '—' : num(k.aperturas),
-        sub: k.aperturas == null ? sinEngagement : pct(k.aperturas),
+        sub: k.aperturas == null ? sinEngagement : pctEntregados(k.aperturas),
         clase: 'text-primary',
       },
       {
         label: 'Clics', icon: 'external-link',
         valor: k.clics == null ? '—' : num(k.clics),
-        sub: k.clics == null ? sinEngagement : pct(k.clics),
+        sub: k.clics == null ? sinEngagement : pctEntregados(k.clics),
         clase: 'text-primary',
       },
     ];
