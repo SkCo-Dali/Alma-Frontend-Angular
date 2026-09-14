@@ -15,9 +15,10 @@ export class ApplicationsService {
     // user() como dependencia: el catálogo se recalcula al resolver la sesión.
     this.auth.user();
     const favorites = this.prefs.favorites();
-    return APP_CATALOG.filter((a) => this.auth.hasPermission(a.requiredPermission)).map(
-      (a) => ({ ...a, favorito: favorites.includes(a.id) }),
-    );
+    return APP_CATALOG.filter((a) => this.puedeVerApp(a)).map((a) => ({
+      ...a,
+      favorito: favorites.includes(a.id),
+    }));
   });
 
   readonly categories = computed(() =>
@@ -28,5 +29,12 @@ export class ApplicationsService {
 
   byRoute(route: string): Application | undefined {
     return this.applications().find((a) => a.internalRoute === route);
+  }
+
+  private puedeVerApp(a: Application): boolean {
+    if (a.requiredAnyPermission?.length) {
+      return this.auth.hasAnyPermission(a.requiredAnyPermission);
+    }
+    return this.auth.hasPermission(a.requiredPermission);
   }
 }

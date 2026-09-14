@@ -42,6 +42,11 @@ export interface Application {
   /** Ruta DENTRO del shell. La declaran todas las apps que Alma pinta
    *  (internal, iframe y microfrontend); las 'external' no la tienen. */
   internalRoute?: string;
+  /**
+   * Si está definido, basta con CUALQUIERA de estos permisos (OR) para ver la
+   * app en Dock/Launchpad. Si no, se usa `requiredPermission`.
+   */
+  requiredAnyPermission?: string[];
   /** Solo para integrationType 'microfrontend': la app remota se publica como
    *  Web Component (lo que produce la plantilla Angular corporativa). */
   remote?: RemoteApp;
