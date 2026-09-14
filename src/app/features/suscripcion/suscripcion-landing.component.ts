@@ -123,6 +123,14 @@ export class SuscripcionLandingComponent {
         hidden: !this.auth.hasPermission('app.suscripcion.motor.config'),
       },
       {
+        title: 'Auditoría y reportería',
+        description:
+          'Resultados del motor, tiempos de emisión y la traza de cada solicitud.',
+        icon: 'bar-chart-3',
+        path: '/apps/suscripcion/reporteria',
+        gradient: 'linear-gradient(150deg, #0089B8, #6D4AE0)',
+      },
+      {
         title: 'Configuración del Simulador de asegurabilidad',
         description:
           'Tablas de IMC, catálogos (preexistencias, ocupaciones, hobbies, países) y exámenes del simulador.',

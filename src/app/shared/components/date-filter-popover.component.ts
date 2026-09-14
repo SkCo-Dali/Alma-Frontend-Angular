@@ -1,13 +1,14 @@
-// Filtro de fecha del visor, replicando el de Cotizaciones: pestaña "Específicas"
-// (árbol año/mes/día con checkboxes) + "Filtros de Fecha" (presets + autofiltro
-// personalizado, reutilizando alma-date-filter-tab). Cliente 100%: el árbol se
-// arma con las fechas del índice (mock). Emite un rango {from,to} date-only.
+// Filtro de fecha en popover, con el mismo lenguaje que el de Cotizaciones:
+// pestaña "Específicas" (árbol año/mes/día con checkboxes y conteos) +
+// "Filtros de Fecha" (presets y autofiltro, reutilizando alma-date-filter-tab).
+// Trabaja en cliente sobre la lista de fechas que le pasen y emite un rango
+// {from,to} date-only. Lo usan el visor de comunicaciones y la reportería.
 
 import { Component, computed, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { AlmaCheckboxComponent } from '../../shared/components/alma-checkbox.component';
-import { DateFilterTabComponent } from '../suscripcion/grid/date-filter-tab.component';
-import { nombreMes } from '../suscripcion/grid/date-utils';
+import { AlmaCheckboxComponent } from './alma-checkbox.component';
+import { DateFilterTabComponent } from '../../features/suscripcion/grid/date-filter-tab.component';
+import { nombreMes } from '../../features/suscripcion/grid/date-utils';
 
 interface DiaInfo {
   day: string;
@@ -25,7 +26,7 @@ interface AnioGrupo {
 }
 
 @Component({
-  selector: 'alma-date-filter-comunicaciones',
+  selector: 'alma-date-filter-popover',
   imports: [LucideAngularModule, AlmaCheckboxComponent, DateFilterTabComponent],
   template: `
     <div (click)="$event.stopPropagation()">
@@ -175,7 +176,7 @@ interface AnioGrupo {
     </div>
   `,
 })
-export class DateFilterComunicacionesComponent {
+export class DateFilterPopoverComponent {
   /** Lista de fechas (YYYY-MM-DD o ISO) del índice; con duplicados para contar. */
   readonly fechas = input.required<string[]>();
   readonly aplicado = output<{ from: string | null; to: string | null }>();

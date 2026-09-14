@@ -17,6 +17,14 @@ export interface ComunicacionRef {
   tamanoBytes: number;
   /** URL del .eml (hoy en /mock-eml; mañana un blob SAS de Azure). */
   archivo: string;
+  /** Estado del envío (Cosmos send-mail): Succeeded / Failed / … */
+  estado?: string;
+  /** Mensaje de error del envío, si falló. */
+  error?: string | null;
+  /** Número de póliza (inferido del adjunto). */
+  poliza?: string | null;
+  /** Campaña del envío. */
+  campana?: string | null;
 }
 
 export const COMUNICACIONES_MOCK: ComunicacionRef[] = [
