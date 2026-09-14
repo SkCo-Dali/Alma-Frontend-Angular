@@ -141,6 +141,14 @@ export const routes: Routes = [
     title: 'Parametrización — ALMA',
   },
   {
+    path: 'apps/motor-comisiones/desarrollo-comercial',
+    loadComponent: () =>
+      import('./features/comisiones/desarrollo-comercial/desarrollo-comercial.page').then(
+        (m) => m.DesarrolloComercialPageComponent,
+      ),
+    title: 'Desarrollo Comercial — ALMA',
+  },
+  {
     path: 'apps/motor-comisiones/info-gerencial',
     loadComponent: () =>
       import('./features/comisiones/info-gerencial/info-gerencial.page').then(

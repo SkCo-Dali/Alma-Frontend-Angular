@@ -12,6 +12,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
@@ -42,7 +43,13 @@ export type ParamColumnTipo =
   | 'chipPrimario'
   | 'chipMuted'
   | 'estado'
-  | 'switch';
+  | 'switch'
+  | 'select';
+
+export interface ParamColumnOption {
+  label: string;
+  value: string;
+}
 
 export interface ParamColumn {
   key: string;
@@ -50,6 +57,10 @@ export interface ParamColumn {
   tipo?: ParamColumnTipo;
   /** Por defecto 'texto'; 'fecha' usa el filtro en cascada. */
   filtro?: 'texto' | 'fecha' | 'ninguno';
+  /** Opciones para columnas `tipo: 'select'`. */
+  opciones?: ParamColumnOption[];
+  /** Columna fija al hacer scroll horizontal. */
+  fija?: 'left' | 'right';
 }
 
 export type ParamRow = Record<string, unknown>;
@@ -59,6 +70,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
 @Component({
   selector: 'alma-param-table',
   imports: [
+    FormsModule,
     LucideAngularModule,
     AlmaSwitchComponent,
     PortalDirective,
@@ -88,7 +100,10 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                 <tr>
                   @for (col of columns(); track col.key) {
                     <th
-                      class="h-[48px] border-b border-border bg-[var(--table-header)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground/65"
+                      [class]="
+                        'h-[48px] border-b border-border bg-[var(--table-header)] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-foreground/65 ' +
+                        claseFija(col, true)
+                      "
                     >
                       <alma-sortable-th
                         [label]="col.label"
@@ -133,7 +148,10 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                   <tr class="group transition-colors hover:bg-primary/5">
                     @for (col of columns(); track col.key) {
                       <td
-                        class="whitespace-nowrap border-b border-border px-3 py-2 text-center text-xs"
+                        [class]="
+                          'whitespace-nowrap border-b border-border px-3 py-2 text-center text-xs ' +
+                          claseFija(col, false)
+                        "
                       >
                         @switch (col.tipo) {
                           @case ('switch') {
@@ -156,6 +174,23 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                                 />
                               }
                             </div>
+                          }
+                          @case ('select') {
+                            <select
+                              class="alma-input h-8 min-w-[180px] cursor-pointer text-xs"
+                              [ngModel]="valorSelect(row, col)"
+                              (ngModelChange)="onSelect(row, col, $event)"
+                              (click)="$event.stopPropagation()"
+                            >
+                              @if (valorFueraDeOpciones(row, col)) {
+                                <option [ngValue]="valorSelect(row, col)" disabled>
+                                  {{ row[col.key] }}
+                                </option>
+                              }
+                              @for (o of col.opciones ?? []; track o.value) {
+                                <option [ngValue]="o.value">{{ o.label }}</option>
+                              }
+                            </select>
                           }
                           @case ('chipPrimario') {
                             <span class="rounded-md bg-primary/10 px-2 py-1 text-primary">
@@ -278,10 +313,43 @@ export class ParamTableComponent {
   readonly editar = output<ParamRow>();
   readonly eliminar = output<ParamRow>();
   readonly alternar = output<{ row: ParamRow; activo: boolean }>();
+  /** Cambio en columna `select`: la página decide si persiste el valor. */
+  readonly seleccion = output<{ row: ParamRow; key: string; value: string }>();
 
   protected readonly tamanos = PARAM_PAGE_SIZE_OPTIONS;
   protected readonly menu = signal<ParamRow | null>(null);
   private anchor: DOMRect | null = null;
+
+  protected valorFueraDeOpciones(row: ParamRow, col: ParamColumn): boolean {
+    const actual = this.valorSelect(row, col);
+    if (!actual) return false;
+    return !(col.opciones ?? []).some((o) => o.value === actual);
+  }
+
+  protected valorSelect(row: ParamRow, col: ParamColumn): string {
+    const v = row[col.key];
+    return v === null || v === undefined ? '' : String(v);
+  }
+
+  protected onSelect(row: ParamRow, col: ParamColumn, value: string): void {
+    if (this.valorSelect(row, col) === value) return;
+    this.seleccion.emit({ row, key: col.key, value });
+  }
+
+  /** Sticky left/right solo en escritorio; en móvil no se fija para no tapar campos. */
+  protected claseFija(col: ParamColumn, esHeader: boolean): string {
+    if (!col.fija) return '';
+    const lado = col.fija === 'right' ? 'lg:sticky lg:right-0' : 'lg:sticky lg:left-0';
+    const z = esHeader ? 'lg:z-30' : 'lg:z-10';
+    const bg = esHeader
+      ? 'lg:bg-[var(--table-header)]'
+      : 'lg:bg-[var(--table-surface)] lg:group-hover:[background-color:color-mix(in_srgb,var(--primary)_5%,var(--table-surface))]';
+    const sombra =
+      col.fija === 'right'
+        ? 'lg:shadow-[-6px_0_8px_-6px_rgba(0,0,0,.18)]'
+        : 'lg:shadow-[6px_0_8px_-6px_rgba(0,0,0,.18)]';
+    return `${lado} ${z} ${bg} ${sombra}`;
+  }
 
   /** El menú se monta en <body> y se coloca bajo el botón (como el Dropdown). */
   @ViewChild('panel') set panelRef(el: ElementRef<HTMLElement> | undefined) {

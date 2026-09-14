@@ -111,6 +111,11 @@ export const APP_CATALOG: Application[] = [
     internalRoute: '/apps/motor-comisiones',
     integrationType: 'internal',
     requiredPermission: 'app.motor-comisiones.view',
+    // Quienes solo tienen el rol/permiso de Desarrollo Comercial también ven la App.
+    requiredAnyPermission: [
+      'app.motor-comisiones.view',
+      'app.motor-comisiones.desarrollo-comercial',
+    ],
     estado: 'active',
     favorito: false,
   },
