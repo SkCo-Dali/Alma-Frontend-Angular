@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
+import { MOTOR_COMISIONES_PERMS } from './motor-comisiones.permissions';
 
 interface MotorModule {
   title: string;
@@ -14,7 +15,8 @@ interface MotorModule {
   path: string;
   /** Gradiente vivo de la tarjeta (estilo app Atajos de Apple) */
   gradient: string;
-  hidden?: boolean;
+  /** Si falta, el tile se oculta. */
+  visible?: boolean;
   disabled?: boolean;
 }
 
@@ -95,14 +97,23 @@ export class ComisionesLandingComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  /** Entra con acceso general o solo con el permiso de Desarrollo Comercial. */
   protected readonly puedeVer = computed(() =>
-    this.auth.hasPermission('app.motor-comisiones.view'),
+    this.auth.hasAnyPermission([
+      MOTOR_COMISIONES_PERMS.view,
+      MOTOR_COMISIONES_PERMS.desarrolloComercial,
+    ]),
   );
 
   protected readonly modulos = computed<MotorModule[]>(() => {
-    // Gateo por PERMISO (RBAC por App), no por nombre de rol. Catálogos: solo
-    // comodines (admin de la App app.motor-comisiones.* o '*' de plataforma).
-    const puedeCatalogos = this.auth.hasPermission('app.motor-comisiones.catalogs');
+    // Gateo por PERMISO (RBAC por App), no por nombre de rol.
+    const puedeApp = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.view);
+    const puedeCatalogos = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.catalogs);
+    const puedeDesarrolloComercial = this.auth.hasAnyPermission([
+      MOTOR_COMISIONES_PERMS.view,
+      MOTOR_COMISIONES_PERMS.desarrolloComercial,
+    ]);
+
     const todos: MotorModule[] = [
       {
         title: 'Planes de Compensación',
@@ -111,6 +122,7 @@ export class ComisionesLandingComponent {
         icon: 'calendar-cog',
         path: '/apps/motor-comisiones/compensation-plans',
         gradient: 'linear-gradient(150deg, #0A84FF, #30B0C7)',
+        visible: puedeApp,
       },
       {
         title: 'Catálogos',
@@ -118,7 +130,7 @@ export class ComisionesLandingComponent {
         icon: 'columns-3-cog',
         path: '/apps/motor-comisiones/catalogs',
         gradient: 'linear-gradient(150deg, #BF5AF2, #6D4AE0)',
-        hidden: !puedeCatalogos,
+        visible: puedeCatalogos,
       },
       {
         title: 'Métricas y Reportes',
@@ -126,6 +138,7 @@ export class ComisionesLandingComponent {
         icon: 'chart-column-stacked',
         path: '/apps/motor-comisiones/info-gerencial',
         gradient: 'linear-gradient(150deg, #30D158, #00A032)',
+        visible: puedeApp,
       },
       {
         title: 'Parametrización',
@@ -133,6 +146,15 @@ export class ComisionesLandingComponent {
         icon: 'settings',
         path: '/apps/motor-comisiones/accounting',
         gradient: 'linear-gradient(150deg, #FF9F0A, #FF6B22)',
+        visible: puedeApp,
+      },
+      {
+        title: 'Desarrollo Comercial',
+        description: 'Clasificación de agentes y parámetros de desarrollo comercial',
+        icon: 'users',
+        path: '/apps/motor-comisiones/desarrollo-comercial',
+        gradient: 'linear-gradient(150deg, #FF375F, #FF6482)',
+        visible: puedeDesarrolloComercial,
       },
       {
         title: 'Ejecución del motor de Comisiones',
@@ -141,9 +163,10 @@ export class ComisionesLandingComponent {
         icon: 'play',
         path: '/apps/motor-comisiones/ejecucion-motor',
         gradient: 'linear-gradient(150deg, #00C7BE, #0089B8)',
+        visible: puedeApp,
       },
     ];
-    return todos.filter((m) => !m.hidden);
+    return todos.filter((m) => m.visible);
   });
 
   protected irA(path: string): void {
