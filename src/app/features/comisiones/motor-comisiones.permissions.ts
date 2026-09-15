@@ -11,4 +11,18 @@ export const MOTOR_COMISIONES_PERMS = {
    * resto de submódulos (planes, parametrización, ejecución, etc.).
    */
   desarrolloComercial: 'app.motor-comisiones.desarrollo-comercial',
+  /**
+   * Autoría de planes: crear, editar y borrar planes y sus reglas, y enviarlos
+   * a aprobación. Lo tienen analistas y supervisores.
+   */
+  plansManage: 'app.motor-comisiones.plans.manage',
+  /** Aprobar, publicar, rechazar e inactivar planes. Solo supervisores. */
+  plansApprove: 'app.motor-comisiones.plans.approve',
+  /**
+   * Parametrización y operación del motor: tipos de comisión, ajustes,
+   * diferidos, contabilidad, contratos excluidos, casos especiales,
+   * configuración de producto/contrato, correos, jobs e ingesta. El backend lo
+   * exige desde la migración 036; sin él, esas pantallas responden 403.
+   */
+  config: 'app.motor-comisiones.config',
 } as const;

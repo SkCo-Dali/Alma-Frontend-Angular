@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
+import { MOTOR_COMISIONES_PERMS } from '../motor-comisiones.permissions';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { CommissionPlansApi } from '../planes/commission-plans.api';
 import {
@@ -306,7 +307,7 @@ export class ParametrizacionPageComponent implements OnInit {
   private readonly planes = signal<{ id: string; name: string }[]>([]);
 
   protected readonly tieneAcceso = computed(() =>
-    this.auth.hasPermission('app.motor-comisiones.view'),
+    this.auth.hasPermission(MOTOR_COMISIONES_PERMS.config),
   );
 
   protected readonly seccionesVisibles = computed(
