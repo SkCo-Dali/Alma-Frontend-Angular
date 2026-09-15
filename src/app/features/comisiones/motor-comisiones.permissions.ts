@@ -7,8 +7,10 @@ export const MOTOR_COMISIONES_PERMS = {
   /** Catálogos (admin de la app / permiso explícito). */
   catalogs: 'app.motor-comisiones.catalogs',
   /**
-   * Solo el módulo Desarrollo Comercial. Quien lo tenga sin `view` no ve el
-   * resto de submódulos (planes, parametrización, ejecución, etc.).
+   * Único permiso que abre el módulo Desarrollo Comercial. Lo tienen el rol
+   * Desarrollo Comercial Comisiones —que no lleva `view`, así que no ve el
+   * resto de submódulos—, el Supervisor y el Administrador del motor.
+   * `view` por sí solo NO alcanza: el analista no entra aquí.
    */
   desarrolloComercial: 'app.motor-comisiones.desarrollo-comercial',
   /**

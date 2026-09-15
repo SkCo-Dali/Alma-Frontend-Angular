@@ -113,10 +113,12 @@ export class ComisionesLandingComponent {
     // el backend les exige `config`. Sin este gate, el analista veía las
     // tarjetas y se estrellaba con un 403 al primer guardado.
     const puedeConfigurar = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.config);
-    const puedeDesarrolloComercial = this.auth.hasAnyPermission([
-      MOTOR_COMISIONES_PERMS.view,
+    // Desarrollo Comercial tiene rol propio (migración 037): lo ven ese rol,
+    // el supervisor y el administrador. `view` ya NO alcanza — si no, el
+    // analista, cuyo alcance son los planes, seguiría entrando.
+    const puedeDesarrolloComercial = this.auth.hasPermission(
       MOTOR_COMISIONES_PERMS.desarrolloComercial,
-    ]);
+    );
 
     const todos: MotorModule[] = [
       {
