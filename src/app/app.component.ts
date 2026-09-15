@@ -6,10 +6,12 @@
 import { Component, effect, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService, authEnabled } from './core/auth/auth.service';
+import { InactividadService } from './core/auth/inactividad.service';
 import { ApiService } from './core/services/api.service';
 import { ApplicationsService } from './core/services/applications.service';
 import { PreferencesService } from './core/services/preferences.service';
 import { AlmaLoaderComponent } from './shared/components/alma-loader.component';
+import { AvisoInactividadComponent } from './shared/components/aviso-inactividad.component';
 import { DockComponent } from './shared/components/dock.component';
 import { HeaderComponent } from './shared/components/header.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
@@ -33,6 +35,7 @@ const EXTRA_ICONS = [
     AlmaLoaderComponent,
     LoginScreenComponent,
     InactiveScreenComponent,
+    AvisoInactividadComponent,
     ToastsComponent,
   ],
   template: `
@@ -63,6 +66,7 @@ const EXTRA_ICONS = [
           </main>
           <alma-dock />
           <alma-toasts />
+          <alma-aviso-inactividad />
         </div>
       }
     }
@@ -73,6 +77,7 @@ export class AppComponent {
   private readonly api = inject(ApiService);
   protected readonly prefs = inject(PreferencesService);
   private readonly apps = inject(ApplicationsService);
+  private readonly inactividad = inject(InactividadService);
 
   constructor() {
     void this.auth.init(() => this.api.getMe());
@@ -81,6 +86,8 @@ export class AppComponent {
     // precargar los íconos (cachean y luego cargan al instante).
     const listo = effect(() => {
       if (this.auth.status() !== 'ready') return;
+      // Cierre por inactividad real (hallazgo del pentest de 7Way).
+      this.inactividad.iniciar();
       if (authEnabled) {
         this.prefs.conectarServidor(
           () => this.api.getPreferences(),
