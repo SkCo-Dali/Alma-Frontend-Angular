@@ -137,11 +137,10 @@ import { InfoGerencialStore } from './info-gerencial.store';
                     [itemsPerPage]="pageSizeComisiones()"
                     [periodoLabel]="periodoComisionesLabel()"
                     [totalLabel]="totalComisionesLabel()"
-                    [exportando]="exportando()"
+                    [exportable]="false"
                     (searchChange)="busquedaComisiones.set($event)"
                     (buscar)="store.cargarComisiones({ page: 1, search: busquedaComisiones().trim() || undefined })"
                     (monthChange)="store.cargarComisiones({ page: 1, selectedPeriodo: $event })"
-                    (exportar)="exportarComisiones()"
                   />
 
                   <alma-ig-table
@@ -318,14 +317,6 @@ export class InfoGerencialPageComponent implements OnInit {
     this.store.cambiarReporte(tipo);
   }
 
-  protected async exportarComisiones(): Promise<void> {
-    this.exportando.set(true);
-    try {
-      await this.store.exportarComisiones();
-    } finally {
-      this.exportando.set(false);
-    }
-  }
 
   protected async exportarReporte(): Promise<void> {
     this.exportando.set(true);

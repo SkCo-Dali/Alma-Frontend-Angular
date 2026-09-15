@@ -688,7 +688,7 @@ export class EjecucionMotorStore implements OnDestroy {
             segmento: c.segmento || undefined,
             estado: c.estado || undefined,
           },
-          `correos_${c.periodo || 'todos'}.csv`,
+          `correos_${c.periodo || 'todos'}.xlsx`,
         );
       } else {
         const c = f as FiltrosComisiones;

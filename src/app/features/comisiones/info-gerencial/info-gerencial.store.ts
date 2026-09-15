@@ -160,21 +160,6 @@ export class InfoGerencialStore {
         : undefined),
   );
 
-  async exportarComisiones(): Promise<void> {
-    const periodo = this.periodoComisiones();
-    if (!periodo) {
-      this.toast.errorGenericoConMensaje('No hay un periodo seleccionado para exportar');
-      return;
-    }
-    try {
-      await this.api.exportCommissions(periodo);
-    } catch (e) {
-      this.toast.errorGenerico(
-        'fetch',
-        e instanceof Error ? e.message : 'No se pudo descargar el archivo CSV',
-      );
-    }
-  }
 
   // ── Reportes ──────────────────────────────────────────────────────────────
 
