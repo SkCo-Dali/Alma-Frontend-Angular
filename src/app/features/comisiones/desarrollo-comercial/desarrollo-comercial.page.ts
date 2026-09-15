@@ -152,10 +152,7 @@ export class DesarrolloComercialPageComponent implements OnInit {
   protected readonly tamanos = signal<Record<string, number>>({});
 
   protected readonly tieneAcceso = computed(() =>
-    this.auth.hasAnyPermission([
-      MOTOR_COMISIONES_PERMS.view,
-      MOTOR_COMISIONES_PERMS.desarrolloComercial,
-    ]),
+    this.auth.hasPermission(MOTOR_COMISIONES_PERMS.desarrolloComercial),
   );
 
   protected readonly seccionesVisibles = computed(

@@ -8,6 +8,7 @@ import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
+import { MOTOR_COMISIONES_PERMS } from '../motor-comisiones.permissions';
 import { CorreoModalData, EjecucionMotorStore } from './ejecucion-motor.store';
 import { MotorDataTableComponent } from './motor-data-table.component';
 import { MotorEjecucionTabComponent } from './motor-ejecucion-tab.component';
@@ -383,7 +384,7 @@ export class EjecucionMotorPageComponent implements OnInit {
   protected correoDestinatario = '';
 
   protected readonly tieneAcceso = computed(() =>
-    this.auth.hasPermission('app.motor-comisiones.view'),
+    this.auth.hasPermission(MOTOR_COMISIONES_PERMS.config),
   );
 
   /** El tab actual acotado a los de datos (la plantilla ya excluye 'motor'). */

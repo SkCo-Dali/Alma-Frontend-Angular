@@ -109,10 +109,16 @@ export class ComisionesLandingComponent {
     // Gateo por PERMISO (RBAC por App), no por nombre de rol.
     const puedeApp = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.view);
     const puedeCatalogos = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.catalogs);
-    const puedeDesarrolloComercial = this.auth.hasAnyPermission([
-      MOTOR_COMISIONES_PERMS.view,
+    // Parametrización y ejecución ESCRIBEN en el motor: desde la migración 036
+    // el backend les exige `config`. Sin este gate, el analista veía las
+    // tarjetas y se estrellaba con un 403 al primer guardado.
+    const puedeConfigurar = this.auth.hasPermission(MOTOR_COMISIONES_PERMS.config);
+    // Desarrollo Comercial tiene rol propio (migración 037): lo ven ese rol,
+    // el supervisor y el administrador. `view` ya NO alcanza — si no, el
+    // analista, cuyo alcance son los planes, seguiría entrando.
+    const puedeDesarrolloComercial = this.auth.hasPermission(
       MOTOR_COMISIONES_PERMS.desarrolloComercial,
-    ]);
+    );
 
     const todos: MotorModule[] = [
       {
@@ -146,7 +152,7 @@ export class ComisionesLandingComponent {
         icon: 'settings',
         path: '/apps/motor-comisiones/accounting',
         gradient: 'linear-gradient(150deg, #FF9F0A, #FF6B22)',
-        visible: puedeApp,
+        visible: puedeConfigurar,
       },
       {
         title: 'Desarrollo Comercial',
@@ -163,7 +169,7 @@ export class ComisionesLandingComponent {
         icon: 'play',
         path: '/apps/motor-comisiones/ejecucion-motor',
         gradient: 'linear-gradient(150deg, #00C7BE, #0089B8)',
-        visible: puedeApp,
+        visible: puedeConfigurar,
       },
     ];
     return todos.filter((m) => m.visible);
