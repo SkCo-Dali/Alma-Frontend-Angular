@@ -53,19 +53,21 @@ import { FilterOption } from './info-gerencial.api';
               }
             </select>
           }
-          <button
-            type="button"
-            (click)="exportar.emit()"
-            [disabled]="exportando()"
-            class="alma-btn h-10 shrink-0 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
-          >
-            @if (exportando()) {
-              <alma-spinner [size]="16" class="mr-2" />
-            } @else {
-              <lucide-icon name="download" [size]="16" class="mr-2" />
-            }
-            Descargar CSV
-          </button>
+          @if (exportable()) {
+            <button
+              type="button"
+              (click)="exportar.emit()"
+              [disabled]="exportando()"
+              class="alma-btn h-10 shrink-0 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+            >
+              @if (exportando()) {
+                <alma-spinner [size]="16" class="mr-2" />
+              } @else {
+                <lucide-icon name="download" [size]="16" class="mr-2" />
+              }
+              Descargar CSV
+            </button>
+          }
         </div>
       </div>
 
@@ -99,6 +101,9 @@ export class IgTableToolbarComponent {
   readonly periodoLabel = input.required<string>();
   readonly totalLabel = input.required<string>();
   readonly exportando = input(false);
+  /** Desempeño no exporta: su descarga generaba el archivo completo en memoria
+   *  y fue el vector del hallazgo de DoS del pentest (sept-2026). */
+  readonly exportable = input(true);
 
   readonly searchChange = output<string>();
   readonly buscar = output<void>();
