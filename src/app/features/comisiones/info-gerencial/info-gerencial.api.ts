@@ -315,7 +315,7 @@ export class InfoGerencialApi {
   exportReport(tipo: ReportType, periodo?: string): Promise<void> {
     return this.http.descargar(
       `${REPORTS}/${this.endpoint(tipo)}/excel${qs({ periodo })}`,
-      `${tipo}_${periodo ?? 'todos'}.csv`,
+      `${tipo}_${periodo ?? 'todos'}.xlsx`,
     );
   }
 

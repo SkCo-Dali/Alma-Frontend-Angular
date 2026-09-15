@@ -110,7 +110,7 @@ import {
             } @else {
               <lucide-icon name="download" [size]="16" class="mr-2" />
             }
-            Descargar CSV
+            {{ variant() === 'correos' ? 'Descargar Excel' : 'Descargar CSV' }}
           </button>
         </div>
       </div>

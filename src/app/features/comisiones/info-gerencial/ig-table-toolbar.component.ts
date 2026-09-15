@@ -65,7 +65,7 @@ import { FilterOption } from './info-gerencial.api';
               } @else {
                 <lucide-icon name="download" [size]="16" class="mr-2" />
               }
-              Descargar CSV
+              Descargar Excel
             </button>
           }
         </div>
