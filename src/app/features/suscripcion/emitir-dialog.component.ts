@@ -177,11 +177,21 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
           </label>
 
           @if (error(); as err) {
-            <p
-              class="mt-3 rounded-xl bg-destructive/10 p-2 text-center text-xs text-destructive"
-            >
-              {{ err }}
-            </p>
+            <div class="mt-3 rounded-xl bg-destructive/10 p-3 text-left text-xs text-destructive">
+              <p>{{ explicacionError() }}</p>
+              @if (detalleError(); as det) {
+                <!-- El motivo crudo de Pharos no le sirve al analista, pero sí a
+                     soporte: se conserva, discreto y plegado. -->
+                <details class="mt-2">
+                  <summary class="cursor-pointer text-destructive/70 select-none">
+                    Detalle técnico
+                  </summary>
+                  <p class="mt-1 break-words font-mono text-[11px] text-destructive/70">
+                    {{ det }}
+                  </p>
+                </details>
+              }
+            </div>
           }
 
           <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -228,6 +238,23 @@ export class EmitirDialogComponent {
     advertencia: string | null;
   } | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  /** El backend manda "<explicación> — Detalle de Pharos: <crudo> (correlationId=…)".
+   *  Se parte para que lo accionable se lea primero y el resto quede plegado; si
+   *  el mensaje no trae esa forma, se muestra completo como explicación. */
+  private readonly SEP_DETALLE = ' — Detalle de Pharos: ';
+
+  protected readonly explicacionError = computed(() => {
+    const err = this.error() ?? '';
+    const i = err.indexOf(this.SEP_DETALLE);
+    return i === -1 ? err : err.slice(0, i);
+  });
+
+  protected readonly detalleError = computed(() => {
+    const err = this.error() ?? '';
+    const i = err.indexOf(this.SEP_DETALLE);
+    return i === -1 ? null : err.slice(i + this.SEP_DETALLE.length);
+  });
 
   protected readonly cuentaLista = computed(
     () => this.cuenta()?.conectada && this.cuenta()?.estado === 'conectada',
