@@ -722,12 +722,14 @@ export function demoProbar(
   const texto = `${body.asunto} ${body.cuerpo} ${body.texto_adjuntos ?? ''}`.toLowerCase();
   const cats = store.categorias.filter((c) => c.buzon_id === buzonId && c.activa);
   const buzon = store.buzones.find((b) => b.id === buzonId);
+  // Heurística SOLO para la demo (el backend real usa el modelo de IA): las
+  // palabras del nombre/clave pesan más que las de la descripción, sin repetir.
+  const tokens = (t: string) => new Set(t.toLowerCase().split(/[^a-záéíóúñ0-9]+/).filter((w) => w.length > 4));
   const puntuar = (c: Categoria) => {
-    const claves = `${c.nombre} ${c.clave} ${c.palabras_clave ?? ''} ${c.descripcion}`
-      .toLowerCase()
-      .split(/[^a-záéíóúñ0-9]+/)
-      .filter((w) => w.length > 4);
-    return claves.reduce((n, w) => n + (texto.includes(w) ? 1 : 0), 0);
+    let n = 0;
+    tokens(`${c.nombre} ${c.clave.replace(/_/g, ' ')}`).forEach((w) => (n += texto.includes(w) ? 3 : 0));
+    tokens(`${c.palabras_clave ?? ''} ${c.descripcion}`).forEach((w) => (n += texto.includes(w) ? 1 : 0));
+    return n;
   };
   const ordenadas = cats.filter((c) => !c.es_fallback).map((c) => ({ c, p: puntuar(c) })).sort((a, b) => b.p - a.p);
   const mejor = ordenadas[0]?.p ? ordenadas[0].c : cats.find((c) => c.es_fallback) ?? cats[0];
