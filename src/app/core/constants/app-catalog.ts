@@ -52,6 +52,21 @@ export const APP_CATALOG: Application[] = [
     favorito: true,
   },
   {
+    id: 'app-buzon-inteligente',
+    nombre: 'Buzón Inteligente',
+    descripcion:
+      'Clasifica con IA los correos que llegan a los buzones de cada área y ejecuta la acción acordada: etiquetar, mover, reenviar o asignar.',
+    categoria: 'Asistentes',
+    icono: 'mail-search',
+    color: '#6D4AE0',
+    url: '/apps/buzon-inteligente',
+    internalRoute: '/apps/buzon-inteligente',
+    integrationType: 'internal',
+    requiredPermission: 'app.buzon-inteligente.view',
+    estado: 'beta',
+    favorito: true,
+  },
+  {
     id: 'app-cheques',
     nombre: 'Cheques',
     descripcion:
@@ -214,6 +229,9 @@ export const MOCK_USER: User = {
     'app.agente-alma.view',
     'app.cheques.view',
     'app.visor-comunicaciones.view',
+    'app.buzon-inteligente.view',
+    'app.buzon-inteligente.review',
+    'app.buzon-inteligente.manage',
     'app.emision.view',
     'app.documental.view',
     'app.pharos.view',

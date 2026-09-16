@@ -42,6 +42,49 @@ export const routes: Routes = [
       ),
     title: 'Visor de comunicaciones — ALMA',
   },
+  // App Buzón Inteligente: landing + bandeja + buzones (lista/config) + métricas.
+  {
+    path: 'apps/buzon-inteligente',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/buzon-inteligente/buzon-landing.component').then(
+        (m) => m.BuzonLandingComponent,
+      ),
+    title: 'Buzón Inteligente — ALMA',
+  },
+  {
+    path: 'apps/buzon-inteligente/bandeja',
+    loadComponent: () =>
+      import('./features/buzon-inteligente/bandeja-buzon.component').then(
+        (m) => m.BandejaBuzonComponent,
+      ),
+    title: 'Bandeja — Buzón Inteligente — ALMA',
+  },
+  {
+    path: 'apps/buzon-inteligente/buzones',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/buzon-inteligente/buzones-page.component').then(
+        (m) => m.BuzonesPageComponent,
+      ),
+    title: 'Buzones — Buzón Inteligente — ALMA',
+  },
+  {
+    path: 'apps/buzon-inteligente/buzones/:id',
+    loadComponent: () =>
+      import('./features/buzon-inteligente/buzon-config.component').then(
+        (m) => m.BuzonConfigComponent,
+      ),
+    title: 'Configurar buzón — Buzón Inteligente — ALMA',
+  },
+  {
+    path: 'apps/buzon-inteligente/metricas',
+    loadComponent: () =>
+      import('./features/buzon-inteligente/metricas-buzon.component').then(
+        (m) => m.MetricasBuzonComponent,
+      ),
+    title: 'Métricas — Buzón Inteligente — ALMA',
+  },
   // App Suscripción de Seguros: landing de tiles + subpáginas de-anidadas
   // (bandeja, config del motor, config del simulador y detalle por id).
   {
