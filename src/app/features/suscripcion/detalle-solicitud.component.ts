@@ -115,15 +115,15 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                 </button>
               }
               <!-- Aprobar y emitir: solo con permiso emit; habilitado cuando la
-                   cotización es emitible (PharosDate hoy o posterior, sin
+                   cotización es emitible (tarifa vigente en Pharos, sin
                    contrato, no emitida). El flag lo calcula el backend. -->
               @if (puedeEmitir()) {
                 <!-- Refresco puntual: solo en el caso accionable — hay cotización
                      de Pharos, aún no es emitible y NO está ya emitida (sin
-                     contrato). Típico: el analista cambió la fecha en Pharos para
-                     emitir con fecha posterior y no quiere esperar el tick de 5
-                     min. No se muestra en pólizas ya emitidas ni en solicitudes
-                     sin cotización de Pharos (refrescar no ayudaría). -->
+                     contrato). Típico: el analista acaba de volver a tarifar en
+                     Pharos y no quiere esperar el tick de 5 min. No se muestra en
+                     pólizas ya emitidas ni en solicitudes sin cotización de
+                     Pharos (refrescar no ayudaría). -->
                 @if (
                   sel.afiliacion &&
                   !sel.afiliacion.emitible &&
@@ -134,7 +134,7 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                     [disabled]="refrescandoPharos()"
                     (click)="refrescarDesdePharos()"
                     class="alma-btn alma-btn-outline h-8 rounded-xl text-xs"
-                    title="Vuelve a leer la cotización desde Pharos (útil si acabas de cambiar la fecha allá)"
+                    title="Vuelve a leer la tarifa desde Pharos (úsalo si acabas de volver a tarifar allá)"
                   >
                     <lucide-icon
                       name="refresh-cw"
@@ -163,7 +163,7 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                 </span>
               }
             </div>
-            @if (avisoPharos(); as aviso) {
+            @if (avisoEmision(); as aviso) {
               <p class="mt-1.5 basis-full text-right text-xs text-muted-foreground">
                 {{ aviso }}
               </p>
@@ -495,6 +495,22 @@ export class DetalleSolicitudComponent {
   // Refresco puntual desde Pharos (bajo demanda, sin esperar el tick de 5 min).
   protected readonly refrescandoPharos = signal(false);
   protected readonly avisoPharos = signal<string | null>(null);
+
+  /**
+   * Por qué no se puede emitir, visible DESDE QUE SE ABRE la pantalla.
+   *
+   * Antes el motivo solo vivía en el `title` del botón deshabilitado y en el
+   * aviso posterior a "Actualizar desde Pharos": quien llegaba y veía el botón
+   * apagado no tenía forma de saber qué le faltaba. El aviso de una
+   * actualización recién hecha manda, porque es más específico.
+   */
+  protected readonly avisoEmision = computed(() => {
+    const reciente = this.avisoPharos();
+    if (reciente) return reciente;
+    if (!this.puedeEmitir()) return null;
+    const afi = this.tarea()?.afiliacion;
+    return afi && !afi.emitible ? afi.motivo_no_emitible : null;
+  });
 
   // Permisos finos: manage = evaluar con el motor; emit = emitir en Pharos.
   protected readonly puedeVer = computed(() =>

@@ -55,6 +55,18 @@ export interface AfiliacionApi {
   contrato_pharos: string | null;
   cumulo_total: number | null;
   source_id: number | null;
+  /** Fecha del impuesto estampada en el nodo de Pharos (null si no se ha leído). */
+  fecha_impuesto: string | null;
+  /** Fecha de la tasa de cambio estampada en el nodo de Pharos. */
+  fecha_tasa_cambio: string | null;
+  /** Estado del nodo en Pharos. Se recoge para calibrar; todavía no decide nada. */
+  estado_nodo: number | null;
+  nodos_leidos_en: string | null;
+  /**
+   * true si la emitibilidad se decidió con las fechas leídas de Pharos; false
+   * si se cayó a la fecha de radicación de Pipeline, que bloquea de más.
+   */
+  vigencia_desde_pharos: boolean;
   emitible: boolean;
   motivo_no_emitible: string | null;
 }
