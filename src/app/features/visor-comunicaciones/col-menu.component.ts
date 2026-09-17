@@ -102,7 +102,7 @@ import { DateFilterPopoverComponent } from '../../shared/components/date-filter-
                   [style.accent-color]="'var(--primary)'"
                   class="h-3.5 w-3.5"
                 />
-                <span class="min-w-0 flex-1 truncate">{{ v }}</span>
+                <span class="min-w-0 flex-1 truncate">{{ etiquetas()[v] ?? v }}</span>
               </label>
             }
           </div>
@@ -118,6 +118,13 @@ export class ColMenuComponent {
   readonly valores = input<string[] | null>(null);
   /** Valores seleccionados (vacío ⇒ sin filtro). */
   readonly seleccion = input<string[]>([]);
+  /**
+   * Traducción opcional valor → etiqueta visible. El valor CRUDO es el que se
+   * emite y viaja al backend; esto solo cambia lo que lee la persona. Un valor
+   * sin traducción se muestra tal cual, para que un código nuevo del origen
+   * aparezca en el filtro en vez de desaparecer.
+   */
+  readonly etiquetas = input<Record<string, string>>({});
   /** Columna de fecha ⇒ el cuerpo del menú es el filtro de fecha (árbol + presets). */
   readonly esFecha = input(false);
   /** Fechas del índice (para el árbol año/mes/día). */
