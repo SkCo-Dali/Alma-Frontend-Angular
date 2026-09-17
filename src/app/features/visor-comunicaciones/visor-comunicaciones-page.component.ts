@@ -85,6 +85,16 @@ function leerAnchoGuardado(): number {
           />
         </div>
         <div class="glass flex h-9 items-center gap-1.5 rounded-xl px-3">
+          <lucide-icon name="check-circle-2" [size]="14" class="text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Estado</span>
+          <alma-col-menu
+            [valores]="estadosOpciones()"
+            [etiquetas]="etiquetasEstado"
+            [seleccion]="filtroEstado()"
+            (filtrar)="onEstado($event)"
+          />
+        </div>
+        <div class="glass flex h-9 items-center gap-1.5 rounded-xl px-3">
           <lucide-icon name="calendar-clock" [size]="14" class="text-muted-foreground" />
           <span class="text-sm text-muted-foreground">Fecha</span>
           <alma-col-menu
@@ -395,6 +405,7 @@ export class VisorComunicacionesPageComponent {
 
   // Filtros que refinan (client-side) los resultados cargados.
   protected readonly filtroCampana = signal<string[]>([]);
+  protected readonly filtroEstado = signal<string[]>([]);
   protected readonly rangoFecha = signal<{ desde: string | null; hasta: string | null }>({
     desde: null,
     hasta: null,
@@ -435,7 +446,11 @@ export class VisorComunicacionesPageComponent {
   protected readonly kpis = signal<KpisEnvios | null>(null);
   protected readonly cargandoKpis = signal(false);
 
-  protected readonly opcionesSrv = signal<OpcionesFiltros>({ campanas: [], fechas: [] });
+  protected readonly opcionesSrv = signal<OpcionesFiltros>({
+    campanas: [],
+    fechas: [],
+    estados: [],
+  });
   private readonly campanasDistintas = computed(() =>
     [...new Set(this.resultados().map((c) => c.campana).filter((x): x is string => !!x))].sort(),
   );
@@ -444,6 +459,22 @@ export class VisorComunicacionesPageComponent {
       .map((c) => c.fecha)
       .filter((x): x is string => !!x),
   );
+  /**
+   * Estados de entrega. La lista viene del backend (los que EXISTEN en la base,
+   * no un catálogo quemado) y se traduce con `etiquetasEstado`; un código nuevo
+   * de Communication Services aparece tal cual en vez de desaparecer del filtro.
+   */
+  protected readonly estadosOpciones = computed(() => this.opcionesSrv().estados);
+  protected readonly etiquetasEstado: Record<string, string> = {
+    Succeeded: 'Entregado',
+    Failed: 'Fallido',
+    SendFailed: 'Fallo al enviar',
+    PollingError: 'Error de seguimiento',
+    HTMLProcessingFailed: 'Error en el HTML',
+    Timeout: 'Tiempo agotado',
+    error: 'Error',
+  };
+
   protected readonly campanasOpciones = computed(() =>
     this.opcionesSrv().campanas.length ? this.opcionesSrv().campanas : this.campanasDistintas(),
   );
@@ -551,6 +582,11 @@ export class VisorComunicacionesPageComponent {
     void this.cargarLista();
   }
 
+  protected onEstado(sel: string[]): void {
+    this.filtroEstado.set(sel);
+    void this.cargarLista();
+  }
+
   protected onRango(r: { desde: string | null; hasta: string | null }): void {
     this.rangoFecha.set(r);
     void this.cargarLista();
@@ -572,7 +608,13 @@ export class VisorComunicacionesPageComponent {
 
   protected hayFiltros(): boolean {
     const { desde, hasta } = this.rangoFecha();
-    return !!(this.qInput || this.filtroCampana().length || desde || hasta);
+    return !!(
+      this.qInput ||
+      this.filtroCampana().length ||
+      this.filtroEstado().length ||
+      desde ||
+      hasta
+    );
   }
 
   protected buscar(): void {
@@ -582,6 +624,7 @@ export class VisorComunicacionesPageComponent {
   protected limpiar(): void {
     this.qInput = '';
     this.filtroCampana.set([]);
+    this.filtroEstado.set([]);
     this.rangoFecha.set({ desde: null, hasta: null });
     void this.cargarLista();
   }
@@ -597,9 +640,11 @@ export class VisorComunicacionesPageComponent {
     try {
       const { desde, hasta } = this.rangoFecha();
       const campanas = this.filtroCampana();
+      const estados = this.filtroEstado();
       const { items, hayMas } = await this.comService.buscar({
         q: this.qInput.trim() || undefined,
         campanas: campanas.length ? campanas : undefined,
+        estados: estados.length ? estados : undefined,
         desde: desde || undefined,
         hasta: hasta || undefined,
       });
@@ -620,10 +665,12 @@ export class VisorComunicacionesPageComponent {
     try {
       const { desde, hasta } = this.rangoFecha();
       const campanas = this.filtroCampana();
+      const estados = this.filtroEstado();
       this.kpis.set(
         await this.comService.kpis({
           q: this.qInput.trim() || undefined,
           campanas: campanas.length ? campanas : undefined,
+          estados: estados.length ? estados : undefined,
           desde: desde || undefined,
           hasta: hasta || undefined,
         }),

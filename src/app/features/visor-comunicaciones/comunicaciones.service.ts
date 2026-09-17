@@ -29,6 +29,8 @@ export interface BusquedaEnvios {
   campanas?: string[];
   desde?: string;
   hasta?: string;
+  /** Estados de entrega crudos de Communication Services (Succeeded, Failed…). */
+  estados?: string[];
 }
 
 /** Indicadores del conjunto filtrado. `aperturas`/`clics` van en null cuando el
@@ -47,6 +49,8 @@ export interface KpisEnvios {
 export interface OpcionesFiltros {
   campanas: string[];
   fechas: string[];
+  /** Estados de entrega presentes en la base, no un catálogo fijo. */
+  estados: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -59,7 +63,7 @@ export class ComunicacionesService {
 
   /**
    * Busca envíos (Cosmos `send-mail`) filtrando en SERVIDOR por texto
-   * (correo/asunto), campaña y rango de fechas. Devuelve UNA página (por defecto
+   * (correo/asunto), campaña, rango de fechas y estado de entrega. Devuelve UNA página (por defecto
    * los 50 más recientes que coincidan). `hayMas` indica si el resultado se topó
    * con el límite (conviene afinar la búsqueda).
    */
@@ -71,6 +75,7 @@ export class ComunicacionesService {
     const qs = new URLSearchParams({ limit: String(limit) });
     if (opts.q) qs.set('q', opts.q);
     (opts.campanas ?? []).forEach((c) => qs.append('campana', c));
+    (opts.estados ?? []).forEach((e) => qs.append('estado', e));
     if (opts.desde) qs.set('desde', opts.desde);
     if (opts.hasta) qs.set('hasta', opts.hasta);
     const r = await this.api.fetch<{ data: ComunicacionRef[]; next: number | null }>(
@@ -84,6 +89,7 @@ export class ComunicacionesService {
     const qs = new URLSearchParams();
     if (opts.q) qs.set('q', opts.q);
     (opts.campanas ?? []).forEach((c) => qs.append('campana', c));
+    (opts.estados ?? []).forEach((e) => qs.append('estado', e));
     if (opts.desde) qs.set('desde', opts.desde);
     if (opts.hasta) qs.set('hasta', opts.hasta);
     const s = qs.toString();
@@ -92,7 +98,7 @@ export class ComunicacionesService {
 
   /** Opciones de filtros (todas las campañas y días de la base). */
   async opciones(): Promise<OpcionesFiltros> {
-    if (this.usarMock) return { campanas: [], fechas: [] };
+    if (this.usarMock) return { campanas: [], fechas: [], estados: [] };
     return this.api.fetch<OpcionesFiltros>('/api/comunicaciones/opciones');
   }
 
