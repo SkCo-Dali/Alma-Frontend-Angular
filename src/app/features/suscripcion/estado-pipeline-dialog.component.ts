@@ -234,10 +234,16 @@ const CASOS: CasoDef[] = [
 
               @if (caso() === 'examenes') {
                 <div class="grid grid-cols-2 gap-2.5">
+                  <!-- Los dos únicos obligatorios: sin paquete y sin fecha de
+                       envío, el registro no le sirve a Control y Emisión para
+                       hacerle seguimiento a la cita. El resto llega después. -->
                   <label class="block min-w-0 space-y-1">
-                    <span class="text-xs font-medium text-foreground">Paquete solicitado</span>
+                    <span class="text-xs font-medium text-foreground">
+                      Paquete solicitado <span class="text-destructive" aria-hidden="true">*</span>
+                    </span>
                     <select
                       class="alma-input h-9 rounded-xl text-sm"
+                      required
                       [(ngModel)]="ex.tipo_examen"
                     >
                       <option value="">—</option>
@@ -247,10 +253,13 @@ const CASOS: CasoDef[] = [
                     </select>
                   </label>
                   <label class="block min-w-0 space-y-1">
-                    <span class="text-xs font-medium text-foreground">Envío de solicitud</span>
+                    <span class="text-xs font-medium text-foreground">
+                      Envío de solicitud <span class="text-destructive" aria-hidden="true">*</span>
+                    </span>
                     <input
                       type="date"
                       class="alma-input h-9 rounded-xl text-sm"
+                      required
                       [(ngModel)]="ex.fecha_envio_solicitud"
                     />
                   </label>
@@ -460,7 +469,10 @@ export class EstadoPipelineDialogComponent {
   protected readonly maxDireccion = computed(() => this.catalogos()?.direccionMax ?? 1000);
 
   /** Lo que quedará escrito en Pipeline, en el lenguaje de la pantalla. */
-  protected readonly efecto = computed(() => {
+  // Método por la misma razón que `puedeAplicar`: el caso «cobertura» lee
+  // `estadoCobertura`, un campo plano que muta `ngModel`. Como `computed` el
+  // texto se quedaba en el del estado inicial al cambiar el desplegable.
+  protected efecto(): string | null {
     const cat = this.catalogos();
     switch (this.caso()) {
       case 'informacion_adicional':
@@ -474,13 +486,13 @@ export class EstadoPipelineDialogComponent {
       case 'cobertura':
         return `Estado de cobertura «${cat?.estadoCobertura?.[this.estadoCobertura] ?? this.estadoCobertura}».`;
       case 'examenes':
-        return 'Solo se escriben los campos que diligencies; los demás quedan como están.';
+        return 'Paquete solicitado y envío de solicitud son obligatorios. De los demás solo se escriben los que diligencies; el resto queda como está.';
       case 'reaseguro_seguimiento':
         return 'Fechas y observaciones del ciclo con el reasegurador.';
       default:
         return null;
     }
-  });
+  }
 
   protected readonly opcionesEstadoCobertura = computed(() =>
     this.mapaAOpciones(this.catalogos()?.estadoCobertura, ['ES', 'EX', 'RE', 'PE']),
@@ -496,10 +508,23 @@ export class EstadoPipelineDialogComponent {
    * Botón habilitado solo cuando hay algo que escribir: los casos de registro
    * (exámenes/reaseguro) no tienen sentido con el formulario vacío.
    */
-  protected readonly puedeAplicar = computed(() => {
+  /**
+   * MÉTODO, no `computed`, a propósito: los formularios de estos casos viven en
+   * objetos y campos planos que `ngModel` muta, no en señales. Un `computed`
+   * solo se invalida cuando cambia una señal que lee —aquí, únicamente
+   * `caso()`— así que se evaluaba con el formulario vacío al elegir el caso y
+   * quedaba cacheado en `false`: el botón no se habilitaba nunca por más campos
+   * que se llenaran. Como método se reevalúa en cada ciclo de detección, que es
+   * lo que dispara `ngModelChange`.
+   */
+  protected puedeAplicar(): boolean {
     switch (this.caso()) {
       case 'examenes':
-        return Object.values(this.ex).some((v) => v !== null && v !== undefined && v !== '');
+        // Los dos únicos obligatorios. Antes bastaba cualquier campo, así que
+        // se podía registrar una cita sin decir qué paquete se pidió ni cuándo
+        // se solicitó, que es justo lo que Control y Emisión necesita para el
+        // seguimiento.
+        return Boolean(this.ex.tipo_examen) && Boolean(this.ex.fecha_envio_solicitud);
       case 'reaseguro_seguimiento':
         return Boolean(
           this.fechaEnvioReaseguro || this.fechaRecibidoReaseguro || this.observaciones,
@@ -509,7 +534,7 @@ export class EstadoPipelineDialogComponent {
       default:
         return true;
     }
-  });
+  }
 
   constructor() {
     void this.cargarCatalogos();
