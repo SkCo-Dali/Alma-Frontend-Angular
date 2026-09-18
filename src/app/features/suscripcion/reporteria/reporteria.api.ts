@@ -42,6 +42,9 @@ export interface ResumenReporteria {
   tiempoEmision: TiempoEmision;
   topAlertas: ConteoValor[];
   topExclusiones: ConteoValor[];
+  /** Totales SIN tope: denominador del reparto porcentual de las dos listas. */
+  totalAlertas: number;
+  totalExclusiones: number;
 }
 
 export interface FilaAuditoria {
