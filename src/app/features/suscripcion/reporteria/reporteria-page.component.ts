@@ -210,7 +210,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Alertas más frecuentes</h2>
           <p class="mb-3 text-[11px] text-muted-foreground">
-            Variable que dispara la alerta. El porcentaje es sobre las solicitudes del periodo.
+            Variable que dispara la alerta. El porcentaje es su peso sobre el total de alertas.
           </p>
           @for (a of resumen()?.topAlertas ?? []; track a.valor) {
             <div class="mb-1.5 flex items-center gap-2">
@@ -219,7 +219,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                 <div class="h-full rounded-full bg-[#FF9200]" [style.width.%]="ancho(a.total, maxAlerta())"></div>
               </div>
               <span class="w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {{ a.total }} · {{ porcentaje(a.total, resumen()?.solicitudes ?? 0) }}
+                {{ a.total }} · {{ porcentaje(a.total, resumen()?.totalAlertas ?? 0) }}
               </span>
             </div>
           } @empty {
@@ -230,7 +230,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Exclusiones más frecuentes</h2>
           <p class="mb-3 text-[11px] text-muted-foreground">
-            Aplicadas en la última evaluación. El porcentaje es sobre las solicitudes del periodo.
+            Aplicadas en la última evaluación. El porcentaje es su peso sobre el total de exclusiones.
           </p>
           @for (x of resumen()?.topExclusiones ?? []; track x.valor) {
             <div class="mb-1.5 flex items-center gap-2">
@@ -239,7 +239,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                 <div class="h-full rounded-full bg-destructive" [style.width.%]="ancho(x.total, maxExclusion())"></div>
               </div>
               <span class="w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {{ x.total }} · {{ porcentaje(x.total, resumen()?.solicitudes ?? 0) }}
+                {{ x.total }} · {{ porcentaje(x.total, resumen()?.totalExclusiones ?? 0) }}
               </span>
             </div>
           } @empty {
