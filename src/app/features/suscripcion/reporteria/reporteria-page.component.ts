@@ -209,14 +209,18 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Alertas más frecuentes</h2>
-          <p class="mb-3 text-[11px] text-muted-foreground">Variable que dispara la alerta.</p>
+          <p class="mb-3 text-[11px] text-muted-foreground">
+            Variable que dispara la alerta. El porcentaje es sobre las solicitudes del periodo.
+          </p>
           @for (a of resumen()?.topAlertas ?? []; track a.valor) {
             <div class="mb-1.5 flex items-center gap-2">
               <span class="min-w-0 flex-1 truncate text-xs text-foreground" [title]="a.valor">{{ a.valor }}</span>
               <div class="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
                 <div class="h-full rounded-full bg-[#FF9200]" [style.width.%]="ancho(a.total, maxAlerta())"></div>
               </div>
-              <span class="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{{ a.total }}</span>
+              <span class="w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {{ a.total }} · {{ porcentaje(a.total, resumen()?.solicitudes ?? 0) }}
+              </span>
             </div>
           } @empty {
             <p class="text-sm text-muted-foreground">Sin alertas.</p>
@@ -225,14 +229,18 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Exclusiones más frecuentes</h2>
-          <p class="mb-3 text-[11px] text-muted-foreground">Aplicadas en la última evaluación.</p>
+          <p class="mb-3 text-[11px] text-muted-foreground">
+            Aplicadas en la última evaluación. El porcentaje es sobre las solicitudes del periodo.
+          </p>
           @for (x of resumen()?.topExclusiones ?? []; track x.valor) {
             <div class="mb-1.5 flex items-center gap-2">
               <span class="min-w-0 flex-1 truncate text-xs text-foreground" [title]="x.valor">{{ x.valor }}</span>
               <div class="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
                 <div class="h-full rounded-full bg-destructive" [style.width.%]="ancho(x.total, maxExclusion())"></div>
               </div>
-              <span class="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{{ x.total }}</span>
+              <span class="w-24 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {{ x.total }} · {{ porcentaje(x.total, resumen()?.solicitudes ?? 0) }}
+              </span>
             </div>
           } @empty {
             <p class="text-sm text-muted-foreground">Sin exclusiones.</p>
@@ -570,7 +578,13 @@ export class ReporteriaPageComponent {
   }
 
   protected porcentaje(valor: number, total: number): string {
-    return total > 0 ? `${Math.round((valor / total) * 100)}%` : '';
+    if (total <= 0) return '';
+    const p = (valor / total) * 100;
+    // Redondear a secas convertía en «0%» lo que sí ocurrió: las exclusiones
+    // son 1 o 2 casos sobre más de mil solicitudes y todas se leían igual que
+    // las que nunca pasaron.
+    if (p > 0 && p < 1) return '<1%';
+    return `${Math.round(p)}%`;
   }
 
   /** Minutos -> "2h 15m" / "3d 4h". */
