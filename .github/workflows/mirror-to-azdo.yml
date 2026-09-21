@@ -11,7 +11,16 @@ on:
   push:                      # instantaneo para la rama donde exista este archivo
   workflow_dispatch:         # boton "Run workflow" (corre desde la rama por defecto)
   schedule:
-    - cron: '*/15 * * * *'   # red de seguridad: cada 15 min sincroniza TODAS las ramas y tags
+    # Red de seguridad por si un push no alcanzo a sincronizar: repasa TODAS
+    # las ramas y tags. Estaba en */15, pero GitHub factura cada job
+    # redondeando al minuto y este tarda ~10s, asi que el costo lo marca la
+    # frecuencia y no la duracion: eran ~200 ejecuciones al mes por repo que
+    # casi nunca encontraban algo que sincronizar, porque el push ya lo hizo.
+    # En 30 dias solo 14 push fallaron entre los dos repos, concentrados en
+    # tres episodios. AzDO es replica de respaldo y auditoria (nadie compila
+    # desde ahi), asi que pasar el peor desfase de 15 min a 1 hora no cambia
+    # nada operativo. Volver a */15 si algun dia se construye desde AzDO.
+    - cron: '0 * * * *'
 
 permissions:
   contents: read
