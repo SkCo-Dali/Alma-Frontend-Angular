@@ -42,6 +42,16 @@ export const routes: Routes = [
       ),
     title: 'Visor de comunicaciones — ALMA',
   },
+  {
+    // Un correo a pantalla completa, para abrirlo en pestaña nueva desde la
+    // bandeja. Va ANTES de 'apps/:appId' para que no lo capture la genérica.
+    path: 'apps/visor-comunicaciones/correo/:id',
+    loadComponent: () =>
+      import('./features/visor-comunicaciones/correo-completo.component').then(
+        (m) => m.CorreoCompletoComponent,
+      ),
+    title: 'Correo — ALMA',
+  },
   // App Buzón Inteligente: landing + bandeja + buzones (lista/config) + métricas.
   {
     path: 'apps/buzon-inteligente',
