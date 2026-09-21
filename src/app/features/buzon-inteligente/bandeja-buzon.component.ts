@@ -239,14 +239,17 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                       <p class="p-6 text-center text-sm text-muted-foreground">Descargando el correo…</p>
                     } @else if (eml(); as e) {
                       <div class="flex h-full flex-col">
-                        @if (e.hasRemoteContent && !cargarRemoto()) {
-                          <div class="flex items-center justify-between gap-2 border-b border-border/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
-                            <span class="inline-flex items-center gap-1.5"><lucide-icon name="shield-alert" [size]="13" /> Imágenes remotas bloqueadas por seguridad.</span>
-                            <button type="button" class="font-semibold underline" (click)="cargarRemoto.set(true)">Mostrar</button>
+                        @if (e.hasRemoteContent) {
+                          <div class="flex items-center gap-1.5 border-b border-border/60 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
+                            <lucide-icon name="shield-alert" [size]="13" />
+                            <span>
+                              Imágenes remotas bloqueadas: cargarlas le avisaría al remitente que
+                              alguien abrió el correo. Las que viajaron dentro sí se muestran.
+                            </span>
                           </div>
                         }
                         @if (e.html) {
-                          <alma-email-frame class="min-h-0 flex-1" [html]="e.html" [loadRemote]="cargarRemoto()" />
+                          <alma-email-frame class="min-h-0 flex-1" [html]="e.html" />
                         } @else {
                           <pre class="whitespace-pre-wrap p-5 text-sm">{{ e.text }}</pre>
                         }
@@ -379,7 +382,6 @@ export class BandejaBuzonComponent {
   protected readonly eml = signal<ParsedEml | null>(null);
   protected readonly cargandoEml = signal(false);
   protected readonly errorEml = signal<string | null>(null);
-  protected readonly cargarRemoto = signal(false);
   protected readonly adjunto = signal<EmlAttachment | null>(null);
 
   protected readonly categoriasFiltro = computed(() => {
@@ -450,7 +452,6 @@ export class BandejaBuzonComponent {
     this.eml.set(null);
     this.adjunto.set(null);
     this.errorEml.set(null);
-    this.cargarRemoto.set(false);
     this.panel.set('ia');
     try {
       const d = await this.api.obtenerCorreo(c.id);
