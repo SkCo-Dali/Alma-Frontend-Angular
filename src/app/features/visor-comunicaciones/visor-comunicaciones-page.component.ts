@@ -262,17 +262,18 @@ function leerAnchoGuardado(): number {
               @switch (modo()) {
                 @case ('correo') {
                   <div class="flex h-full flex-col">
-                    @if (eml.hasRemoteContent && !cargarRemoto()) {
+                    @if (eml.hasRemoteContent) {
                       <div class="flex flex-wrap items-center gap-2 border-b border-border/60 bg-[var(--surface-sunken)] px-4 py-2 text-xs text-muted-foreground">
                         <lucide-icon name="shield-alert" [size]="15" class="text-primary" />
-                        <span class="flex-1">Se bloqueó contenido remoto (imágenes externas y rastreo).</span>
-                        <button type="button" (click)="cargarRemoto.set(true)" class="alma-btn alma-btn-outline h-7 rounded-lg text-xs">
-                          Cargar imágenes
-                        </button>
+                        <span class="flex-1">
+                          Este correo tenía imágenes alojadas fuera de Skandia. No se cargan:
+                          hacerlo le avisaría al remitente que alguien está viendo el mensaje.
+                          Las imágenes que viajaron dentro del correo sí se muestran.
+                        </span>
                       </div>
                     }
                     @if (eml.html) {
-                      <alma-email-frame class="min-h-0 flex-1" [html]="eml.html" [loadRemote]="cargarRemoto()" />
+                      <alma-email-frame class="min-h-0 flex-1" [html]="eml.html" />
                     } @else {
                       <pre class="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-white p-5 text-sm leading-relaxed text-[#111]">{{ eml.text || 'Este correo no tiene cuerpo.' }}</pre>
                     }
@@ -436,7 +437,6 @@ export class VisorComunicacionesPageComponent {
   protected readonly parsed = signal<ParsedEml | null>(null);
   protected readonly cargandoDetalle = signal(false);
   protected readonly modo = signal<Modo>('correo');
-  protected readonly cargarRemoto = signal(false);
   protected readonly adjuntoSel = signal<EmlAttachment | null>(null);
 
   protected readonly traza = signal<EventoTraza[]>([]);
@@ -696,7 +696,6 @@ export class VisorComunicacionesPageComponent {
     this.error.set(null);
     this.modo.set('correo');
     this.adjuntoSel.set(null);
-    this.cargarRemoto.set(false);
     this.traza.set([]);
     try {
       const buffer = await this.comService.obtenerEml(c);

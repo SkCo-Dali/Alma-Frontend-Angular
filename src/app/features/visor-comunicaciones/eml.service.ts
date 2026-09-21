@@ -2,11 +2,18 @@
 // Aquí se resuelve todo lo "sucio" del correo para que la UI no vea nada de MIME:
 //  - imágenes inline (cid:) se embeben en el HTML como data URLs;
 //  - los adjuntos se exponen como Blob URLs (previsualizar/descargar);
-//  - se detecta si el HTML trae recursos remotos (para bloquear tracking por defecto).
+//  - las imágenes remotas se sustituyen por un marcador: el visor es una
+//    herramienta de AUDITORÍA (ver qué se envió), no un cliente de correo, y
+//    cargarlas le avisaría al remitente que alguien está mirando el mensaje.
 
 import { Injectable } from '@angular/core';
 import PostalMime, { type Attachment, type Address } from 'postal-mime';
 import { AttachmentKind, EmlAddress, ParsedEml } from './eml.types';
+
+/** Punto transparente. El aspecto del hueco lo da el CSS del iframe. */
+const PLACEHOLDER_REMOTO =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>');
 
 @Injectable({ providedIn: 'root' })
 export class EmlService {
@@ -29,6 +36,7 @@ export class EmlService {
         cidsUsados.add(this.limpiarCid(cid));
         return this.dataUrl(att);
       });
+      html = this.marcarImagenesRemotas(html);
     }
 
     // Adjuntos "de verdad": todo lo que no se embebió como imagen inline.
@@ -128,6 +136,35 @@ export class EmlService {
   }
 
   /** Detección simple de recursos remotos en el HTML (imágenes de rastreo, etc.). */
+  /**
+   * Sustituye el `src` remoto de cada <img> por un marcador y guarda el
+   * original en `data-remoto`.
+   *
+   * Sin esto el navegador pinta el ícono de imagen rota —la CSP las bloquea— y
+   * en una herramienta de auditoría eso se lee como si el correo enviado
+   * estuviera dañado, cuando el correo está bien y somos nosotros los que no
+   * las cargamos. El marcador lo deja explícito y conserva el hueco, así que la
+   * maquetación del correo no se desarma.
+   *
+   * La CSP del iframe bloquea igual cualquier `src` remoto que se escape de
+   * esta sustitución: esto es presentación, no el control de seguridad.
+   */
+  private marcarImagenesRemotas(html: string): string {
+    return html.replace(
+      /<img[^>]*>/gi,
+      (tag) => {
+        const m = /\ssrc\s*=\s*("|')?(https?:\/\/[^"'\s>]+)?/i.exec(tag);
+        if (!m) return tag;
+        return tag
+          .replace(m[0], ` src="${PLACEHOLDER_REMOTO}" data-remoto="${this.escapar(m[2])}"`);
+      },
+    );
+  }
+
+  private escapar(v: string): string {
+    return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
   private tieneRemoto(html: string | null): boolean {
     if (!html) return false;
     return /(?:src|background|href)\s*=\s*["']?https?:\/\//i.test(html) || /url\(\s*["']?https?:\/\//i.test(html);

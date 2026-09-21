@@ -124,7 +124,7 @@ export class ColMenuComponent {
    * sin traducción se muestra tal cual, para que un código nuevo del origen
    * aparezca en el filtro en vez de desaparecer.
    */
-  readonly etiquetas = input<Record<string, string>>({});
+  readonly etiquetas = input<Record<string, string | undefined>>({});
   /** Columna de fecha ⇒ el cuerpo del menú es el filtro de fecha (árbol + presets). */
   readonly esFecha = input(false);
   /** Fechas del índice (para el árbol año/mes/día). */
