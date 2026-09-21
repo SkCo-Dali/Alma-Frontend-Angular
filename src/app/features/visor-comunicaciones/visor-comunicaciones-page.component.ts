@@ -167,8 +167,13 @@ function leerAnchoGuardado(): number {
                     <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                       {{ c.destinatarios[0] || c.remitenteEmail }}
                     </span>
-                    @if (c.estado) {
-                      <span class="alma-badge shrink-0" [class]="claseEstado(c.estado)">{{ c.estado }}</span>
+                    @if (estadoVisible(c); as est) {
+                      <span
+                        class="alma-badge shrink-0"
+                        [class]="claseEstado(est.crudo)"
+                        [title]="est.titulo"
+                        >{{ est.texto }}</span
+                      >
                     }
                   </div>
                   <span class="truncate text-xs text-muted-foreground">{{ c.asunto }}</span>
@@ -216,9 +221,9 @@ function leerAnchoGuardado(): number {
               <!-- Franja de metadatos -->
               <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 @if (refActual(); as r) {
-                  @if (r.estado) {
-                    <span class="alma-badge" [class]="claseEstado(r.estado)">
-                      <lucide-icon [name]="iconoEstado(r.estado)" [size]="12" /> {{ r.estado }}
+                  @if (estadoVisible(r); as est) {
+                    <span class="alma-badge" [class]="claseEstado(est.crudo)" [title]="est.titulo">
+                      <lucide-icon [name]="iconoEstado(est.crudo)" [size]="12" /> {{ est.texto }}
                     </span>
                   }
                   <span><span class="font-medium text-foreground">Para:</span> {{ r.destinatarios[0] || '—' }}</span>
@@ -759,6 +764,49 @@ export class VisorComunicacionesPageComponent {
     }
   }
 
+  /**
+   * Etiquetas de los estados que reporta Communication Services. El backend
+   * devuelve el valor CRUDO (así el color y el ícono siguen funcionando si
+   * aparece uno nuevo) y aquí se traduce lo conocido.
+   */
+  private readonly ESTADOS: Record<string, string> = {
+    succeeded: 'Enviado',
+    delivered: 'Entregado',
+    bounced: 'Rebotado',
+    failed: 'Falló',
+    suppressed: 'Suprimido',
+    view: 'Abierto',
+    open: 'Abierto',
+    click: 'Clic',
+  };
+
+  /**
+   * Qué estado mostrar en la fila y en la cabecera del detalle.
+   *
+   * Manda el ÚLTIMO estado registrado, no el del envío: `estado` es el
+   * resultado de entregarle el correo al proveedor ("Succeeded") y se queda en
+   * eso aunque después rebote. La bandeja mostraba «Succeeded» en correos que
+   * nunca llegaron. El del envío queda en el tooltip, que es donde sirve.
+   */
+  protected estadoVisible(
+    c: ComunicacionRef,
+  ): { texto: string; crudo: string; titulo: string } | null {
+    const entrega = c.estadoEntrega;
+    if (entrega) {
+      return {
+        texto: this.ESTADOS[entrega.toLowerCase()] ?? entrega,
+        crudo: entrega,
+        titulo: `Último estado: ${entrega}. Envío: ${c.estado}.`,
+      };
+    }
+    if (!c.estado) return null;
+    return {
+      texto: this.ESTADOS[c.estado.toLowerCase()] ?? c.estado,
+      crudo: c.estado,
+      titulo: `Envío: ${c.estado}. Sin eventos reportados todavía.`,
+    };
+  }
+
   protected claseEstado(estado?: string): string {
     const e = (estado || '').toLowerCase();
     if (e.includes('succ') || e.includes('deliver') || e.includes('entreg')) {
@@ -779,12 +827,20 @@ export class VisorComunicacionesPageComponent {
 
   protected etiquetaEvento(e: EventoTraza): string {
     const est = (e.estado || '').toLowerCase();
+    if (e.tipo === 'Envío') {
+      return est === 'succeeded' ? 'Enviado' : `Envío: ${this.ESTADOS[est] ?? e.estado}`;
+    }
     if (e.tipo === 'Engagement') {
       if (est === 'click') return 'Clic en un enlace';
       if (est === 'view' || est === 'open') return 'Correo abierto';
       return `Engagement: ${e.estado}`;
     }
-    if (e.tipo === 'Entrega') return `Entrega: ${e.estado}`;
+    if (e.tipo === 'Entrega') {
+      // Hasta sep-2026 el backend leía el campo equivocado y aquí llegaba
+      // siempre el literal "Entrega", así que un rebote se veía igual que una
+      // entrega exitosa.
+      return `Entrega: ${this.ESTADOS[est] ?? e.estado}`;
+    }
     return `${e.tipo}: ${e.estado}`;
   }
 
