@@ -15,8 +15,8 @@ const API_BASE = environment.apiUrl.replace(/\/+$/, '');
 
 /** Un evento de la traza de un envío (entrega o engagement de ACS). */
 export interface EventoTraza {
-  tipo: string; // "Entrega" | "Engagement" | ...
-  estado: string; // Delivered/Bounced/... | click/view
+  tipo: string; // "Envío" | "Entrega" | "Engagement" | ...
+  estado: string; // Delivered/Bounced/... | click/view | Succeeded (hito de envío)
   fecha: string | null;
   destinatario?: string | null;
   contexto?: string | null;

@@ -17,8 +17,20 @@ export interface ComunicacionRef {
   tamanoBytes: number;
   /** URL del .eml (hoy en /mock-eml; mañana un blob SAS de Azure). */
   archivo: string;
-  /** Estado del envío (Cosmos send-mail): Succeeded / Failed / … */
+  /** Resultado del ENVÍO al proveedor (Cosmos send-mail): Succeeded / Failed. */
   estado?: string;
+  /**
+   * Último estado registrado por Communication Services DESPUÉS del envío:
+   * Delivered / Bounced / Failed / Suppressed, o view / click si hubo
+   * interacción. null mientras no haya eventos reportados.
+   *
+   * Es el que manda en la bandeja: `estado` se queda en "Succeeded" aunque el
+   * correo rebote después, porque describe la entrega al proveedor y no al
+   * destinatario.
+   */
+  estadoEntrega?: string | null;
+  estadoEntregaTipo?: string | null;
+  estadoEntregaEn?: string | null;
   /** Mensaje de error del envío, si falló. */
   error?: string | null;
   /** Número de póliza (inferido del adjunto). */
