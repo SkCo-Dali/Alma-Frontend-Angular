@@ -255,17 +255,6 @@ function leerAnchoGuardado(): number {
                     }
                   </button>
                 }
-                @if (refActual(); as r) {
-                  <a
-                    [href]="'/apps/visor-comunicaciones/correo/' + r.id"
-                    target="_blank"
-                    rel="noopener"
-                    class="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    title="Abre este correo solo, en una pestaña nueva de Alma"
-                  >
-                    <lucide-icon name="external-link" [size]="16" /> Abrir en pestaña nueva
-                  </a>
-                }
               </div>
             </header>
 
