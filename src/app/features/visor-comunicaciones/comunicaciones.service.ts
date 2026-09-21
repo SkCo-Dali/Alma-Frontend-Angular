@@ -112,14 +112,6 @@ export class ComunicacionesService {
   }
 
   /** Bytes del .eml de una comunicación (para parsear/render en el visor). */
-  /**
-   * El .eml a partir del id del envío, para la vista de pantalla completa, que
-   * llega por URL y no tiene la fila cargada.
-   */
-  obtenerEmlPorId(id: string): Promise<ArrayBuffer> {
-    return this.obtenerEml({ archivo: `/api/comunicaciones/${id}/eml` } as ComunicacionRef);
-  }
-
   async obtenerEml(ref: ComunicacionRef): Promise<ArrayBuffer> {
     if (this.usarMock) {
       const resp = await fetch(ref.archivo);
