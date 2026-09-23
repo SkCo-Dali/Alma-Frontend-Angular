@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
+import { UW_BADGE } from '../suscripcion.domain';
 import { FiltroPeriodoComponent } from './filtro-periodo.component';
 import { FiltroValoresComponent, OpcionFiltro } from './filtro-valores.component';
 import { ColumnHeaderMenuComponent } from '../grid/column-header-menu.component';
@@ -354,9 +355,16 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                       <p class="truncate text-[11px] text-muted-foreground">{{ f.cedula }}</p>
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2">
-                      <span class="alma-badge capitalize" [class]="badgeEstado(f.estado)">
-                        {{ f.estado.replace('_', ' ') }}
-                      </span>
+                      @if (f.estadoPipelineDesc) {
+                        <span class="alma-badge" [class]="badgeUw(f.estadoPipeline)">
+                          {{ f.estadoPipelineDesc }}
+                        </span>
+                        @if (f.subestadoPipelineDesc) {
+                          <p class="mt-0.5 text-[11px] text-muted-foreground">{{ f.subestadoPipelineDesc }}</p>
+                        }
+                      } @else {
+                        <span class="text-xs text-muted-foreground">—</span>
+                      }
                     </td>
                     <td class="max-w-0 border-b border-border/50 px-3 py-2">
                       <p class="truncate text-xs text-foreground" [title]="f.decision || ''">{{ f.decision || '—' }}</p>
@@ -446,13 +454,17 @@ export class ReporteriaPageComponent {
   protected readonly columnas: { label: string; clave: ColumnaAuditoria; ayuda?: string }[] = [
     { label: 'Cotización', clave: 'nroCotizacion' },
     { label: 'Asegurado', clave: 'nombre' },
-    { label: 'Estado', clave: 'estado' },
+    {
+      label: 'Estado Pipeline',
+      clave: 'estadoPipeline',
+      ayuda: 'Estado y subestado de la póliza en Pipeline, que es la fuente de verdad.',
+    },
     { label: 'Última decisión', clave: 'decision' },
     {
-      label: 'Motor evaluó',
+      label: 'Evaluado por',
       clave: 'analista',
       ayuda:
-        'Quién disparó la última evaluación del motor: motor-auto si fue la automática, o el analista que la re-evaluó.',
+        'Quién disparó la última evaluación del motor: la automática, al llegar la solicitud, o el analista que la re-evaluó.',
     },
     { label: 'Gestionó', clave: 'gestiono', ayuda: 'Quién emitió la póliza en Pipeline.' },
     { label: 'Ingreso', clave: 'fechaIngreso' },
@@ -467,7 +479,7 @@ export class ReporteriaPageComponent {
   protected readonly DEFS: GridColumnsResponse = {
     nroCotizacion: this.def('string'),
     nombre: this.def('string'),
-    estado: this.def('string', true),
+    estadoPipeline: this.def('string', true),
     decision: this.def('string', true),
     analista: this.def('string', true),
     gestiono: this.def('string', true),
@@ -773,18 +785,8 @@ export class ReporteriaPageComponent {
     }
   }
 
-  protected badgeEstado(estado: string): string {
-    switch (estado) {
-      case 'emitido':
-        return 'bg-[#10b981]/12 text-[#047857] dark:text-[#34d399]';
-      case 'devuelto':
-        return 'bg-destructive/12 text-destructive';
-      case 'escalado':
-        return 'bg-[#FF9200]/14 text-[#b56800] dark:text-[#ffb04a]';
-      case 'en_revision':
-        return 'bg-[#02B1FF]/12 text-[#0270b8] dark:text-[#5cc3ff]';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
+  /** Mismos colores de estado que la bandeja. */
+  protected badgeUw(codigo: string | null): string {
+    return UW_BADGE[codigo ?? ''] ?? 'bg-muted text-muted-foreground';
   }
 }

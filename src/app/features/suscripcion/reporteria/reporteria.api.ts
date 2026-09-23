@@ -65,6 +65,11 @@ export interface FilaAuditoria {
   minutosAEmision: number | null;
   /** Quién emitió la póliza en Pipeline (IssuanceUser), en minúsculas. */
   gestiono: string | null;
+  /** Estado de la póliza en Pipeline: código (para el color) y descripción. */
+  estadoPipeline: string | null;
+  estadoPipelineDesc: string | null;
+  /** Subestado en Pipeline; null cuando no aplica. */
+  subestadoPipelineDesc: string | null;
 }
 
 export interface PaginaAuditoria {
@@ -96,7 +101,7 @@ export interface OpcionesReporteria {
 export type ColumnaAuditoria =
   | 'nroCotizacion'
   | 'nombre'
-  | 'estado'
+  | 'estadoPipeline'
   | 'decision'
   | 'analista'
   | 'gestiono'
