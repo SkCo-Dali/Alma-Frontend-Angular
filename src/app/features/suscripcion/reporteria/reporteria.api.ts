@@ -6,6 +6,11 @@
 
 import { inject, Injectable } from '@angular/core';
 import { ApiService } from '../../../core/services/api.service';
+import {
+  ApiFilters,
+  DistinctRequest,
+  DistinctResponse,
+} from '../grid/suscripcion-grid.api';
 
 export interface ConteoEstado {
   estado: string;
@@ -58,6 +63,8 @@ export interface FilaAuditoria {
   evaluadaEn: string | null;
   fechaEmision: string | null;
   minutosAEmision: number | null;
+  /** Quién emitió la póliza en Pipeline (IssuanceUser), en minúsculas. */
+  gestiono: string | null;
 }
 
 export interface PaginaAuditoria {
@@ -85,13 +92,14 @@ export interface OpcionesReporteria {
   analistas?: ConteoAnalista[];
 }
 
-/** Columnas de la auditoría por las que se puede ordenar (lista blanca del backend). */
+/** Columnas de la auditoría que se filtran y ordenan (lista blanca del backend). */
 export type ColumnaAuditoria =
   | 'nroCotizacion'
   | 'nombre'
   | 'estado'
   | 'decision'
   | 'analista'
+  | 'gestiono'
   | 'fechaIngreso'
   | 'fechaEmision'
   | 'minutosAEmision';
@@ -99,6 +107,19 @@ export type ColumnaAuditoria =
 export interface OrdenAuditoria {
   columna: ColumnaAuditoria;
   direccion: 'asc' | 'desc';
+}
+
+/** Lo que acota la vista entera: periodo y resultado del motor. */
+export type ContextoAuditoria = Pick<FiltrosReporteria, 'desde' | 'hasta' | 'decision'>;
+
+/** Consulta de la auditoría con filtros por columna, en el formato de la bandeja. */
+export interface ConsultaAuditoria extends ContextoAuditoria {
+  search?: string;
+  filters?: ApiFilters;
+  sortBy?: ColumnaAuditoria;
+  sortDir?: 'asc' | 'desc';
+  limit: number;
+  offset: number;
 }
 
 export interface FiltrosReporteria {
@@ -140,21 +161,34 @@ export class ReporteriaApi {
     return this.api.fetch<OpcionesReporteria>('/api/suscripcion/reporteria/opciones');
   }
 
-  /** Traza fila por fila, filtrable y paginada (`cursor` = offset). */
-  auditoria(
-    f: FiltrosReporteria = {},
-    limit = 50,
-    cursor: number | null = null,
-    orden: OrdenAuditoria | null = null,
-  ): Promise<PaginaAuditoria> {
-    const extra: Record<string, string> = { limit: String(limit) };
-    if (cursor != null) extra['cursor'] = String(cursor);
-    if (orden) {
-      extra['orden'] = orden.columna;
-      extra['direccion'] = orden.direccion;
-    }
-    return this.api.fetch<PaginaAuditoria>(
-      `/api/suscripcion/reporteria/auditoria${this.qs(f, extra)}`,
-    );
+  /** Traza fila por fila, con filtro por columna y paginada por offset. */
+  auditoria(consulta: ConsultaAuditoria): Promise<PaginaAuditoria> {
+    return this.api.fetch<PaginaAuditoria>('/api/suscripcion/reporteria/auditoria', {
+      method: 'POST',
+      body: JSON.stringify(consulta),
+    });
+  }
+}
+
+/**
+ * Los filtros de columna de la bandeja (valores con casillas, árbol de fechas)
+ * piden sus valores a `SuscripcionGridApi.fetchDistinctValues`, que apunta a la
+ * bandeja. La página de reportería provee ESTA clase en su lugar, así los mismos
+ * componentes sirven para la auditoría sin tocarlos: los valores salen de las
+ * solicitudes de la auditoría, acotados por el periodo y el resultado del motor
+ * que estén elegidos, y no de la bandeja.
+ */
+@Injectable()
+export class AuditoriaDistinctApi {
+  private readonly api = inject(ApiService);
+
+  /** Lo pone la página: periodo y resultado elegidos en ese momento. */
+  contexto: () => ContextoAuditoria = () => ({});
+
+  fetchDistinctValues(request: DistinctRequest): Promise<DistinctResponse> {
+    return this.api.fetch<DistinctResponse>('/api/suscripcion/reporteria/auditoria/distincts', {
+      method: 'POST',
+      body: JSON.stringify({ ...this.contexto(), ...request }),
+    });
   }
 }
