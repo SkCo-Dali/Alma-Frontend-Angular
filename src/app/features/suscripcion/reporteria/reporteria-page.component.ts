@@ -13,9 +13,11 @@ import { GridPaginationComponent } from '../../../shared/components/grid-paginat
 import { FiltroPeriodoComponent } from './filtro-periodo.component';
 import { FiltroValoresComponent, OpcionFiltro } from './filtro-valores.component';
 import {
+  ColumnaAuditoria,
   ConteoValor,
   FiltrosReporteria,
   OpcionesReporteria,
+  OrdenAuditoria,
   PaginaAuditoria,
   ReporteriaApi,
   ResumenReporteria,
@@ -276,12 +278,12 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
               [seleccion]="estadoInput"
               (seleccionar)="onEstado($event)"
             />
-            <input
-              [(ngModel)]="analistaInput"
-              name="analista"
-              type="text"
-              placeholder="Analista"
-              class="alma-input h-8 w-32 rounded-lg px-2 text-xs"
+            <alma-filtro-valores
+              etiqueta="Evaluó"
+              todosLabel="Todos"
+              [opciones]="opcionesAnalista()"
+              [seleccion]="analistaInput"
+              (seleccionar)="onAnalista($event)"
             />
             <button type="button" (click)="aplicarAuditoria()" class="alma-btn alma-btn-outline h-8 rounded-lg px-3 text-xs">
               Filtrar
@@ -298,11 +300,25 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
             <table class="w-full border-separate border-spacing-0 text-sm">
               <thead class="sticky top-0 z-10">
                 <tr>
-                  @for (c of columnas; track c) {
+                  @for (c of columnas; track c.clave) {
                     <th
-                      class="whitespace-nowrap border-b border-border bg-[var(--table-header)] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65"
+                      class="whitespace-nowrap border-b border-border bg-[var(--table-header)] p-0 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65"
+                      [attr.aria-sort]="ariaSort(c.clave)"
                     >
-                      {{ c }}
+                      <button
+                        type="button"
+                        (click)="ordenarPor(c.clave)"
+                        class="flex w-full items-center gap-1 px-3 py-2 uppercase tracking-wider transition-colors hover:text-foreground"
+                        [class.text-foreground]="orden()?.columna === c.clave"
+                        [title]="'Ordenar por ' + c.label"
+                      >
+                        {{ c.label }}
+                        <lucide-icon
+                          [name]="iconoOrden(c.clave)"
+                          [size]="12"
+                          [class.opacity-30]="orden()?.columna !== c.clave"
+                        />
+                      </button>
                     </th>
                   }
                 </tr>
@@ -392,16 +408,34 @@ export class ReporteriaPageComponent {
   protected readonly pagina = signal(1);
   protected readonly tamanoPagina = signal(50);
 
-  protected readonly columnas = [
-    'Cotización',
-    'Asegurado',
-    'Estado',
-    'Última decisión',
-    'Evaluó',
-    'Ingreso',
-    'Emisión',
-    'Tiempo',
+  /**
+   * Columnas de la tabla con su clave de orden. La clave es la que el backend
+   * resuelve contra una lista blanca: nada de lo que viaja se interpola en el
+   * SQL. «Asegurado» ordena por nombre, que es lo primero que se lee en la celda.
+   */
+  protected readonly columnas: { label: string; clave: ColumnaAuditoria }[] = [
+    { label: 'Cotización', clave: 'nroCotizacion' },
+    { label: 'Asegurado', clave: 'nombre' },
+    { label: 'Estado', clave: 'estado' },
+    { label: 'Última decisión', clave: 'decision' },
+    { label: 'Evaluó', clave: 'analista' },
+    { label: 'Ingreso', clave: 'fechaIngreso' },
+    { label: 'Emisión', clave: 'fechaEmision' },
+    { label: 'Tiempo', clave: 'minutosAEmision' },
   ];
+
+  /** null = orden por defecto del backend (ingreso, más reciente primero). */
+  protected readonly orden = signal<OrdenAuditoria | null>(null);
+
+  /**
+   * Columnas cuyo primer clic trae lo MÁS reciente o lo más largo primero, que
+   * es lo que se busca al auditar. Las de texto arrancan de la A a la Z.
+   */
+  private readonly DESC_POR_DEFECTO = new Set<ColumnaAuditoria>([
+    'fechaIngreso',
+    'fechaEmision',
+    'minutosAEmision',
+  ]);
 
   protected readonly totalPaginas = computed(() =>
     Math.ceil((this.auditoria()?.total ?? 0) / this.tamanoPagina()),
@@ -424,6 +458,18 @@ export class ReporteriaPageComponent {
     (this.resumen()?.decisiones ?? this.opciones()?.decisiones ?? []).map((d) => ({
       valor: d.decision,
       total: d.total,
+    })),
+  );
+  /**
+   * Quién hizo la última evaluación. `motor-auto` es la evaluación automática
+   * del motor —el 80% en prd—, no una persona, y se rotula así para que no se
+   * confunda con un analista.
+   */
+  protected readonly opcionesAnalista = computed<OpcionFiltro[]>(() =>
+    (this.opciones()?.analistas ?? []).map((a) => ({
+      valor: a.analista,
+      total: a.total,
+      etiqueta: a.analista === 'motor-auto' ? 'Motor (automático)' : a.analista,
     })),
   );
   protected readonly opcionesEstado = computed<OpcionFiltro[]>(() =>
@@ -480,7 +526,7 @@ export class ReporteriaPageComponent {
     return {
       ...this.filtrosBase(),
       estado: this.estadoInput || undefined,
-      analista: this.analistaInput.trim() || undefined,
+      analista: this.analistaInput || undefined,
       q: this.qInput.trim() || undefined,
     };
   }
@@ -504,7 +550,12 @@ export class ReporteriaPageComponent {
     try {
       const offset = (pagina - 1) * this.tamanoPagina();
       this.auditoria.set(
-        await this.api.auditoria(this.filtrosAuditoria(), this.tamanoPagina(), offset),
+        await this.api.auditoria(
+          this.filtrosAuditoria(),
+          this.tamanoPagina(),
+          offset,
+          this.orden(),
+        ),
       );
       this.pagina.set(pagina);
     } catch (e) {
@@ -522,6 +573,41 @@ export class ReporteriaPageComponent {
     this.desdeInput = r.desde;
     this.hastaInput = r.hasta;
     void this.cargar();
+  }
+
+  protected onAnalista(valor: string): void {
+    if (valor === this.analistaInput) return;
+    this.analistaInput = valor;
+    void this.cargarAuditoria(1);
+  }
+
+  /**
+   * Clic en un encabezado: la misma columna invierte el sentido; otra columna
+   * arranca en su sentido natural. Siempre vuelve a la primera página, porque la
+   * página 3 de un orden no tiene nada que ver con la página 3 de otro.
+   */
+  protected ordenarPor(columna: ColumnaAuditoria): void {
+    const actual = this.orden();
+    let direccion: 'asc' | 'desc';
+    if (actual?.columna === columna) {
+      direccion = actual.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+      direccion = this.DESC_POR_DEFECTO.has(columna) ? 'desc' : 'asc';
+    }
+    this.orden.set({ columna, direccion });
+    void this.cargarAuditoria(1);
+  }
+
+  protected iconoOrden(columna: ColumnaAuditoria): string {
+    const o = this.orden();
+    if (o?.columna !== columna) return 'arrow-up-down';
+    return o.direccion === 'asc' ? 'arrow-up' : 'arrow-down';
+  }
+
+  protected ariaSort(columna: ColumnaAuditoria): 'ascending' | 'descending' | 'none' {
+    const o = this.orden();
+    if (o?.columna !== columna) return 'none';
+    return o.direccion === 'asc' ? 'ascending' : 'descending';
   }
 
   protected onEstado(valor: string): void {
