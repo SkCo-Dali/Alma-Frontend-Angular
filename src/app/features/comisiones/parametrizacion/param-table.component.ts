@@ -144,8 +144,15 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                 </tr>
               </thead>
               <tbody>
-                @for (row of pagina(); track $index) {
-                  <tr class="group transition-colors hover:bg-primary/5">
+                @for (row of pagina(); track trackFila(row, $index)) {
+                  <tr
+                    class="group transition-colors duration-1000"
+                    [class]="
+                      esResaltada(row)
+                        ? 'bg-emerald-100/95 shadow-[inset_3px_0_0_0_var(--primary)] ring-1 ring-inset ring-emerald-400/60 dark:bg-emerald-500/25 dark:ring-emerald-400/50'
+                        : 'hover:bg-primary/5'
+                    "
+                  >
                     @for (col of columns(); track col.key) {
                       <td
                         [class]="
@@ -307,6 +314,8 @@ export class ParamTableComponent {
   readonly conAcciones = input(true);
   readonly mensajeVacio = input('No se encontraron registros.');
   readonly anchoMinimo = input('900px');
+  /** IDs de filas a resaltar temporalmente (p. ej. tras carga masiva). */
+  readonly idsResaltados = input<ReadonlySet<string> | string[]>([]);
 
   readonly pageChange = output<number>();
   readonly itemsPerPageChange = output<number>();
@@ -319,6 +328,20 @@ export class ParamTableComponent {
   protected readonly tamanos = PARAM_PAGE_SIZE_OPTIONS;
   protected readonly menu = signal<ParamRow | null>(null);
   private anchor: DOMRect | null = null;
+
+  protected trackFila(row: ParamRow, index: number): string {
+    const id = row['id'];
+    return id !== undefined && id !== null ? String(id) : `i-${index}`;
+  }
+
+  protected esResaltada(row: ParamRow): boolean {
+    const id = row['id'];
+    if (id === undefined || id === null) return false;
+    const ids = this.idsResaltados();
+    const clave = String(id);
+    if (Array.isArray(ids)) return ids.includes(clave);
+    return ids.has(clave);
+  }
 
   protected valorFueraDeOpciones(row: ParamRow, col: ParamColumn): boolean {
     const actual = this.valorSelect(row, col);

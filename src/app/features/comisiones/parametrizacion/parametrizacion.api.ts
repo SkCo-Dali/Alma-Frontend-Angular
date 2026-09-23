@@ -397,6 +397,41 @@ export class ParametrizacionApi {
     );
   }
 
+  /** Plantilla Excel para carga masiva de ajustes. */
+  descargarPlantillaAjustes(): Promise<void> {
+    return this.http.descargar(
+      '/api/commission-adjustments/template',
+      'plantilla_ajustes_comisiones.xlsx',
+    );
+  }
+
+  /** Cabeceras de la tabla de previsualización del cargue masivo. */
+  getAjustesTemplateColumns(): Promise<unknown> {
+    return this.http.get('/api/commission-adjustments/template/columns');
+  }
+
+  /** Valida el archivo de carga masiva enviando el Excel. */
+  validateAjustesBatch(file: File): Promise<unknown> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.upload(
+      '/api/commission-adjustments/batches/validate',
+      form,
+      'Error validando el archivo de ajustes',
+    );
+  }
+
+  /** Confirma el archivo de carga masiva ya validado sin errores. */
+  confirmAjustesBatch(file: File): Promise<unknown> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.upload(
+      '/api/commission-adjustments/batches/confirm',
+      form,
+      'Error confirmando el archivo de ajustes',
+    );
+  }
+
   // ── 8. Casos especiales ───────────────────────────────────────────────────
 
   /** El listado puede llegar como arreglo plano o como {items}. */
