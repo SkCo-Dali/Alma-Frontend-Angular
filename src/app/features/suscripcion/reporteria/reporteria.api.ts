@@ -72,10 +72,33 @@ export interface DiaConSolicitudes {
 }
 
 /** Valores de los filtros (toda la base, sin acotar por lo que ya esté aplicado). */
+export interface ConteoAnalista {
+  analista: string;
+  total: number;
+}
+
 export interface OpcionesReporteria {
   fechas: DiaConSolicitudes[];
   decisiones: ConteoDecision[];
   estados: ConteoEstado[];
+  /** Quién hizo la última evaluación. Pocos valores: va entero. */
+  analistas?: ConteoAnalista[];
+}
+
+/** Columnas de la auditoría por las que se puede ordenar (lista blanca del backend). */
+export type ColumnaAuditoria =
+  | 'nroCotizacion'
+  | 'nombre'
+  | 'estado'
+  | 'decision'
+  | 'analista'
+  | 'fechaIngreso'
+  | 'fechaEmision'
+  | 'minutosAEmision';
+
+export interface OrdenAuditoria {
+  columna: ColumnaAuditoria;
+  direccion: 'asc' | 'desc';
 }
 
 export interface FiltrosReporteria {
@@ -118,9 +141,18 @@ export class ReporteriaApi {
   }
 
   /** Traza fila por fila, filtrable y paginada (`cursor` = offset). */
-  auditoria(f: FiltrosReporteria = {}, limit = 50, cursor: number | null = null): Promise<PaginaAuditoria> {
+  auditoria(
+    f: FiltrosReporteria = {},
+    limit = 50,
+    cursor: number | null = null,
+    orden: OrdenAuditoria | null = null,
+  ): Promise<PaginaAuditoria> {
     const extra: Record<string, string> = { limit: String(limit) };
     if (cursor != null) extra['cursor'] = String(cursor);
+    if (orden) {
+      extra['orden'] = orden.columna;
+      extra['direccion'] = orden.direccion;
+    }
     return this.api.fetch<PaginaAuditoria>(
       `/api/suscripcion/reporteria/auditoria${this.qs(f, extra)}`,
     );
