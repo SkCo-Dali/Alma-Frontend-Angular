@@ -10,6 +10,7 @@ import { AccessDeniedComponent } from '../../../shared/components/access-denied.
 import { MOTOR_COMISIONES_PERMS } from '../motor-comisiones.permissions';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
 import { CommissionPlansApi } from '../planes/commission-plans.api';
+import { AjustesCargaMasivaDialogComponent } from './ajustes-carga-masiva-dialog.component';
 import {
   ParamField,
   ParamFormDialogComponent,
@@ -35,6 +36,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
     AlmaLoaderComponent,
     ParamTableComponent,
     ParamFormDialogComponent,
+    AjustesCargaMasivaDialogComponent,
   ],
   template: `
     @if (!tieneAcceso()) {
@@ -93,15 +95,29 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
                   <p class="text-xs text-muted-foreground">{{ spec.subtitulo }}</p>
                 }
               </div>
-              @if (spec.botonCrear) {
-                <button
-                  type="button"
-                  (click)="abrirCrear(id)"
-                  class="alma-btn alma-btn-primary h-10 shrink-0 rounded-xl px-4"
-                >
-                  <lucide-icon name="plus" [size]="16" class="mr-2" />
-                  {{ spec.botonCrear }}
-                </button>
+              @if (spec.botonCargaMasiva || spec.botonCrear) {
+                <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                  @if (spec.botonCargaMasiva) {
+                    <button
+                      type="button"
+                      (click)="abrirCargaMasiva()"
+                      class="alma-btn alma-btn-outline h-10 w-full rounded-xl px-4 sm:w-auto"
+                    >
+                      <lucide-icon name="folder-input" [size]="16" class="mr-2" />
+                      {{ spec.botonCargaMasiva }}
+                    </button>
+                  }
+                  @if (spec.botonCrear) {
+                    <button
+                      type="button"
+                      (click)="abrirCrear(id)"
+                      class="alma-btn alma-btn-primary h-10 w-full rounded-xl px-4 sm:w-auto"
+                    >
+                      <lucide-icon name="plus" [size]="16" class="mr-2" />
+                      {{ spec.botonCrear }}
+                    </button>
+                  }
+                </div>
               }
             </div>
 
@@ -206,6 +222,7 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
                 [itemsPerPage]="porPagina(id)"
                 [conAcciones]="!spec.soloLectura"
                 [anchoMinimo]="spec.anchoMinimo"
+                [idsResaltados]="id === 'ajustesComisiones' ? idsAjustesResaltados() : []"
                 (pageChange)="setPagina(id, $event)"
                 (itemsPerPageChange)="setPorPagina(id, $event)"
                 (editar)="abrirEditar(id, $event)"
@@ -231,6 +248,14 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
           [validarExtra]="f.validar"
           (guardar)="guardarFormulario($event)"
           (closed)="formulario.set(null)"
+        />
+      }
+
+      <!-- Carga masiva de ajustes -->
+      @if (cargaMasivaAbierta()) {
+        <alma-ajustes-carga-masiva-dialog
+          (closed)="cargaMasivaAbierta.set(false)"
+          (guardado)="onCargaMasivaGuardada($event)"
         />
       }
 
@@ -290,6 +315,10 @@ export class ParametrizacionPageComponent implements OnInit {
   protected hasta = '';
 
   protected readonly porBorrar = signal<{ seccion: SeccionId; row: ParamRow } | null>(null);
+  protected readonly cargaMasivaAbierta = signal(false);
+  /** IDs de ajustes recién cargados masivamente (resalte temporal). */
+  protected readonly idsAjustesResaltados = signal<ReadonlySet<string>>(new Set());
+  private timerResalteAjustes: ReturnType<typeof setTimeout> | null = null;
   protected readonly formulario = signal<{
     seccion: SeccionId;
     editando: ParamRow | null;
@@ -420,6 +449,36 @@ export class ParametrizacionPageComponent implements OnInit {
 
   private ctx(id: SeccionId): FormCtx {
     return { categoria: this.categoria(id), planes: this.planes() };
+  }
+
+  protected abrirCargaMasiva(): void {
+    this.cargaMasivaAbierta.set(true);
+  }
+
+  protected async onCargaMasivaGuardada(idsDelConfirm: string[]): Promise<void> {
+    this.cargaMasivaAbierta.set(false);
+    const idsAntes = new Set(
+      this.store.commissionAdjustments().map((r) => String(r.id)),
+    );
+    await this.store.cargarAjustes();
+
+    const idsNuevos =
+      idsDelConfirm.length > 0
+        ? idsDelConfirm
+        : this.store
+            .commissionAdjustments()
+            .map((r) => String(r.id))
+            .filter((id) => !idsAntes.has(id));
+
+    if (idsNuevos.length === 0) return;
+
+    if (this.timerResalteAjustes) clearTimeout(this.timerResalteAjustes);
+    this.idsAjustesResaltados.set(new Set(idsNuevos));
+    this.setPagina('ajustesComisiones', 1);
+    this.timerResalteAjustes = setTimeout(() => {
+      this.idsAjustesResaltados.set(new Set());
+      this.timerResalteAjustes = null;
+    }, 8000);
   }
 
   protected abrirCrear(id: SeccionId): void {
