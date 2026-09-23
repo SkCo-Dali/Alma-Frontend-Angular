@@ -10,8 +10,11 @@ import { colocarPanel } from '../../../shared/popover-position';
 import { PortalDirective } from '../../../shared/portal.directive';
 
 export interface OpcionFiltro {
+  /** Lo que se envía al backend. */
   valor: string;
   total: number;
+  /** Lo que se muestra, si difiere del valor (p. ej. "motor-auto"). */
+  etiqueta?: string;
 }
 
 @Component({
@@ -24,14 +27,14 @@ export interface OpcionFiltro {
       (click)="alternar($event)"
       class="glass flex h-9 max-w-[260px] items-center gap-1.5 rounded-xl px-3 text-sm transition-colors hover:text-primary"
       [class]="seleccion() ? 'text-foreground' : 'text-muted-foreground'"
-      [title]="etiqueta() + ': ' + (seleccion() || todosLabel())"
+      [title]="etiqueta() + ': ' + (etiquetaSeleccion() || todosLabel())"
     >
       @if (icono(); as ic) {
         <lucide-icon [name]="ic" [size]="15" [class.text-primary]="!!seleccion()" />
       }
       <span class="shrink-0">{{ etiqueta() }}</span>
       <span class="min-w-0 truncate" [class.font-medium]="!!seleccion()">
-        {{ seleccion() || todosLabel() }}
+        {{ etiquetaSeleccion() || todosLabel() }}
       </span>
       <lucide-icon name="chevron-down" [size]="14" class="shrink-0" />
     </button>
@@ -74,7 +77,7 @@ export interface OpcionFiltro {
               class="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-xs transition-colors hover:bg-accent"
             >
               <span class="shrink-0" [class]="marca(borrador() === o.valor)"></span>
-              <span class="min-w-0 flex-1 truncate" [title]="o.valor">{{ o.valor }}</span>
+              <span class="min-w-0 flex-1 truncate" [title]="o.valor">{{ o.etiqueta ?? o.valor }}</span>
               <span class="shrink-0 tabular-nums text-muted-foreground">({{ o.total }})</span>
             </button>
           } @empty {
@@ -117,6 +120,12 @@ export class FiltroValoresComponent {
   /** Valor aplicado; vacío = sin filtro. */
   readonly seleccion = input<string>('');
   readonly todosLabel = input('Todos');
+
+  /** Etiqueta del valor elegido; el botón no debe mostrar el valor crudo. */
+  protected readonly etiquetaSeleccion = computed(() => {
+    const v = this.seleccion();
+    return this.opciones().find((o) => o.valor === v)?.etiqueta ?? v;
+  });
   readonly icono = input<string | null>(null);
 
   readonly seleccionar = output<string>();
