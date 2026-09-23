@@ -167,8 +167,13 @@ function leerAnchoGuardado(): number {
                     <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                       {{ c.destinatarios[0] || c.remitenteEmail }}
                     </span>
-                    @if (c.estado) {
-                      <span class="alma-badge shrink-0" [class]="claseEstado(c.estado)">{{ c.estado }}</span>
+                    @if (estadoVisible(c); as est) {
+                      <span
+                        class="alma-badge shrink-0"
+                        [class]="claseEstado(est.crudo)"
+                        [title]="est.titulo"
+                        >{{ est.texto }}</span
+                      >
                     }
                   </div>
                   <span class="truncate text-xs text-muted-foreground">{{ c.asunto }}</span>
@@ -216,9 +221,9 @@ function leerAnchoGuardado(): number {
               <!-- Franja de metadatos -->
               <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 @if (refActual(); as r) {
-                  @if (r.estado) {
-                    <span class="alma-badge" [class]="claseEstado(r.estado)">
-                      <lucide-icon [name]="iconoEstado(r.estado)" [size]="12" /> {{ r.estado }}
+                  @if (estadoVisible(r); as est) {
+                    <span class="alma-badge" [class]="claseEstado(est.crudo)" [title]="est.titulo">
+                      <lucide-icon [name]="iconoEstado(est.crudo)" [size]="12" /> {{ est.texto }}
                     </span>
                   }
                   <span><span class="font-medium text-foreground">Para:</span> {{ r.destinatarios[0] || '—' }}</span>
@@ -257,17 +262,18 @@ function leerAnchoGuardado(): number {
               @switch (modo()) {
                 @case ('correo') {
                   <div class="flex h-full flex-col">
-                    @if (eml.hasRemoteContent && !cargarRemoto()) {
+                    @if (eml.hasRemoteContent) {
                       <div class="flex flex-wrap items-center gap-2 border-b border-border/60 bg-[var(--surface-sunken)] px-4 py-2 text-xs text-muted-foreground">
                         <lucide-icon name="shield-alert" [size]="15" class="text-primary" />
-                        <span class="flex-1">Se bloqueó contenido remoto (imágenes externas y rastreo).</span>
-                        <button type="button" (click)="cargarRemoto.set(true)" class="alma-btn alma-btn-outline h-7 rounded-lg text-xs">
-                          Cargar imágenes
-                        </button>
+                        <span class="flex-1">
+                          Este correo tenía imágenes alojadas fuera de Skandia. No se cargan:
+                          hacerlo le avisaría al remitente que alguien está viendo el mensaje.
+                          Las imágenes que viajaron dentro del correo sí se muestran.
+                        </span>
                       </div>
                     }
                     @if (eml.html) {
-                      <alma-email-frame class="min-h-0 flex-1" [html]="eml.html" [loadRemote]="cargarRemoto()" />
+                      <alma-email-frame class="min-h-0 flex-1" [html]="eml.html" />
                     } @else {
                       <pre class="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words bg-white p-5 text-sm leading-relaxed text-[#111]">{{ eml.text || 'Este correo no tiene cuerpo.' }}</pre>
                     }
@@ -431,7 +437,6 @@ export class VisorComunicacionesPageComponent {
   protected readonly parsed = signal<ParsedEml | null>(null);
   protected readonly cargandoDetalle = signal(false);
   protected readonly modo = signal<Modo>('correo');
-  protected readonly cargarRemoto = signal(false);
   protected readonly adjuntoSel = signal<EmlAttachment | null>(null);
 
   protected readonly traza = signal<EventoTraza[]>([]);
@@ -691,7 +696,6 @@ export class VisorComunicacionesPageComponent {
     this.error.set(null);
     this.modo.set('correo');
     this.adjuntoSel.set(null);
-    this.cargarRemoto.set(false);
     this.traza.set([]);
     try {
       const buffer = await this.comService.obtenerEml(c);
@@ -759,6 +763,49 @@ export class VisorComunicacionesPageComponent {
     }
   }
 
+  /**
+   * Etiquetas de los estados que reporta Communication Services. El backend
+   * devuelve el valor CRUDO (así el color y el ícono siguen funcionando si
+   * aparece uno nuevo) y aquí se traduce lo conocido.
+   */
+  private readonly ESTADOS: Record<string, string> = {
+    succeeded: 'Enviado',
+    delivered: 'Entregado',
+    bounced: 'Rebotado',
+    failed: 'Falló',
+    suppressed: 'Suprimido',
+    view: 'Abierto',
+    open: 'Abierto',
+    click: 'Clic',
+  };
+
+  /**
+   * Qué estado mostrar en la fila y en la cabecera del detalle.
+   *
+   * Manda el ÚLTIMO estado registrado, no el del envío: `estado` es el
+   * resultado de entregarle el correo al proveedor ("Succeeded") y se queda en
+   * eso aunque después rebote. La bandeja mostraba «Succeeded» en correos que
+   * nunca llegaron. El del envío queda en el tooltip, que es donde sirve.
+   */
+  protected estadoVisible(
+    c: ComunicacionRef,
+  ): { texto: string; crudo: string; titulo: string } | null {
+    const entrega = c.estadoEntrega;
+    if (entrega) {
+      return {
+        texto: this.ESTADOS[entrega.toLowerCase()] ?? entrega,
+        crudo: entrega,
+        titulo: `Último estado: ${entrega}. Envío: ${c.estado}.`,
+      };
+    }
+    if (!c.estado) return null;
+    return {
+      texto: this.ESTADOS[c.estado.toLowerCase()] ?? c.estado,
+      crudo: c.estado,
+      titulo: `Envío: ${c.estado}. Sin eventos reportados todavía.`,
+    };
+  }
+
   protected claseEstado(estado?: string): string {
     const e = (estado || '').toLowerCase();
     if (e.includes('succ') || e.includes('deliver') || e.includes('entreg')) {
@@ -779,12 +826,20 @@ export class VisorComunicacionesPageComponent {
 
   protected etiquetaEvento(e: EventoTraza): string {
     const est = (e.estado || '').toLowerCase();
+    if (e.tipo === 'Envío') {
+      return est === 'succeeded' ? 'Enviado' : `Envío: ${this.ESTADOS[est] ?? e.estado}`;
+    }
     if (e.tipo === 'Engagement') {
       if (est === 'click') return 'Clic en un enlace';
       if (est === 'view' || est === 'open') return 'Correo abierto';
       return `Engagement: ${e.estado}`;
     }
-    if (e.tipo === 'Entrega') return `Entrega: ${e.estado}`;
+    if (e.tipo === 'Entrega') {
+      // Hasta sep-2026 el backend leía el campo equivocado y aquí llegaba
+      // siempre el literal "Entrega", así que un rebote se veía igual que una
+      // entrega exitosa.
+      return `Entrega: ${this.ESTADOS[est] ?? e.estado}`;
+    }
     return `${e.tipo}: ${e.estado}`;
   }
 
