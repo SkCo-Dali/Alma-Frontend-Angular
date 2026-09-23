@@ -12,7 +12,18 @@ import { LucideAngularModule } from 'lucide-angular';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
 import { FiltroPeriodoComponent } from './filtro-periodo.component';
 import { FiltroValoresComponent, OpcionFiltro } from './filtro-valores.component';
+import { ColumnHeaderMenuComponent } from '../grid/column-header-menu.component';
+import { RangeOp } from '../grid/range-filter.component';
 import {
+  DistinctBaseRequest,
+  GridColumnsResponse,
+  GridFilter,
+  GridFilterOp,
+  SuscripcionGridApi,
+  filtersToApiFormat,
+} from '../grid/suscripcion-grid.api';
+import {
+  AuditoriaDistinctApi,
   ColumnaAuditoria,
   ConteoValor,
   FiltrosReporteria,
@@ -37,6 +48,13 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
     GridPaginationComponent,
     FiltroPeriodoComponent,
     FiltroValoresComponent,
+    ColumnHeaderMenuComponent,
+  ],
+  // Los filtros de columna piden sus valores a SuscripcionGridApi; aquí se
+  // cambia por el de la auditoría (ver AuditoriaDistinctApi).
+  providers: [
+    AuditoriaDistinctApi,
+    { provide: SuscripcionGridApi, useExisting: AuditoriaDistinctApi },
   ],
   template: `
     <div data-full-bleed class="flex flex-col gap-3 pb-6">
@@ -268,26 +286,23 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                 name="q"
                 type="search"
                 placeholder="Cotización, nombre o cédula…"
+                (keyup.enter)="aplicarAuditoria()"
                 class="h-full flex-1 border-none bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <alma-filtro-valores
-              etiqueta="Estado"
-              todosLabel="Todos"
-              [opciones]="opcionesEstado()"
-              [seleccion]="estadoInput"
-              (seleccionar)="onEstado($event)"
-            />
-            <alma-filtro-valores
-              etiqueta="Evaluó"
-              todosLabel="Todos"
-              [opciones]="opcionesAnalista()"
-              [seleccion]="analistaInput"
-              (seleccionar)="onAnalista($event)"
-            />
             <button type="button" (click)="aplicarAuditoria()" class="alma-btn alma-btn-outline h-8 rounded-lg px-3 text-xs">
-              Filtrar
+              Buscar
             </button>
+            @if (columnasFiltradas() > 0) {
+              <button
+                type="button"
+                (click)="limpiarFiltrosColumna()"
+                class="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <lucide-icon name="x" [size]="14" />
+                Quitar filtros de columna ({{ columnasFiltradas() }})
+              </button>
+            }
           </div>
         </header>
 
@@ -302,23 +317,28 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                 <tr>
                   @for (c of columnas; track c.clave) {
                     <th
-                      class="whitespace-nowrap border-b border-border bg-[var(--table-header)] p-0 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65"
+                      class="whitespace-nowrap border-b border-border bg-[var(--table-header)] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65"
                       [attr.aria-sort]="ariaSort(c.clave)"
+                      [title]="c.ayuda ?? ''"
                     >
-                      <button
-                        type="button"
-                        (click)="ordenarPor(c.clave)"
-                        class="flex w-full items-center gap-1 px-3 py-2 uppercase tracking-wider transition-colors hover:text-foreground"
-                        [class.text-foreground]="orden()?.columna === c.clave"
-                        [title]="'Ordenar por ' + c.label"
-                      >
-                        {{ c.label }}
-                        <lucide-icon
-                          [name]="iconoOrden(c.clave)"
-                          [size]="12"
-                          [class.opacity-30]="orden()?.columna !== c.clave"
+                      <div class="flex items-center gap-1.5">
+                        <span>{{ c.label }}</span>
+                        <alma-column-header-menu
+                          [field]="c.clave"
+                          [label]="c.label"
+                          [def]="DEFS[c.clave]"
+                          [sortField]="orden()?.columna ?? ''"
+                          [sortDir]="orden()?.direccion ?? 'desc'"
+                          [filters]="filtros()"
+                          [buildDistinctRequest]="construirDistinct"
+                          (sorted)="onOrden($event)"
+                          (discreteFilterChange)="onDiscreto($event)"
+                          (textFilterChange)="onTexto($event)"
+                          (rangeFilterChange)="onRangoNumerico($event)"
+                          (dateFilterChange)="onFecha($event)"
+                          (clearFilter)="quitarFiltro($event)"
                         />
-                      </button>
+                      </div>
                     </th>
                   }
                 </tr>
@@ -343,6 +363,9 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       {{ f.analista || '—' }}
+                    </td>
+                    <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
+                      {{ f.gestiono || '—' }}
                     </td>
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
                       {{ fecha(f.fechaIngreso) }}
@@ -395,8 +418,14 @@ export class ReporteriaPageComponent {
   protected decisionInput = '';
   // Filtros propios de la tabla de auditoría.
   protected qInput = '';
-  protected estadoInput = '';
-  protected analistaInput = '';
+  /** Búsqueda ya aplicada (la del input puede estar a medio escribir). */
+  private qAplicada = '';
+  /** Filtros de columna, en el formato interno del grid de la bandeja. */
+  protected readonly filtros = signal<GridFilter[]>([]);
+  protected readonly columnasFiltradas = computed(
+    () => new Set(this.filtros().map((f) => f.field)).size,
+  );
+  private readonly distinctApi = inject(AuditoriaDistinctApi);
 
   protected readonly resumen = signal<ResumenReporteria | null>(null);
   protected readonly opciones = signal<OpcionesReporteria | null>(null);
@@ -409,33 +438,52 @@ export class ReporteriaPageComponent {
   protected readonly tamanoPagina = signal(50);
 
   /**
-   * Columnas de la tabla con su clave de orden. La clave es la que el backend
-   * resuelve contra una lista blanca: nada de lo que viaja se interpola en el
-   * SQL. «Asegurado» ordena por nombre, que es lo primero que se lee en la celda.
+   * Columnas de la tabla. La clave es la que el backend resuelve contra una
+   * lista blanca: nada de lo que viaja se interpola en el SQL. «Asegurado»
+   * filtra y ordena por nombre, que es lo primero que se lee en la celda; la
+   * cédula se encuentra con la búsqueda.
    */
-  protected readonly columnas: { label: string; clave: ColumnaAuditoria }[] = [
+  protected readonly columnas: { label: string; clave: ColumnaAuditoria; ayuda?: string }[] = [
     { label: 'Cotización', clave: 'nroCotizacion' },
     { label: 'Asegurado', clave: 'nombre' },
     { label: 'Estado', clave: 'estado' },
     { label: 'Última decisión', clave: 'decision' },
-    { label: 'Evaluó', clave: 'analista' },
+    {
+      label: 'Motor evaluó',
+      clave: 'analista',
+      ayuda:
+        'Quién disparó la última evaluación del motor: motor-auto si fue la automática, o el analista que la re-evaluó.',
+    },
+    { label: 'Gestionó', clave: 'gestiono', ayuda: 'Quién emitió la póliza en Pipeline.' },
     { label: 'Ingreso', clave: 'fechaIngreso' },
     { label: 'Emisión', clave: 'fechaEmision' },
-    { label: 'Tiempo', clave: 'minutosAEmision' },
+    { label: 'Tiempo', clave: 'minutosAEmision', ayuda: 'Tiempo hasta la emisión. El filtro va en horas.' },
   ];
+
+  /**
+   * Tipo de filtro de cada columna, en el formato del catálogo de la bandeja:
+   * es lo que decide si el menú pinta casillas, árbol de fechas, rango o texto.
+   */
+  protected readonly DEFS: GridColumnsResponse = {
+    nroCotizacion: this.def('string'),
+    nombre: this.def('string'),
+    estado: this.def('string', true),
+    decision: this.def('string', true),
+    analista: this.def('string', true),
+    gestiono: this.def('string', true),
+    fechaIngreso: this.def('date'),
+    fechaEmision: this.def('date'),
+    minutosAEmision: this.def('number'),
+  };
 
   /** null = orden por defecto del backend (ingreso, más reciente primero). */
   protected readonly orden = signal<OrdenAuditoria | null>(null);
 
-  /**
-   * Columnas cuyo primer clic trae lo MÁS reciente o lo más largo primero, que
-   * es lo que se busca al auditar. Las de texto arrancan de la A a la Z.
-   */
-  private readonly DESC_POR_DEFECTO = new Set<ColumnaAuditoria>([
-    'fechaIngreso',
-    'fechaEmision',
-    'minutosAEmision',
-  ]);
+  /** Base de la petición de valores distintos: filtros de columna + búsqueda. */
+  protected readonly construirDistinct = (): DistinctBaseRequest => ({
+    filters: filtersToApiFormat(this.filtros(), this.DEFS),
+    search: this.qAplicada || undefined,
+  });
 
   protected readonly totalPaginas = computed(() =>
     Math.ceil((this.auditoria()?.total ?? 0) / this.tamanoPagina()),
@@ -460,21 +508,6 @@ export class ReporteriaPageComponent {
       total: d.total,
     })),
   );
-  /**
-   * Quién hizo la última evaluación. `motor-auto` es la evaluación automática
-   * del motor —el 80% en prd—, no una persona, y se rotula así para que no se
-   * confunda con un analista.
-   */
-  protected readonly opcionesAnalista = computed<OpcionFiltro[]>(() =>
-    (this.opciones()?.analistas ?? []).map((a) => ({
-      valor: a.analista,
-      total: a.total,
-      etiqueta: a.analista === 'motor-auto' ? 'Motor (automático)' : a.analista,
-    })),
-  );
-  protected readonly opcionesEstado = computed<OpcionFiltro[]>(() =>
-    (this.resumen()?.estados ?? []).map((e) => ({ valor: e.estado, total: e.total })),
-  );
 
   /** Total de la distribución por resultado (no se acota: es el selector). */
   protected readonly totalDecisiones = computed(() =>
@@ -498,6 +531,7 @@ export class ReporteriaPageComponent {
   });
 
   constructor() {
+    this.distinctApi.contexto = () => this.filtrosBase();
     void this.cargar();
     void this.cargarOpciones();
   }
@@ -522,14 +556,6 @@ export class ReporteriaPageComponent {
     };
   }
 
-  private filtrosAuditoria(): FiltrosReporteria {
-    return {
-      ...this.filtrosBase(),
-      estado: this.estadoInput || undefined,
-      analista: this.analistaInput || undefined,
-      q: this.qInput.trim() || undefined,
-    };
-  }
 
   private async cargar(): Promise<void> {
     this.error.set(null);
@@ -549,13 +575,17 @@ export class ReporteriaPageComponent {
     this.cargandoAuditoria.set(true);
     try {
       const offset = (pagina - 1) * this.tamanoPagina();
+      const orden = this.orden();
       this.auditoria.set(
-        await this.api.auditoria(
-          this.filtrosAuditoria(),
-          this.tamanoPagina(),
+        await this.api.auditoria({
+          ...this.filtrosBase(),
+          search: this.qAplicada || undefined,
+          filters: filtersToApiFormat(this.filtros(), this.DEFS),
+          sortBy: orden?.columna,
+          sortDir: orden?.direccion,
+          limit: this.tamanoPagina(),
           offset,
-          this.orden(),
-        ),
+        }),
       );
       this.pagina.set(pagina);
     } catch (e) {
@@ -575,45 +605,77 @@ export class ReporteriaPageComponent {
     void this.cargar();
   }
 
-  protected onAnalista(valor: string): void {
-    if (valor === this.analistaInput) return;
-    this.analistaInput = valor;
+  // ── Menú de columna ──
+  // Mismo modelo que la bandeja (suscripcion-grid.store): cada columna tiene a lo
+  // sumo un filtro, y cualquier cambio vuelve a la primera página, porque la
+  // página 3 de un filtro u orden no tiene nada que ver con la de otro.
+
+  protected onOrden(e: { field: string; dir: 'asc' | 'desc' }): void {
+    this.orden.set({ columna: e.field as ColumnaAuditoria, direccion: e.dir });
     void this.cargarAuditoria(1);
   }
 
-  /**
-   * Clic en un encabezado: la misma columna invierte el sentido; otra columna
-   * arranca en su sentido natural. Siempre vuelve a la primera página, porque la
-   * página 3 de un orden no tiene nada que ver con la página 3 de otro.
-   */
-  protected ordenarPor(columna: ColumnaAuditoria): void {
-    const actual = this.orden();
-    let direccion: 'asc' | 'desc';
-    if (actual?.columna === columna) {
-      direccion = actual.direccion === 'asc' ? 'desc' : 'asc';
-    } else {
-      direccion = this.DESC_POR_DEFECTO.has(columna) ? 'desc' : 'asc';
+  protected onDiscreto(e: { field: string; values: (string | number | boolean)[] }): void {
+    this.fijarFiltro(e.field, e.values.length ? [{ field: e.field, op: 'in', value: e.values }] : []);
+  }
+
+  protected onTexto(e: { field: string; op: string; value: string }): void {
+    this.fijarFiltro(e.field, [{ field: e.field, op: e.op as GridFilterOp, value: e.value }]);
+  }
+
+  protected onRangoNumerico(e: { field: string; op: RangeOp | 'clear'; value?: number; value2?: number }): void {
+    const nuevos: GridFilter[] = [];
+    if (e.op === 'between') {
+      if (e.value !== undefined) nuevos.push({ field: e.field, op: 'gte', value: e.value });
+      if (e.value2 !== undefined) nuevos.push({ field: e.field, op: 'lte', value: e.value2 });
+    } else if (e.op !== 'clear' && e.value !== undefined) {
+      nuevos.push({ field: e.field, op: e.op, value: e.value });
     }
-    this.orden.set({ columna, direccion });
+    this.fijarFiltro(e.field, nuevos);
+  }
+
+  protected onFecha(e: { field: string; from?: string; to?: string }): void {
+    const nuevos: GridFilter[] = [];
+    // '__NULL__' es el centinela del árbol de fechas para "solo vacíos".
+    if (e.from === '__NULL__') nuevos.push({ field: e.field, op: 'isnull', value: true });
+    else {
+      if (e.from) nuevos.push({ field: e.field, op: 'gte', value: e.from });
+      if (e.to) nuevos.push({ field: e.field, op: 'lte', value: e.to });
+    }
+    this.fijarFiltro(e.field, nuevos);
+  }
+
+  protected quitarFiltro(field: string): void {
+    this.fijarFiltro(field, []);
+  }
+
+  protected limpiarFiltrosColumna(): void {
+    this.filtros.set([]);
     void this.cargarAuditoria(1);
   }
 
-  protected iconoOrden(columna: ColumnaAuditoria): string {
-    const o = this.orden();
-    if (o?.columna !== columna) return 'arrow-up-down';
-    return o.direccion === 'asc' ? 'arrow-up' : 'arrow-down';
+  /** Reemplaza el filtro de una columna (vacío = quitarlo) y recarga. */
+  private fijarFiltro(field: string, nuevos: GridFilter[]): void {
+    this.filtros.update((prev) => [...prev.filter((f) => f.field !== field), ...nuevos]);
+    void this.cargarAuditoria(1);
+  }
+
+  private def(type: 'string' | 'date' | 'number', discrete = false): GridColumnsResponse[string] {
+    return {
+      type,
+      discrete,
+      filterable: true,
+      sortable: true,
+      searchable: false,
+      sensitive: false,
+      defaultVisible: true,
+    };
   }
 
   protected ariaSort(columna: ColumnaAuditoria): 'ascending' | 'descending' | 'none' {
     const o = this.orden();
     if (o?.columna !== columna) return 'none';
     return o.direccion === 'asc' ? 'ascending' : 'descending';
-  }
-
-  protected onEstado(valor: string): void {
-    if (valor === this.estadoInput) return;
-    this.estadoInput = valor;
-    void this.cargarAuditoria(1);
   }
 
   protected limpiarPeriodo(): void {
@@ -627,12 +689,11 @@ export class ReporteriaPageComponent {
   protected onDecision(valor: string): void {
     if (valor === this.decisionInput) return;
     this.decisionInput = valor;
-    // El estado que se venía filtrando puede no existir en el nuevo universo.
-    this.estadoInput = '';
     void this.cargar();
   }
 
   protected aplicarAuditoria(): void {
+    this.qAplicada = this.qInput.trim();
     void this.cargarAuditoria(1);
   }
 
