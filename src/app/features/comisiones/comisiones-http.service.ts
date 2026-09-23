@@ -7,7 +7,7 @@
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
 import { AuthService } from '../../core/auth/auth.service';
-import { ApiConflictError, HTTP_CONFLICT } from './api-error';
+import { ApiConflictError, ApiValidationError, HTTP_CONFLICT, HTTP_UNPROCESSABLE } from './api-error';
 
 const API_BASE = environment.apiUrl.replace(/\/+$/, '');
 const RETRIES = 3;
@@ -98,11 +98,49 @@ export class ComisionesHttp {
   }
 
   /**
+   * POST multipart (FormData). No fija Content-Type para que el navegador
+   * agregue el boundary del multipart.
+   */
+  async upload<T>(
+    path: string,
+    formData: FormData,
+    fallbackMessage = 'Error subiendo el archivo',
+  ): Promise<T> {
+    const headers: Record<string, string> = {};
+    const token = await this.auth.getAccessToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    const texto = await res.text();
+    const body = texto ? (() => {
+      try {
+        return JSON.parse(texto) as unknown;
+      } catch {
+        return texto;
+      }
+    })() : null;
+
+    if (res.status === HTTP_UNPROCESSABLE) {
+      throw new ApiValidationError(body, fallbackMessage);
+    }
+    if (!res.ok) throw await this.errorFromText(res, texto, fallbackMessage);
+    return body as T;
+  }
+
+  /**
    * Traduce una respuesta fallida: 409 → ApiConflictError (duplicado), y el
    * resto a Error con el `detail` del backend cuando viene en JSON.
    */
   private async error(res: Response, fallbackMessage: string): Promise<Error> {
     const texto = await res.text().catch(() => '');
+    return this.errorFromText(res, texto, fallbackMessage);
+  }
+
+  private errorFromText(res: Response, texto: string, fallbackMessage: string): Error {
     if (res.status === HTTP_CONFLICT) {
       return new ApiConflictError(texto || fallbackMessage);
     }
