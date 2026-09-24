@@ -141,7 +141,7 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
                           <lucide-icon name="power" [size]="14" /> Reanudar
                         </button>
                       }
-                      <button type="button" class="alma-btn alma-btn-ghost h-8 w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10" almaTooltip="Eliminar buzón" aria-label="Eliminar buzón" (click)="pedirConfirmacion('eliminar', b)">
+                      <button type="button" class="alma-btn alma-btn-ghost h-8 w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10" almaTooltip="Quitar de la App" aria-label="Quitar buzón de la App" (click)="pedirConfirmacion('eliminar', b)">
                         <lucide-icon name="trash-2" [size]="14" />
                       </button>
                     }
@@ -218,21 +218,22 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
                 Se conservan sus categorías, reglas y el historial de correos. Puedes reanudarlo cuando quieras.
               </p>
             } @else {
-              <h2 class="text-sm font-semibold text-foreground">¿Eliminar {{ c.buzon.nombre }}?</h2>
+              <h2 class="text-sm font-semibold text-foreground">¿Quitar {{ c.buzon.nombre }} de la App?</h2>
               <p class="mt-2 text-xs text-muted-foreground">
-                Se quita el buzón de la App con sus categorías, reglas, miembros y el historial de correos procesados, y se borra su conexión con Microsoft.
-                No se toca ningún correo en Outlook. <span class="font-medium text-destructive">No se puede deshacer.</span>
+                Deja de verse en el Buzón Inteligente y Alma deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra su conexión con Microsoft.
+                No se toca ningún correo en Outlook.
               </p>
-              <label class="alma-label mt-4 block">Escribe <span class="font-mono">{{ c.buzon.nombre }}</span> para confirmar</label>
-              <input class="alma-input mt-1.5" [(ngModel)]="textoConfirmacion" [attr.aria-label]="'Escribe ' + c.buzon.nombre + ' para confirmar'" />
+              <p class="mt-2 text-xs text-muted-foreground">
+                Sus categorías, reglas e historial se conservan: si vuelves a registrar esta dirección, el buzón se restaura como estaba.
+              </p>
             }
             <div class="mt-5 flex justify-end gap-2">
               <button type="button" class="alma-btn alma-btn-outline" (click)="cancelarConfirmacion()">Cancelar</button>
               <button type="button" [class]="c.accion === 'eliminar' ? 'alma-btn bg-destructive text-white hover:bg-destructive/90' : 'alma-btn alma-btn-primary'"
-                      [disabled]="trabajando() === c.buzon.id || (c.accion === 'eliminar' && textoConfirmacion.trim() !== c.buzon.nombre)"
+                      [disabled]="trabajando() === c.buzon.id"
                       (click)="confirmar()">
                 <lucide-icon [name]="trabajando() === c.buzon.id ? 'loader-2' : c.accion === 'eliminar' ? 'trash-2' : 'power-off'" [size]="16" [class.animate-spin]="trabajando() === c.buzon.id" />
-                {{ c.accion === 'eliminar' ? 'Eliminar buzón' : 'Desconectar' }}
+                {{ c.accion === 'eliminar' ? 'Quitar de la App' : 'Desconectar' }}
               </button>
             </div>
           </div>
@@ -258,8 +259,6 @@ export class BuzonesPageComponent {
   /** Buzón sobre el que corre desconectar / reanudar / eliminar. */
   protected readonly trabajando = signal<string | null>(null);
   protected readonly confirmacion = signal<{ accion: 'desconectar' | 'eliminar'; buzon: Buzon } | null>(null);
-  /** Eliminar exige escribir el nombre: borra el historial y no se deshace. */
-  protected textoConfirmacion = '';
 
   protected readonly formAbierto = signal(false);
   protected readonly guardando = signal(false);
@@ -318,7 +317,14 @@ export class BuzonesPageComponent {
     this.errorForm.set(null);
     try {
       const nuevo = await this.api.crearBuzon({ ...this.form, direccion: this.form.direccion.trim().toLowerCase() });
-      this.toast.show('Buzón creado', `${nuevo.nombre} · ${nuevo.direccion}`);
+      if (nuevo.restaurado) {
+        this.toast.show(
+          'Buzón restaurado',
+          `${nuevo.direccion} ya había estado en la App: volvió con sus categorías, reglas e historial. Quedó pausado: conéctalo y reanúdalo.`,
+        );
+      } else {
+        this.toast.show('Buzón creado', `${nuevo.nombre} · ${nuevo.direccion}`);
+      }
       this.cerrar();
       void this.router.navigate(['/apps/buzon-inteligente/buzones', nuevo.id]);
     } catch (e) {
@@ -345,7 +351,6 @@ export class BuzonesPageComponent {
   }
 
   protected pedirConfirmacion(accion: 'desconectar' | 'eliminar', buzon: Buzon): void {
-    this.textoConfirmacion = '';
     this.confirmacion.set({ accion, buzon });
   }
 
@@ -364,7 +369,7 @@ export class BuzonesPageComponent {
         this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Alma ya no lo lee.`);
       } else {
         await this.api.eliminarBuzon(c.buzon.id);
-        this.toast.show('Buzón eliminado', `${c.buzon.nombre} · ${c.buzon.direccion}`);
+        this.toast.show('Buzón quitado de la App', `${c.buzon.nombre} · ${c.buzon.direccion}`);
       }
       this.confirmacion.set(null);
       await this.cargar();

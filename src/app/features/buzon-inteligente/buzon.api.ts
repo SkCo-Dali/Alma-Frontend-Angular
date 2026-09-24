@@ -46,6 +46,9 @@ export interface Buzon {
   max_correos_por_tick: number;
   contexto: string | null;
   activo: boolean;
+  /** Solo en la respuesta de crear: la dirección ya había tenido un buzón que
+   *  se eliminó, y se restauró con su configuración (queda pausado). */
+  restaurado?: boolean;
   ultima_sincronizacion: string | null;
   ultimo_error: string | null;
   categorias_count: number;
@@ -367,7 +370,8 @@ export class BuzonApi {
     );
   }
 
-  /** Quita el buzón de la App con sus categorías, reglas y correos procesados. */
+  /** Quita el buzón de la App (borrado lógico: el historial se conserva y
+   *  registrar de nuevo la dirección lo restaura). */
   eliminarBuzon(id: string): Promise<void> {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/buzones/${id}`, { method: 'DELETE' }),
