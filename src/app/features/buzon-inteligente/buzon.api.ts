@@ -46,6 +46,9 @@ export interface Buzon {
   max_correos_por_tick: number;
   contexto: string | null;
   activo: boolean;
+  /** Solo en la respuesta de crear: la dirección ya había tenido un buzón que
+   *  se eliminó, y se restauró con su configuración (queda pausado). */
+  restaurado?: boolean;
   ultima_sincronizacion: string | null;
   ultimo_error: string | null;
   categorias_count: number;
@@ -356,6 +359,23 @@ export class BuzonApi {
     return this.conDemo(
       () => this.api.fetch<Buzon>(`${BASE}/buzones/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       () => this.demo.actualizarBuzon(id, body),
+    );
+  }
+
+  /** Borra la conexión y PAUSA el buzón: Alma deja de leerlo hasta reanudarlo. */
+  desconectarBuzon(id: string): Promise<Buzon> {
+    return this.conDemo(
+      () => this.api.fetch<Buzon>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
+      () => this.demo.desconectarBuzon(id),
+    );
+  }
+
+  /** Quita el buzón de la App (borrado lógico: el historial se conserva y
+   *  registrar de nuevo la dirección lo restaura). */
+  eliminarBuzon(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/buzones/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarBuzon(id),
     );
   }
 

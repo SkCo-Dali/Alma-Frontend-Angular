@@ -1,5 +1,6 @@
 // Buzones del Buzón Inteligente: tarjetas por área con estado de conexión, modo,
-// contadores y accesos a configurar / sincronizar / conectar. Alta con modal.
+// contadores y accesos a configurar / sincronizar / conectar / desconectar /
+// eliminar. Alta y confirmaciones con modal.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -95,6 +96,11 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  @if (!b.activo) {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 font-medium text-zinc-700 dark:text-zinc-300" almaTooltip="Alma no lee este buzón hasta que lo reanudes.">
+                      <lucide-icon name="power-off" [size]="12" /> Pausado
+                    </span>
+                  }
                   <span class="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5">
                     <lucide-icon [name]="b.modo === 'automatico' ? 'zap' : 'user-check'" [size]="12" />
                     {{ b.modo === 'automatico' ? 'Automático' : 'Solo sugiere' }} · umbral {{ (b.umbral_confianza * 100) | number: '1.0-0' }}%
@@ -116,15 +122,27 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
                     }
                     @if (b.miembros.length === 0) { <span class="text-xs text-muted-foreground">Visible para toda la App</span> }
                   </div>
-                  <div class="flex items-center gap-1.5">
+                  <div class="flex flex-wrap items-center justify-end gap-1.5">
                     @if (b.estado_conexion !== 'conectada' && b.estado_conexion !== 'app_only' && b.puede_administrar) {
                       <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" (click)="conectar(b)">
                         <lucide-icon name="plug" [size]="14" /> Conectar
                       </button>
                     }
                     @if (b.puede_administrar) {
-                      <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [disabled]="sincronizando() === b.id" (click)="sincronizar(b)">
-                        <lucide-icon name="refresh-cw" [size]="14" [class.animate-spin]="sincronizando() === b.id" /> Sincronizar
+                      @if (b.activo) {
+                        <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [disabled]="sincronizando() === b.id" (click)="sincronizar(b)">
+                          <lucide-icon name="refresh-cw" [size]="14" [class.animate-spin]="sincronizando() === b.id" /> Sincronizar
+                        </button>
+                        <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" (click)="pedirConfirmacion('desconectar', b)">
+                          <lucide-icon name="power-off" [size]="14" /> Desconectar
+                        </button>
+                      } @else {
+                        <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [disabled]="trabajando() === b.id" (click)="reanudar(b)">
+                          <lucide-icon name="power" [size]="14" /> Reanudar
+                        </button>
+                      }
+                      <button type="button" class="alma-btn alma-btn-ghost h-8 w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10" almaTooltip="Quitar de la App" aria-label="Quitar buzón de la App" (click)="pedirConfirmacion('eliminar', b)">
+                        <lucide-icon name="trash-2" [size]="14" />
                       </button>
                     }
                     <a [routerLink]="['/apps/buzon-inteligente/buzones', b.id]" class="alma-btn alma-btn-primary h-8 rounded-lg text-xs">
@@ -188,6 +206,39 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
           </div>
         </div>
       }
+
+      <!-- Confirmar desconectar / eliminar -->
+      @if (confirmacion(); as c) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="cancelarConfirmacion()">
+          <div class="surface-solid w-full max-w-md rounded-2xl border border-border p-5 shadow-[var(--shadow-lg)]" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
+            @if (c.accion === 'desconectar') {
+              <h2 class="text-sm font-semibold text-foreground">¿Desconectar {{ c.buzon.nombre }}?</h2>
+              <p class="mt-2 text-xs text-muted-foreground">
+                Alma deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra la conexión con Microsoft y el buzón queda pausado.
+                Se conservan sus categorías, reglas y el historial de correos. Puedes reanudarlo cuando quieras.
+              </p>
+            } @else {
+              <h2 class="text-sm font-semibold text-foreground">¿Quitar {{ c.buzon.nombre }} de la App?</h2>
+              <p class="mt-2 text-xs text-muted-foreground">
+                Deja de verse en el Buzón Inteligente y Alma deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra su conexión con Microsoft.
+                No se toca ningún correo en Outlook.
+              </p>
+              <p class="mt-2 text-xs text-muted-foreground">
+                Sus categorías, reglas e historial se conservan: si vuelves a registrar esta dirección, el buzón se restaura como estaba.
+              </p>
+            }
+            <div class="mt-5 flex justify-end gap-2">
+              <button type="button" class="alma-btn alma-btn-outline" (click)="cancelarConfirmacion()">Cancelar</button>
+              <button type="button" [class]="c.accion === 'eliminar' ? 'alma-btn bg-destructive text-white hover:bg-destructive/90' : 'alma-btn alma-btn-primary'"
+                      [disabled]="trabajando() === c.buzon.id"
+                      (click)="confirmar()">
+                <lucide-icon [name]="trabajando() === c.buzon.id ? 'loader-2' : c.accion === 'eliminar' ? 'trash-2' : 'power-off'" [size]="16" [class.animate-spin]="trabajando() === c.buzon.id" />
+                {{ c.accion === 'eliminar' ? 'Quitar de la App' : 'Desconectar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `,
 })
@@ -204,6 +255,10 @@ export class BuzonesPageComponent {
   protected readonly buzones = signal<Buzon[]>([]);
   protected readonly cargando = signal(true);
   protected readonly sincronizando = signal<string | null>(null);
+
+  /** Buzón sobre el que corre desconectar / reanudar / eliminar. */
+  protected readonly trabajando = signal<string | null>(null);
+  protected readonly confirmacion = signal<{ accion: 'desconectar' | 'eliminar'; buzon: Buzon } | null>(null);
 
   protected readonly formAbierto = signal(false);
   protected readonly guardando = signal(false);
@@ -262,7 +317,14 @@ export class BuzonesPageComponent {
     this.errorForm.set(null);
     try {
       const nuevo = await this.api.crearBuzon({ ...this.form, direccion: this.form.direccion.trim().toLowerCase() });
-      this.toast.show('Buzón creado', `${nuevo.nombre} · ${nuevo.direccion}`);
+      if (nuevo.restaurado) {
+        this.toast.show(
+          'Buzón restaurado',
+          `${nuevo.direccion} ya había estado en la App: volvió con sus categorías, reglas e historial. Quedó pausado: conéctalo y reanúdalo.`,
+        );
+      } else {
+        this.toast.show('Buzón creado', `${nuevo.nombre} · ${nuevo.direccion}`);
+      }
       this.cerrar();
       void this.router.navigate(['/apps/buzon-inteligente/buzones', nuevo.id]);
     } catch (e) {
@@ -285,6 +347,52 @@ export class BuzonesPageComponent {
       this.toast.error('No se pudo sincronizar', e instanceof Error ? e.message : String(e));
     } finally {
       this.sincronizando.set(null);
+    }
+  }
+
+  protected pedirConfirmacion(accion: 'desconectar' | 'eliminar', buzon: Buzon): void {
+    this.confirmacion.set({ accion, buzon });
+  }
+
+  protected cancelarConfirmacion(): void {
+    if (this.trabajando()) return;
+    this.confirmacion.set(null);
+  }
+
+  protected async confirmar(): Promise<void> {
+    const c = this.confirmacion();
+    if (!c) return;
+    this.trabajando.set(c.buzon.id);
+    try {
+      if (c.accion === 'desconectar') {
+        await this.api.desconectarBuzon(c.buzon.id);
+        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Alma ya no lo lee.`);
+      } else {
+        await this.api.eliminarBuzon(c.buzon.id);
+        this.toast.show('Buzón quitado de la App', `${c.buzon.nombre} · ${c.buzon.direccion}`);
+      }
+      this.confirmacion.set(null);
+      await this.cargar();
+    } catch (e) {
+      this.toast.error(
+        c.accion === 'desconectar' ? 'No se pudo desconectar' : 'No se pudo eliminar',
+        e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      this.trabajando.set(null);
+    }
+  }
+
+  protected async reanudar(b: Buzon): Promise<void> {
+    this.trabajando.set(b.id);
+    try {
+      await this.api.actualizarBuzon(b.id, { activo: true });
+      this.toast.show('Buzón reanudado', `Alma vuelve a leer ${b.direccion}.`);
+      await this.cargar();
+    } catch (e) {
+      this.toast.error('No se pudo reanudar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.trabajando.set(null);
     }
   }
 
