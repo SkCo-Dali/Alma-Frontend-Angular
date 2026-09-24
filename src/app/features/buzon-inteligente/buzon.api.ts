@@ -359,6 +359,22 @@ export class BuzonApi {
     );
   }
 
+  /** Borra la conexión y PAUSA el buzón: Alma deja de leerlo hasta reanudarlo. */
+  desconectarBuzon(id: string): Promise<Buzon> {
+    return this.conDemo(
+      () => this.api.fetch<Buzon>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
+      () => this.demo.desconectarBuzon(id),
+    );
+  }
+
+  /** Quita el buzón de la App con sus categorías, reglas y correos procesados. */
+  eliminarBuzon(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/buzones/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarBuzon(id),
+    );
+  }
+
   sincronizar(id: string, maxCorreos = 25): Promise<ResumenSync> {
     return this.conDemo(
       () =>
