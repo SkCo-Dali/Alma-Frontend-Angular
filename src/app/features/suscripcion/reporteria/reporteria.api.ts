@@ -13,6 +13,9 @@ import {
 } from '../grid/suscripcion-grid.api';
 
 export interface ConteoEstado {
+  /** En el resumen: código de Pipeline (UWStatus), para el color. */
+  codigo?: string | null;
+  /** En el resumen: descripción del estado en Pipeline. */
   estado: string;
   total: number;
 }
@@ -36,7 +39,10 @@ export interface TiempoEmision {
 
 export interface ResumenReporteria {
   solicitudes: number;
+  /** Emitidas en Pipeline (Emitida + Primer pago), por donde se hayan emitido. */
   emitidas: number;
+  /** De ellas, las emitidas con el botón de Alma: la medida de adopción. */
+  emitidasDesdeAlma: number;
   /** Evaluaciones totales (actividad del motor), no una por solicitud. */
   evaluaciones: number;
   emisionAutomatica: number;

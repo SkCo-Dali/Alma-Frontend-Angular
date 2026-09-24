@@ -165,21 +165,21 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         </section>
 
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
-          <h2 class="mb-3 text-sm font-bold text-foreground">Estado actual de las solicitudes</h2>
+          <h2 class="mb-3 text-sm font-bold text-foreground">Estado actual en Pipeline</h2>
           <p class="mb-3 text-[11px] text-muted-foreground">
             Dónde están hoy las pólizas
-            {{ decisionInput ? 'con ese resultado del motor' : 'del periodo' }}.
+            {{ decisionInput ? 'con ese resultado del motor' : 'del periodo' }}, según Pipeline.
           </p>
           @for (e of resumen()?.estados ?? []; track e.estado) {
             <div class="mb-2">
               <div class="flex items-baseline justify-between gap-2 text-xs">
-                <span class="capitalize text-foreground">{{ e.estado.replace('_', ' ') }}</span>
+                <span class="text-foreground">{{ e.estado }}</span>
                 <span class="shrink-0 tabular-nums text-muted-foreground">
                   {{ e.total }} · {{ porcentaje(e.total, resumen()?.solicitudes ?? 0) }}
                 </span>
               </div>
               <div class="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full" [class]="colorEstado(e.estado)" [style.width.%]="ancho(e.total, maxEstado())"></div>
+                <div class="h-full rounded-full" [class]="colorEstado(e.codigo)" [style.width.%]="ancho(e.total, maxEstado())"></div>
               </div>
             </div>
           } @empty {
@@ -535,7 +535,17 @@ export class ReporteriaPageComponent {
     const n = (v: number) => v.toLocaleString('es-CO');
     return [
       { label: 'Solicitudes', icon: 'list-checks', valor: n(r.solicitudes), sub: `${n(r.evaluaciones)} evaluaciones`, clase: 'text-foreground' },
-      { label: 'Emitidas', icon: 'check-circle-2', valor: n(r.emitidas), sub: this.porcentaje(r.emitidas, r.solicitudes), clase: 'text-[#047857] dark:text-[#34d399]' },
+      // Emitidas en Pipeline, se hayan emitido por donde sea; debajo, cuántas
+      // con el botón de Alma, que es lo que mide la adopción.
+      {
+        label: 'Emitidas',
+        icon: 'check-circle-2',
+        valor: n(r.emitidas),
+        sub: [this.porcentaje(r.emitidas, r.solicitudes), `${n(r.emitidasDesdeAlma ?? 0)} desde Alma`]
+          .filter(Boolean)
+          .join(' · '),
+        clase: 'text-[#047857] dark:text-[#34d399]',
+      },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
       { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
       { label: 'Devoluciones', icon: 'shield-alert', valor: n(this.devoluciones(r)), sub: this.porcentaje(this.devoluciones(r), r.solicitudes), clase: 'text-destructive' },
@@ -770,16 +780,19 @@ export class ReporteriaPageComponent {
     return d.toLocaleTimeString('es-CO', { ...ZONA, hour: '2-digit', minute: '2-digit' });
   }
 
-  protected colorEstado(estado: string): string {
-    switch (estado) {
-      case 'emitido':
-        return 'bg-[#10b981]';
-      case 'devuelto':
-        return 'bg-destructive';
-      case 'escalado':
-        return 'bg-[#FF9200]';
-      case 'en_revision':
+  /** Barra del estado de Pipeline: los tonos de los badges de la bandeja (UW_BADGE), sólidos. */
+  protected colorEstado(codigo: string | null | undefined): string {
+    switch (codigo) {
+      case 'ES':
+        return 'bg-sky-500';
+      case 'EM':
         return 'bg-primary';
+      case 'PP':
+        return 'bg-emerald-500';
+      case 'RC':
+        return 'bg-destructive';
+      case 'RT':
+        return 'bg-amber-500';
       default:
         return 'bg-muted-foreground';
     }
