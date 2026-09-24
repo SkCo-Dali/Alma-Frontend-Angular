@@ -527,6 +527,17 @@ export class DemoStore {
     return this.buzones[i];
   }
 
+  desconectarBuzon(id: string): Buzon {
+    const b = this.actualizarBuzon(id, { activo: false });
+    b.estado_conexion = 'sin_conectar';
+    return b;
+  }
+
+  eliminarBuzon(id: string): void {
+    this.buzones = this.buzones.filter((b) => b.id !== id);
+    this.categorias = this.categorias.filter((c) => c.buzon_id !== id);
+  }
+
   sincronizar(id: string): ResumenSync {
     this.actualizarBuzon(id, {});
     const b = this.buzones.find((x) => x.id === id)!;
