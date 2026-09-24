@@ -2,6 +2,7 @@
 // del resto para poder mostrar el aviso correcto.
 
 export const HTTP_CONFLICT = 409;
+export const HTTP_UNPROCESSABLE = 422;
 
 export class ApiConflictError extends Error {
   readonly status = HTTP_CONFLICT;
@@ -12,8 +13,24 @@ export class ApiConflictError extends Error {
   }
 }
 
+/** 422: el cuerpo suele traer errores de validación de negocio (p. ej. carga masiva). */
+export class ApiValidationError extends Error {
+  readonly status = HTTP_UNPROCESSABLE;
+  readonly body: unknown;
+
+  constructor(body: unknown, message = 'Validation failed') {
+    super(message);
+    this.name = 'ApiValidationError';
+    this.body = body;
+  }
+}
+
 export function isApiConflictError(error: unknown): error is ApiConflictError {
   return error instanceof ApiConflictError;
+}
+
+export function isApiValidationError(error: unknown): error is ApiValidationError {
+  return error instanceof ApiValidationError;
 }
 
 export const CONFLICT_TOAST_DESCRIPTION =

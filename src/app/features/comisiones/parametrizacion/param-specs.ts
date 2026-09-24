@@ -40,6 +40,8 @@ export interface SeccionSpec {
   /** Diferidos consulta al backend por rango de fechas. */
   conRangoFechas?: boolean;
   botonCrear?: string;
+  /** Abre el modal de carga masiva (ajustes de comisiones). */
+  botonCargaMasiva?: string;
   formColumnas?: 2 | 3;
   formAncho?: string;
   tituloCrear?: string;
@@ -532,6 +534,7 @@ const AJUSTES: SeccionSpec = {
   id: 'ajustesComisiones',
   titulo: 'Ajustes Comisiones',
   placeholderBusqueda: 'Buscar por compañía, producto, tomador...',
+  botonCargaMasiva: 'Carga Masiva',
   botonCrear: 'Crear Registro',
   anchoMinimo: '4500px',
   formColumnas: 3,
