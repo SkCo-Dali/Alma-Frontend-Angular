@@ -2,7 +2,7 @@
 // periodo) y correos (periodo + segmento + estado). La búsqueda se aplica al pulsar
 // "Filtrar" o Enter, nunca al teclear.
 
-import { Component, input, output } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSpinnerComponent } from '../../../shared/components/alma-spinner.component';
@@ -99,10 +99,13 @@ import {
         </div>
 
         <div class="flex items-center gap-2">
+          @if (filtrosFaltantes()) {
+            <span class="text-xs text-muted-foreground">{{ filtrosFaltantes() }}</span>
+          }
           <button
             type="button"
             (click)="exportar.emit()"
-            [disabled]="exportando()"
+            [disabled]="exportando() || !!filtrosFaltantes()"
             class="alma-btn h-10 whitespace-nowrap rounded-lg border border-primary px-4 text-sm font-medium text-primary hover:bg-primary hover:text-white disabled:opacity-50"
           >
             @if (exportando()) {
@@ -138,6 +141,15 @@ export class MotorTableToolbarComponent {
 
   protected readonly companias = MOTOR_COMPANY_FILTER_OPTIONS;
   protected readonly estados = MOTOR_ESTADO_CORREO_OPTIONS;
+
+  /** El backend rechaza (400) la descarga sin estos filtros; "Todas" no cuenta como compañía. */
+  protected readonly filtrosFaltantes = computed(() => {
+    if (this.variant() === 'correos') {
+      return this.periodo() && this.segmento() ? '' : 'Selecciona periodo y segmento';
+    }
+    const compania = this.compania();
+    return this.periodo() && compania && compania !== 'Todas' ? '' : 'Selecciona compañía y periodo';
+  });
 
   protected etiquetaPeriodo(p: string): string {
     return formatMotorPeriodo(p);
