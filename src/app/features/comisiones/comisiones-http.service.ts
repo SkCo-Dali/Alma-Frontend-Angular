@@ -1,8 +1,9 @@
 // HTTP base del módulo de comisiones:
 //  - El token de Entra se agrega aquí, de forma explícita (no hay interceptor
 //    global de fetch).
-//  - Conserva el retry con backoff exponencial ante 5xx/errores de red y el
-//    ApiConflictError en 409 (registro duplicado), que la UI trata distinto.
+//  - Conserva el retry con backoff exponencial ante 5xx/errores de red (salvo
+//    las descargas) y el ApiConflictError en 409 (registro duplicado), que la
+//    UI trata distinto.
 
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
@@ -79,7 +80,8 @@ export class ComisionesHttp {
    * Content-Disposition cuando el backend lo manda; si no, del fallback.
    */
   async descargar(path: string, fallbackFilename: string): Promise<void> {
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
+    // Sin reintento automático: cada intento es otra consulta pesada; ante 429/503 el usuario ve el motivo.
+    const res = await fetch(`${API_BASE}${path}`, {
       headers: await this.headers(),
     });
     if (!res.ok) throw await this.error(res, 'No se pudo generar el archivo');
