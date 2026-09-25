@@ -82,6 +82,21 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-recaudos-acreditacion-pac',
+    nombre: 'Acreditación PAC',
+    descripcion:
+      'Bandeja de pagos PAC recibidos por correo: cruce con suspense, cargue a Pipeline y respuesta a la empresa.',
+    categoria: 'Recaudos',
+    icono: 'coins',
+    color: '#0089B8',
+    url: '/apps/recaudos-acreditacion-pac',
+    internalRoute: '/apps/recaudos-acreditacion-pac',
+    integrationType: 'internal',
+    requiredPermission: 'app.recaudos-acreditacion-pac.view',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-visor-comunicaciones',
     nombre: 'Visor de comunicaciones',
     descripcion:
@@ -232,6 +247,8 @@ export const MOCK_USER: User = {
     'app.buzon-inteligente.view',
     'app.buzon-inteligente.review',
     'app.buzon-inteligente.manage',
+    'app.recaudos-acreditacion-pac.view',
+    'app.recaudos-acreditacion-pac.config',
     'app.emision.view',
     'app.documental.view',
     'app.pharos.view',

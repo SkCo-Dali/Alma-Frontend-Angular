@@ -207,6 +207,24 @@ export const routes: Routes = [
       ),
     title: 'Métricas y Reportes — ALMA',
   },
+  // App Acreditación PAC (Recaudos): bandeja + configuración de estados.
+  {
+    path: 'apps/recaudos-acreditacion-pac',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/recaudos-acreditacion-pac/recaudos-pac-page.component').then(
+        (m) => m.RecaudosPacPageComponent,
+      ),
+    title: 'Acreditación PAC — ALMA',
+  },
+  {
+    path: 'apps/recaudos-acreditacion-pac/estados',
+    loadComponent: () =>
+      import('./features/recaudos-acreditacion-pac/estados-config-page.component').then(
+        (m) => m.EstadosConfigPageComponent,
+      ),
+    title: 'Configuración de estados — Acreditación PAC — ALMA',
+  },
   {
     path: 'apps/:appId',
     loadComponent: () =>
