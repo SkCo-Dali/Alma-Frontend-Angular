@@ -1,6 +1,7 @@
 // Combobox de un solo campo: se escribe en el input, se filtran las opciones
 // y se puede elegir de la lista. El valor es el texto (permite completar una
-// opción o dejar un valor escrito).
+// opción o dejar un valor escrito), salvo con soloOpciones: ahí lo escrito
+// solo busca y el valor cambia únicamente al elegir una opción.
 
 import {
   Component,
@@ -36,9 +37,10 @@ const MAX_VISIBLES = 80;
         [disabled]="disabled()"
         [placeholder]="placeholder()"
         autocomplete="off"
-        [ngModel]="value()"
+        [ngModel]="texto()"
         (ngModelChange)="escribir($event)"
         (focus)="abrir()"
+        (keydown.tab)="soloOpciones() && cerrar()"
         (keydown.escape)="cerrar()"
         (keydown.arrowDown)="abrir(); $event.preventDefault()"
       />
@@ -66,7 +68,7 @@ const MAX_VISIBLES = 80;
         <div class="max-h-60 overflow-y-auto p-1.5">
           @if (visibles().length === 0) {
             <p class="px-3 py-3 text-center text-xs text-muted-foreground">
-              Sin coincidencias. Puedes dejar el texto escrito.
+              {{ soloOpciones() ? 'Sin coincidencias.' : 'Sin coincidencias. Puedes dejar el texto escrito.' }}
             </p>
           }
           @for (o of visibles(); track o.value) {
@@ -91,6 +93,8 @@ export class ParamComboboxComponent {
   readonly opciones = input<ParamComboboxOption[]>([]);
   readonly disabled = input(false);
   readonly placeholder = input('Seleccionar o escribir…');
+  /** Lo escrito solo filtra: el valor cambia únicamente al elegir una opción. */
+  readonly soloOpciones = input(false);
   readonly valueChange = output<string>();
 
   private readonly host = inject(ElementRef<HTMLElement>);
@@ -101,6 +105,10 @@ export class ParamComboboxComponent {
   protected readonly pos = signal({ top: 0, left: 0, width: 240 });
   /** Independiente del valor: al abrir la lista se muestran todas las opciones. */
   private readonly filtro = signal('');
+  /** Con soloOpciones, true mientras se escribe para buscar. */
+  private readonly buscando = signal(false);
+  /** Lo que muestra el input: lo que se escribe para buscar o el valor elegido. */
+  protected readonly texto = computed(() => (this.buscando() ? this.filtro() : this.value()));
 
   protected readonly visibles = computed(() => {
     const q = this.filtro().trim().toLowerCase();
@@ -125,7 +133,8 @@ export class ParamComboboxComponent {
 
   protected escribir(texto: string): void {
     this.filtro.set(texto);
-    this.valueChange.emit(texto);
+    if (this.soloOpciones()) this.buscando.set(true);
+    else this.valueChange.emit(texto);
     if (!this.abierto()) this.abrir();
   }
 
@@ -153,6 +162,7 @@ export class ParamComboboxComponent {
   protected cerrar(): void {
     this.abierto.set(false);
     this.filtro.set('');
+    this.buscando.set(false);
   }
 
   protected elegir(o: ParamComboboxOption): void {
