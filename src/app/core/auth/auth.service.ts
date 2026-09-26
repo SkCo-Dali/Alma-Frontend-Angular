@@ -15,13 +15,24 @@ import {
   PublicClientApplication,
 } from '@azure/msal-browser';
 import { environment } from '@env/environment';
-import { MOCK_USER } from '../constants/app-catalog';
 import { MeApi, User } from '../models/platform.models';
 
 const CLIENT_ID = environment.azure.clientId;
 const TENANT_ID = environment.azure.tenantId;
 
 export const authEnabled = Boolean(CLIENT_ID && TENANT_ID);
+
+/** Usuario mientras no hay sesión en dev/stg/prd: sin roles ni permisos. */
+const SIN_SESION: User = {
+  id: '',
+  nombre: '',
+  correo: '',
+  cargo: '',
+  equipo: '',
+  foto: '',
+  roles: [],
+  permissions: [],
+};
 
 // Scope expuesto por la misma app registration (Expose an API)
 const API_SCOPE = `api://${CLIENT_ID}/access_as_user`;
@@ -86,7 +97,8 @@ export class AuthService {
   private readonly foto = signal<string | null>(null);
   readonly user = computed<User>(() => {
     const account = this.account();
-    return account ? accountToUser(account, this.profile(), this.foto()) : MOCK_USER;
+    if (account) return accountToUser(account, this.profile(), this.foto());
+    return environment.usuarioLocal ?? SIN_SESION;
   });
   readonly isAuthenticated = computed(() => !authEnabled || this.status() === 'ready');
   readonly isAdmin = computed(() => this.hasPermission('platform.admin'));

@@ -2,7 +2,7 @@
 // métricas vive en la consola /admin (ícono Accesos del Dock), no como Apps del
 // catálogo.
 
-import { Application, User } from '../models/platform.models';
+import { Application } from '../models/platform.models';
 
 export const APP_CATALOG: Application[] = [
   {
@@ -105,35 +105,3 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
 ];
-
-/** Usuario mock para desarrollo local sin Entra. */
-export const MOCK_USER: User = {
-  id: 'u-001',
-  nombre: 'Daniel Cano',
-  correo: 'daniel.cano@skandia.co',
-  cargo: 'Analista de Operaciones',
-  equipo: 'Vicepresidencia de Operaciones',
-  foto: 'https://api.dicebear.com/9.x/initials/svg?seed=Daniel%20Cano&backgroundColor=0d6cbd&textColor=ffffff',
-  roles: ['admin', 'operations.analyst'],
-  permissions: [
-    'app.suscripcion.view',
-    'app.suscripcion.solicitudes.manage',
-    'app.suscripcion.solicitudes.emit',
-    'app.suscripcion.motor.config',
-    'app.suscripcion.simulador.config',
-    'app.motor-comisiones.view',
-    'app.motor-comisiones.catalogs',
-    'app.agente-alma.view',
-    'app.visor-comunicaciones.view',
-    'app.buzon-inteligente.view',
-    'app.buzon-inteligente.review',
-    'app.buzon-inteligente.manage',
-    'app.recaudos-acreditacion-pac.view',
-    'app.recaudos-acreditacion-pac.config',
-    'platform.admin',
-    'platform.access.view',
-    'platform.access.assign',
-    'platform.audit.view',
-    'platform.metrics.view',
-  ],
-};
