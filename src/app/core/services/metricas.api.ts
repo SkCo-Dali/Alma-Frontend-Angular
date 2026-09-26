@@ -15,7 +15,6 @@ export interface MetricasAgente {
 export interface ResumenMetricas {
   dias: number;
   agente: MetricasAgente | null;
-  cheques: { registros: number; usuarios: number } | null;
   accesos: { eventos: number } | null;
   suscripcion: { solicitudes: number; evaluaciones: number } | null;
   preguntas_recientes: { email: string; contenido: string; fecha: string }[];
