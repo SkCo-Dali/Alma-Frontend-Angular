@@ -40,7 +40,7 @@ export const SUGERENCIAS: string[] = [
 
 export const MENSAJE_BIENVENIDA =
   'Hola, soy Alma, tu asistente de Servicio al Cliente. Puedo ayudarte con procesos y ' +
-  'procedimientos, consultar casos en Salesforce y localizar registros de cheques. ' +
+  'procedimientos y consultar casos en Salesforce. ' +
   '¿En qué te ayudo?';
 
 @Injectable({ providedIn: 'root' })
