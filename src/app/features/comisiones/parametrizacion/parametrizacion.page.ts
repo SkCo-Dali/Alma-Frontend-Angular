@@ -332,7 +332,7 @@ export class ParametrizacionPageComponent implements OnInit {
     validar: (v: ParamValues) => Record<string, string>;
   } | null>(null);
 
-  /** Planes publicados: los selectores de tipo de comisión y regla los usan. */
+  /** Planes publicados y listos para aprobar: los selectores de tipo de comisión y regla los usan. */
   private readonly planes = signal<{ id: string; name: string }[]>([]);
 
   protected readonly tieneAcceso = computed(() =>
@@ -348,12 +348,23 @@ export class ParametrizacionPageComponent implements OnInit {
     void this.cargarPlanes();
   }
 
+  /** Todas las páginas: los productos cargados por script (MFUND…) quedan en listo para aprobar. */
   private async cargarPlanes(): Promise<void> {
     try {
-      const res = await this.planesApi.list(1, 200, 'published');
-      this.planes.set(res.items.map((p) => ({ id: p.id, name: p.name })));
+      const porNombre = new Map<string, { id: string; name: string }>();
+      for (const estado of ['published', 'ready_to_approve']) {
+        for (let pagina = 1; ; pagina++) {
+          const res = await this.planesApi.list(pagina, 200, estado);
+          for (const p of res.items) {
+            // Si un nombre existe publicado y en revisión, gana el publicado.
+            if (!porNombre.has(p.name)) porNombre.set(p.name, { id: p.id, name: p.name });
+          }
+          if (res.items.length < 200 || pagina * 200 >= res.total) break;
+        }
+      }
+      this.planes.set([...porNombre.values()]);
     } catch (e) {
-      console.error('No se pudieron cargar los planes publicados:', e);
+      console.error('No se pudieron cargar los planes:', e);
     }
   }
 
