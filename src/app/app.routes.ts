@@ -19,14 +19,6 @@ export const routes: Routes = [
     title: 'Favoritos — ALMA',
   },
   {
-    path: 'apps/cheques',
-    loadComponent: () =>
-      import('./features/cheques/cheques-page.component').then(
-        (m) => m.ChequesPageComponent,
-      ),
-    title: 'Cheques — ALMA',
-  },
-  {
     path: 'apps/agente-alma',
     loadComponent: () =>
       import('./features/agente-alma/agente-alma-page.component').then(

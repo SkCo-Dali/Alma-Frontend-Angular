@@ -31,7 +31,6 @@ interface Chip {
 
 const CHIPS: Chip[] = [
   { icon: 'message-square-text', label: 'Consultar un caso', action: '>Quiero consultar el estado de un caso de Salesforce' },
-  { icon: 'wallet', label: 'Buscar un cheque', action: '/apps/cheques' },
   { icon: 'bar-chart-3', label: 'Analizar datos', action: '>Ayúdame a analizar datos de la operación' },
   { icon: 'zap', label: 'Crear automatización', action: '>Quiero crear una automatización para un proceso repetitivo' },
 ];
@@ -53,14 +52,6 @@ const NOVEDADES: Novedad[] = [
     nuevo: true,
     titulo: 'Nueva plataforma Angular',
     texto: 'ALMA ahora corre sobre su nueva base: más rápida y lista para apps de otros equipos.',
-  },
-  {
-    icon: 'message-circle',
-    tono: 'text-sky-600 bg-sky-500/10 dark:text-sky-400',
-    nuevo: false,
-    titulo: 'Usuarios SAC en ALMA',
-    texto: 'La gestión de usuarios del SAC ya se abre aquí, con tu misma sesión.',
-    to: '/apps/sac-usuarios',
   },
 ];
 
