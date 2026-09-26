@@ -7,6 +7,8 @@ export const environment = {
     clientId: 'd43d6a91-ee68-4e97-ada0-069a106a142a',
     tenantId: '08271f42-81ef-45d6-81ac-49776c4be615',
   },
+  /** Sin usuario de prueba fuera de local (ver environment.ts). */
+  usuarioLocal: null,
   /** Apps de otros equipos montadas en el shell (App Manifest). */
   remotes: {
     sacUsuarios: {

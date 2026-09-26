@@ -62,20 +62,6 @@ const RANGOS = [7, 30, 90] as const;
                 </p>
               </div>
             }
-            @if (d.cheques; as ch) {
-              <div class="rounded-lg border border-border bg-background p-4">
-                <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                  <lucide-icon name="wallet" [size]="16" class="text-primary" />
-                  Cheques
-                </div>
-                <p class="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                  {{ ch.registros.toLocaleString('es-CO') }}
-                </p>
-                <p class="text-xs text-muted-foreground">
-                  {{ ch.usuarios }} usuarios registrando
-                </p>
-              </div>
-            }
             @if (d.suscripcion; as su) {
               <div class="rounded-lg border border-border bg-background p-4">
                 <div class="flex items-center gap-2 text-xs text-muted-foreground">

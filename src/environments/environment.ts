@@ -1,5 +1,7 @@
 // Local: sin Entra (clientId vacío ⇒ auth deshabilitada, usuario mock) y
 // backend local. Los builds por ambiente reemplazan este archivo (fileReplacements).
+import { USUARIO_LOCAL } from '../app/core/auth/usuario-local';
+
 export const environment = {
   production: false,
   name: 'local',
@@ -8,6 +10,9 @@ export const environment = {
     clientId: '',
     tenantId: '',
   },
+  /** Usuario sin sesión. Solo existe en local: en los demás ambientes es null
+   *  y así el usuario de prueba no viaja en su código. */
+  usuarioLocal: USUARIO_LOCAL as typeof USUARIO_LOCAL | null,
   /** Apps de otros equipos montadas en el shell (App Manifest). */
   remotes: {
     sacUsuarios: {
