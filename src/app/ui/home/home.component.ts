@@ -84,7 +84,7 @@ const MOSTRAR_WIDGETS = false;
 
 /** El Agente aún no está habilitado para el público: la barra y los chips que
  *  dependen de él se ven (misma UI) pero deshabilitados y marcados "Muy pronto".
- *  Los chips que NO dependen del Agente (Cheques, Más acciones) siguen vivos. */
+ *  Los chips que NO dependen del Agente (Más acciones) siguen vivos. */
 const AGENTE_LISTO = false;
 
 @Component({
