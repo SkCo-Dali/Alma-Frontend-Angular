@@ -39,6 +39,8 @@ export interface ParamField {
   opciones?: ParamFieldOption[];
   /** Select con buscador (listas largas, p. ej. planes de comisión). */
   buscable?: boolean;
+  /** Combobox: lo escrito solo busca; el valor debe ser una de las opciones. */
+  soloOpciones?: boolean;
   maxLength?: number;
   deshabilitado?: boolean;
   placeholder?: string;
@@ -128,6 +130,7 @@ export type ParamValues = Record<string, string | boolean>;
                       [opciones]="f.opciones ?? []"
                       [disabled]="!!f.deshabilitado"
                       [placeholder]="f.placeholder ?? 'Seleccionar o escribir…'"
+                      [soloOpciones]="!!f.soloOpciones"
                       (valueChange)="setValor(f.key, $event)"
                     />
                   }
