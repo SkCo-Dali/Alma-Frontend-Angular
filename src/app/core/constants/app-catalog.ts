@@ -9,7 +9,7 @@ export const APP_CATALOG: Application[] = [
     id: 'app-agente-alma',
     nombre: 'Agente Alma',
     descripcion:
-      'Asistente conversacional de Servicio al Cliente: procesos, casos de Salesforce y cheques.',
+      'Asistente conversacional de Servicio al Cliente: procesos y casos de Salesforce.',
     categoria: 'Asistentes',
     icono: 'sparkles',
     iconUrl: '/app-icons/agente-alma.png',
