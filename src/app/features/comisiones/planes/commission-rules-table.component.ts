@@ -325,7 +325,7 @@ export class CommissionRulesTableComponent {
           'No se puede eliminar la regla',
         );
       } else {
-        this.toast.errorGenerico('delete', msg);
+        this.toast.errorGenerico('delete', e);
       }
     } finally {
       this.borrando.set(false);

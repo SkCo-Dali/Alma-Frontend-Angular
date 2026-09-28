@@ -12,6 +12,7 @@
 // - Los mensajes de error distinguen 403 (permiso), 404 y 409 (estado inválido).
 
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { motivoDeError } from '../api-error';
 import { ComisionesToast } from '../comisiones-toast.service';
 import {
   ALL_STATUSES,
@@ -250,7 +251,7 @@ export class CommissionPlansStore {
           'No se puede eliminar el plan: tiene reglas asociadas. Elimina primero las reglas.',
         );
       } else {
-        this.toast.errorGenerico('delete', msg);
+        this.toast.errorGenerico('delete', e);
       }
       return false;
     }
@@ -276,9 +277,10 @@ export class CommissionPlansStore {
       } else if (mensaje404 && msg.includes('404')) {
         this.toast.errorGenericoConMensaje(mensaje404);
       } else if (msg.includes('409')) {
-        this.toast.errorGenericoConMensaje(mensaje409);
+        // El backend dice qué falta (p. ej. la vigencia no incluye hoy).
+        this.toast.errorGenericoConMensaje(motivoDeError(e) ?? mensaje409);
       } else {
-        this.toast.errorGenerico('toggle', msg);
+        this.toast.errorGenerico('toggle', e);
       }
       return false;
     }
