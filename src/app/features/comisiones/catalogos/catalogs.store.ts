@@ -151,8 +151,7 @@ export class CatalogsStore {
       this.toast.ok('Catálogo eliminado', 'El catálogo se eliminó.');
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.toast.errorGenerico('delete', msg);
+      this.toast.errorGenerico('delete', e);
       return false;
     }
   }
@@ -171,8 +170,7 @@ export class CatalogsStore {
       );
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.toast.errorGenerico('toggle', msg);
+      this.toast.errorGenerico('toggle', e);
       return false;
     }
   }
@@ -228,8 +226,7 @@ export class CatalogsStore {
       this.toast.ok('Campo eliminado', 'El campo se eliminó.');
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.toast.errorGenerico('delete', msg);
+      this.toast.errorGenerico('delete', e);
       return false;
     }
   }

@@ -26,6 +26,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
+import { motivoDeError } from '../api-error';
 import { CatalogsStore } from '../catalogos/catalogs.store';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionRule } from './commission-plans.api';
@@ -635,7 +636,7 @@ export class RuleDialogComponent implements OnInit {
       quitarLocal();
       this.toast.ok('Condición eliminada', 'La condición se eliminó correctamente.');
     } catch (e) {
-      this.toast.errorGenerico('delete', e instanceof Error ? e.message : String(e));
+      this.toast.errorGenerico('delete', e);
     }
   }
 
@@ -712,8 +713,11 @@ export class RuleDialogComponent implements OnInit {
       }
     } catch (e) {
       console.error('Error guardando la condición:', e);
+      const motivo = motivoDeError(e);
       this.toast.errorGenericoConMensaje(
-        'La condición se actualizó en pantalla pero no se pudo guardar en el servidor.',
+        motivo
+          ? `La condición no se guardó en el servidor: ${motivo}`
+          : 'La condición se actualizó en pantalla pero no se pudo guardar en el servidor.',
         'Advertencia',
       );
     }
