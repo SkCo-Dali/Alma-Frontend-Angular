@@ -2,13 +2,20 @@
 //  - El token de Entra se agrega aquí, de forma explícita (no hay interceptor
 //    global de fetch).
 //  - Conserva el retry con backoff exponencial ante 5xx/errores de red (salvo
-//    las descargas) y el ApiConflictError en 409 (registro duplicado), que la
-//    UI trata distinto.
+//    las descargas) y el ApiConflictError en 409, que la UI trata distinto.
+//  - En los 4xx el error lleva el motivo del backend (ver api-error.ts).
 
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
 import { AuthService } from '../../core/auth/auth.service';
-import { ApiConflictError, ApiValidationError, HTTP_CONFLICT, HTTP_UNPROCESSABLE } from './api-error';
+import {
+  ApiConflictError,
+  ApiHttpError,
+  ApiValidationError,
+  HTTP_CONFLICT,
+  HTTP_UNPROCESSABLE,
+  leerMotivo,
+} from './api-error';
 
 const API_BASE = environment.apiUrl.replace(/\/+$/, '');
 const RETRIES = 3;
@@ -134,8 +141,9 @@ export class ComisionesHttp {
   }
 
   /**
-   * Traduce una respuesta fallida: 409 → ApiConflictError (duplicado), y el
-   * resto a Error con el `detail` del backend cuando viene en JSON.
+   * Traduce una respuesta fallida: 409 → ApiConflictError, y el resto a
+   * ApiHttpError. En los 4xx guarda el motivo legible del backend para el aviso;
+   * en los 5xx no, para no mostrar detalles técnicos.
    */
   private async error(res: Response, fallbackMessage: string): Promise<Error> {
     const texto = await res.text().catch(() => '');
@@ -143,19 +151,13 @@ export class ComisionesHttp {
   }
 
   private errorFromText(res: Response, texto: string, fallbackMessage: string): Error {
-    if (res.status === HTTP_CONFLICT) {
-      return new ApiConflictError(texto || fallbackMessage);
-    }
-    let detalle = texto;
-    try {
-      const json = JSON.parse(texto) as { detail?: string };
-      if (json?.detail) detalle = json.detail;
-    } catch {
-      /* no era JSON: se usa el texto crudo */
-    }
+    const motivo = res.status >= 400 && res.status < 500 ? leerMotivo(texto) : null;
+    const detalle = motivo ?? texto;
     // El status queda en el mensaje: varios flujos lo inspeccionan (403/404/409).
-    return new Error(
-      `${fallbackMessage}: ${res.status} ${res.statusText}${detalle ? ` - ${detalle}` : ''}`,
-    );
+    const mensaje = `${fallbackMessage}: ${res.status} ${res.statusText}${detalle ? ` - ${detalle}` : ''}`;
+    if (res.status === HTTP_CONFLICT) {
+      return new ApiConflictError(mensaje, motivo);
+    }
+    return new ApiHttpError(mensaje, res.status, motivo);
   }
 }

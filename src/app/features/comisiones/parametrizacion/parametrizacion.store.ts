@@ -192,7 +192,7 @@ export class ParametrizacionStore {
       if (tipo === 'create' || tipo === 'update') {
         this.toast.errorMutacion(e, tipo);
       } else {
-        this.toast.errorGenerico(tipo, e instanceof Error ? e.message : String(e));
+        this.toast.errorGenerico(tipo, e);
       }
       return false;
     }
