@@ -40,7 +40,9 @@ import { RuleDialogComponent } from './rule-dialog.component';
                   <th class="w-[260px] py-3 text-center text-[11px] uppercase tracking-wide">
                     Condiciones
                   </th>
-                  <th class="w-20 py-3 text-center text-[11px] uppercase tracking-wide">
+                  <th
+                    class="sticky right-0 w-20 bg-[var(--table-header)] py-3 text-center text-[11px] uppercase tracking-wide"
+                  >
                     Acciones
                   </th>
                 </tr>
@@ -93,15 +95,24 @@ import { RuleDialogComponent } from './rule-dialog.component';
                         }
                       </div>
                     </td>
-                    <td class="py-2.5 text-center">
-                      <button
-                        type="button"
-                        (click)="pedirBorrado(r, $event)"
-                        class="h-8 w-8 rounded-full transition-all hover:bg-destructive/10 sm:invisible group-hover:visible"
-                        aria-label="Eliminar regla"
+                    <td class="sticky right-0 bg-[var(--table-surface)] py-2.5 text-center">
+                      <!-- El title va en el span: un botón deshabilitado no muestra
+                           el tooltip ni debe abrir la edición de la fila. -->
+                      <span
+                        class="inline-block"
+                        [title]="bloqueo() ?? 'Eliminar regla'"
+                        (click)="$event.stopPropagation()"
                       >
-                        <lucide-icon name="trash-2" [size]="16" class="text-destructive" />
-                      </button>
+                        <button
+                          type="button"
+                          (click)="pedirBorrado(r, $event)"
+                          [disabled]="!!bloqueo()"
+                          class="h-8 w-8 rounded-full transition-all hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                          aria-label="Eliminar regla"
+                        >
+                          <lucide-icon name="trash-2" [size]="16" class="text-destructive" />
+                        </button>
+                      </span>
                     </td>
                   </tr>
                 }
@@ -235,6 +246,8 @@ import { RuleDialogComponent } from './rule-dialog.component';
 export class CommissionRulesTableComponent {
   readonly rules = input.required<CommissionRule[]>();
   readonly planId = input.required<string>();
+  /** Motivo por el que el plan no admite cambios en sus reglas (null si los admite). */
+  readonly bloqueo = input<string | null>(null);
   readonly ruleDeleted = output<void>();
   readonly ruleUpdated = output<void>();
 
