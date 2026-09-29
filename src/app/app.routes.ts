@@ -201,6 +201,14 @@ export const routes: Routes = [
   },
   // App Acreditación PAC (Recaudos): bandeja + configuración de estados.
   {
+    path: 'apps/recaudos-aplicacion-pagos',
+    loadComponent: () =>
+      import('./features/aplicacion-pagos/aplicacion-pagos-page.component').then(
+        (m) => m.AplicacionPagosPageComponent,
+      ),
+    title: 'Aplicación de Pagos — ALMA',
+  },
+  {
     path: 'apps/recaudos-acreditacion-pac',
     pathMatch: 'full',
     loadComponent: () =>
