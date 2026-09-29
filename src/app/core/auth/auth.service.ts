@@ -36,6 +36,7 @@ const SIN_SESION: User = {
 
 // Scope expuesto por la misma app registration (Expose an API)
 const API_SCOPE = `api://${CLIENT_ID}/access_as_user`;
+const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 
 function resolveAccess(me: MeApi | null): { roles: string[]; permissions: string[] } {
   if (!me?.registrado || !me.is_active) {
@@ -307,6 +308,34 @@ export class AuthService {
   async signOut(): Promise<void> {
     if (!authEnabled) return;
     const app = await this.getMsal();
-    await app.logoutRedirect({ account: this.getAccount(app) ?? undefined });
+    const account = this.getAccount(app);
+    await this.cerrarSesionEnServidor(app, account);
+    await app.logoutRedirect({ account: account ?? undefined });
+  }
+
+  /**
+   * Retest 7Way (MEDIO #6): el backend anota el token como cerrado para que una
+   * copia de él ya no sirva. Si la llamada falla o tarda más de 3 s, el cierre
+   * de sesión sigue igual.
+   */
+  private async cerrarSesionEnServidor(
+    app: PublicClientApplication,
+    account: AccountInfo | null,
+  ): Promise<void> {
+    if (!account) return;
+    const control = new AbortController();
+    const espera = setTimeout(() => control.abort(), 3000);
+    try {
+      const { accessToken } = await app.acquireTokenSilent({ scopes: [API_SCOPE], account });
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: control.signal,
+      });
+    } catch (err) {
+      console.warn('[auth] no se pudo cerrar la sesión en el servidor:', err);
+    } finally {
+      clearTimeout(espera);
+    }
   }
 }
