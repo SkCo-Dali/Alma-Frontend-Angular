@@ -139,15 +139,17 @@ type MotivoPara = 'reject' | 'inactivate';
             <div class="mt-6 flex flex-col">
               <div class="mb-2 flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-muted-foreground">Reglas</h3>
-                <button
-                  type="button"
-                  (click)="creandoRegla.set(true)"
-                  [disabled]="cargandoReglas()"
-                  class="alma-btn alma-btn-primary h-8 px-3 text-xs"
-                >
-                  <lucide-icon name="plus" [size]="16" class="mr-2" />
-                  Crear
-                </button>
+                <span class="inline-block" [title]="bloqueoReglas() ?? ''">
+                  <button
+                    type="button"
+                    (click)="creandoRegla.set(true)"
+                    [disabled]="cargandoReglas() || !!bloqueoReglas()"
+                    class="alma-btn alma-btn-primary h-8 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <lucide-icon name="plus" [size]="16" class="mr-2" />
+                    Crear
+                  </button>
+                </span>
               </div>
 
               @if (cargandoReglas()) {
@@ -174,6 +176,7 @@ type MotivoPara = 'reject' | 'inactivate';
                 <alma-commission-rules-table
                   [rules]="reglas()"
                   [planId]="plan().id"
+                  [bloqueo]="bloqueoReglas()"
                   (ruleDeleted)="cargarReglas()"
                   (ruleUpdated)="cargarReglas()"
                 />
@@ -379,6 +382,18 @@ export class PlanEditorDialogComponent implements OnInit {
   protected readonly errorReglas = signal<string | null>(null);
 
   protected readonly esBorrador = computed(() => this.plan().status === 'draft');
+
+  /** El backend solo deja cambiar reglas en borrador, rechazado o inactivo. */
+  protected readonly bloqueoReglas = computed(() => {
+    switch (this.plan().status) {
+      case 'published':
+        return 'Plan publicado: inactívalo para cambiar sus reglas.';
+      case 'ready_to_approve':
+        return 'Plan en Listo para aprobar: recházalo para cambiar sus reglas.';
+      default:
+        return null;
+    }
+  });
 
   protected puedeGuardar(): boolean {
     return (
