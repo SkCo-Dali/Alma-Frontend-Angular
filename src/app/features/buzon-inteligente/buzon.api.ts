@@ -15,7 +15,8 @@ import { DEMO, demoCorreoDetalle, demoMetricas, demoProbar } from './buzon.demo'
 // ── Tipos del contrato ───────────────────────────────────────────────────────
 
 export type ModoBuzon = 'sugerir' | 'automatico';
-export type EstadoConexion = 'conectada' | 'sin_conectar' | 'requiere_reconexion' | 'app_only';
+/** El Buzón solo lee buzones que su dueño conectó: no hay acceso de plataforma (app-only). */
+export type EstadoConexion = 'conectada' | 'sin_conectar' | 'requiere_reconexion';
 export type EstadoCorreo = 'pendiente' | 'revision' | 'ejecutado' | 'ignorado' | 'error';
 export type OrigenDecision = 'ia' | 'regla' | 'humano';
 export type TipoAccion =

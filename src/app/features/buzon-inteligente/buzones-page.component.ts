@@ -17,7 +17,6 @@ import { DemoBadgeComponent } from './demo-badge.component';
 
 const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: string }> = {
   conectada: { nombre: 'Conectado', clase: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', icon: 'plug-zap' },
-  app_only: { nombre: 'Acceso de plataforma', clase: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', icon: 'shield-check' },
   sin_conectar: { nombre: 'Sin conectar', clase: 'bg-amber-500/15 text-amber-700 dark:text-amber-300', icon: 'plug' },
   requiere_reconexion: { nombre: 'Reconectar', clase: 'bg-rose-500/15 text-rose-700 dark:text-rose-300', icon: 'alert-triangle' },
 };
@@ -123,7 +122,7 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
                     @if (b.miembros.length === 0) { <span class="text-xs text-muted-foreground">Visible para toda la App</span> }
                   </div>
                   <div class="flex flex-wrap items-center justify-end gap-1.5">
-                    @if (b.estado_conexion !== 'conectada' && b.estado_conexion !== 'app_only' && b.puede_administrar) {
+                    @if (b.estado_conexion !== 'conectada' && b.puede_administrar) {
                       <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" (click)="conectar(b)">
                         <lucide-icon name="plug" [size]="14" /> Conectar
                       </button>
