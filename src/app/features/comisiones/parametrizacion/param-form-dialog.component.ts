@@ -19,6 +19,7 @@ export type ParamFieldTipo =
   | 'texto'
   | 'numero'
   | 'decimal'
+  | 'monto'
   | 'select'
   | 'combobox'
   | 'switch'
@@ -42,6 +43,8 @@ export interface ParamField {
   /** Combobox: lo escrito solo busca; el valor debe ser una de las opciones. */
   soloOpciones?: boolean;
   maxLength?: number;
+  /** Monto: admite un "-" al inicio (p. ej. ajustes que netean un pago de más). */
+  conSigno?: boolean;
   deshabilitado?: boolean;
   placeholder?: string;
   ayuda?: string;
@@ -50,6 +53,10 @@ export interface ParamField {
 }
 
 export type ParamValues = Record<string, string | boolean>;
+
+// Montos con el formato de la columna decimal(18,2): dígitos, punto y hasta 2 decimales.
+const MONTO = /^\d+(\.\d{1,2})?$/;
+const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
 
 @Component({
   selector: 'alma-param-form-dialog',
@@ -288,33 +295,43 @@ export class ParamFormDialogComponent implements OnInit {
     this.estado.update((prev) => this.derivar()(key, { ...prev, [key]: valor }));
   }
 
-  /** Los campos numéricos filtran lo que no sea dígito (o punto en decimales). */
+  /** Los campos numéricos filtran lo que no sea dígito (o punto en decimales y montos). */
   protected setTexto(f: ParamField, valor: string): void {
     let v = valor;
     if (f.tipo === 'numero') v = v.replace(/\D/g, '');
     if (f.tipo === 'decimal') v = this.soloDecimal(v);
+    if (f.tipo === 'monto') {
+      const negativo = !!f.conSigno && v.trim().startsWith('-');
+      v = (negativo ? '-' : '') + this.soloDecimal(v);
+    }
     if (f.maxLength) v = v.slice(0, f.maxLength);
     this.setValor(f.key, v);
   }
 
   protected filtrarTecla(f: ParamField, ev: KeyboardEvent): void {
-    if (f.tipo !== 'numero' && f.tipo !== 'decimal') return;
+    if (f.tipo !== 'numero' && f.tipo !== 'decimal' && f.tipo !== 'monto') return;
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.key.length > 1) return;
     if (/\d/.test(ev.key)) return;
-    if (f.tipo === 'decimal' && ev.key === '.' && !this.valor(f.key).includes('.')) return;
+    const conPunto = f.tipo === 'decimal' || f.tipo === 'monto';
+    if (conPunto && ev.key === '.' && !this.valor(f.key).includes('.')) return;
+    if (f.tipo === 'monto' && f.conSigno && ev.key === '-' && !this.valor(f.key).includes('-')) {
+      return;
+    }
     ev.preventDefault();
   }
 
   protected modoEntrada(f: ParamField): string | null {
     if (f.tipo === 'numero') return 'numeric';
-    if (f.tipo === 'decimal') return 'decimal';
+    // El teclado "decimal" del celular no trae el signo "-".
+    if (f.tipo === 'decimal' || (f.tipo === 'monto' && !f.conSigno)) return 'decimal';
     return null;
   }
 
   protected patronEntrada(f: ParamField): string | null {
     if (f.tipo === 'numero') return '[0-9]*';
     if (f.tipo === 'decimal') return '[0-9]*[.]?[0-9]*';
+    if (f.tipo === 'monto') return f.conSigno ? '-?[0-9]*[.]?[0-9]*' : '[0-9]*[.]?[0-9]*';
     return null;
   }
 
@@ -378,6 +395,9 @@ export class ParamFormDialogComponent implements OnInit {
         !/^([0-9]{1,2}(\.[0-9]{1,3})?|100(\.0{1,3})?)$/.test(texto)
       ) {
         errs[f.key] = 'Número entre 0 - 100 (máx 3 decimales)';
+      } else if (f.tipo === 'monto' && !(f.conSigno ? MONTO_CON_SIGNO : MONTO).test(texto)) {
+        errs[f.key] =
+          'Solo números, con punto y hasta 2 decimales' + (f.conSigno ? ' (puede ser negativo)' : '');
       } else if (f.tipo === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(texto)) {
         errs[f.key] = 'Ingrese un correo valido';
       } else if (f.maxLength && texto.length > f.maxLength) {
