@@ -866,9 +866,9 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
     {
       key: 'ContratoLargo',
       label: 'Contrato Largo',
-      tipo: 'texto',
+      tipo: 'numero',
       requerido: true,
-      maxLength: 50,
+      maxLength: 18,
     },
     { key: 'Activo', label: 'Estado Activo', tipo: 'switch', ayuda: 'Estado del registro' },
   ],
