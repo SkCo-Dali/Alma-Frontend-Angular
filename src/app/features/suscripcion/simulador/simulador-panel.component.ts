@@ -369,7 +369,12 @@ interface ItemVista {
             />
           </div>
           <div class="min-w-0 space-y-1">
-            <p class="text-xs font-medium text-foreground">Valor cúmulo</p>
+            <p
+              class="text-xs font-medium text-foreground"
+              title="Lo que el cliente ya tiene asegurado, sin esta cotización (control de cúmulos)."
+            >
+              Cúmulo previo
+            </p>
             <input
               class="alma-input h-9 rounded-xl text-sm"
               [(ngModel)]="valorCumulo"
