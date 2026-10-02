@@ -113,7 +113,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
       <!-- ── Indicadores ── -->
       @if (cards().length) {
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           @for (k of cards(); track k.label) {
             <div class="glass rounded-xl px-3 py-2 shadow-[var(--shadow-sm)]" [class.opacity-60]="cargandoResumen()">
               <p class="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -226,6 +226,32 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
               }
             }
           }
+
+          <div class="mt-4 border-t border-border/60 pt-3">
+            <h3 class="mb-1 text-xs font-bold text-foreground">Tiempo de gestión</h3>
+            <p class="mb-2 text-[11px] text-muted-foreground">
+              Desde que una persona abre la solicitud por primera vez hasta que queda emitida.
+            </p>
+            @if (gestion(); as g) {
+              @if (g.n === 0) {
+                <p class="text-xs text-muted-foreground">
+                  Se mide desde el 2 de octubre: todavía no hay emisiones con apertura registrada en el periodo.
+                </p>
+              } @else {
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <p class="text-[11px] text-muted-foreground">Mediana</p>
+                    <p class="text-lg font-bold text-foreground">{{ duracion(g.medianaMin) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-muted-foreground">P90</p>
+                    <p class="text-lg font-bold text-foreground">{{ duracion(g.p90Min) }}</p>
+                  </div>
+                </div>
+                <p class="mt-2 text-[11px] text-muted-foreground/70">Sobre {{ g.n }} emisiones.</p>
+              }
+            }
+          </div>
         </section>
 
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
@@ -390,6 +416,9 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
                     <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-right text-xs tabular-nums text-foreground">
                       {{ duracion(f.minutosAEmision) }}
                     </td>
+                    <td class="whitespace-nowrap border-b border-border/50 px-3 py-2 text-right text-xs tabular-nums text-foreground">
+                      {{ duracion(f.minutosGestion) }}
+                    </td>
                   </tr>
                 } @empty {
                   <tr>
@@ -469,7 +498,12 @@ export class ReporteriaPageComponent {
     { label: 'Gestionó', clave: 'gestiono', ayuda: 'Quién emitió la póliza en Pipeline.' },
     { label: 'Ingreso', clave: 'fechaIngreso' },
     { label: 'Emisión', clave: 'fechaEmision' },
-    { label: 'Tiempo', clave: 'minutosAEmision', ayuda: 'Tiempo hasta la emisión. El filtro va en horas.' },
+    { label: 'Tiempo', clave: 'minutosAEmision', ayuda: 'Desde el ingreso hasta la emisión. El filtro va en horas.' },
+    {
+      label: 'Gestión',
+      clave: 'minutosGestion',
+      ayuda: 'Desde que una persona abrió la solicitud por primera vez hasta la emisión (se mide desde el 2 de octubre). El filtro va en horas.',
+    },
   ];
 
   /**
@@ -486,6 +520,7 @@ export class ReporteriaPageComponent {
     fechaIngreso: this.def('date'),
     fechaEmision: this.def('date'),
     minutosAEmision: this.def('number'),
+    minutosGestion: this.def('number'),
   };
 
   /** null = orden por defecto del backend (ingreso, más reciente primero). */
@@ -501,6 +536,9 @@ export class ReporteriaPageComponent {
     Math.ceil((this.auditoria()?.total ?? 0) / this.tamanoPagina()),
   );
   protected readonly tiempos = computed(() => this.resumen()?.tiempoEmision ?? null);
+  protected readonly gestion = computed(() =>
+    this.resumen() ? (this.resumen()!.tiempoGestion ?? { n: 0, medianaMin: null, p90Min: null, minMin: null, maxMin: null }) : null,
+  );
   protected readonly maxDecision = computed(() =>
     Math.max(1, ...(this.resumen()?.decisiones ?? []).map((d) => d.total)),
   );
@@ -548,6 +586,14 @@ export class ReporteriaPageComponent {
       },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
       { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
+      // Desde que alguien la abre, no desde que llega: el tiempo en manos del analista.
+      {
+        label: 'Mediana de gestión',
+        icon: 'timer',
+        valor: this.duracion(r.tiempoGestion?.medianaMin),
+        sub: r.tiempoGestion?.n ? `sobre ${r.tiempoGestion.n} emisiones` : 'se mide desde el 2 de octubre',
+        clase: 'text-foreground',
+      },
       { label: 'Devoluciones', icon: 'shield-alert', valor: n(this.devoluciones(r)), sub: this.porcentaje(this.devoluciones(r), r.solicitudes), clase: 'text-destructive' },
     ];
   });
