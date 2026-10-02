@@ -51,6 +51,9 @@ export interface ResumenReporteria {
   estados: ConteoEstado[];
   decisiones: ConteoDecision[];
   tiempoEmision: TiempoEmision;
+  /** Desde que una persona abrió la solicitud por primera vez hasta la emisión
+   *  (se mide desde el 2-oct-2026; antes Alma no registraba la apertura). */
+  tiempoGestion?: TiempoEmision;
   topAlertas: ConteoValor[];
   topExclusiones: ConteoValor[];
   /** Totales SIN tope: denominador del reparto porcentual de las dos listas. */
@@ -69,6 +72,8 @@ export interface FilaAuditoria {
   evaluadaEn: string | null;
   fechaEmision: string | null;
   minutosAEmision: number | null;
+  /** Primera apertura por una persona → emisión; null si no aplica. */
+  minutosGestion?: number | null;
   /** Quién emitió la póliza en Pipeline (IssuanceUser), en minúsculas. */
   gestiono: string | null;
   /** Estado de la póliza en Pipeline: código (para el color) y descripción. */
@@ -113,7 +118,8 @@ export type ColumnaAuditoria =
   | 'gestiono'
   | 'fechaIngreso'
   | 'fechaEmision'
-  | 'minutosAEmision';
+  | 'minutosAEmision'
+  | 'minutosGestion';
 
 export interface OrdenAuditoria {
   columna: ColumnaAuditoria;
