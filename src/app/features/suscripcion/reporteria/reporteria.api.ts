@@ -22,6 +22,9 @@ export interface ConteoEstado {
 export interface ConteoDecision {
   decision: string;
   total: number;
+  /** De ese total, las que creó la experiencia digital (userWEB / PHAROSDIGITAL).
+   *  El resto, `total - digital`, las crea Afiliaciones y se gestionan en Alma. */
+  digital?: number;
 }
 export interface ConteoValor {
   valor: string;
@@ -100,10 +103,32 @@ export interface ConteoAnalista {
   total: number;
 }
 
+/** Origen de la cotización: `digital` la creó la experiencia digital; `alma` la
+ *  creó Afiliaciones y se gestiona en Alma. */
+export type OrigenCotizacion = 'alma' | 'digital';
+
+export const ETIQUETA_ORIGEN: Record<OrigenCotizacion, string> = {
+  alma: 'Gestión Alma',
+  digital: 'Experiencia digital',
+};
+
+export interface ConteoOrigen {
+  origen: OrigenCotizacion;
+  total: number;
+}
+
+/** Quién gestionó (emitió) la póliza en Pipeline, en minúsculas. */
+export interface ConteoGestiono {
+  usuario: string;
+  total: number;
+}
+
 export interface OpcionesReporteria {
   fechas: DiaConSolicitudes[];
   decisiones: ConteoDecision[];
   estados: ConteoEstado[];
+  origenes?: ConteoOrigen[];
+  gestionaron?: ConteoGestiono[];
   /** Quién hizo la última evaluación. Pocos valores: va entero. */
   analistas?: ConteoAnalista[];
 }
@@ -126,8 +151,11 @@ export interface OrdenAuditoria {
   direccion: 'asc' | 'desc';
 }
 
-/** Lo que acota la vista entera: periodo y resultado del motor. */
-export type ContextoAuditoria = Pick<FiltrosReporteria, 'desde' | 'hasta' | 'decision'>;
+/** Lo que acota la vista entera: periodo, resultado del motor, origen y quién gestionó. */
+export type ContextoAuditoria = Pick<
+  FiltrosReporteria,
+  'desde' | 'hasta' | 'decision' | 'origen' | 'gestiono'
+>;
 
 /** Consulta de la auditoría con filtros por columna, en el formato de la bandeja. */
 export interface ConsultaAuditoria extends ContextoAuditoria {
@@ -143,6 +171,8 @@ export interface FiltrosReporteria {
   desde?: string;
   hasta?: string;
   decision?: string;
+  origen?: OrigenCotizacion;
+  gestiono?: string;
   estado?: string;
   analista?: string;
   q?: string;
@@ -167,9 +197,9 @@ export class ReporteriaApi {
    * selector), el resto de indicadores sí queda acotado.
    */
   resumen(f: FiltrosReporteria = {}): Promise<ResumenReporteria> {
-    const { desde, hasta, decision } = f;
+    const { desde, hasta, decision, origen, gestiono } = f;
     return this.api.fetch<ResumenReporteria>(
-      `/api/suscripcion/reporteria/resumen${this.qs({ desde, hasta, decision })}`,
+      `/api/suscripcion/reporteria/resumen${this.qs({ desde, hasta, decision, origen, gestiono })}`,
     );
   }
 
