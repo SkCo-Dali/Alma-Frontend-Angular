@@ -27,9 +27,11 @@ import {
   AuditoriaDistinctApi,
   ColumnaAuditoria,
   ConteoValor,
+  ETIQUETA_ORIGEN,
   FiltrosReporteria,
   OpcionesReporteria,
   OrdenAuditoria,
+  OrigenCotizacion,
   PaginaAuditoria,
   ReporteriaApi,
   ResumenReporteria,
@@ -87,7 +89,23 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           [seleccion]="decisionInput"
           (seleccionar)="onDecision($event)"
         />
-        @if (desdeInput || hastaInput || decisionInput) {
+        <alma-filtro-valores
+          etiqueta="Origen"
+          icono="globe"
+          todosLabel="Todos"
+          [opciones]="opcionesOrigen()"
+          [seleccion]="origenInput"
+          (seleccionar)="onOrigen($event)"
+        />
+        <alma-filtro-valores
+          etiqueta="Gestionó"
+          icono="user-check"
+          todosLabel="Todos"
+          [opciones]="opcionesGestiono()"
+          [seleccion]="gestionoInput"
+          (seleccionar)="onGestiono($event)"
+        />
+        @if (desdeInput || hastaInput || decisionInput || origenInput || gestionoInput) {
           <button type="button" (click)="limpiarPeriodo()" class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-sm">
             <lucide-icon name="x" [size]="15" /> Limpiar
           </button>
@@ -100,14 +118,16 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         </p>
       }
 
-      @if (decisionInput) {
+      @if (decisionInput || origenInput || gestionoInput) {
         <p
           class="glass flex w-fit max-w-full flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] text-muted-foreground shadow-[var(--shadow-sm)]"
         >
           <lucide-icon name="filter" [size]="12" class="text-primary" />
           Indicadores acotados a
-          <span class="font-semibold text-foreground">{{ decisionInput }}</span>
-          — la distribución por resultado del motor sigue mostrando todo el periodo.
+          <span class="font-semibold text-foreground">{{ filtrosActivos() }}</span>
+          @if (decisionInput) {
+            — la distribución por resultado del motor no se acota por el resultado: sigue mostrando todos.
+          }
         </p>
       }
 
@@ -324,8 +344,8 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           <h2 class="text-sm font-bold text-foreground">Auditoría</h2>
           <p class="text-[11px] text-muted-foreground">
             Cada solicitud con su última decisión, quién la evaluó y su tiempo hasta emisión.
-            @if (decisionInput) {
-              <span> Acotada a <span class="font-medium text-foreground">{{ decisionInput }}</span>.</span>
+            @if (decisionInput || origenInput || gestionoInput) {
+              <span> Acotada a <span class="font-medium text-foreground">{{ filtrosActivos() }}</span>.</span>
             }
           </p>
           <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -476,6 +496,10 @@ export class ReporteriaPageComponent {
   protected hastaInput = '';
   /** Resultado del motor (última decisión): acota indicadores Y auditoría. */
   protected decisionInput = '';
+  /** Origen de la cotización (experiencia digital o Alma): también acota todo. */
+  protected origenInput: OrigenCotizacion | '' = '';
+  /** Quién gestionó (emitió) la póliza: también acota todo. */
+  protected gestionoInput = '';
   // Filtros propios de la tabla de auditoría.
   protected qInput = '';
   /** Búsqueda ya aplicada (la del input puede estar a medio escribir). */
@@ -591,6 +615,29 @@ export class ReporteriaPageComponent {
     (this.resumen()?.decisiones ?? []).reduce((a, d) => a + (d.digital ?? 0), 0),
   );
   protected readonly totalAlma = computed(() => this.totalDecisiones() - this.totalDigital());
+  /** Origen y quién gestionó se piden una vez a /opciones: son el selector, no se acotan. */
+  protected readonly opcionesOrigen = computed<OpcionFiltro[]>(() =>
+    (this.opciones()?.origenes ?? []).map((o) => ({
+      valor: o.origen,
+      etiqueta: ETIQUETA_ORIGEN[o.origen],
+      total: o.total,
+    })),
+  );
+  protected readonly opcionesGestiono = computed<OpcionFiltro[]>(() =>
+    (this.opciones()?.gestionaron ?? []).map((g) => ({ valor: g.usuario, total: g.total })),
+  );
+
+  /** Los filtros de la vista que están puestos, para rotular indicadores y auditoría. */
+  protected filtrosActivos(): string {
+    return [
+      this.decisionInput,
+      this.origenInput ? ETIQUETA_ORIGEN[this.origenInput] : '',
+      this.gestionoInput,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
   protected readonly maxAlerta = computed(() => this.maxDe(this.resumen()?.topAlertas));
   protected readonly maxExclusion = computed(() => this.maxDe(this.resumen()?.topExclusiones));
 
@@ -643,12 +690,15 @@ export class ReporteriaPageComponent {
     }
   }
 
-  /** Lo que comparten los indicadores y la tabla: periodo + resultado del motor. */
+  /** Lo que comparten los indicadores y la tabla: periodo, resultado del motor,
+   *  origen y quién gestionó. */
   private filtrosBase(): FiltrosReporteria {
     return {
       desde: this.desdeInput || undefined,
       hasta: this.hastaInput || undefined,
       decision: this.decisionInput || undefined,
+      origen: this.origenInput || undefined,
+      gestiono: this.gestionoInput || undefined,
     };
   }
 
@@ -778,6 +828,23 @@ export class ReporteriaPageComponent {
     this.desdeInput = '';
     this.hastaInput = '';
     this.decisionInput = '';
+    this.origenInput = '';
+    this.gestionoInput = '';
+    void this.cargar();
+  }
+
+  /** Cambiar el origen recarga indicadores y auditoría. */
+  protected onOrigen(valor: string): void {
+    const origen = (valor === 'alma' || valor === 'digital' ? valor : '') as OrigenCotizacion | '';
+    if (origen === this.origenInput) return;
+    this.origenInput = origen;
+    void this.cargar();
+  }
+
+  /** Cambiar quién gestionó recarga indicadores y auditoría. */
+  protected onGestiono(valor: string): void {
+    if (valor === this.gestionoInput) return;
+    this.gestionoInput = valor;
     void this.cargar();
   }
 
