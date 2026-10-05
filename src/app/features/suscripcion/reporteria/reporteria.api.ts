@@ -22,6 +22,9 @@ export interface ConteoEstado {
 export interface ConteoDecision {
   decision: string;
   total: number;
+  /** De ese total, las que creó la experiencia digital (userWEB / PHAROSDIGITAL).
+   *  El resto, `total - digital`, las crea Afiliaciones y se gestionan en Alma. */
+  digital?: number;
 }
 export interface ConteoValor {
   valor: string;
