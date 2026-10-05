@@ -132,9 +132,21 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
       <div class="grid gap-3 lg:grid-cols-2">
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-3 text-sm font-bold text-foreground">Resultado del motor</h2>
-          <p class="mb-3 text-[11px] text-muted-foreground">
+          <p class="mb-2 text-[11px] text-muted-foreground">
             Última decisión de cada solicitud (una solicitud puede re-evaluarse varias veces).
           </p>
+          <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+            <span class="inline-flex items-center gap-1.5" title="Cotizaciones que crea el equipo de Afiliaciones">
+              <span class="size-2 rounded-full bg-primary"></span>
+              Gestión Alma
+              <span class="tabular-nums text-foreground">{{ totalAlma() }}</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5" title="Cotizaciones creadas desde la experiencia digital (userWEB y PHAROSDIGITAL)">
+              <span class="size-2 rounded-full bg-chart-2"></span>
+              Experiencia digital
+              <span class="tabular-nums text-foreground">{{ totalDigital() }}</span>
+            </span>
+          </div>
           @for (d of resumen()?.decisiones ?? []; track d.decision) {
             <button
               type="button"
@@ -153,10 +165,21 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
               </div>
               <div class="mt-1 h-2 overflow-hidden rounded-full bg-muted">
                 <div
-                  class="h-full rounded-full"
-                  [class]="d.decision === decisionInput || !decisionInput ? 'bg-primary' : 'bg-primary/35'"
+                  class="flex h-full overflow-hidden rounded-full"
+                  [class.opacity-40]="decisionInput && d.decision !== decisionInput"
                   [style.width.%]="ancho(d.total, maxDecision())"
-                ></div>
+                >
+                  <div class="h-full bg-primary" [style.width.%]="parte(d.total - (d.digital ?? 0), d.total)"></div>
+                  <div class="h-full bg-chart-2" [style.width.%]="parte(d.digital ?? 0, d.total)"></div>
+                </div>
+              </div>
+              <div class="mt-1 flex items-center gap-3 text-[11px] tabular-nums text-muted-foreground">
+                <span class="inline-flex items-center gap-1">
+                  <span class="size-1.5 rounded-full bg-primary"></span>{{ d.total - (d.digital ?? 0) }} Alma
+                </span>
+                <span class="inline-flex items-center gap-1">
+                  <span class="size-1.5 rounded-full bg-chart-2"></span>{{ d.digital ?? 0 }} digital
+                </span>
               </div>
             </button>
           } @empty {
@@ -563,6 +586,11 @@ export class ReporteriaPageComponent {
   protected readonly totalDecisiones = computed(() =>
     (this.resumen()?.decisiones ?? []).reduce((a, d) => a + d.total, 0),
   );
+  /** Del total de la distribución, lo que creó la experiencia digital y lo que gestiona Alma. */
+  protected readonly totalDigital = computed(() =>
+    (this.resumen()?.decisiones ?? []).reduce((a, d) => a + (d.digital ?? 0), 0),
+  );
+  protected readonly totalAlma = computed(() => this.totalDecisiones() - this.totalDigital());
   protected readonly maxAlerta = computed(() => this.maxDe(this.resumen()?.topAlertas));
   protected readonly maxExclusion = computed(() => this.maxDe(this.resumen()?.topExclusiones));
 
@@ -786,6 +814,11 @@ export class ReporteriaPageComponent {
     return (r.decisiones ?? [])
       .filter((d) => (d.decision || '').toLowerCase().includes('devoluc'))
       .reduce((a, d) => a + d.total, 0);
+  }
+
+  /** Porción (en %) de una barra: la parte Alma y la parte digital suman el 100% de su barra. */
+  protected parte(valor: number, total: number): number {
+    return total > 0 ? (valor / total) * 100 : 0;
   }
 
   protected ancho(valor: number, max: number): number {
