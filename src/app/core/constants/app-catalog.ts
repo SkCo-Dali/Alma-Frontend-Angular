@@ -52,6 +52,21 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-recaudos-aplicacion-pagos',
+    nombre: 'Aplicación de Pagos',
+    descripcion:
+      'Recaudos: carga del MAESTRO de pagos de extractos y PSE para identificarlos, conciliarlos y aplicarlos a los créditos.',
+    categoria: 'Recaudos',
+    icono: 'landmark',
+    color: '#0F6CBD',
+    url: '/apps/recaudos-aplicacion-pagos',
+    internalRoute: '/apps/recaudos-aplicacion-pagos',
+    integrationType: 'internal',
+    requiredPermission: 'app.recaudos-aplicacion-pagos.view',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-visor-comunicaciones',
     nombre: 'Visor de comunicaciones',
     descripcion:
