@@ -267,7 +267,12 @@ export class InfoGerencialApi {
 
   async getFilters(): Promise<FilterOptions> {
     const res = await this.http.get<{
-      filters: { periodo: number[]; canal: string[]; compania: string[]; producto: string[] };
+      filters: {
+        periodo: number[];
+        canal: string[];
+        producto: string[];
+        compania: (string | { value: string; label: string })[];
+      };
     }>(`${PERFORMANCE}/filters`);
     const f = res.filters;
     return {
@@ -276,7 +281,9 @@ export class InfoGerencialApi {
         label: formatPeriodo(p),
       })),
       channels: (f?.canal ?? []).map((c) => ({ value: c, label: c })),
-      companies: (f?.compania ?? []).map((c) => ({ value: c, label: c })),
+      companies: (f?.compania ?? []).map((c) =>
+        typeof c === 'string' ? { value: c, label: c } : { value: c.value, label: c.label },
+      ),
       products: (f?.producto ?? []).map((p) => ({ value: p, label: p })),
     };
   }
