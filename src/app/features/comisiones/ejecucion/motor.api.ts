@@ -113,9 +113,9 @@ export const MOTOR_TABLE_COLUMNS: Record<MotorDataTab, string[]> = {
 /** Opciones fijas del filtro de compañía en las tablas de comisiones. */
 export const MOTOR_COMPANY_FILTER_OPTIONS = [
   { label: 'Todas', value: 'Todas' },
-  { label: 'Skandia Seguros de Vida S.A.', value: '137' },
-  { label: 'Skandia Fiduciaria', value: '180' },
-  { label: 'Skandia AFP', value: '194' },
+  { label: 'VIDA', value: '137' },
+  { label: 'FIDU', value: '180' },
+  { label: 'AFPC', value: '194' },
 ];
 
 export const MOTOR_ESTADO_CORREO_OPTIONS = ['Pendiente', 'Excluido', 'Enviado', 'Error'];

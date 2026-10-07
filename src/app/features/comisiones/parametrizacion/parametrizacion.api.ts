@@ -601,7 +601,7 @@ function categoriaDe(code: unknown): AccountingCategory {
 /** En contabilidad la categoría se deduce del NOMBRE de la compañía. */
 function categoriaPorNombre(nombre: string): AccountingCategory {
   const n = (nombre || '').toLowerCase();
-  if (n.includes('fiduciaria')) return 'fiduciaria';
+  if (n.includes('fiduciaria') || n === 'fidu') return 'fiduciaria';
   if (
     n.includes('pension') ||
     n.includes('afp') ||
