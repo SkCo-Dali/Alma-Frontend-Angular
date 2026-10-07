@@ -36,6 +36,30 @@ export class ApiService {
     return body as T;
   }
 
+  /**
+   * POST multipart (FormData) para subir archivos. No fija Content-Type: el
+   * navegador lo pone con el boundary del multipart.
+   */
+  async upload<T>(path: string, form: FormData): Promise<T> {
+    const headers: Record<string, string> = {};
+    const token = await this.auth.getAccessToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body: form });
+    const text = await res.text();
+    let body: unknown = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = text;
+    }
+    if (!res.ok) {
+      const detail =
+        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
+      throw new Error(detail);
+    }
+    return body as T;
+  }
+
   /** Perfil del usuario autenticado: identidad + permisos RBAC por App. */
   getMe(): Promise<MeApi> {
     return this.fetch<MeApi>('/api/users/me');

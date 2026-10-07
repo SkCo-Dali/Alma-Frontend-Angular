@@ -10,9 +10,9 @@ export const CATEGORIES: AccountingCategory[] = [
 ];
 
 export const ACCOUNTING_CATEGORY_LABELS: Record<AccountingCategory, string> = {
-  seguros: 'Vida',
-  fiduciaria: 'Fiduciaria',
-  pensiones_obligatorias: 'AFP',
+  seguros: 'VIDA',
+  fiduciaria: 'FIDU',
+  pensiones_obligatorias: 'AFPC',
 };
 
 export const CATEGORY_TO_COMPANY_CODE: Record<AccountingCategory, number> = {
@@ -31,17 +31,13 @@ export const COMPANY_CODE_TO_CATEGORY: Record<number, AccountingCategory> = {
 export const COMPANY_OPTIONS = [
   { label: 'Skandia Seguros De Vida S.A.', value: 'Skandia Seguros De Vida S.A.', code: 137 },
   { label: 'Skandia Fiduciaria S.A.', value: 'Skandia Fiduciaria S.A.', code: 180 },
-  {
-    label: 'Skandia Pensiones y Cesantias S.A.',
-    value: 'Skandia Pensiones y Cesantias S.A.',
-    code: 194,
-  },
+  { label: 'Skandia AFP-ACCAI S.A.', value: 'Skandia AFP-ACCAI S.A.', code: 194 },
 ];
 
 export const COMPANY_CODE_TO_NAME: Record<number, string> = {
   137: 'Skandia Seguros De Vida S.A.',
   180: 'Skandia Fiduciaria S.A.',
-  194: 'Skandia Pensiones y Cesantias S.A.',
+  194: 'Skandia AFP-ACCAI S.A.',
 };
 
 /** Canal y su código, iguales en los cuatro formularios que lo piden. */
