@@ -67,7 +67,7 @@ import { LucideAngularModule } from 'lucide-angular';
                   <strong class="text-foreground">Verificar comisiones y mantenimiento:</strong>
                   Revise en <em class="text-foreground">Comisiones Finales</em> y
                   <em class="text-foreground">Reporte de Mantenimiento</em>. El reporte de
-                  mantenimiento solo aplica para Seguros (Fiduciaria y AFP estarán vacíos).
+                  mantenimiento solo aplica para Seguros (FIDU y AFPC estarán vacíos).
                 </div>
               </div>
             </div>
@@ -104,7 +104,7 @@ import { LucideAngularModule } from 'lucide-angular';
             class="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
           >
             <lucide-icon name="info" [size]="16" class="shrink-0" />
-            Las 3 compañías (Seguros, Fiduciaria y AFP) corren en paralelo bajo estos jobs.
+            Las 3 compañías (VIDA, FIDU y AFPC) corren en paralelo bajo estos jobs.
           </div>
         </div>
       }
