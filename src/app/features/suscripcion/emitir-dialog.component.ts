@@ -125,24 +125,51 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
             {{ tarea().afiliacion?.fecha_cotizacion_pharos ?? '—' }}
           </div>
 
-          <!-- Condiciones con las que se emite: cobertura (pestaña Condiciones
-               de Pharos) + observaciones (exclusiones/condiciones → bitácora
-               de Pipeline). Pedido de Control y Emisión (ago-2026). -->
+          <!-- Condiciones con las que se emite: estado de la cobertura y
+               cobertura (Control Emisión de Pipeline) + observaciones
+               (bitácora de Pipeline). Exclusión y Rechazo ITP: pedido de
+               Suscripción (oct-2026). -->
           <fieldset class="mt-4 rounded-xl border border-border/50 p-3">
             <legend class="px-1 text-xs font-semibold text-muted-foreground">
-              Cobertura de la póliza
+              Estado de la cobertura
             </legend>
-            <div class="flex flex-col gap-2 text-sm">
-              <label class="flex cursor-pointer items-center gap-2">
+            <div class="grid grid-cols-3 gap-1 rounded-xl bg-muted/40 p-1 text-xs">
+              @for (op of ESTADOS; track op.valor) {
+                <button
+                  type="button"
+                  (click)="elegirEstado(op.valor)"
+                  class="rounded-lg px-2 py-1.5 font-medium transition-colors"
+                  [class]="
+                    estadoCobertura === op.valor
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  "
+                  [attr.aria-pressed]="estadoCobertura === op.valor"
+                >
+                  {{ op.etiqueta }}
+                </button>
+              }
+            </div>
+            <p class="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+              {{ ayudaEstado() }}
+            </p>
+
+            <p class="mt-3 text-xs font-semibold text-muted-foreground">Cobertura</p>
+            <div class="mt-1 flex flex-col gap-2 text-sm">
+              <label
+                class="flex items-center gap-2"
+                [class.cursor-pointer]="estadoCobertura !== 'RE'"
+                [class.opacity-50]="estadoCobertura === 'RE'"
+              >
                 <input
                   type="radio"
                   name="cobertura"
                   value="VT"
                   [(ngModel)]="cobertura"
+                  [disabled]="estadoCobertura === 'RE'"
                   class="h-4 w-4 accent-[var(--primary)]"
                 />
                 Vida + Incapacidad Total y Permanente
-                <span class="text-xs text-muted-foreground">(estándar)</span>
               </label>
               <label class="flex cursor-pointer items-center gap-2">
                 <input
@@ -158,11 +185,21 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
             </div>
             <textarea
               [(ngModel)]="observaciones"
-              rows="2"
+              rows="3"
               maxlength="1900"
-              placeholder="Observaciones de la emisión: exclusiones o condiciones de cobertura (opcional, queda en la bitácora de Pipeline)"
+              [placeholder]="
+                estadoCobertura === 'EX'
+                  ? 'Obligatorio: qué cobertura se excluye y por qué (queda en la bitácora de Pipeline)'
+                  : 'Observaciones de la emisión: condiciones de cobertura (opcional, queda en la bitácora de Pipeline)'
+              "
               class="alma-input mt-3 w-full rounded-xl text-xs"
+              [class.border-amber-400]="faltaObservacion()"
             ></textarea>
+            @if (faltaObservacion()) {
+              <p class="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                Describe la exclusión para poder emitir.
+              </p>
+            }
           </fieldset>
 
           <label
@@ -204,7 +241,7 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
             </button>
             <button
               type="button"
-              [disabled]="!acepta || emitiendo()"
+              [disabled]="!acepta || emitiendo() || faltaObservacion()"
               (click)="emitir()"
               class="alma-btn alma-btn-primary w-full rounded-xl sm:w-auto"
             >
@@ -229,7 +266,17 @@ export class EmitirDialogComponent {
 
   protected acepta = false;
   protected cobertura: 'VT' | 'VI' = 'VT';
+  protected estadoCobertura: 'ES' | 'EX' | 'RE' = 'ES';
   protected observaciones = '';
+
+  protected readonly ESTADOS = [
+    { valor: 'ES', etiqueta: 'Estándar' },
+    { valor: 'EX', etiqueta: 'Exclusión' },
+    { valor: 'RE', etiqueta: 'Rechazo ITP' },
+  ] as const;
+
+  /** Mismo mínimo que valida el backend antes de emitir. */
+  private readonly MIN_OBSERVACION_EXCLUSION = 10;
   protected readonly cuenta = signal<CuentaPharosApi | null>(null);
   protected readonly cargandoCuenta = signal(true);
   protected readonly emitiendo = signal(false);
@@ -278,6 +325,30 @@ export class EmitirDialogComponent {
     }
   }
 
+  /** Rechazo ITP se emite solo con Vida: al elegirlo, la cobertura pasa a Vida. */
+  protected elegirEstado(estado: 'ES' | 'EX' | 'RE'): void {
+    this.estadoCobertura = estado;
+    if (estado === 'RE') this.cobertura = 'VI';
+  }
+
+  protected ayudaEstado(): string {
+    switch (this.estadoCobertura) {
+      case 'EX':
+        return 'Se emite con exclusión en una o ambas coberturas. Describe la exclusión en las observaciones.';
+      case 'RE':
+        return 'Se rechaza la Incapacidad Total y Permanente: la póliza se emite solo con Vida.';
+      default:
+        return 'Coberturas sin condiciones. Si Pipeline ya tiene una exclusión definida, se conserva.';
+    }
+  }
+
+  protected faltaObservacion(): boolean {
+    return (
+      this.estadoCobertura === 'EX' &&
+      this.observaciones.trim().length < this.MIN_OBSERVACION_EXCLUSION
+    );
+  }
+
   protected async emitir(): Promise<void> {
     this.emitiendo.set(true);
     this.error.set(null);
@@ -285,7 +356,11 @@ export class EmitirDialogComponent {
       const res = await this.api.emitirSolicitud(
         this.tarea().tarea_id,
         `Emisión aprobada por el analista — cotización ${this.tarea().nro_cotizacion}`,
-        { cobertura: this.cobertura, observaciones: this.observaciones.trim() },
+        {
+          cobertura: this.cobertura,
+          estadoCobertura: this.estadoCobertura,
+          observaciones: this.observaciones.trim(),
+        },
       );
       this.emitida.set(res);
       this.emitido.emit();
