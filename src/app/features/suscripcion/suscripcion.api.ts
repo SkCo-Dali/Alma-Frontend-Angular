@@ -615,13 +615,19 @@ export class SuscripcionApi {
   emitirSolicitud(
     solicitudId: string,
     confirmacion: string,
-    opciones?: { cobertura?: 'VT' | 'VI'; observaciones?: string },
+    opciones?: {
+      cobertura?: 'VT' | 'VI';
+      /** ES = Estándar, EX = Exclusión, RE = Rechazo ITP (se emite solo Vida). */
+      estadoCobertura?: 'ES' | 'EX' | 'RE';
+      observaciones?: string;
+    },
   ): Promise<{ contrato: string; advertencia: string | null }> {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/emitir`, {
       method: 'POST',
       body: JSON.stringify({
         confirmacion,
         cobertura: opciones?.cobertura ?? null,
+        estado_cobertura: opciones?.estadoCobertura ?? 'ES',
         observaciones: opciones?.observaciones || null,
       }),
     });
