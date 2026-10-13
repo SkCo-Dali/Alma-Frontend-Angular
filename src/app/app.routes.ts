@@ -208,6 +208,15 @@ export const routes: Routes = [
       ),
     title: 'Aplicación de Pagos — ALMA',
   },
+  // App Monitor-IA (SAC): campañas de autoevaluación automática de llamadas en Genesys.
+  {
+    path: 'apps/monitor-ia',
+    loadComponent: () =>
+      import('./features/monitor-ia/monitor-ia-page.component').then(
+        (m) => m.MonitorIaPageComponent,
+      ),
+    title: 'Monitor-IA — ALMA',
+  },
   {
     path: 'apps/recaudos-acreditacion-pac',
     pathMatch: 'full',

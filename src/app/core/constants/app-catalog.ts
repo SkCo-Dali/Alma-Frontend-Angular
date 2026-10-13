@@ -67,6 +67,21 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-monitor-ia',
+    nombre: 'Monitor-IA',
+    descripcion:
+      'Autoevaluación automática de llamadas: arma campañas, sortea la muestra por analista y trae las notas de Genesys Cloud.',
+    categoria: 'Servicio al Cliente',
+    icono: 'bot',
+    color: '#7C3AED',
+    url: '/apps/monitor-ia',
+    internalRoute: '/apps/monitor-ia',
+    integrationType: 'internal',
+    requiredPermission: 'app.monitor-ia.view',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-visor-comunicaciones',
     nombre: 'Visor de comunicaciones',
     descripcion:
