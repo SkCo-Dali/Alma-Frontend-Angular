@@ -443,6 +443,7 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
         @if (modal() === 'estado') {
           <alma-estado-pipeline-dialog
             [tarea]="sel"
+            [puedeCerrar]="puedeEmitir()"
             (closed)="modal.set(null)"
             (aplicadoOk)="recargar()"
           />
