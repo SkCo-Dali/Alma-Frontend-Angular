@@ -108,6 +108,8 @@ export interface AfiliacionDetalleApi {
     /** Ciudad de residencia (chankla) — la que usa el motor. */
     ciudad_residencia: string | null;
     direccion_residencia: string | null;
+    /** Editor de clientes de Pipeline (Chankla «Invalidez»), tal cual: «Visual;», «Ninguna de las anteriores»… */
+    condicion_discapacidad?: string | null;
   };
   empresa: { nit: string | null; nombre: string | null };
   comercial: {
