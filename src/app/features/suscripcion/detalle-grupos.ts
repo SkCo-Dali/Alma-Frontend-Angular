@@ -114,6 +114,9 @@ export function buildGrupos(a: AfiliacionDetalleApi, sel: Tarea): GrupoDef[] {
         { k: 'Ciudad de residencia', v: txt(as.ciudad_residencia), strong: true },
         { k: 'Ciudad cliente (Pipeline)', v: txt(as.ciudad_cliente) },
         { k: 'Ciudad afiliación', v: txt(as.ciudad_afiliacion) },
+        // Editor de clientes de Pipeline: con un tipo marcado el motor pide
+        // información adicional (REGLAS UW+, oct-2026).
+        { k: 'Condición de discapacidad', v: condicionDiscapacidad(as.condicion_discapacidad) },
       ],
     },
     {
@@ -298,6 +301,17 @@ export interface ParteIdentidad {
   fuerte?: boolean;
 }
 
+/** «Física o Motriz;Visual;» → «Física o Motriz, Visual»; «Ninguna de las anteriores» → «Ninguna». */
+export function condicionDiscapacidad(valor: string | null | undefined): string | null {
+  const tipos = (valor ?? '')
+    .split(';')
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (!tipos.length) return null;
+  const reales = tipos.filter((t) => !/^(ninguna de las anteriores|ninguna|false|no)$/i.test(t));
+  return reales.length ? [...new Set(reales)].join(', ') : 'Ninguna';
+}
+
 export function buildIdentidad(
   sel: Tarea,
   afi: AfiliacionDetalleApi | null,
@@ -328,5 +342,16 @@ export function buildIdentidad(
     copy: sel.nro_cotizacion,
     copyLabel: 'número de cotización',
   });
+  // Número de póliza que generó Pharos al emitir (contrato), a la vista y
+  // copiable: Suscripción lo necesita apenas emite.
+  const poliza = txt(sel.afiliacion?.contrato_pharos);
+  if (poliza)
+    partes.push({
+      prefijo: 'Póliza',
+      texto: poliza,
+      fuerte: true,
+      copy: poliza,
+      copyLabel: 'número de póliza',
+    });
   return partes;
 }
