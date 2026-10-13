@@ -69,6 +69,11 @@ export interface AfiliacionApi {
   vigencia_desde_pharos: boolean;
   emitible: boolean;
   motivo_no_emitible: string | null;
+  /**
+   * true si no se puede emitir por una regla del motor (edad fuera del rango de
+   * ingreso o edad + vigencia sobre la permanencia). Re-tarifar no lo resuelve.
+   */
+  bloqueo_motor?: boolean;
 }
 
 /**
