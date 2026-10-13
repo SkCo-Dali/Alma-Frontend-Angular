@@ -445,14 +445,14 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
             [tarea]="sel"
             [puedeCerrar]="puedeEmitir()"
             (closed)="modal.set(null)"
-            (aplicadoOk)="recargar()"
+            (aplicadoOk)="recargar(false)"
           />
         }
         @if (modal() === 'emitir') {
           <alma-emitir-dialog
             [tarea]="sel"
             (closed)="modal.set(null)"
-            (emitido)="recargar()"
+            (emitido)="recargar(false)"
           />
         }
         @if (modal() === 'pharos') {
@@ -584,8 +584,14 @@ export class DetalleSolicitudComponent {
     }
   }
 
-  protected async recargar(): Promise<void> {
-    this.modal.set(null);
+  /**
+   * Vuelve a leer la solicitud. `cerrarModal = false` deja abierta la ventana
+   * que la pidió: la emisión y «Actualizar en Pipeline» muestran su resultado
+   * (el número de póliza que generó Pharos, advertencias) y antes se cerraban
+   * en el mismo instante en que lo pintaban (reportado por Suscripción).
+   */
+  protected async recargar(cerrarModal = true): Promise<void> {
+    if (cerrarModal) this.modal.set(null);
     this.refrescando.set(true);
     try {
       const dto = await this.api.getSolicitud(this.solicitudId());
