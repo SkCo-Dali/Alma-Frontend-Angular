@@ -69,6 +69,11 @@ export interface AfiliacionApi {
   vigencia_desde_pharos: boolean;
   emitible: boolean;
   motivo_no_emitible: string | null;
+  /**
+   * true si no se puede emitir por una regla del motor (edad fuera del rango de
+   * ingreso o edad + vigencia sobre la permanencia). Re-tarifar no lo resuelve.
+   */
+  bloqueo_motor?: boolean;
 }
 
 /**
@@ -108,6 +113,8 @@ export interface AfiliacionDetalleApi {
     /** Ciudad de residencia (chankla) — la que usa el motor. */
     ciudad_residencia: string | null;
     direccion_residencia: string | null;
+    /** Editor de clientes de Pipeline (Chankla «Invalidez»), tal cual: «Visual;», «Ninguna de las anteriores»… */
+    condicion_discapacidad?: string | null;
   };
   empresa: { nit: string | null; nombre: string | null };
   comercial: {
