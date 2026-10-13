@@ -123,11 +123,13 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
                      contrato). Típico: el analista acaba de volver a tarifar en
                      Pharos y no quiere esperar el tick de 5 min. No se muestra en
                      pólizas ya emitidas ni en solicitudes sin cotización de
-                     Pharos (refrescar no ayudaría). -->
+                     Pharos (refrescar no ayudaría), ni cuando bloquea el motor
+                     por edad: re-tarifar no lo resuelve. -->
                 @if (
                   sel.afiliacion &&
                   !sel.afiliacion.emitible &&
-                  !sel.afiliacion.contrato_pharos
+                  !sel.afiliacion.contrato_pharos &&
+                  !sel.afiliacion.bloqueo_motor
                 ) {
                   <button
                     type="button"
