@@ -328,5 +328,16 @@ export function buildIdentidad(
     copy: sel.nro_cotizacion,
     copyLabel: 'número de cotización',
   });
+  // Número de póliza que generó Pharos al emitir (contrato), a la vista y
+  // copiable: Suscripción lo necesita apenas emite.
+  const poliza = txt(sel.afiliacion?.contrato_pharos);
+  if (poliza)
+    partes.push({
+      prefijo: 'Póliza',
+      texto: poliza,
+      fuerte: true,
+      copy: poliza,
+      copyLabel: 'número de póliza',
+    });
   return partes;
 }
