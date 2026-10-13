@@ -30,10 +30,21 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
           </div>
           <h2 class="mt-3 text-center text-lg font-bold">Póliza emitida</h2>
           <p class="text-center text-sm text-muted-foreground">
-            Pharos generó el contrato
-            <strong class="text-foreground">{{ res.contrato }}</strong> para la cotización
-            {{ tarea().nro_cotizacion }}.
+            Número de póliza que generó Pharos para la cotización
+            {{ tarea().nro_cotizacion }}:
           </p>
+          <div class="mt-2 flex items-center justify-center gap-2">
+            <strong class="font-mono text-2xl tracking-wide text-foreground">{{ res.contrato }}</strong>
+            <button
+              type="button"
+              (click)="copiarPoliza(res.contrato)"
+              class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              [attr.aria-label]="copiada() ? 'Copiado' : 'Copiar número de póliza'"
+              [title]="copiada() ? 'Copiado' : 'Copiar número de póliza'"
+            >
+              <lucide-icon [name]="copiada() ? 'check' : 'copy'" [size]="16" />
+            </button>
+          </div>
           @if (res.advertencia; as adv) {
             <div
               class="mt-3 flex items-start gap-2 rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
@@ -285,6 +296,17 @@ export class EmitirDialogComponent {
     advertencia: string | null;
   } | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly copiada = signal(false);
+
+  protected async copiarPoliza(numero: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(numero);
+      this.copiada.set(true);
+      setTimeout(() => this.copiada.set(false), 1500);
+    } catch {
+      // Sin permiso de portapapeles el número sigue a la vista para copiarlo a mano.
+    }
+  }
 
   /** El backend manda "<explicación> — Detalle de Pharos: <crudo> (correlationId=…)".
    *  Se parte para que lo accionable se lea primero y el resto quede plegado; si

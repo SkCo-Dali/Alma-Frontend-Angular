@@ -12,7 +12,10 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AccessDeniedComponent } from '../../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
-import { EnfermedadesEditorComponent } from './enfermedades-editor.component';
+import {
+  EnfermedadesEditorComponent,
+  PREGUNTAS_DECLARACION,
+} from './enfermedades-editor.component';
 import { HistorialCambiosComponent } from './historial-cambios.component';
 import { ListaEditorComponent } from './lista-editor.component';
 import {
@@ -263,6 +266,15 @@ interface GrupoVista {
                     [value]="$any(p.valor)"
                     (valueChange)="setValor(g.grupo, p.param, $event)"
                   />
+                } @else if (
+                  p.param.tipo === 'lista' && p.param.clave === 'preguntas_declaracion_flujo'
+                ) {
+                  <alma-enfermedades-editor
+                    [value]="$any(p.valor)"
+                    [opciones]="preguntasDeclaracion"
+                    [nombres]="nombresPregunta"
+                    (valueChange)="setValor(g.grupo, p.param, $event)"
+                  />
                 } @else if (p.param.tipo === 'lista') {
                   <alma-lista-editor
                     [value]="$any(p.valor)"
@@ -454,6 +466,8 @@ interface GrupoVista {
   `,
 })
 export class MotorConfigPageComponent {
+  protected readonly preguntasDeclaracion = PREGUNTAS_DECLARACION;
+  protected readonly nombresPregunta: [string, string] = ['pregunta', 'preguntas'];
   private readonly api = inject(MotorConfigApiService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
