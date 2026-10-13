@@ -25,7 +25,12 @@ interface CasoDef {
   titulo: string;
   detalle: string;
   icon: string;
+  /** Cierra la cotización (rechazar / retractar): permiso de emitir y cotización viva. */
+  cierre?: boolean;
 }
+
+/** Estados de Pipeline en los que la cotización todavía se puede cerrar. */
+const UW_VIVA = ['RE', 'ES'];
 
 /** Los 7 casos del documento, en el orden en que ocurren en la operación. */
 const CASOS: CasoDef[] = [
@@ -70,6 +75,20 @@ const CASOS: CasoDef[] = [
     titulo: 'Definir cobertura',
     detalle: 'Estándar, exclusión o rechazo de ITP.',
     icon: 'shield-check',
+  },
+  {
+    id: 'rechazar',
+    titulo: 'Rechazar',
+    detalle: 'La póliza no es asegurable: queda Rechazada en Pipeline.',
+    icon: 'x-circle',
+    cierre: true,
+  },
+  {
+    id: 'retractar',
+    titulo: 'Retractar',
+    detalle: 'El cliente desiste: queda Retractada en Pipeline.',
+    icon: 'rotate-ccw',
+    cierre: true,
   },
 ];
 
@@ -138,17 +157,21 @@ const CASOS: CasoDef[] = [
               ¿Qué le pasó a esta solicitud?
             </p>
             <ul class="grid gap-1.5">
-              @for (c of casos; track c.id) {
+              @for (c of casos(); track c.id) {
                 <li>
                   <button
                     type="button"
                     (click)="elegir(c)"
-                    class="flex w-full items-center gap-3 rounded-xl border border-border/50 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"
+                    [disabled]="c.cierre && !cotizacionViva()"
+                    [title]="c.cierre && !cotizacionViva() ? 'Solo se puede cerrar una cotización recibida o en estudio' : ''"
+                    class="flex w-full items-center gap-3 rounded-xl border border-border/50 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border/50 disabled:hover:bg-transparent"
+                    [class.mt-2]="c.id === 'rechazar'"
                   >
                     <lucide-icon
                       [name]="c.icon"
                       [size]="18"
-                      class="shrink-0 text-muted-foreground"
+                      class="shrink-0"
+                      [class]="c.cierre ? 'text-destructive' : 'text-muted-foreground'"
                     />
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-medium text-foreground">{{
@@ -338,6 +361,26 @@ const CASOS: CasoDef[] = [
                 </label>
               }
 
+              @if (esCierre()) {
+                <label class="block space-y-1">
+                  <span class="text-xs font-medium text-foreground">
+                    Motivo <span class="text-destructive" aria-hidden="true">*</span>
+                  </span>
+                  <select class="alma-input h-9 rounded-xl text-sm" required [(ngModel)]="motivo">
+                    <option value="">Selecciona el motivo…</option>
+                    @for (op of opcionesMotivo(); track op.codigo) {
+                      <option [value]="op.codigo">{{ op.label }}</option>
+                    }
+                  </select>
+                  @if (caso() === 'retractar') {
+                    <span class="block text-[11px] leading-snug text-muted-foreground">
+                      Retractar aplica solo cuando el cliente desiste. Si el motivo es de la
+                      compañía (salud, ocupación, políticas…), usa Rechazar.
+                    </span>
+                  }
+                </label>
+              }
+
               @if (caso() === 'reaseguro_seguimiento') {
                 <div class="grid grid-cols-2 gap-2.5">
                   <label class="block min-w-0 space-y-1">
@@ -373,11 +416,32 @@ const CASOS: CasoDef[] = [
                     [maxlength]="maxObservaciones()"
                     class="alma-input rounded-xl py-2 text-sm"
                     [(ngModel)]="observaciones"
-                    placeholder="Queda en la bitácora del caso."
+                    [placeholder]="
+                      esCierre()
+                        ? 'Obligatorio: por qué se cierra la solicitud. Queda en la bitácora de Pipeline.'
+                        : 'Queda en la bitácora del caso.'
+                    "
                   ></textarea>
                   <span class="block text-[11px] text-muted-foreground">
                     {{ observaciones.length }}/{{ maxObservaciones() }} · Pipeline conserva
                     la última observación; Alma guarda el historial completo.
+                  </span>
+                </label>
+              }
+
+              @if (esCierre()) {
+                <label
+                  class="flex cursor-pointer items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-foreground"
+                >
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="confirmaCierre"
+                    class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--destructive)]"
+                  />
+                  <span>
+                    Confirmo que la cotización {{ tarea().nro_cotizacion }} queda
+                    <strong>{{ caso() === 'rechazar' ? 'Rechazada' : 'Retractada' }}</strong>
+                    en Pipeline. Para reabrirla habrá que hacerlo en Pipeline.
                   </span>
                 </label>
               }
@@ -416,12 +480,13 @@ const CASOS: CasoDef[] = [
                 type="button"
                 [disabled]="!puedeAplicar() || aplicando()"
                 (click)="aplicar()"
-                class="alma-btn alma-btn-primary rounded-xl"
+                class="alma-btn rounded-xl"
+                [class]="esCierre() ? 'bg-destructive text-white hover:bg-destructive/90' : 'alma-btn-primary'"
               >
                 @if (aplicando()) {
                   <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
                 }
-                {{ aplicando() ? 'Aplicando…' : 'Aplicar en Pipeline' }}
+                {{ aplicando() ? 'Aplicando…' : textoBoton() }}
               </button>
             }
           }
@@ -434,11 +499,29 @@ export class EstadoPipelineDialogComponent {
   private readonly api = inject(SuscripcionApi);
 
   readonly tarea = input.required<Tarea>();
+  /** Rechazar y retractar cierran la cotización: piden el permiso de emitir. */
+  readonly puedeCerrar = input(false);
   readonly closed = output<void>();
   /** Se emite tras una escritura exitosa (el padre refresca la cotización). */
   readonly aplicadoOk = output<void>();
 
-  protected readonly casos = CASOS;
+  protected readonly casos = computed(() =>
+    CASOS.filter((c) => !c.cierre || this.puedeCerrar()),
+  );
+  /** Solo una cotización recibida o en estudio se rechaza o se retracta. */
+  protected readonly cotizacionViva = computed(() =>
+    UW_VIVA.includes((this.tarea().afiliacion?.uw_status ?? '').toUpperCase()),
+  );
+  protected readonly esCierre = computed(
+    () => this.caso() === 'rechazar' || this.caso() === 'retractar',
+  );
+  protected readonly opcionesMotivo = computed(() =>
+    this.mapaAOpciones(
+      this.caso() === 'retractar'
+        ? this.catalogos()?.motivosRetracto
+        : this.catalogos()?.motivosRechazo,
+    ),
+  );
   protected readonly caso = signal<CasoEstado | null>(null);
   protected readonly catalogos = signal<EstadosCatalogosApi | null>(null);
   protected readonly aplicando = signal(false);
@@ -453,6 +536,14 @@ export class EstadoPipelineDialogComponent {
   protected fechaEnvioReaseguro = '';
   protected fechaRecibidoReaseguro = '';
   protected ex: ExamenesIn = {};
+  protected motivo = '';
+  protected confirmaCierre = false;
+
+  protected textoBoton(): string {
+    if (this.caso() === 'rechazar') return 'Rechazar en Pipeline';
+    if (this.caso() === 'retractar') return 'Retractar en Pipeline';
+    return 'Aplicar en Pipeline';
+  }
 
   protected readonly tituloCaso = computed(
     () => CASOS.find((c) => c.id === this.caso())?.titulo ?? '',
@@ -489,6 +580,10 @@ export class EstadoPipelineDialogComponent {
         return 'Paquete solicitado y envío de solicitud son obligatorios. De los demás solo se escriben los que diligencies; el resto queda como está.';
       case 'reaseguro_seguimiento':
         return 'Fechas y observaciones del ciclo con el reasegurador.';
+      case 'rechazar':
+        return 'Estado «Rechazada», ¿Póliza asegurable? «No» y el motivo, como el botón Rechazar de Control Emisión. El subestado y la cobertura no cambian.';
+      case 'retractar':
+        return 'Estado «Retractada», ¿Póliza asegurable? «No» y el motivo del cliente, como el botón Retractar de Control Emisión.';
       default:
         return null;
     }
@@ -529,6 +624,16 @@ export class EstadoPipelineDialogComponent {
         return Boolean(
           this.fechaEnvioReaseguro || this.fechaRecibidoReaseguro || this.observaciones,
         );
+      case 'rechazar':
+      case 'retractar':
+        // Motivo, observación y confirmación explícita: cerrar la cotización
+        // no se deshace desde Alma.
+        return (
+          this.cotizacionViva() &&
+          Boolean(this.motivo) &&
+          this.observaciones.trim().length > 0 &&
+          this.confirmaCierre
+        );
       case null:
         return false;
       default:
@@ -560,6 +665,7 @@ export class EstadoPipelineDialogComponent {
   }
 
   protected elegir(c: CasoDef): void {
+    if (c.cierre && !this.cotizacionViva()) return;
     this.limpiar();
     this.caso.set(c.id);
     // La fecha del correo al asesor es, por defecto, hoy: es el día en que el
@@ -582,6 +688,8 @@ export class EstadoPipelineDialogComponent {
     this.fechaEnvioReaseguro = '';
     this.fechaRecibidoReaseguro = '';
     this.ex = {};
+    this.motivo = '';
+    this.confirmaCierre = false;
     this.error.set(null);
   }
 
@@ -629,6 +737,12 @@ export class EstadoPipelineDialogComponent {
             this.v(this.fechaRecibidoReaseguro),
             obs,
           );
+          break;
+        case 'rechazar':
+          res = await this.api.rechazarSolicitud(id, this.motivo, obs ?? '');
+          break;
+        case 'retractar':
+          res = await this.api.retractarSolicitud(id, this.motivo, obs ?? '');
           break;
         default:
           return;

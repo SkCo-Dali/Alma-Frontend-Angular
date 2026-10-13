@@ -449,7 +449,9 @@ export type CasoEstado =
   | 'reaseguro'
   | 'cobertura'
   | 'examenes'
-  | 'reaseguro_seguimiento';
+  | 'reaseguro_seguimiento'
+  | 'rechazar'
+  | 'retractar';
 
 export interface EstadosCatalogosApi {
   subestados: Record<string, string>;
@@ -457,6 +459,10 @@ export interface EstadosCatalogosApi {
   estadoCobertura: Record<string, string>;
   unidadExamenes: Record<string, string>;
   paquetesExamen: string[];
+  /** Motivos de la lista de Pipeline (RejectRetractReason). */
+  motivosRechazo?: Record<string, string>;
+  /** Retractar solo admite los motivos que vienen del cliente. */
+  motivosRetracto?: Record<string, string>;
   /** Longitudes reales de las columnas de TrkApplications (el borde corta ahí). */
   observacionesMax: number;
   numeroCitaMax: number;
@@ -615,13 +621,19 @@ export class SuscripcionApi {
   emitirSolicitud(
     solicitudId: string,
     confirmacion: string,
-    opciones?: { cobertura?: 'VT' | 'VI'; observaciones?: string },
+    opciones?: {
+      cobertura?: 'VT' | 'VI';
+      /** ES = Estándar, EX = Exclusión, RE = Rechazo ITP (se emite solo Vida). */
+      estadoCobertura?: 'ES' | 'EX' | 'RE';
+      observaciones?: string;
+    },
   ): Promise<{ contrato: string; advertencia: string | null }> {
     return this.api.fetch(`/api/suscripcion/solicitudes/${solicitudId}/emitir`, {
       method: 'POST',
       body: JSON.stringify({
         confirmacion,
         cobertura: opciones?.cobertura ?? null,
+        estado_cobertura: opciones?.estadoCobertura ?? 'ES',
         observaciones: opciones?.observaciones || null,
       }),
     });
@@ -726,6 +738,24 @@ export class SuscripcionApi {
       cobertura,
       observaciones,
     });
+  }
+
+  /** Botón «Rechazar» de Control Emisión: la cotización queda Rechazada. */
+  rechazarSolicitud(
+    solicitudId: string,
+    motivo: string,
+    observaciones: string,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/rechazar', { motivo, observaciones });
+  }
+
+  /** Botón «Retractar»: el cliente desiste y la cotización queda Retractada. */
+  retractarSolicitud(
+    solicitudId: string,
+    motivo: string,
+    observaciones: string,
+  ): Promise<EstadoAplicadoApi> {
+    return this.postEstado(solicitudId, 'estado/retractar', { motivo, observaciones });
   }
 
   registrarExamenes(solicitudId: string, campos: ExamenesIn): Promise<EstadoAplicadoApi> {
