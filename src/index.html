@@ -6,8 +6,12 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="ALMA: plataforma de aplicaciones de la Vicepresidencia de Operaciones de Skandia.">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <!-- «A» con el punto verde. El .ico con sizes y el SVG van en este orden para que Chrome
+       elija el SVG (se adapta al modo oscuro) y Safari use el ícono de base blanca.
+       El ?v= evita que el navegador conserve el ícono anterior en caché. -->
+  <link rel="icon" href="favicon.ico?v=2" sizes="32x32">
+  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 </head>
 <body>
   <alma-root></alma-root>
