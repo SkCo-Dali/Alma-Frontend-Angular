@@ -236,7 +236,8 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Tiempo hasta emisión</h2>
           <p class="mb-3 text-[11px] text-muted-foreground">
-            Desde el ingreso de la solicitud hasta que queda emitida.
+            Desde el ingreso de la solicitud hasta que queda emitida, en tiempo hábil: no cuentan
+            fines de semana ni festivos.
           </p>
           @if (tiempos(); as t) {
             @if (t.n === 0) {
@@ -273,7 +274,8 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           <div class="mt-4 border-t border-border/60 pt-3">
             <h3 class="mb-1 text-xs font-bold text-foreground">Tiempo de gestión</h3>
             <p class="mb-2 text-[11px] text-muted-foreground">
-              Desde que una persona abre la solicitud por primera vez hasta que queda emitida.
+              Desde que una persona abre la solicitud por primera vez hasta que queda emitida, en
+              tiempo hábil.
             </p>
             @if (gestion(); as g) {
               @if (g.n === 0) {
@@ -545,11 +547,15 @@ export class ReporteriaPageComponent {
     { label: 'Gestionó', clave: 'gestiono', ayuda: 'Quién emitió la póliza en Pipeline.' },
     { label: 'Ingreso', clave: 'fechaIngreso' },
     { label: 'Emisión', clave: 'fechaEmision' },
-    { label: 'Tiempo', clave: 'minutosAEmision', ayuda: 'Desde el ingreso hasta la emisión. El filtro va en horas.' },
+    {
+      label: 'Tiempo',
+      clave: 'minutosAEmision',
+      ayuda: 'Desde el ingreso hasta la emisión, sin fines de semana ni festivos. El filtro va en horas hábiles.',
+    },
     {
       label: 'Gestión',
       clave: 'minutosGestion',
-      ayuda: 'Desde que una persona abrió la solicitud por primera vez hasta la emisión (se mide desde el 2 de octubre). El filtro va en horas.',
+      ayuda: 'Desde que una persona abrió la solicitud por primera vez hasta la emisión (se mide desde el 2 de octubre), sin fines de semana ni festivos. El filtro va en horas hábiles.',
     },
   ];
 
@@ -660,13 +666,13 @@ export class ReporteriaPageComponent {
         clase: 'text-[#047857] dark:text-[#34d399]',
       },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
-      { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
+      { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `hábil · sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
       // Desde que alguien la abre, no desde que llega: el tiempo en manos del analista.
       {
         label: 'Mediana de gestión',
         icon: 'timer',
         valor: this.duracion(r.tiempoGestion?.medianaMin),
-        sub: r.tiempoGestion?.n ? `sobre ${r.tiempoGestion.n} emisiones` : 'se mide desde el 2 de octubre',
+        sub: r.tiempoGestion?.n ? `hábil · sobre ${r.tiempoGestion.n} emisiones` : 'se mide desde el 2 de octubre',
         clase: 'text-foreground',
       },
       { label: 'Devoluciones', icon: 'shield-alert', valor: n(this.devoluciones(r)), sub: this.porcentaje(this.devoluciones(r), r.solicitudes), clase: 'text-destructive' },
