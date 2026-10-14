@@ -15,8 +15,8 @@ import { AlmaHousingComponent } from './alma-housing.component';
     >
       <!-- Logo arriba a la izquierda -->
       <div class="absolute left-6 top-6 flex items-center gap-2">
-        <img src="alma-logo.png" alt="Alma" class="h-9 w-auto dark:hidden" />
-        <img src="alma-logo-neg.png" alt="Alma" class="hidden h-9 w-auto dark:block" />
+        <img src="alma-logo.png?v=2" alt="Alma" class="h-9 w-auto dark:hidden" />
+        <img src="alma-logo-neg.png?v=2" alt="Alma" class="hidden h-9 w-auto dark:block" />
       </div>
 
       <alma-housing [size]="224" [interactive]="true" />
