@@ -25,11 +25,12 @@ import { shortName } from '../../core/utils/name';
       ></div>
 
       <a routerLink="/" class="relative flex shrink-0 items-center gap-3" aria-label="Inicio">
-        <img src="alma-logo.png" alt="Alma Skandia" class="block h-[3.25rem] w-auto dark:hidden" />
+        <!-- El ?v= evita que el navegador conserve el logo anterior en caché. -->
+        <img src="alma-logo.png?v=2" alt="Alma Skandia" class="block h-10 w-auto dark:hidden" />
         <img
-          src="alma-logo-neg.png"
+          src="alma-logo-neg.png?v=2"
           alt="Alma Skandia"
-          class="hidden h-[3.25rem] w-auto dark:block"
+          class="hidden h-10 w-auto dark:block"
         />
         <span class="hidden h-8 w-px bg-border sm:block"></span>
         <span class="text-on-wallpaper hidden flex-col justify-center sm:flex">
