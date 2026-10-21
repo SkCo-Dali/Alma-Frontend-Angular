@@ -217,6 +217,15 @@ export const routes: Routes = [
       ),
     title: 'Monitor-IA — ALMA',
   },
+  // App Solicitudes Prestaciones (SAC): diligenciamiento asistido del FOR-0075.
+  {
+    path: 'apps/solicitudes-prestaciones',
+    loadComponent: () =>
+      import('./features/solicitudes-prestaciones/solicitudes-prestaciones-page.component').then(
+        (m) => m.SolicitudesPrestacionesPageComponent,
+      ),
+    title: 'Solicitudes Prestaciones — ALMA',
+  },
   {
     path: 'apps/recaudos-acreditacion-pac',
     pathMatch: 'full',

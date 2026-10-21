@@ -37,6 +37,20 @@ export class ApiService {
   }
 
   /**
+   * Petición autenticada que devuelve la Response tal cual: para descargas (PDF)
+   * y para errores cuyo cuerpo trae más que un `detail` de texto.
+   */
+  async fetchRaw(path: string, init?: RequestInit): Promise<Response> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((init?.headers as Record<string, string> | undefined) ?? {}),
+    };
+    const token = await this.auth.getAccessToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  }
+
+  /**
    * POST multipart (FormData) para subir archivos. No fija Content-Type: el
    * navegador lo pone con el boundary del multipart.
    */
