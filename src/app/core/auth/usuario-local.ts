@@ -34,6 +34,8 @@ export const USUARIO_LOCAL: User = {
     'app.monitor-ia.view',
     'app.monitor-ia.campanas.manage',
     'app.monitor-ia.config',
+    'app.solicitudes-prestaciones.diligenciar',
+    'app.solicitudes-prestaciones.auditoria.view',
     'platform.admin',
     'platform.access.view',
     'platform.access.assign',

@@ -82,6 +82,21 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-solicitudes-prestaciones',
+    nombre: 'Solicitudes Prestaciones',
+    descripcion:
+      'Diligencia la solicitud de prestaciones (FOR-0075) con datos prellenados por documento, validaciones en pantalla y PDF listo para firmar.',
+    categoria: 'Servicio al Cliente',
+    icono: 'file-text',
+    color: '#0F6CBD',
+    url: '/apps/solicitudes-prestaciones',
+    internalRoute: '/apps/solicitudes-prestaciones',
+    integrationType: 'internal',
+    requiredPermission: 'app.solicitudes-prestaciones.diligenciar',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-visor-comunicaciones',
     nombre: 'Visor de comunicaciones',
     descripcion:
