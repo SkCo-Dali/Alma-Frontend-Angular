@@ -46,6 +46,10 @@ export interface ResumenReporteria {
   emitidas: number;
   /** De ellas, las emitidas con el botón de Alma: la medida de adopción. */
   emitidasDesdeAlma: number;
+  /** Emitidas por un analista, según quién emitió en Pipeline. */
+  emitidasPorAnalista?: number;
+  /** Emitidas por el canal digital sin analista (userWEB / PHAROSDIGITAL). */
+  emitidasPorCanalDigital?: number;
   /** Evaluaciones totales (actividad del motor), no una por solicitud. */
   evaluaciones: number;
   emisionAutomatica: number;
@@ -107,8 +111,13 @@ export interface ConteoAnalista {
  *  creó Afiliaciones y se gestiona en Alma. */
 export type OrigenCotizacion = 'alma' | 'digital';
 
+/**
+ * Canal por el que LLEGÓ la cotización (quién la creó). No dice quién la
+ * emitió: muchas de la experiencia digital las emite un analista en Alma (ver
+ * emitidasPorAnalista / emitidasPorCanalDigital).
+ */
 export const ETIQUETA_ORIGEN: Record<OrigenCotizacion, string> = {
-  alma: 'Gestión Alma',
+  alma: 'Asesor / Afiliaciones',
   digital: 'Experiencia digital',
 };
 
