@@ -32,6 +32,7 @@ import {
   OpcionesReporteria,
   OrdenAuditoria,
   OrigenCotizacion,
+  FechaPeriodo,
   PaginaAuditoria,
   ReporteriaApi,
   ResumenReporteria,
@@ -81,6 +82,29 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           [hasta]="hastaInput"
           (rango)="onRango($event)"
         />
+        <!-- Con qué fecha se aplica el periodo: lo que llegó o lo que se emitió. -->
+        <div
+          class="glass inline-flex h-9 items-center gap-0.5 rounded-xl p-0.5 text-sm shadow-[var(--shadow-sm)]"
+          role="group"
+          aria-label="Contar el periodo por"
+        >
+          @for (o of opcionesFecha; track o.valor) {
+            <button
+              type="button"
+              [attr.aria-pressed]="fechaInput === o.valor"
+              [title]="o.ayuda"
+              (click)="onFechaPeriodo(o.valor)"
+              class="h-8 rounded-lg px-2.5 transition-colors"
+              [class]="
+                fechaInput === o.valor
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              "
+            >
+              {{ o.etiqueta }}
+            </button>
+          }
+        </div>
         <alma-filtro-valores
           etiqueta="Resultado"
           icono="sliders-horizontal"
@@ -105,7 +129,9 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           [seleccion]="gestionoInput"
           (seleccionar)="onGestiono($event)"
         />
-        @if (desdeInput || hastaInput || decisionInput || origenInput || gestionoInput) {
+        @if (
+          desdeInput || hastaInput || fechaInput === 'emision' || decisionInput || origenInput || gestionoInput
+        ) {
           <button type="button" (click)="limpiarPeriodo()" class="alma-btn alma-btn-outline h-9 rounded-xl px-3 text-sm">
             <lucide-icon name="x" [size]="15" /> Limpiar
           </button>
@@ -115,6 +141,16 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
       @if (error()) {
         <p class="flex items-center gap-1.5 text-xs text-destructive">
           <lucide-icon name="alert-triangle" [size]="14" /> {{ error() }}
+        </p>
+      }
+
+      @if (fechaInput === 'emision') {
+        <p
+          class="glass flex w-fit max-w-full flex-wrap items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] text-muted-foreground shadow-[var(--shadow-sm)]"
+        >
+          <lucide-icon name="calendar-check" [size]="12" class="text-primary" />
+          Contando por <span class="font-semibold text-foreground">fecha de emisión en Pipeline</span>: solo
+          pólizas emitidas en el periodo, sin importar cuándo llegaron. Es el mismo conteo de Pipeline.
         </p>
       }
 
@@ -496,6 +532,20 @@ export class ReporteriaPageComponent {
   // Periodo (aplica a TODOS los indicadores y a la auditoría).
   protected desdeInput = '';
   protected hastaInput = '';
+  /** Con qué fecha se aplica el periodo (ver FechaPeriodo). */
+  protected fechaInput: FechaPeriodo = 'ingreso';
+  protected readonly opcionesFecha: { valor: FechaPeriodo; etiqueta: string; ayuda: string }[] = [
+    {
+      valor: 'ingreso',
+      etiqueta: 'Por ingreso',
+      ayuda: 'Solicitudes que llegaron en el periodo, emitidas o no.',
+    },
+    {
+      valor: 'emision',
+      etiqueta: 'Por emisión',
+      ayuda: 'Pólizas emitidas en el periodo según Pipeline, sin importar cuándo llegaron.',
+    },
+  ];
   /** Resultado del motor (última decisión): acota indicadores Y auditoría. */
   protected decisionInput = '';
   /** Origen de la cotización (experiencia digital o Alma): también acota todo. */
@@ -702,6 +752,7 @@ export class ReporteriaPageComponent {
     return {
       desde: this.desdeInput || undefined,
       hasta: this.hastaInput || undefined,
+      fecha: this.fechaInput === 'emision' ? 'emision' : undefined,
       decision: this.decisionInput || undefined,
       origen: this.origenInput || undefined,
       gestiono: this.gestionoInput || undefined,
@@ -833,9 +884,17 @@ export class ReporteriaPageComponent {
   protected limpiarPeriodo(): void {
     this.desdeInput = '';
     this.hastaInput = '';
+    this.fechaInput = 'ingreso';
     this.decisionInput = '';
     this.origenInput = '';
     this.gestionoInput = '';
+    void this.cargar();
+  }
+
+  /** Cambiar la fecha del periodo (ingreso / emisión) recarga indicadores y auditoría. */
+  protected onFechaPeriodo(valor: FechaPeriodo): void {
+    if (valor === this.fechaInput) return;
+    this.fechaInput = valor;
     void this.cargar();
   }
 
