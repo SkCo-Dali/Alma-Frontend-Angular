@@ -114,7 +114,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           (seleccionar)="onDecision($event)"
         />
         <alma-filtro-valores
-          etiqueta="Origen"
+          etiqueta="Canal de recepción"
           icono="globe"
           todosLabel="Todos"
           [opciones]="opcionesOrigen()"
@@ -169,7 +169,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
       <!-- ── Indicadores ── -->
       @if (cards().length) {
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           @for (k of cards(); track k.label) {
             <div class="glass rounded-xl px-3 py-2 shadow-[var(--shadow-sm)]" [class.opacity-60]="cargandoResumen()">
               <p class="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -189,15 +189,19 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-3 text-sm font-bold text-foreground">Resultado del motor</h2>
           <p class="mb-2 text-[11px] text-muted-foreground">
-            Última decisión de cada solicitud (una solicitud puede re-evaluarse varias veces).
+            Última decisión de cada solicitud (una solicitud puede re-evaluarse varias veces), por el canal por
+            el que llegó la cotización.
           </p>
           <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-            <span class="inline-flex items-center gap-1.5" title="Cotizaciones que crea el equipo de Afiliaciones">
+            <span class="inline-flex items-center gap-1.5" title="Cotizaciones que llegaron por el asesor o el equipo de Afiliaciones">
               <span class="size-2 rounded-full bg-primary"></span>
-              Gestión Alma
+              Asesor / Afiliaciones
               <span class="tabular-nums text-foreground">{{ totalAlma() }}</span>
             </span>
-            <span class="inline-flex items-center gap-1.5" title="Cotizaciones creadas desde la experiencia digital (userWEB y PHAROSDIGITAL)">
+            <span
+              class="inline-flex items-center gap-1.5"
+              title="Cotizaciones que llegaron por la experiencia digital (userWEB y PHAROSDIGITAL). Muchas las emite después un analista en Alma."
+            >
               <span class="size-2 rounded-full bg-chart-2"></span>
               Experiencia digital
               <span class="tabular-nums text-foreground">{{ totalDigital() }}</span>
@@ -714,6 +718,14 @@ export class ReporteriaPageComponent {
           .filter(Boolean)
           .join(' · '),
         clase: 'text-[#047857] dark:text-[#34d399]',
+      },
+      // Quién EMITIÓ (no por dónde llegó): un analista o el canal digital sin analista.
+      {
+        label: 'Emitidas por analista',
+        icon: 'user-check',
+        valor: n(r.emitidasPorAnalista ?? 0),
+        sub: `${n(r.emitidasPorCanalDigital ?? 0)} por el canal digital, sin analista`,
+        clase: 'text-foreground',
       },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
       { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `hábil · sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
