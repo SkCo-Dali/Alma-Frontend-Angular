@@ -233,6 +233,11 @@ const REFRESCO_MS = 60_000;
         <section class="glass grid gap-2 rounded-3xl px-4 py-3.5 shadow-[var(--shadow-sm)] sm:px-5" aria-labelledby="bz-flujo">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 id="bz-flujo" class="text-[15px] font-bold text-foreground">Cómo funciona · hoy</h2>
+            @if (resumen()?.sin_asignar; as n) {
+              <button type="button" class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-500/25 dark:text-amber-300" (click)="irSinAsignar()">
+                <lucide-icon name="user-x" [size]="13" /> {{ n }} {{ n === 1 ? 'correo sin asignar' : 'correos sin asignar' }} <lucide-icon name="arrow-right" [size]="12" />
+              </button>
+            }
             <span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="bz-pulse h-2 w-2 rounded-full bg-emerald-500"></span> En vivo · toca un paso para ver qué hace</span>
           </div>
           <div class="relative grid grid-cols-2 gap-2.5 md:grid-cols-4">
@@ -409,6 +414,11 @@ export class BuzonLandingComponent {
 
   protected irBandeja(): void {
     void this.router.navigate(['/apps/buzon-inteligente/bandeja'], { queryParams: { estado: 'revision' } });
+  }
+
+  /** La cola del líder: correos de grupos de personas que quedaron sin responsable. */
+  protected irSinAsignar(): void {
+    void this.router.navigate(['/apps/buzon-inteligente/bandeja'], { queryParams: { sin_asignar: 1 } });
   }
 
   protected irA(path: string): void {

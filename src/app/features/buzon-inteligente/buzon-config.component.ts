@@ -30,12 +30,13 @@ import {
   resumenAccion,
 } from './buzon.api';
 import { AsignacionTabComponent } from './asignacion-tab.component';
+import { ExportacionTabComponent } from './exportacion-tab.component';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { ProcesosTabComponent } from './procesos-tab.component';
 
-type Tab = 'procesos' | 'tipos' | 'reglas' | 'asignacion' | 'ajustes' | 'probar';
-const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'ajustes', 'probar'];
+type Tab = 'procesos' | 'tipos' | 'reglas' | 'asignacion' | 'exportacion' | 'ajustes' | 'probar';
+const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'exportacion', 'ajustes', 'probar'];
 
 @Component({
   selector: 'alma-buzon-config',
@@ -52,6 +53,7 @@ const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'ajustes', 'pr
     DemoBadgeComponent,
     ProcesosTabComponent,
     AsignacionTabComponent,
+    ExportacionTabComponent,
   ],
   template: `
     @if (!puedeVer()) {
@@ -112,6 +114,11 @@ const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'ajustes', 'pr
           <!-- ── ASIGNACIÓN ── -->
           @case ('asignacion') {
             <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" />
+          }
+
+          <!-- ── EXPORTACIÓN ── -->
+          @case ('exportacion') {
+            <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" />
           }
 
           <!-- ── TIPOS DE CORREO ── -->
@@ -392,6 +399,7 @@ export class BuzonConfigComponent {
     { id: 'tipos', nombre: 'Tipos de correo', icon: 'tags' },
     { id: 'reglas', nombre: 'Reglas fijas', icon: 'list-filter' },
     { id: 'asignacion', nombre: 'Asignación', icon: 'route' },
+    { id: 'exportacion', nombre: 'Exportación', icon: 'file-spreadsheet' },
     { id: 'ajustes', nombre: 'Ajustes e IA', icon: 'sliders-horizontal' },
     { id: 'probar', nombre: 'Probar', icon: 'flask-conical' },
   ];

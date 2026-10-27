@@ -155,6 +155,7 @@ import {
   Link,
   FileSpreadsheet,
   CornerLeftDown,
+  Type,
 } from 'lucide-angular';
 
 export const ALMA_ICONS = {
@@ -310,4 +311,5 @@ export const ALMA_ICONS = {
   Link,
   FileSpreadsheet,
   CornerLeftDown,
+  Type,
 };
