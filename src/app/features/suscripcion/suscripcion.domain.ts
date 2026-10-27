@@ -229,6 +229,8 @@ export const UW_BADGE: Record<string, string> = {
   PP: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
   RC: 'bg-destructive/10 text-destructive',
   RT: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  // Código propio de Alma: la cotización se borró de Control y Emisión en Pipeline.
+  EL: 'bg-muted text-muted-foreground line-through decoration-muted-foreground/60',
 };
 
 /** Decisión del motor de suscripción. */
