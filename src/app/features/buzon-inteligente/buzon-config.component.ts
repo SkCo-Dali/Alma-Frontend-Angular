@@ -1,5 +1,8 @@
-// Configuración de UN buzón: parámetros (modo, umbral, carpeta, contexto para la IA),
-// tipos de correo (categorías con sus acciones), reglas fijas y un probador en vivo.
+// Configuración de UN buzón (solo admin o editor del buzón: `puede_administrar`):
+// procesos (y lectura del prompt del área), tipos de correo (categorías con sus
+// acciones), reglas fijas, asignación (grupos, equipo, reglas y bases, probar),
+// ajustes (modo, umbral, carpeta, clasificador, contexto para la IA) y un
+// probador de clasificación en vivo.
 
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -13,29 +16,60 @@ import { AlmaLoaderComponent } from '../../shared/components/alma-loader.compone
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
 import { TooltipDirective } from '../../shared/tooltip.directive';
 import {
+  AlDesactivar,
   Buzon,
   BuzonApi,
   Categoria,
   CategoriaIn,
+  ModoClasificacion,
+  PERM_VER_BUZON,
   ReglaFija,
   ReglaIn,
   ResultadoPrueba,
   iconoAccion,
   resumenAccion,
 } from './buzon.api';
+import { AsignacionTabComponent } from './asignacion-tab.component';
+import { ExportacionTabComponent } from './exportacion-tab.component';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { ProcesosTabComponent } from './procesos-tab.component';
 
-type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
+type Tab = 'procesos' | 'tipos' | 'reglas' | 'asignacion' | 'exportacion' | 'ajustes' | 'probar';
+const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'exportacion', 'ajustes', 'probar'];
 
 @Component({
   selector: 'alma-buzon-config',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, AlmaSwitchComponent, TooltipDirective, CategoriaEditorComponent, DemoBadgeComponent],
+  imports: [
+    DecimalPipe,
+    FormsModule,
+    RouterLink,
+    LucideAngularModule,
+    AccessDeniedComponent,
+    AlmaLoaderComponent,
+    AlmaSwitchComponent,
+    TooltipDirective,
+    CategoriaEditorComponent,
+    DemoBadgeComponent,
+    ProcesosTabComponent,
+    AsignacionTabComponent,
+    ExportacionTabComponent,
+  ],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else if (cargando()) {
       <div class="flex justify-center py-24"><alma-loader [size]="80" label="Cargando buzón…" /></div>
+    } @else if (!buzon()) {
+      <div class="mx-auto mt-10 flex max-w-md flex-col items-center gap-3 px-4 text-center">
+        <lucide-icon name="alert-triangle" [size]="28" class="text-rose-500" />
+        <p class="text-sm font-semibold text-foreground">No se pudo abrir el buzón</p>
+        <p class="text-xs text-muted-foreground">{{ errorCarga() || 'No existe o no tienes acceso a él.' }}</p>
+        <a routerLink="/apps/buzon-inteligente" class="alma-btn alma-btn-outline"><lucide-icon name="arrow-left" [size]="15" /> Volver al inicio</a>
+      </div>
+    } @else if (!buzon()!.puede_administrar) {
+      <!-- El revisor no configura: solo bandeja y métricas. -->
+      <alma-access-denied />
     } @else if (buzon(); as b) {
       <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-4 sm:px-6">
         <!-- Encabezado -->
@@ -61,9 +95,9 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
         </div>
 
         <!-- Tabs -->
-        <div class="glass inline-flex gap-1 rounded-xl p-1">
+        <div class="glass inline-flex max-w-full flex-wrap gap-1 rounded-xl p-1" role="tablist" aria-label="Configuración del buzón">
           @for (t of tabs; track t.id) {
-            <button type="button" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" [class]="tab() === t.id ? 'bg-primary text-primary-foreground shadow-[var(--shadow-sm)]' : 'text-muted-foreground hover:text-foreground'" (click)="tab.set(t.id)">
+            <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" [class]="tab() === t.id ? 'bg-primary text-primary-foreground shadow-[var(--shadow-sm)]' : 'text-muted-foreground hover:text-foreground'" (click)="tab.set(t.id)">
               <lucide-icon [name]="t.icon" [size]="15" /> {{ t.nombre }}
               @if (t.id === 'tipos') { <span class="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums">{{ categorias().length }}</span> }
               @if (t.id === 'reglas') { <span class="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums">{{ reglas().length }}</span> }
@@ -72,6 +106,21 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
         </div>
 
         @switch (tab()) {
+          <!-- ── PROCESOS ── -->
+          @case ('procesos') {
+            <alma-procesos-tab [buzon]="b" [categorias]="categorias()" (actualizado)="recargarTipos()" />
+          }
+
+          <!-- ── ASIGNACIÓN ── -->
+          @case ('asignacion') {
+            <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" />
+          }
+
+          <!-- ── EXPORTACIÓN ── -->
+          @case ('exportacion') {
+            <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" />
+          }
+
           <!-- ── TIPOS DE CORREO ── -->
           @case ('tipos') {
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -184,12 +233,46 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
                   <p class="text-[11px] text-muted-foreground">Debajo del umbral el correo espera aprobación en la bandeja.</p>
                 </div>
                 <div class="flex flex-col gap-1.5"><label class="alma-label">Correos por ciclo (cada 5 min)</label><input type="number" min="1" max="200" class="alma-input" [(ngModel)]="ajustes.max" [disabled]="!puedeGestionar()" /></div>
-                <label class="flex items-center justify-between text-sm"><span>Buzón activo</span><alma-switch [checked]="ajustes.activo" (checkedChange)="ajustes.activo = $event" [disabled]="!puedeGestionar()" /></label>
+                <label class="flex items-center justify-between text-sm"><span>Buzón activo</span><alma-switch [checked]="ajustes.activo" (checkedChange)="ajustes.activo = $event" [disabled]="!puedeGestionar()" ariaLabel="Buzón activo" /></label>
                 @if (puedeGestionar()) {
                   <button type="button" class="alma-btn alma-btn-primary rounded-xl" [disabled]="guardandoAjustes()" (click)="guardarAjustes()">
                     <lucide-icon [name]="guardandoAjustes() ? 'loader-2' : 'save'" [size]="15" [class.animate-spin]="guardandoAjustes()" /> Guardar ajustes
                   </button>
                 }
+              </section>
+
+              <!-- Clasificador -->
+              <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)] lg:col-span-2">
+                <div>
+                  <h2 class="text-sm font-semibold text-foreground">Modo de clasificación</h2>
+                  <p class="mt-0.5 text-xs text-muted-foreground">Quién decide el proceso y la etiqueta de cada correo.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Modo de clasificación">
+                  @for (m of modosClasificacion; track m.id) {
+                    <button type="button" role="radio" [attr.aria-checked]="ajustes.modo_clasificacion === m.id" class="flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors" [class]="ajustes.modo_clasificacion === m.id ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/50'" [disabled]="!puedeGestionar()" (click)="ajustes.modo_clasificacion = m.id">
+                      <span class="flex items-center gap-1.5 text-sm font-semibold text-foreground"><lucide-icon [name]="m.icon" [size]="15" /> {{ m.nombre }}</span>
+                      <span class="text-xs text-muted-foreground">{{ m.ayuda }}</span>
+                    </button>
+                  }
+                </div>
+                @if (ajustes.modo_clasificacion === 'agente') {
+                  <div class="flex flex-col gap-1.5">
+                    <label class="alma-label" for="aj-agente">Nombre del agente en Foundry *</label>
+                    <input id="aj-agente" class="alma-input" [(ngModel)]="ajustes.agente_nombre" [disabled]="!puedeGestionar()" placeholder="DistribucionCorreosRecaudos" />
+                    <p class="text-[11px] text-muted-foreground">Alma invoca el agente del área y valida cada respuesta contra los procesos y etiquetas de este buzón.</p>
+                  </div>
+                }
+              </section>
+              <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
+                <div>
+                  <h2 class="text-sm font-semibold text-foreground">Al desactivar a alguien</h2>
+                  <p class="mt-0.5 text-xs text-muted-foreground">Qué pasa con los casos que una base le asigna a una persona ausente o inactiva en el grupo.</p>
+                </div>
+                <label class="alma-label sr-only" for="aj-desact">Al desactivar a alguien</label>
+                <select id="aj-desact" class="alma-input" [(ngModel)]="ajustes.al_desactivar" [disabled]="!puedeGestionar()">
+                  <option value="respaldo">Respaldo fijo: va a su respaldo del grupo o de la base</option>
+                  <option value="roundrobin">Round-robin: se reparte entre los activos</option>
+                </select>
               </section>
             </div>
           }
@@ -306,20 +389,31 @@ export class BuzonConfigComponent {
   private readonly auth = inject(AuthService);
   private readonly api = inject(BuzonApi);
   private readonly toast = inject(ToastService);
-  private readonly route = inject(ActivatedRoute);
 
-  protected readonly puedeVer = computed(() => this.auth.hasPermission('app.buzon-inteligente.view'));
-  protected readonly puedeGestionar = computed(() => this.auth.hasPermission('app.buzon-inteligente.manage') || !!this.buzon()?.puede_administrar);
+  protected readonly puedeVer = computed(() => this.auth.hasPermission(PERM_VER_BUZON));
+  /** Admin o editor del buzón (el backend lo calcula por buzón). */
+  protected readonly puedeGestionar = computed(() => !!this.buzon()?.puede_administrar);
 
   protected readonly tabs: { id: Tab; nombre: string; icon: string }[] = [
+    { id: 'procesos', nombre: 'Procesos', icon: 'workflow' },
     { id: 'tipos', nombre: 'Tipos de correo', icon: 'tags' },
     { id: 'reglas', nombre: 'Reglas fijas', icon: 'list-filter' },
+    { id: 'asignacion', nombre: 'Asignación', icon: 'route' },
+    { id: 'exportacion', nombre: 'Exportación', icon: 'file-spreadsheet' },
     { id: 'ajustes', nombre: 'Ajustes e IA', icon: 'sliders-horizontal' },
     { id: 'probar', nombre: 'Probar', icon: 'flask-conical' },
   ];
-  protected readonly tab = signal<Tab>('tipos');
+  protected readonly modosClasificacion: { id: ModoClasificacion; nombre: string; ayuda: string; icon: string }[] = [
+    { id: 'prompt', nombre: 'Prompt de Alma', ayuda: 'Las reglas viven en Alma (procesos y tipos de correo) y Alma arma el prompt.', icon: 'scroll-text' },
+    { id: 'agente', nombre: 'Agente de Foundry', ayuda: 'El área administra su propio agente; Alma lo invoca y valida cada respuesta.', icon: 'bot' },
+  ];
+  private readonly route = inject(ActivatedRoute);
+  protected readonly tab = signal<Tab>(
+    TABS.includes(this.route.snapshot.queryParamMap.get('tab') as Tab) ? (this.route.snapshot.queryParamMap.get('tab') as Tab) : 'procesos',
+  );
 
   protected readonly cargando = signal(true);
+  protected readonly errorCarga = signal<string | null>(null);
   protected readonly buzon = signal<Buzon | null>(null);
   protected readonly categorias = signal<Categoria[]>([]);
   protected readonly reglas = signal<ReglaFija[]>([]);
@@ -335,7 +429,18 @@ export class BuzonConfigComponent {
   protected reglaForm: ReglaIn = { nombre: '', remitente_contiene: '', asunto_contiene: '', cuerpo_contiene: '', categoria_id: '', orden: 1, activa: true };
 
   protected readonly guardandoAjustes = signal(false);
-  protected ajustes = { nombre: '', area: '', carpeta_vigilada: 'Inbox', umbral: 80, max: 25, activo: true, contexto: '' };
+  protected ajustes = {
+    nombre: '',
+    area: '',
+    carpeta_vigilada: 'Inbox',
+    umbral: 80,
+    max: 25,
+    activo: true,
+    contexto: '',
+    modo_clasificacion: 'prompt' as ModoClasificacion,
+    agente_nombre: '',
+    al_desactivar: 'respaldo' as AlDesactivar,
+  };
 
   protected readonly probando = signal(false);
   protected readonly resultado = signal<ResultadoPrueba | null>(null);
@@ -369,11 +474,27 @@ export class BuzonConfigComponent {
         max: b.max_correos_por_tick,
         activo: b.activo,
         contexto: b.contexto ?? '',
+        modo_clasificacion: b.modo_clasificacion ?? 'prompt',
+        agente_nombre: b.agente_nombre ?? '',
+        al_desactivar: b.al_desactivar ?? 'respaldo',
       };
     } catch (e) {
-      this.toast.error('No se pudo cargar el buzón', e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      this.errorCarga.set(msg);
+      this.toast.error('No se pudo cargar el buzón', msg);
     } finally {
       this.cargando.set(false);
+    }
+  }
+
+  /** Procesos cambió etiquetas o el prompt del área: se recargan tipos y buzón. */
+  protected async recargarTipos(): Promise<void> {
+    try {
+      const [b, cats] = await Promise.all([this.api.obtenerBuzon(this.id), this.api.listarCategorias(this.id)]);
+      this.buzon.set(b);
+      this.categorias.set([...cats].sort((x, y) => x.orden - y.orden));
+    } catch (e) {
+      this.toast.error('No se pudieron recargar los tipos de correo', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -405,6 +526,10 @@ export class BuzonConfigComponent {
   protected async guardarAjustes(): Promise<void> {
     const b = this.buzon();
     if (!b) return;
+    if (this.ajustes.modo_clasificacion === 'agente' && !this.ajustes.agente_nombre.trim()) {
+      this.toast.error('Falta el agente', 'Escribe el nombre del agente de Foundry o vuelve al prompt de Alma.');
+      return;
+    }
     this.guardandoAjustes.set(true);
     try {
       const actualizado = await this.api.actualizarBuzon(b.id, {
@@ -415,6 +540,9 @@ export class BuzonConfigComponent {
         max_correos_por_tick: Number(this.ajustes.max) || 25,
         activo: this.ajustes.activo,
         contexto: this.ajustes.contexto.trim() || null,
+        modo_clasificacion: this.ajustes.modo_clasificacion,
+        agente_nombre: this.ajustes.agente_nombre.trim() || null,
+        al_desactivar: this.ajustes.al_desactivar,
       });
       this.buzon.set(actualizado);
       this.toast.show('Ajustes guardados');

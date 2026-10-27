@@ -24,17 +24,35 @@ import {
   CorreoDetalle,
   ESTADO_CORREO,
   EstadoCorreo,
+  PERM_VER_BUZON,
+  ArchivoCorreo,
   iconoAccion,
   nombreAccion,
   resumenAccion,
 } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { TrazaAsignacionComponent } from './traza-asignacion.component';
+
+/** Un dato extraído en edición (se conserva su tipo al guardar). */
+interface DatoForm {
+  clave: string;
+  tipo: 'texto' | 'numero' | 'bool' | 'json';
+  valor: string;
+}
+
+interface AsignacionVista {
+  tipo: 'persona' | 'carpeta' | 'categorizar' | 'sin';
+  icon: string;
+  etiqueta: string;
+  texto: string;
+  correo?: string;
+}
 
 type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
 
 @Component({
   selector: 'alma-bandeja-buzon',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent],
+  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent, TrazaAsignacionComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -63,11 +81,15 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
         <!-- Estados (chips) -->
         <div class="flex shrink-0 flex-wrap gap-1.5">
           @for (e of estadosChips; track e.id) {
-            <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors" [class]="estado === e.id ? 'border-primary bg-primary text-primary-foreground' : 'glass border-border/60 text-foreground hover:text-primary'" (click)="estado = e.id; aplicar()">
+            <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors" [attr.aria-pressed]="!sinAsignar && estado === e.id" [class]="!sinAsignar && estado === e.id ? 'border-primary bg-primary text-primary-foreground' : 'glass border-border/60 text-foreground hover:text-primary'" (click)="estado = e.id; sinAsignar = false; aplicar()">
               <lucide-icon [name]="e.icon" [size]="13" /> {{ e.nombre }}
-              @if (e.id === 'revision' && porRevisar() > 0) { <span class="rounded-full px-1.5 text-[10px] tabular-nums" [class]="estado === e.id ? 'bg-white/25' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'">{{ porRevisar() }}</span> }
+              @if (e.id === 'revision' && porRevisar() > 0) { <span class="rounded-full px-1.5 text-[10px] tabular-nums" [class]="!sinAsignar && estado === e.id ? 'bg-white/25' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'">{{ porRevisar() }}</span> }
             </button>
           }
+          <span class="mx-1 h-8 w-px bg-border/70" aria-hidden="true"></span>
+          <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors" [attr.aria-pressed]="sinAsignar" [class]="sinAsignar ? 'border-amber-500 bg-amber-500 text-white' : 'glass border-border/60 text-foreground hover:text-amber-600'" almaTooltip="Correos de un grupo de personas que quedaron sin responsable" (click)="alternarSinAsignar()">
+            <lucide-icon name="user-x" [size]="13" /> Sin asignar
+          </button>
         </div>
 
         <!-- Master-detail -->
@@ -101,6 +123,7 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                     <div class="flex w-full flex-wrap items-center gap-1.5">
                       <span class="alma-badge" [class]="'alma-badge ' + estadoMeta[c.estado].clase">{{ estadoMeta[c.estado].nombre }}</span>
                       @if (c.categoria_nombre) { <span class="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-foreground">{{ c.categoria_nombre }}</span> }
+                      @if (c.grupo_id && !c.asignado_a) { <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">Sin asignar</span> }
                       @if (c.confianza !== null) { <span class="ml-auto text-[11px] tabular-nums" [class]="confianzaClase(c.confianza)">{{ (c.confianza * 100) | number: '1.0-0' }}%</span> }
                       @if (c.tiene_adjuntos) { <lucide-icon name="paperclip" [size]="12" class="text-muted-foreground" /> }
                     </div>
@@ -149,8 +172,12 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                     <lucide-icon [name]="d.origen === 'humano' ? 'user-check' : d.origen === 'regla' ? 'list-filter' : 'sparkles'" [size]="13" />
                     {{ d.origen === 'humano' ? 'Decidido por ' + (d.decidido_por || 'una persona') : d.origen === 'regla' ? 'Regla fija' : 'Clasificado por IA' + (d.modelo_ia ? ' · ' + d.modelo_ia : '') }}
                   </span>
-                  @if (d.asignado_a) {
-                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"><lucide-icon name="user" [size]="13" /> Asignado a <b class="text-foreground">{{ d.asignado_a }}</b></span>
+                  @if (asignacion(d); as a) {
+                    @if (a.tipo === 'sin') {
+                      <span class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300"><lucide-icon name="user-x" [size]="13" /> Sin asignar</span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"><lucide-icon [name]="a.icon" [size]="13" /> {{ a.etiqueta }} <b class="text-foreground">{{ a.texto }}</b></span>
+                    }
                   }
                   @if (d.categoria_sugerida_id && d.categoria_sugerida_id !== d.categoria_id && d.origen === 'humano') {
                     <span class="inline-flex items-center gap-1 rounded-xl bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300"><lucide-icon name="alert-triangle" [size]="13" /> Corregido: la IA propuso otra categoría</span>
@@ -206,12 +233,67 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                       </div>
                       <div class="flex flex-col gap-4">
                         <div class="rounded-2xl border border-border/60 p-4">
-                          <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="scan-text" [size]="12" /> Datos extraídos</p>
-                          @if (entradas(d.datos_extraidos).length) {
+                          <div class="flex items-center justify-between gap-2">
+                            <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="scan-text" [size]="12" /> Datos extraídos</p>
+                            @if (puedeRevisar() && !editandoDatos()) {
+                              <button type="button" class="alma-btn alma-btn-ghost h-7 text-xs" (click)="editarDatos(d)"><lucide-icon name="pencil" [size]="13" /> Corregir datos</button>
+                            }
+                          </div>
+                          @if (editandoDatos()) {
+                            <div class="mt-2 grid gap-2">
+                              @for (f of datosForm(); track f.clave; let i = $index) {
+                                <div class="grid gap-1">
+                                  <label class="font-mono text-[11px] text-muted-foreground" [attr.for]="'dx-' + i">{{ f.clave }}</label>
+                                  @switch (f.tipo) {
+                                    @case ('bool') {
+                                      <select class="alma-input h-8 text-xs" [id]="'dx-' + i" [(ngModel)]="f.valor">
+                                        <option value="true">Sí</option>
+                                        <option value="false">No</option>
+                                      </select>
+                                    }
+                                    @case ('json') {
+                                      <textarea class="alma-input min-h-24 py-1.5 font-mono text-[11px]" [id]="'dx-' + i" [(ngModel)]="f.valor"></textarea>
+                                    }
+                                    @default {
+                                      <input class="alma-input h-8 text-xs" [id]="'dx-' + i" [(ngModel)]="f.valor" />
+                                    }
+                                  }
+                                </div>
+                              }
+                              <form class="flex items-center gap-1.5" (submit)="$event.preventDefault(); agregarDato()">
+                                <input class="alma-input h-8 flex-1 font-mono text-xs" name="nuevo-dato" [(ngModel)]="nuevoDato" placeholder="nuevo_dato" aria-label="Clave del dato a agregar" />
+                                <button type="submit" class="alma-btn alma-btn-ghost h-8 text-xs" [disabled]="!nuevoDato.trim()"><lucide-icon name="plus" [size]="13" /> Agregar dato</button>
+                              </form>
+                              @if (errorDatos(); as e) { <p class="text-xs text-destructive">{{ e }}</p> }
+                              <p class="text-[11px] text-muted-foreground">{{ d.estado === 'ejecutado' ? 'Al guardar se genera la versión siguiente del archivo.' : 'El archivo se genera con estos datos al aprobar el correo.' }}</p>
+                              <div class="flex justify-end gap-2">
+                                <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" [disabled]="guardandoDatos()" (click)="editandoDatos.set(false)">Cancelar</button>
+                                <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardandoDatos()" (click)="guardarDatos(d)">
+                                  <lucide-icon [name]="guardandoDatos() ? 'loader-2' : 'save'" [size]="13" [class.animate-spin]="guardandoDatos()" /> Guardar datos
+                                </button>
+                              </div>
+                            </div>
+                          } @else if (entradas(d.datos_extraidos).length) {
                             <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
                               @for (e of entradas(d.datos_extraidos); track e[0]) {
                                 <dt class="font-mono text-muted-foreground">{{ e[0] }}</dt>
-                                <dd class="min-w-0 break-words font-medium text-foreground">{{ e[1] || '—' }}</dd>
+                                @if (listaDe(d.datos_extraidos, e[0]); as l) {
+                                  <dd class="min-w-0">
+                                    <span class="text-muted-foreground">{{ l.filas.length }} {{ l.filas.length === 1 ? 'elemento' : 'elementos' }}</span>
+                                    <div class="mt-1 max-h-40 overflow-auto rounded-lg border border-border/60">
+                                      <table class="alma-table text-[11px]">
+                                        <thead><tr>@for (c of l.columnas; track c) { <th class="whitespace-nowrap">{{ c }}</th> }</tr></thead>
+                                        <tbody>
+                                          @for (fila of l.filas; track $index) {
+                                            <tr>@for (c of l.columnas; track c) { <td class="whitespace-nowrap">{{ fila[c] }}</td> }</tr>
+                                          }
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </dd>
+                                } @else {
+                                  <dd class="min-w-0 break-words font-medium text-foreground">{{ e[1] || '—' }}</dd>
+                                }
                               }
                             </dl>
                           } @else {
@@ -232,6 +314,77 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                           </div>
                         </div>
                       </div>
+
+                      <!-- Asignación 2.0 -->
+                      @if (d.grupo_id || d.proceso_clave || d.asignacion_traza.length) {
+                        <section class="rounded-2xl border border-border/60 p-4 lg:col-span-2" aria-labelledby="bz-asig">
+                          <p id="bz-asig" class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="route" [size]="12" /> Asignación</p>
+                          <div class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
+                            <dl class="grid grid-cols-[auto_1fr] content-start gap-x-3 gap-y-1.5 text-xs">
+                              <dt class="text-muted-foreground">Proceso</dt>
+                              <dd class="font-medium text-foreground">{{ d.proceso_clave || '—' }}</dd>
+                              <dt class="text-muted-foreground">Grupo</dt>
+                              <dd class="font-medium text-foreground">{{ d.grupo_nombre || 'Sin grupo' }}</dd>
+                              <dt class="text-muted-foreground">Asignado a</dt>
+                              <dd>
+                                @if (asignacion(d); as a) {
+                                  @if (a.tipo === 'sin') {
+                                    <span class="rounded-full bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300">Sin asignar</span>
+                                  } @else {
+                                    <span class="font-medium text-foreground">{{ a.etiqueta }} {{ a.texto }}</span>
+                                    @if (a.correo) { <span class="block text-[11px] text-muted-foreground">{{ a.correo }}</span> }
+                                  }
+                                }
+                              </dd>
+                            </dl>
+                            <div>
+                              <p class="mb-2 text-[11px] font-semibold text-muted-foreground">Recorrido</p>
+                              <alma-traza-asignacion [traza]="d.asignacion_traza" vacio="Este correo no tiene recorrido de asignación." />
+                            </div>
+                          </div>
+                        </section>
+                      }
+
+                      <!-- Archivos generados (059) -->
+                      @if (archivos().length || d.proceso_clave) {
+                        <section class="rounded-2xl border border-border/60 p-4 lg:col-span-2" aria-labelledby="bz-arch">
+                          <div class="flex flex-wrap items-center justify-between gap-2">
+                            <p id="bz-arch" class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="file-spreadsheet" [size]="12" /> Archivos</p>
+                            @if (puedeRevisar() && d.estado === 'ejecutado') {
+                              <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [disabled]="generando()" almaTooltip="Genera la versión siguiente con los datos actuales" (click)="regenerar(d)">
+                                <lucide-icon name="refresh-cw" [size]="13" [class.animate-spin]="generando()" /> Generar de nuevo
+                              </button>
+                            }
+                          </div>
+                          @if (cargandoArchivos()) {
+                            <p class="mt-2 text-xs text-muted-foreground">Cargando archivos…</p>
+                          } @else {
+                            <div class="mt-2 grid gap-1.5">
+                              @for (a of archivos(); track a.id; let primero = $first) {
+                                <div class="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" [class]="primero ? 'bg-emerald-500/10' : 'bg-[var(--surface-sunken)]'">
+                                  <lucide-icon name="file-spreadsheet" [size]="16" class="shrink-0 text-emerald-600" />
+                                  <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-foreground">{{ a.nombre }}</p>
+                                    <p class="text-[11px] text-muted-foreground">
+                                      Versión {{ a.version }}{{ primero ? ' (vigente)' : '' }} · {{ a.filas }} {{ a.filas === 1 ? 'fila' : 'filas' }}@if (a.salida_nombre) { · {{ a.salida_nombre }}} · {{ fecha(a.created_at) }} · {{ a.created_by }}
+                                    </p>
+                                  </div>
+                                  @if (a.borrador_en_hilo) {
+                                    <span class="alma-badge gap-1 bg-sky-500/15 text-sky-700 dark:text-sky-300"><lucide-icon name="mail" [size]="11" /> Borrador en el hilo</span>
+                                  }
+                                  <button type="button" class="alma-btn alma-btn-ghost h-8 rounded-lg text-xs" [disabled]="descargando() === a.id" [attr.aria-label]="'Descargar ' + a.nombre" (click)="descargar(a)">
+                                    <lucide-icon [name]="descargando() === a.id ? 'loader-2' : 'download'" [size]="14" [class.animate-spin]="descargando() === a.id" /> Descargar
+                                  </button>
+                                </div>
+                              } @empty {
+                                <p class="text-xs text-muted-foreground">
+                                  {{ d.estado === 'ejecutado' ? 'La etiqueta de este correo no genera archivo, o aún no se ha generado.' : 'Un correo en Validar genera su archivo al aprobarlo, con la salida de su etiqueta final.' }}
+                                </p>
+                              }
+                            </div>
+                          }
+                        </section>
+                      }
                     </div>
                   }
                   @case ('correo') {
@@ -336,8 +489,21 @@ export class BandejaBuzonComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly emlSvc = inject(EmlService);
 
-  protected readonly puedeVer = computed(() => this.auth.hasPermission('app.buzon-inteligente.view'));
-  protected readonly puedeRevisar = computed(() => this.auth.hasPermission('app.buzon-inteligente.review'));
+  protected readonly puedeVer = computed(() => this.auth.hasPermission(PERM_VER_BUZON));
+  /** Cualquier rol del buzón (admin, editor o revisor) trabaja la bandeja; el
+   *  backend solo devuelve correos de los buzones que el usuario ve. */
+  protected readonly puedeRevisar = this.puedeVer;
+
+  // Datos extraídos (corrección del revisor) y archivos generados (059)
+  protected readonly editandoDatos = signal(false);
+  protected readonly datosForm = signal<DatoForm[]>([]);
+  protected readonly guardandoDatos = signal(false);
+  protected readonly errorDatos = signal<string | null>(null);
+  protected nuevoDato = '';
+  protected readonly archivos = signal<ArchivoCorreo[]>([]);
+  protected readonly cargandoArchivos = signal(false);
+  protected readonly generando = signal(false);
+  protected readonly descargando = signal<string | null>(null);
 
   protected readonly estadoMeta = ESTADO_CORREO;
   protected readonly icono = iconoAccion;
@@ -362,6 +528,8 @@ export class BandejaBuzonComponent {
   protected buzonId = '';
   protected categoriaId = '';
   protected estado: EstadoCorreo | '' = 'revision';
+  /** Cola «Sin asignar» (grupos de personas sin responsable), de cualquier estado. */
+  protected sinAsignar = false;
   private offset = 0;
   private readonly limit = 50;
 
@@ -393,6 +561,10 @@ export class BandejaBuzonComponent {
     const qp = this.route.snapshot.queryParamMap;
     if (qp.get('estado') !== null) this.estado = (qp.get('estado') as EstadoCorreo) ?? '';
     if (qp.get('buzon')) this.buzonId = qp.get('buzon')!;
+    if (qp.get('sin_asignar')) {
+      this.sinAsignar = true;
+      this.estado = '';
+    }
     void this.inicial();
     inject(DestroyRef).onDestroy(() => this.emlSvc.revoke(this.eml()));
   }
@@ -415,6 +587,13 @@ export class BandejaBuzonComponent {
     void this.cargar();
   }
 
+  protected alternarSinAsignar(): void {
+    this.sinAsignar = !this.sinAsignar;
+    if (this.sinAsignar) this.estado = '';
+    else if (!this.estado) this.estado = 'revision';
+    this.aplicar();
+  }
+
   protected async cargar(): Promise<void> {
     this.cargandoLista.set(true);
     try {
@@ -423,6 +602,7 @@ export class BandejaBuzonComponent {
         estado: this.estado || undefined,
         categoria_id: this.categoriaId || undefined,
         q: this.q.trim() || undefined,
+        sin_asignar: this.sinAsignar || undefined,
         limit: this.limit,
         offset: this.offset,
       });
@@ -453,11 +633,14 @@ export class BandejaBuzonComponent {
     this.adjunto.set(null);
     this.errorEml.set(null);
     this.panel.set('ia');
+    this.editandoDatos.set(false);
+    this.archivos.set([]);
     try {
       const d = await this.api.obtenerCorreo(c.id);
       this.detalle.set(d);
       this.categoriaDecision = d.categoria_id ?? this.categoriasDe(d.buzon_id)[0]?.id ?? '';
       void this.cargarEml(c.id);
+      void this.cargarArchivos(c.id);
     } catch (e) {
       this.toast.error('No se pudo cargar el detalle', e instanceof Error ? e.message : String(e));
     }
@@ -478,11 +661,137 @@ export class BandejaBuzonComponent {
     }
   }
 
+  protected asignacion(d: Correo): AsignacionVista | null {
+    if (d.asignado_persona_id) {
+      const correo = d.asignado_a && d.asignado_a.includes('@') ? d.asignado_a : undefined;
+      return { tipo: 'persona', icon: 'user', etiqueta: 'Asignado a', texto: d.asignado_nombre ?? d.asignado_a ?? 'una persona', correo: d.asignado_nombre ? correo : undefined };
+    }
+    const a = d.asignado_a ?? '';
+    if (a.startsWith('Carpeta')) return { tipo: 'carpeta', icon: 'folder-input', etiqueta: 'Enviado a', texto: a.replace(/^Carpeta\s*/, 'la carpeta ') };
+    if (a === 'Solo categorizar') return { tipo: 'categorizar', icon: 'tag', etiqueta: '', texto: 'Solo categorizar' };
+    if (a) return { tipo: 'persona', icon: 'user', etiqueta: 'Asignado a', texto: a };
+    // Sin persona ni carpeta: solo es «Sin asignar» si el buzón usa la asignación 2.0.
+    return d.grupo_id || d.asignacion_traza?.length ? { tipo: 'sin', icon: 'user-x', etiqueta: '', texto: 'Sin asignar' } : null;
+  }
+
   private reemplazar(actualizado: Correo): void {
     this.correos.update((l) => l.map((x) => (x.id === actualizado.id ? actualizado : x)));
     this.seleccionado.set(actualizado);
-    void this.api.obtenerCorreo(actualizado.id).then((d) => this.detalle.set(d)).catch(() => undefined);
+    void this.api
+      .obtenerCorreo(actualizado.id)
+      .then((d) => this.detalle.set(d))
+      .catch(() => undefined);
+    void this.cargarArchivos(actualizado.id);
     this.porRevisar.update((n) => Math.max(0, n - 1));
+  }
+
+  // ── Datos extraídos: corrección del revisor ──
+  protected listaDe(datos: Record<string, unknown> | null, clave: string): { columnas: string[]; filas: Record<string, string>[] } | null {
+    const v = datos?.[clave];
+    if (!Array.isArray(v) || !v.length || !v.every((x) => x && typeof x === 'object' && !Array.isArray(x))) return null;
+    const columnas = [...new Set(v.flatMap((x) => Object.keys(x as object)))];
+    const filas = (v as Record<string, unknown>[]).map((x) =>
+      Object.fromEntries(columnas.map((c) => [c, x[c] === null || x[c] === undefined ? '' : typeof x[c] === 'object' ? JSON.stringify(x[c]) : String(x[c])])),
+    );
+    return { columnas, filas };
+  }
+
+  protected editarDatos(d: CorreoDetalle): void {
+    this.errorDatos.set(null);
+    this.nuevoDato = '';
+    this.datosForm.set(
+      Object.entries(d.datos_extraidos ?? {}).map(([clave, v]) => {
+        if (typeof v === 'boolean') return { clave, tipo: 'bool' as const, valor: String(v) };
+        if (typeof v === 'number') return { clave, tipo: 'numero' as const, valor: String(v) };
+        if (v !== null && typeof v === 'object') return { clave, tipo: 'json' as const, valor: JSON.stringify(v, null, 2) };
+        return { clave, tipo: 'texto' as const, valor: v === null || v === undefined ? '' : String(v) };
+      }),
+    );
+    this.editandoDatos.set(true);
+  }
+
+  protected agregarDato(): void {
+    const clave = this.nuevoDato.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+    if (!clave) return;
+    if (this.datosForm().some((f) => f.clave === clave)) {
+      this.errorDatos.set(`Ya existe el dato «${clave}».`);
+      return;
+    }
+    this.datosForm.update((l) => [...l, { clave, tipo: 'texto', valor: '' }]);
+    this.nuevoDato = '';
+  }
+
+  protected async guardarDatos(d: CorreoDetalle): Promise<void> {
+    this.errorDatos.set(null);
+    const datos: Record<string, unknown> = {};
+    for (const f of this.datosForm()) {
+      const v = f.valor.trim();
+      if (f.tipo === 'bool') datos[f.clave] = v === 'true';
+      else if (f.tipo === 'numero') datos[f.clave] = v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : v;
+      else if (f.tipo === 'json') {
+        try {
+          datos[f.clave] = v ? JSON.parse(v) : null;
+        } catch {
+          this.errorDatos.set(`«${f.clave}» no es un JSON válido.`);
+          return;
+        }
+      } else datos[f.clave] = v === '' ? null : v;
+    }
+    this.guardandoDatos.set(true);
+    try {
+      const r = await this.api.corregirDatos(d.id, datos);
+      this.correos.update((l) => l.map((x) => (x.id === r.correo.id ? r.correo : x)));
+      this.seleccionado.set(r.correo);
+      this.detalle.set(await this.api.obtenerCorreo(d.id));
+      this.editandoDatos.set(false);
+      if (r.archivo) {
+        this.toast.show('Datos corregidos', `Se generó ${r.archivo.nombre} (versión ${r.archivo.version}, ${r.archivo.filas} filas).`);
+        void this.cargarArchivos(d.id);
+      } else {
+        this.toast.show('Datos corregidos', r.correo.asignado_a && !d.asignado_a ? 'Con los datos corregidos el correo ya tiene responsable.' : 'Se guardaron los datos del correo.');
+      }
+    } catch (e) {
+      this.errorDatos.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoDatos.set(false);
+    }
+  }
+
+  // ── Archivos generados ──
+  private async cargarArchivos(correoId: string): Promise<void> {
+    this.cargandoArchivos.set(true);
+    try {
+      const l = await this.api.archivosCorreo(correoId);
+      if (this.seleccionado()?.id === correoId) this.archivos.set(l);
+    } catch {
+      this.archivos.set([]);
+    } finally {
+      this.cargandoArchivos.set(false);
+    }
+  }
+
+  protected async regenerar(d: CorreoDetalle): Promise<void> {
+    this.generando.set(true);
+    try {
+      const a = await this.api.regenerarArchivo(d.id);
+      this.toast.show('Archivo generado', `${a.nombre} · versión ${a.version} · ${a.filas} filas.`);
+      await this.cargarArchivos(d.id);
+    } catch (e) {
+      this.toast.error('No se pudo generar el archivo', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.generando.set(false);
+    }
+  }
+
+  protected async descargar(a: ArchivoCorreo): Promise<void> {
+    this.descargando.set(a.id);
+    try {
+      await this.api.descargarArchivo(a);
+    } catch (e) {
+      this.toast.error('No se pudo descargar el archivo', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.descargando.set(null);
+    }
   }
 
   protected async decidir(ejecutar: boolean): Promise<void> {

@@ -1,8 +1,23 @@
-// Datos de DEMOSTRACIÓN del Buzón Inteligente (área de Recaudos, portado del flujo
-// de Daniel Pedraza). Se usan solo cuando el backend no tiene el módulo disponible;
-// ver BuzonApi.conDemo. Todo vive en memoria durante la sesión.
+// Datos de DEMOSTRACIÓN del Buzón Inteligente (área de Recaudos). Se usan solo
+// cuando el backend no tiene el módulo disponible; ver BuzonApi.conDemo. Todo vive
+// en memoria durante la sesión. Personas, correos, NIT y empresas son FICTICIOS.
 
 import {
+  AlertaInicio,
+  ArchivoCorreo,
+  ArchivoGenerado,
+  ColumnaPlantilla,
+  Exportacion,
+  ModeloLeido,
+  OrigenColumna,
+  Plantilla,
+  PlantillaIn,
+  Salida,
+  SalidaIn,
+  VistaPrevia,
+  Base,
+  BaseIn,
+  BaseUpdate,
   Buzon,
   BuzonIn,
   BuzonUpdate,
@@ -11,14 +26,31 @@ import {
   CategoriaIn,
   Correo,
   CorreoDetalle,
+  DisponibilidadIn,
   Ejecucion,
+  FilaBase,
   FiltroCorreos,
+  Grupo,
+  GrupoIn,
+  LecturaArchivo,
   Metricas,
+  Persona,
+  PersonaIn,
+  Proceso,
+  ProcesoIn,
+  PropuestaProcesos,
   ReglaFija,
   ReglaIn,
+  ResultadoAplicar,
+  ResultadoAsignacion,
+  ResultadoCarga,
   ResultadoPrueba,
+  ResumenInicio,
   ResumenSync,
+  RolMiembro,
 } from './buzon.api';
+import { nrm, simularAsignacion } from './buzon-asignacion';
+import { matriz, nombreArchivo, salidaPara, sugerirColumna } from './buzon-exportacion';
 
 const B_RECAUDOS = 'demo-buzon-recaudos';
 const B_JURIDICA = 'demo-buzon-juridica';
@@ -70,8 +102,16 @@ function cat(
     campos_extraer: [],
     acciones,
     correos_30d: 0,
+    proceso_id: null,
     ...extra,
   };
+}
+
+/** Proceso de cada etiqueta del buzón de Recaudos (demo). */
+function procesoDeEtiqueta(clave: string): string | null {
+  if (clave.startsWith('4X1000')) return 'demo-proc-4x1000';
+  if (['PAC', 'MFUND', 'PILA'].includes(clave)) return `demo-proc-${clave.toLowerCase()}`;
+  return null;
 }
 
 const asignar = (carpeta = true): Categoria['acciones'][number] => ({
@@ -171,6 +211,15 @@ function categoriasBase(): Categoria[] {
     ),
     cat(
       B_RECAUDOS,
+      'PILA',
+      'PILA',
+      'Planillas integradas de liquidación de aportes de empresas: número de planilla, NIT del aportante y periodo.',
+      '#30D158',
+      [{ tipo: 'categorizar', parametros: { categoria: 'PILA' }, orden: 1, activa: true }],
+      { correos_30d: 8 },
+    ),
+    cat(
+      B_RECAUDOS,
       'INFORMATIVO',
       'Informativo',
       'Notificaciones automáticas que no requieren gestión: consolidaciones de gestión de retiros, avisos bancarios, confirmaciones del sistema.',
@@ -233,9 +282,23 @@ function categoriasBase(): Categoria[] {
       correos_30d: 4,
     }),
   ];
-  lista.forEach((c, i) => (c.orden = i + 1));
+  lista.forEach((c, i) => {
+    c.orden = i + 1;
+    if (c.buzon_id === B_RECAUDOS) c.proceso_id = procesoDeEtiqueta(c.clave);
+  });
   return lista;
 }
+
+const PROMPT_DEMO = `Eres el asistente que clasifica los correos del buzón de Recaudos.
+
+PASO 1. Reconoce el proceso del correo:
+- 4X1000: carta de autorización al banco firmada por el afiliado y certificado para traslado a FPV (exención GMF). Etiquetas: 4X1000_DAVIVIENDA, 4X1000_BANCOLOMBIA, 4X1000_OTROS_BANCOS, 4X1000_ACREDITAR, 4X1000_INCOMPLETO.
+- PAC: aportes de planes colectivos; el contrato empieza por PC. No es PAC si es una solicitud de retiro.
+- MFUND: novedades de recaudo de fondos MFUND.
+- PILA: planillas de aportes de empresas.
+
+PASO 2. Extrae en JSON: codigo_pac, nit_empresa, razon_social, valor, periodo, afiliado_cedula, afiliado_contrato.
+Si dudas entre dos procesos, usa la etiqueta Validar.`;
 
 function buzonesBase(): Buzon[] {
   return [
@@ -260,10 +323,19 @@ function buzonesBase(): Buzon[] {
       en_revision: 4,
       ejecutados_hoy: 27,
       miembros: [
-        { user_id: 'u1', email: 'dapedraza@skandia.com.co', name: 'Daniel Pedraza', rol: 'propietario' },
-        { user_id: 'u2', email: 'lgomez@skandia.com.co', name: 'Laura Gómez', rol: 'analista' },
+        { user_id: 'u1', email: 'paula.mendez@ejemplo.com.co', name: 'Paula Méndez', rol: 'editor' },
+        { user_id: 'u2', email: 'laura.gomez@ejemplo.com.co', name: 'Laura Gómez', rol: 'revisor' },
       ],
+      rol: 'admin',
       puede_administrar: true,
+      puede_conectar: true,
+      conexion_compartida: true,
+      conectada_por: 'admin.demo@ejemplo.com.co',
+      modo_clasificacion: 'prompt',
+      agente_nombre: null,
+      prompt_area: PROMPT_DEMO,
+      al_desactivar: 'respaldo',
+      borrador_en_hilo: true,
     },
     {
       id: B_JURIDICA,
@@ -286,7 +358,16 @@ function buzonesBase(): Buzon[] {
       en_revision: 2,
       ejecutados_hoy: 0,
       miembros: [],
+      rol: 'admin',
       puede_administrar: true,
+      puede_conectar: true,
+      conexion_compartida: false,
+      conectada_por: null,
+      modo_clasificacion: 'agente',
+      agente_nombre: 'ClasificadorJuridica',
+      prompt_area: null,
+      al_desactivar: 'roundrobin',
+      borrador_en_hilo: false,
     },
   ];
 }
@@ -374,7 +455,14 @@ function correosBase(cats: Categoria[]): Correo[] {
       cat: 'PAC', conf: 0.91, estado: 'ejecutado', origen: 'ia',
       resumen: 'Empresa envía planilla de aportes del plan colectivo PC0001234 correspondiente a septiembre.',
       just: 'Referencia a contrato PC y planilla de aportes colectivos.',
-      datos: { afiliado_contrato: 'PC0001234', afiliado_nombre: 'Constructora Sol SAS' },
+      datos: {
+        codigo_pac: 'PC0001234', nit_empresa: '900.123.456-7', razon_social: 'Constructora Sol SAS', valor: '18450000', periodo: '2026-09',
+        afiliados: [
+          { cedula: '79000001', nombre: 'Pedro Ejemplo Ruiz', valor: '8250000' },
+          { cedula: '52987654', nombre: 'Ana Demo Torres', valor: '6200000' },
+          { cedula: '1020300400', nombre: 'Luis Ficticio Mora', valor: '4000000' },
+        ],
+      },
       adj: [{ nombre: 'Planilla_sep_2026.xlsx', tipo: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', tamano: 48210 }],
       asignado: 'Carolina Ruiz',
     },
@@ -418,6 +506,25 @@ function correosBase(cats: Categoria[]): Correo[] {
       just: 'Carta + certificado, cuenta destino 200-3511643-8, sin comprobante.',
       datos: { afiliado_nombre: 'Luisa Fernanda Ortiz', afiliado_cedula: '1020456789', banco: 'Bancolombia', monto: '12000000' },
       adj: [{ nombre: 'Carta_Bancolombia.pdf', tipo: 'application/pdf', tamano: 402000 }],
+    },
+    {
+      buzon: B_RECAUDOS, de: 'tesoreria@cafedelvalle.example', nombre: 'Café del Valle Ltda', asunto: 'Aporte PAC octubre - contrato pc-3105', h: 0.9,
+      cat: 'PAC', conf: 0.74, estado: 'revision', origen: 'ia',
+      resumen: 'La empresa envía el soporte del aporte PAC de octubre del contrato PC3105 por $6.200.000.',
+      just: 'Referencia a contrato PC y soporte de pago, pero el valor no coincide con la planilla adjunta: confianza bajo el umbral.',
+      datos: {
+        codigo_pac: 'pc-3105', nit_empresa: '901222333', razon_social: 'Café del Valle Ltda', valor: '6200000', periodo: '2026-10',
+        afiliados: [{ cedula: '43111222', nombre: 'Marta Prueba Gil', valor: '6200000' }],
+      },
+      adj: [{ nombre: 'Soporte_pago_octubre.pdf', tipo: 'application/pdf', tamano: 132000 }],
+    },
+    {
+      buzon: B_RECAUDOS, de: 'nomina@agropacifico.example', nombre: 'Agro Pacífico SAS', asunto: 'Planilla PILA septiembre NIT 900777888', h: 2.6,
+      cat: 'PILA', conf: 0.92, estado: 'ejecutado', origen: 'ia',
+      resumen: 'Planilla PILA del periodo 2026-09 del aportante Agro Pacífico SAS.',
+      just: 'Número de planilla, NIT del aportante y periodo presentes.',
+      datos: { numero_planilla: '8800123456', nit_aportante: '900777888', periodo: '2026-09' },
+      adj: [{ nombre: 'Planilla_PILA.pdf', tipo: 'application/pdf', tamano: 98000 }],
     },
     {
       buzon: B_JURIDICA, de: 'notificaciones@cendoj.ramajudicial.gov.co', nombre: 'Rama Judicial', asunto: 'Notificación auto admisorio - Rad. 11001310300420260045600', h: 1.5,
@@ -465,8 +572,273 @@ function correosBase(cats: Categoria[]): Correo[] {
       error: s.error ?? null,
       modelo_ia: s.origen === 'regla' ? null : 'gpt-4.1',
       created_at: hace(s.h),
+      // La asignación 2.0 la calcula DemoStore con los grupos, el equipo y las bases.
+      proceso_clave: null,
+      grupo_id: null,
+      grupo_nombre: null,
+      asignado_persona_id: null,
+      asignacion_traza: [],
+      asignado_nombre: null,
     };
   });
+}
+
+// ── 2.0: procesos, grupos, equipo y bases (Recaudos) ─────────────────────────
+
+function procesosBase(): Proceso[] {
+  const p = (clave: string, nombre: string, color: string, orden: number, descripcion: string, exclusiones: string | null, campos: [string, string, boolean][]): Proceso => ({
+    id: `demo-proc-${clave.toLowerCase()}`,
+    buzon_id: B_RECAUDOS,
+    clave,
+    nombre,
+    descripcion,
+    exclusiones,
+    campos_extraer: campos.map(([c, d, k]) => ({ clave: c, descripcion: d, critico: k })),
+    color,
+    orden,
+    activo: true,
+    etiquetas: [],
+  });
+  return [
+    p('4X1000', 'Exención 4x1000', '#E5392A', 1,
+      'Carta de autorización al banco firmada por el afiliado y certificado Skandia para traslado a FPV; a veces llega el comprobante del traslado.',
+      'No es 4x1000 si solo preguntan por el estado de un traslado sin soportes.',
+      [['afiliado_cedula', 'Cédula del afiliado, solo dígitos', true], ['afiliado_contrato', 'Contrato Skandia', true], ['banco', 'Banco de la carta', false], ['monto', 'Valor del traslado', false], ['tiene_comprobante_traslado', 'Si llega el comprobante', false]]),
+    p('PAC', 'Planes colectivos (PAC)', '#0A84FF', 2,
+      'Aportes de planes colectivos de empresas: contrato que empieza por PC, planilla o soporte de pago de la empresa.',
+      'No es PAC si la empresa pide un retiro o una certificación.',
+      [['codigo_pac', 'Código del contrato PAC (PC + número)', true], ['nit_empresa', 'NIT de la empresa', true], ['razon_social', 'Razón social', false], ['valor', 'Valor del aporte', false], ['periodo', 'Periodo AAAA-MM', false], ['afiliados', 'Lista de afiliados del aporte (cedula, nombre, valor)', false]]),
+    p('MFUND', 'Fondos MFUND', '#6D4AE0', 3, 'Novedades de recaudo de fondos MFUND: aportes y aplicaciones pendientes.', null,
+      [['numero_encargo', 'Número de encargo', true], ['valor', 'Valor', false]]),
+    p('PILA', 'Planillas PILA', '#30D158', 4, 'Planillas integradas de liquidación de aportes enviadas por empresas.', null,
+      [['numero_planilla', 'Número de planilla', true], ['nit_aportante', 'NIT del aportante', true], ['periodo', 'Periodo AAAA-MM', false]]),
+  ];
+}
+
+function gruposBase(): Grupo[] {
+  const g = (id: string, nombre: string, orden: number, etiquetas: string[], extra: Partial<Grupo> = {}): Grupo => ({
+    id: `demo-g-${id}`,
+    buzon_id: B_RECAUDOS,
+    nombre,
+    etiquetas,
+    destino: 'personas',
+    carpeta: null,
+    sin_activos_modo: 'cola',
+    sin_activos_carpeta: null,
+    sin_activos_persona_id: null,
+    orden,
+    activo: true,
+    reglas: [],
+    ...extra,
+  });
+  return [
+    g('4x1000', '4X1000', 1, ['4X1000_DAVIVIENDA', '4X1000_BANCOLOMBIA', '4X1000_OTROS_BANCOS', '4X1000_ACREDITAR', '4X1000_INCOMPLETO']),
+    g('pac', 'PAC', 2, ['PAC'], {
+      sin_activos_modo: 'carpeta',
+      sin_activos_carpeta: 'PAC sin analista',
+      reglas: [
+        {
+          id: 'demo-r-pac-1',
+          grupo_id: 'demo-g-pac',
+          base_id: 'demo-base-pac',
+          base_nombre: 'BASE PAC',
+          cruces: [
+            { campo: 'codigo_pac', columna: 'CODIGO PAC', comparacion: 'pc' },
+            { campo: 'nit_empresa', columna: 'NIT', comparacion: 'doc' },
+          ],
+          col_responsable: 'ANALISTA',
+          col_respaldo: 'BACKUP',
+          orden: 1,
+          activa: true,
+        },
+      ],
+    }),
+    g('fondos', 'MFUND y PILA', 3, ['MFUND', 'PILA'], { destino: 'carpeta', carpeta: 'MFUND' }),
+    g('info', 'Informativos', 4, ['INFORMATIVO'], { destino: 'categorizar' }),
+    // Sin nadie activo: sus correos quedan en la cola «Sin asignar» (alerta al líder).
+    g('otros', 'Otros', 5, ['OTROS']),
+  ];
+}
+
+function equipoBase(): (Persona & { buzon_id: string })[] {
+  const p = (id: string, nombre: string, carpeta: string | null, disponible: boolean, orden: number, grupos: Persona['grupos']) => ({
+    id: `demo-p-${id}`,
+    buzon_id: B_RECAUDOS,
+    nombre,
+    correo: `${nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '.')}@ejemplo.com.co`,
+    carpeta,
+    disponible,
+    orden,
+    carga_hoy: 0,
+    abiertos: 0,
+    grupos,
+  });
+  return [
+    p('laura', 'Laura Gómez', 'Laura Gómez', true, 1, { 'demo-g-4x1000': { activa: true, respaldo_id: 'demo-p-andres' } }),
+    p('andres', 'Andrés Pérez', 'Andrés Pérez', true, 2, {
+      'demo-g-4x1000': { activa: true, respaldo_id: null },
+      'demo-g-pac': { activa: true, respaldo_id: 'demo-p-carolina' },
+    }),
+    p('carolina', 'Carolina Ruiz', 'Carolina Ruiz', true, 3, { 'demo-g-pac': { activa: true, respaldo_id: 'demo-p-mateo' } }),
+    p('mateo', 'Mateo Salazar', 'Mateo Salazar', true, 4, { 'demo-g-pac': { activa: true, respaldo_id: 'demo-p-carolina' } }),
+    p('valentina', 'Valentina Ríos', null, false, 5, { 'demo-g-4x1000': { activa: true, respaldo_id: 'demo-p-laura' } }),
+  ];
+}
+
+const COLS_PAC = ['CODIGO PAC', 'NIT', 'RAZON SOCIAL', 'ANALISTA', 'BACKUP'];
+const FILAS_PAC: FilaBase[] = [
+  ['PC0001234', '900123456', 'Constructora Sol SAS', 'Carolina Ruiz', 'Mateo Salazar'],
+  ['PC0002210', '800456789', 'Logística Andina SAS', 'mateo.salazar@ejemplo.com.co', 'Carolina Ruiz'],
+  ['PC0003105', '901222333', 'Café del Valle Ltda', 'Caro R.', 'Mateo Salazar'],
+  ['PC0004420', '860111222', 'Textiles Norte SA', 'Andrés', 'Carolina Ruiz'],
+  ['PC0005001', '900777888', 'Agro Pacífico SAS', '', ''],
+  ['PC0006150', '830444555', 'Servicios Médicos Integrales SAS', 'Valentina Ríos', 'Laura Gómez'],
+  ['PC0007312', '901333444', 'Transportes del Sur SAS', 'Carolina Ruiz', 'Andrés Pérez'],
+].map((r) => Object.fromEntries(COLS_PAC.map((c, i) => [c, r[i]])));
+
+function basesBase(): Base[] {
+  return [
+    {
+      id: 'demo-base-pac',
+      nombre: 'BASE PAC',
+      origen: 'sharepoint',
+      archivo: 'BASE_PAC.xlsx',
+      hoja: 'Asignación',
+      fila_encabezado: 3,
+      columnas: [...COLS_PAC],
+      total_filas: FILAS_PAC.length,
+      estado: 'ok',
+      motivo: null,
+      sharepoint_url: 'https://ejemplo.sharepoint.com/sites/recaudos/Documentos/BASE_PAC.xlsx',
+      vinculos: {},
+      cargada_en: hace(26),
+      cargada_por: 'paula.mendez@ejemplo.com.co',
+      buzones: [B_RECAUDOS],
+      usos: 1,
+    },
+    {
+      id: 'demo-base-mfund',
+      nombre: 'BASE ENCARGOS MFUND',
+      origen: 'archivo',
+      archivo: null,
+      hoja: null,
+      fila_encabezado: null,
+      columnas: [],
+      total_filas: 0,
+      estado: 'rechazado',
+      motivo: 'El archivo no trae filas debajo de los encabezados.',
+      sharepoint_url: null,
+      vinculos: {},
+      cargada_en: null,
+      cargada_por: null,
+      buzones: [B_RECAUDOS],
+      usos: 0,
+    },
+  ];
+}
+
+// ── Exportación (059) ────────────────────────────────────────────────────────
+
+function plantillasBase(): Plantilla[] {
+  const col = (encabezado: string, origen: OrigenColumna, formato: ColumnaPlantilla['formato'] = 'texto'): ColumnaPlantilla => ({ encabezado, origen, formato });
+  return [
+    {
+      id: 'demo-tpl-cargue-pac',
+      buzon_id: B_RECAUDOS,
+      nombre: 'Cargue PAC',
+      formato: 'xlsx',
+      separador: ';',
+      hoja: 'Cargue',
+      nombre_archivo: 'Cargue_{codigo_pac}_{fecha}',
+      titulo: [['CARGUE DE APORTES PAC'], ['Generado por Alma · Recaudos']],
+      columnas: [
+        col('CONSECUTIVO', { tipo: 'fila' }, 'entero'),
+        col('CODIGO PAC', { tipo: 'campo', campo: 'codigo_pac' }),
+        col('NIT EMPRESA', { tipo: 'campo', campo: 'nit_empresa' }),
+        col('DOCUMENTO', { tipo: 'campo', campo: 'afiliados.cedula' }),
+        col('NOMBRE', { tipo: 'campo', campo: 'afiliados.nombre' }),
+        col('VALOR', { tipo: 'campo', campo: 'afiliados.valor' }, 'moneda'),
+        col('FECHA RECIBIDO', { tipo: 'correo', dato: 'fecha' }, 'fecha'),
+        col('ANALISTA', { tipo: 'base', base_id: 'demo-base-pac', campo: 'codigo_pac', columna_busqueda: 'CODIGO PAC', columna_resultado: 'ANALISTA', comparacion: 'pc' }),
+        col('VALOR CON GMF', { tipo: 'formula', formula: '=F{fila}*1.004' }, 'moneda'),
+        col('OBSERVACION', { tipo: 'fijo', valor: 'Cargue automático Alma' }),
+      ],
+      detalle: 'afiliados',
+      modelo: 'MODELO_CARGUE_PAC.xlsx',
+      updated_at: hace(72),
+      updated_by: 'paula.mendez@ejemplo.com.co',
+    },
+  ];
+}
+
+function salidasBase(): Salida[] {
+  const s = (id: string, proceso: string, nombre: string, modo: Salida['modo'], orden: number, extra: Partial<Salida> = {}): Salida => ({
+    id: `demo-sal-${id}`,
+    proceso_id: `demo-proc-${proceso}`,
+    nombre,
+    modo,
+    etiquetas: null,
+    plantilla_id: null,
+    orden,
+    activa: true,
+    ...extra,
+  });
+  return [
+    s('4x-tabla', '4x1000', 'Tabla 4X1000', 'tabla', 1, { etiquetas: ['4X1000_DAVIVIENDA', '4X1000_BANCOLOMBIA', '4X1000_OTROS_BANCOS', '4X1000_ACREDITAR'] }),
+    s('4x-nada', '4x1000', 'Incompletos sin archivo', 'ninguno', 2, { etiquetas: ['4X1000_INCOMPLETO'] }),
+    s('pac', 'pac', 'Cargue PAC', 'plantilla', 1, { plantilla_id: 'demo-tpl-cargue-pac' }),
+    s('mfund', 'mfund', 'Sin archivo', 'ninguno', 1),
+    s('pila', 'pila', 'Tabla PILA', 'tabla', 1),
+  ];
+}
+
+const espera = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const clonar = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+/** Vista previa de un Excel/CSV en el navegador (solo demo; el real lo lee el backend). */
+export async function demoLeerArchivo(archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<LecturaArchivo> {
+  const XLSX = await import('xlsx');
+  const csv = /\.csv$/i.test(archivo.name);
+  if (!csv && !/\.(xlsx|xlsm|xls)$/i.test(archivo.name)) throw new Error('La base debe ser un Excel (.xlsx) o un .csv.');
+  const wb = csv ? XLSX.read(await archivo.text(), { type: 'string' }) : XLSX.read(new Uint8Array(await archivo.arrayBuffer()), { type: 'array' });
+  const hojas = csv ? [] : wb.SheetNames;
+  const elegida = hoja && wb.SheetNames.includes(hoja) ? hoja : wb.SheetNames[0];
+  const filas = XLSX.utils
+    .sheet_to_json<unknown[]>(wb.Sheets[elegida], { header: 1, blankrows: false, defval: '', raw: false })
+    .map((r) => r.map((c) => String(c ?? '').trim()));
+  let idx = filaEncabezado ? filaEncabezado - 1 : 0;
+  if (!filaEncabezado) {
+    let mejor = 0;
+    filas.slice(0, 20).forEach((f, i) => {
+      const n = f.filter((c) => c && isNaN(Number(c.replace(',', '.')))).length;
+      if (n > mejor) [mejor, idx] = [n, i];
+    });
+    if (mejor < 2) throw new Error('No encontré una fila de encabezados (al menos dos columnas con nombre).');
+  }
+  if (idx < 0 || idx >= filas.length) throw new Error('La fila de encabezados está fuera del archivo.');
+  const vistos = new Map<string, number>();
+  const columnas = filas[idx].map((c, i) => {
+    let n = c || `Columna ${i + 1}`;
+    const k = vistos.get(n) ?? 0;
+    vistos.set(n, k + 1);
+    if (k) n = `${n} (${k + 1})`;
+    return n;
+  });
+  const datos = filas
+    .slice(idx + 1)
+    .filter((f) => f.some((c) => c))
+    .map((f) => Object.fromEntries(columnas.map((c, i) => [c, f[i] ?? ''])));
+  const titulo = filas.slice(0, idx).map((f) => f.filter(Boolean).join(' ')).filter(Boolean).join(' · ');
+  return {
+    hojas,
+    hoja: csv ? null : elegida,
+    fila_encabezado: idx + 1,
+    columnas,
+    total_filas: datos.length,
+    muestra: datos.slice(0, 20),
+    titulo: titulo || null,
+    filas: datos.slice(0, 500),
+  };
 }
 
 function carpetasBase(): CarpetaGraph[] {
@@ -476,7 +848,8 @@ function carpetasBase(): CarpetaGraph[] {
   return [
     h('Bandeja de entrada', 214, []),
     h('4X1000 Acreditar', 58), h('4X1000 Davivienda', 41), h('4X1000 Bancolombia', 37), h('4X1000 Otros Bancos', 9),
-    h('Laura Gómez', 33), h('Andrés Pérez', 29), h('Carolina Ruiz', 31),
+    h('Laura Gómez', 33), h('Andrés Pérez', 29), h('Carolina Ruiz', 31), h('Mateo Salazar', 18),
+    h('MFUND', 22), h('PAC sin analista', 0),
     h('2026', 812, [h('SEPTIEMBRE', 140), h('AGOSTO', 173)]),
   ];
 }
@@ -490,6 +863,662 @@ export class DemoStore {
   correos = correosBase(this.categorias);
   carpetas = carpetasBase();
   ejecuciones = new Map<string, Ejecucion[]>();
+  procesos = procesosBase();
+  grupos = gruposBase();
+  equipo = equipoBase();
+  bases = basesBase();
+  filasPorBase = new Map<string, FilaBase[]>([['demo-base-pac', FILAS_PAC.map((f) => ({ ...f }))]]);
+
+  salidas = salidasBase();
+  plantillas = plantillasBase();
+  archivos: ArchivoCorreo[] = [];
+  /** Celdas de cada archivo generado (para descargarlo en la demo). */
+  private contenidos = new Map<string, { hoja: string; formato: 'xlsx' | 'csv'; separador: string; celdas: string[][] }>();
+
+  constructor() {
+    // En orden, para que el round-robin vea la carga que va quedando.
+    this.correos.forEach((c, i) => (this.correos[i] = this.asignarCorreo(c)));
+    this.correos.filter((c) => c.estado === 'ejecutado').forEach((c) => this.generarArchivo(c, 'sistema', c.decidido_en ?? c.created_at));
+  }
+
+  // ── Exportación (059) ──
+  exportacion(buzonId: string): Exportacion {
+    const b = this.buzones.find((x) => x.id === buzonId);
+    if (!b) throw new Error('Buzón no encontrado.');
+    return {
+      borrador_en_hilo: b.borrador_en_hilo,
+      procesos: this.listarProcesos(buzonId).map((p) => ({
+        ...p,
+        salidas: clonar(this.salidas.filter((s) => s.proceso_id === p.id).sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0))),
+      })),
+      plantillas: this.listarPlantillas(buzonId),
+    };
+  }
+
+  guardarSalidas(procesoId: string, salidas: SalidaIn[]): Salida[] {
+    const p = this.procesos.find((x) => x.id === procesoId);
+    if (!p) throw new Error('Proceso no encontrado.');
+    const etiquetas = this.listarProcesos(p.buzon_id).find((x) => x.id === procesoId)?.etiquetas ?? [];
+    for (const s of salidas) {
+      if (s.modo === 'plantilla' && !this.plantillas.some((t) => t.id === s.plantilla_id && t.buzon_id === p.buzon_id)) {
+        throw new Error(`La salida «${s.nombre}» usa una plantilla: elígela.`);
+      }
+      if (s.etiquetas !== null && !s.etiquetas.length) throw new Error(`La salida «${s.nombre}» no aplica a ninguna etiqueta.`);
+      if (s.etiquetas?.some((e) => !etiquetas.includes(e))) throw new Error(`«${s.nombre}» usa etiquetas que no son del proceso ${p.clave}.`);
+    }
+    this.salidas = [
+      ...this.salidas.filter((s) => s.proceso_id !== procesoId),
+      ...salidas.map((s, i) => ({
+        ...clonar(s),
+        id: nuevoId('demo-sal'),
+        proceso_id: procesoId,
+        plantilla_id: s.modo === 'plantilla' ? s.plantilla_id : null,
+        orden: i + 1,
+      })),
+    ];
+    return clonar(this.salidas.filter((s) => s.proceso_id === procesoId));
+  }
+
+  listarPlantillas(buzonId: string): Plantilla[] {
+    return clonar(this.plantillas.filter((t) => t.buzon_id === buzonId).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+  }
+
+  guardarPlantilla(buzonId: string | null, body: PlantillaIn, id?: string): Plantilla {
+    const previa = id ? this.plantillas.find((t) => t.id === id) : undefined;
+    if (id && !previa) throw new Error('Plantilla no encontrada.');
+    const malo = body.columnas.find((c) => c.origen.tipo === 'formula' && !(c.origen.formula ?? '').startsWith('='));
+    if (malo) throw new Error('La fórmula debe empezar con «=». Usa {fila} para el número de la fila.');
+    const t: Plantilla = {
+      ...clonar(body),
+      id: previa?.id ?? nuevoId('demo-tpl'),
+      buzon_id: previa?.buzon_id ?? buzonId!,
+      updated_at: new Date().toISOString(),
+      updated_by: 'tú (demostración)',
+    };
+    this.plantillas = previa ? this.plantillas.map((x) => (x.id === id ? t : x)) : [...this.plantillas, t];
+    return clonar(t);
+  }
+
+  eliminarPlantilla(id: string): void {
+    // Las salidas que la usaban quedan «sin archivo».
+    this.salidas = this.salidas.map((s) => (s.plantilla_id === id ? { ...s, plantilla_id: null, modo: 'ninguno' } : s));
+    this.plantillas = this.plantillas.filter((t) => t.id !== id);
+  }
+
+  async leerModelo(buzonId: string, archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<ModeloLeido> {
+    const XLSX = await import('xlsx');
+    const csv = /\.csv$/i.test(archivo.name);
+    if (!csv && !/\.(xlsx|xlsm)$/i.test(archivo.name)) throw new Error('El archivo debe ser un Excel (.xlsx) o un .csv.');
+    const wb = csv ? XLSX.read(await archivo.text(), { type: 'string' }) : XLSX.read(new Uint8Array(await archivo.arrayBuffer()), { type: 'array' });
+    const elegida = hoja && wb.SheetNames.includes(hoja) ? hoja : wb.SheetNames[0];
+    const filas = XLSX.utils
+      .sheet_to_json<unknown[]>(wb.Sheets[elegida], { header: 1, blankrows: true, defval: '', raw: false })
+      .map((r) => r.map((c) => String(c ?? '').trim()));
+    let idx = filaEncabezado ? filaEncabezado - 1 : 0;
+    if (!filaEncabezado) {
+      let mejor = 0;
+      filas.slice(0, 20).forEach((f, i) => {
+        const n = f.filter((c) => c && isNaN(Number(c.replace(',', '.')))).length;
+        if (n > mejor) [mejor, idx] = [n, i];
+      });
+      if (mejor < 2) throw new Error('No encontré una fila de encabezados (al menos dos columnas con nombre).');
+    }
+    if (idx < 0 || idx >= filas.length) throw new Error('La fila de encabezados está fuera del archivo.');
+    const ancho = filas[idx].reduce((n, c, i) => (c ? i + 1 : n), 0);
+    const ejemplo = filas[idx + 1] ?? [];
+    const campos = this.camposBuzon(buzonId);
+    const columnas = filas[idx].slice(0, ancho).map((enc, i) => {
+      const muestra = ejemplo[i] ?? '';
+      const sugerido = sugerirColumna(enc, campos);
+      return {
+        encabezado: enc || `Columna ${i + 1}`,
+        origen: sugerido ?? { tipo: 'vacio' as const },
+        sugerido: !!sugerido,
+        formato: (/^\d{4}-\d{2}-\d{2}|^\d{2}\/\d{2}\/\d{4}/.test(muestra) ? 'fecha' : muestra && /^[\d.,$\s-]+$/.test(muestra) && muestra.length < 15 ? 'numero' : 'texto') as ColumnaPlantilla['formato'],
+        ejemplo: muestra,
+      };
+    });
+    return {
+      hojas: csv ? [] : wb.SheetNames,
+      hoja: csv ? null : elegida,
+      fila_encabezado: idx + 1,
+      titulo: filas.slice(0, idx).filter((f) => f.some(Boolean)).map((f) => f.slice(0, ancho)),
+      columnas,
+      formato: csv ? 'csv' : 'xlsx',
+      modelo: archivo.name,
+      campos,
+    };
+  }
+
+  /** Datos que extraen los procesos del buzón (los de las listas como «lista.campo»). */
+  private camposBuzon(buzonId: string): string[] {
+    const out = this.procesos.filter((p) => p.buzon_id === buzonId).flatMap((p) => p.campos_extraer.map((c) => c.clave));
+    const listas = this.correos
+      .filter((c) => c.buzon_id === buzonId)
+      .flatMap((c) => Object.entries(c.datos_extraidos ?? {}))
+      .filter(([, v]) => Array.isArray(v) && v.length && typeof v[0] === 'object')
+      .flatMap(([k, v]) => Object.keys((v as Record<string, unknown>[])[0]).map((x) => `${k}.${x}`));
+    return [...new Set([...out, ...listas])];
+  }
+
+  private meta(c: Pick<Correo, 'asunto' | 'remitente' | 'recibido_en' | 'id'> | null, etiqueta: string, proceso: string): Record<string, string> {
+    return {
+      asunto: c?.asunto ?? 'Asunto del correo',
+      remitente: c?.remitente ?? 'remitente@empresa.com',
+      fecha: (c?.recibido_en ?? '').slice(0, 10),
+      radicado: (c?.id ?? 'AB12CD34').replace(/[^a-z0-9]/gi, '').slice(-8).toUpperCase(),
+      etiqueta,
+      proceso,
+      hoy: new Date().toISOString().slice(0, 10),
+    };
+  }
+
+  vistaPrevia(plantillaId: string, body: { datos?: Record<string, unknown>; proceso_clave?: string }): VistaPrevia {
+    const t = this.plantillas.find((x) => x.id === plantillaId);
+    if (!t) throw new Error('Plantilla no encontrada.');
+    let datos = body.datos ?? null;
+    if (!datos && body.proceso_clave) {
+      datos = [...this.correos].filter((c) => c.proceso_clave === body.proceso_clave!.toUpperCase() && c.datos_extraidos).sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.datos_extraidos ?? null;
+    }
+    const meta = this.meta(null, body.proceso_clave ?? '', body.proceso_clave ?? '');
+    meta['fecha'] = '';
+    const m = matriz(t, datos ?? {}, meta, this.basesConFilas());
+    return {
+      nombre_archivo: nombreArchivo(t.nombre_archivo, datos ?? {}, meta, t.formato),
+      titulo: m.titulo,
+      encabezados: m.encabezados,
+      filas: m.filas.slice(0, 30),
+      total_filas: m.filas.length,
+      con_datos_reales: !body.datos && !!datos,
+    };
+  }
+
+  archivosCorreo(correoId: string): ArchivoCorreo[] {
+    return clonar(this.archivos.filter((a) => a.correo_id === correoId).sort((a, b) => b.version - a.version));
+  }
+
+  /** Versión siguiente del archivo según la salida de la etiqueta (null si no genera archivo). */
+  private generarArchivo(c: Correo, usuario: string, cuando = new Date().toISOString()): ArchivoGenerado | null {
+    const cat = this.categorias.find((x) => x.id === c.categoria_id);
+    const proceso = this.procesos.find((p) => p.id === cat?.proceso_id);
+    if (!cat || !proceso) return null;
+    const salidas = this.salidas.filter((s) => s.proceso_id === proceso.id).sort((x, y) => (x.orden ?? 0) - (y.orden ?? 0));
+    const salida = salidaPara(salidas, cat.clave);
+    if (!salida || salida.modo === 'ninguno') return null;
+    const t = salida.modo === 'plantilla' ? this.plantillas.find((x) => x.id === salida.plantilla_id) : undefined;
+    if (salida.modo === 'plantilla' && !t) return null;
+    const meta = this.meta(c, cat.clave, proceso.clave);
+    const datos = c.datos_extraidos ?? {};
+    const m = matriz(t ?? null, datos, meta, this.basesConFilas());
+    const formato = t?.formato ?? 'xlsx';
+    const version = Math.max(0, ...this.archivos.filter((a) => a.correo_id === c.id).map((a) => a.version)) + 1;
+    const buzon = this.buzones.find((b) => b.id === c.buzon_id);
+    const archivo: ArchivoCorreo = {
+      id: nuevoId('demo-arch'),
+      correo_id: c.id,
+      salida_id: salida.id ?? null,
+      salida_nombre: salida.nombre,
+      nombre: nombreArchivo(t?.nombre_archivo ?? `${proceso.clave}_{radicado}`, datos, meta, formato),
+      formato,
+      version,
+      filas: m.filas.length,
+      tamano: 4_000 + m.filas.length * 120,
+      borrador_en_hilo: !!buzon?.borrador_en_hilo,
+      borrador_en: buzon?.borrador_en_hilo ? cuando : null,
+      created_at: cuando,
+      created_by: usuario,
+    };
+    this.archivos = [...this.archivos, archivo];
+    this.contenidos.set(archivo.id, { hoja: t?.hoja ?? proceso.clave, formato, separador: t?.separador ?? ';', celdas: [...m.titulo, m.encabezados, ...m.filas] });
+    return { id: archivo.id, nombre: archivo.nombre, version, filas: archivo.filas };
+  }
+
+  regenerarArchivo(correoId: string, usuario: string): ArchivoGenerado {
+    const c = this.correos.find((x) => x.id === correoId);
+    if (!c) throw new Error('Correo no encontrado.');
+    const a = this.generarArchivo(c, usuario);
+    if (!a) throw new Error('La etiqueta de este correo no tiene archivo de salida.');
+    return a;
+  }
+
+  corregirDatos(correoId: string, datos: Record<string, unknown>, usuario: string): { correo: Correo; archivo: ArchivoGenerado | null } {
+    const i = this.correos.findIndex((x) => x.id === correoId);
+    if (i < 0) throw new Error('Correo no encontrado.');
+    let c: Correo = { ...this.correos[i], datos_extraidos: clonar(datos) };
+    // Si quedó sin responsable, con los datos corregidos se vuelve a buscar.
+    if (!c.asignado_a && c.categoria_id) c = this.asignarCorreo(c);
+    this.correos[i] = c;
+    this.correos = [...this.correos];
+    const archivo = c.estado === 'ejecutado' ? this.generarArchivo(c, usuario) : null;
+    return { correo: c, archivo };
+  }
+
+  async descargarArchivo(id: string): Promise<Blob> {
+    const a = this.archivos.find((x) => x.id === id);
+    const cont = this.contenidos.get(id);
+    if (!a || !cont) throw new Error('Archivo no encontrado.');
+    if (cont.formato === 'csv') {
+      const sep = cont.separador === '\t' ? '\t' : cont.separador;
+      const texto = cont.celdas.map((f) => f.map((v) => (/[";\n,|]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(sep)).join('\r\n');
+      return new Blob(['﻿' + texto], { type: 'text/csv;charset=utf-8' });
+    }
+    const XLSX = await import('xlsx');
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cont.celdas), cont.hoja.slice(0, 31) || 'Hoja1');
+    const bytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    return new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  // ── 2.0: asignación de los correos de la demo ──
+  private grupoDeEtiqueta(buzonId: string, clave: string): Grupo | undefined {
+    return [...this.grupos]
+      .filter((g) => g.buzon_id === buzonId && g.activo)
+      .sort((a, b) => a.orden - b.orden)
+      .find((g) => g.etiquetas.some((e) => e.toUpperCase() === clave.toUpperCase()));
+  }
+
+  private basesConFilas(): Record<string, Base & { filas: FilaBase[] }> {
+    return Object.fromEntries(this.bases.map((b) => [b.id, { ...b, filas: this.filasPorBase.get(b.id) ?? [] }]));
+  }
+
+  private cargaHoy(): Record<string, number> {
+    const carga: Record<string, number> = {};
+    this.correos.forEach((c) => {
+      if (c.asignado_persona_id) carga[c.asignado_persona_id] = (carga[c.asignado_persona_id] ?? 0) + 1;
+    });
+    return carga;
+  }
+
+  private asignarCorreo(c: Correo): Correo {
+    const cat = this.categorias.find((x) => x.id === c.categoria_id);
+    if (!cat || !this.grupos.some((g) => g.buzon_id === c.buzon_id)) return c; // sin grupos: asignación v1
+    const proceso_clave = this.procesos.find((p) => p.id === cat.proceso_id)?.clave ?? null;
+    const grupo = this.grupoDeEtiqueta(c.buzon_id, cat.clave);
+    if (!grupo) {
+      return {
+        ...c,
+        proceso_clave,
+        grupo_id: null,
+        grupo_nombre: null,
+        asignado_persona_id: null,
+        asignado_a: null,
+        asignado_nombre: null,
+        asignacion_traza: [{ estado: 'warn', titulo: 'Sin grupo de asignación', detalle: `La etiqueta ${cat.clave} no está en ningún grupo: se queda sin asignar` }],
+      };
+    }
+    const buzon = this.buzones.find((b) => b.id === c.buzon_id);
+    const r = simularAsignacion(grupo, this.listarEquipo(c.buzon_id), this.basesConFilas(), c.datos_extraidos ?? {}, buzon?.al_desactivar ?? 'respaldo', this.cargaHoy());
+    if (r.carpeta && (r.estado === 'asignado' || r.estado === 'carpeta')) r.traza.push({ estado: 'ok', titulo: `Movido a «${r.carpeta}»`, detalle: '' });
+    return {
+      ...c,
+      proceso_clave,
+      grupo_id: grupo.id,
+      grupo_nombre: grupo.nombre,
+      asignado_persona_id: r.persona?.id ?? null,
+      asignado_a: r.persona ? r.persona.correo : r.estado === 'carpeta' && r.carpeta ? `Carpeta «${r.carpeta}»` : r.estado === 'categorizar' ? 'Solo categorizar' : null,
+      asignacion_traza: r.traza,
+      asignado_nombre: r.persona?.nombre ?? null,
+    };
+  }
+
+  guardarMiembros(buzonId: string, miembros: { email: string; rol: RolMiembro }[]): Buzon {
+    const unicos = new Map(miembros.map((m) => [m.email.trim().toLowerCase(), m.rol]));
+    const b = this.actualizarBuzon(buzonId, {});
+    b.miembros = [...unicos].map(([email, rol], i) => ({
+      user_id: `demo-u-${i}`,
+      email,
+      name: b.miembros.find((m) => m.email === email)?.name ?? null,
+      rol,
+    }));
+    return b;
+  }
+
+  resumen(): ResumenInicio {
+    const inicioHoy = new Date();
+    inicioHoy.setHours(0, 0, 0, 0);
+    const hoy = this.correos.filter((c) => new Date(c.created_at) >= inicioHoy);
+    const revision = this.correos.filter((c) => c.estado === 'revision');
+    const desde = revision.map((c) => c.recibido_en).sort()[0] ?? null;
+    const alertas: AlertaInicio[] = [];
+    this.buzones
+      .filter((b) => b.puede_administrar)
+      .forEach((b) => {
+        if (b.estado_conexion !== 'conectada') alertas.push({ tipo: 'conexion', buzon_id: b.id, texto: `${b.nombre}: sin conexión con Outlook` });
+        else if (b.ultimo_error) alertas.push({ tipo: 'error', buzon_id: b.id, texto: `${b.nombre}: ${b.ultimo_error.slice(0, 120)}` });
+        if (!b.categorias_count) alertas.push({ tipo: 'reglas', buzon_id: b.id, texto: `${b.nombre}: sin reglas publicadas` });
+        const equipo = this.listarEquipo(b.id);
+        this.grupos
+          .filter((g) => g.buzon_id === b.id && g.activo && g.destino === 'personas')
+          .filter((g) => !equipo.some((p) => p.disponible && p.grupos[g.id]?.activa))
+          .forEach((g) => alertas.push({ tipo: 'equipo', buzon_id: b.id, texto: `Grupo ${g.nombre} sin analistas activos` }));
+      });
+    this.bases
+      .filter((x) => x.estado === 'rechazado' || (x.motivo && x.estado === 'ok'))
+      .forEach((x) => alertas.push({ tipo: 'base', base_id: x.id, texto: `${x.nombre}: ${x.motivo ?? 'última carga rechazada'}` }));
+    const semana = [11, 14, 9, 16, 13, 15].map((n, i) => ({
+      fecha: new Date(Date.now() - (6 - i) * 86_400_000).toISOString().slice(0, 10),
+      ejecutados: n,
+    }));
+    const ejecutadosHoy = hoy.filter((c) => c.estado === 'ejecutado').length;
+    semana.push({ fecha: new Date().toISOString().slice(0, 10), ejecutados: ejecutadosHoy });
+    return {
+      buzones: this.buzones.map((b) => ({
+        id: b.id,
+        nombre: b.nombre,
+        estado_conexion: b.estado_conexion,
+        ultima_sincronizacion: b.ultima_sincronizacion,
+        activo: b.activo,
+        en_revision: this.correos.filter((c) => c.buzon_id === b.id && c.estado === 'revision').length,
+        categorias_count: b.categorias_count,
+      })),
+      flujo: {
+        llegaron: hoy.length,
+        con_adjuntos: hoy.filter((c) => c.tiene_adjuntos).length,
+        clasificados: hoy.filter((c) => c.categoria_id || c.estado === 'revision' || c.estado === 'ejecutado').length,
+        validar: revision.length,
+        asignados: hoy.filter((c) => c.asignado_a).length,
+        ejecutados: ejecutadosHoy,
+        validar_desde: desde,
+        semana,
+      },
+      sin_asignar: this.correos.filter((c) => c.grupo_id && !c.asignado_a && this.grupos.find((g) => g.id === c.grupo_id)?.destino === 'personas').length,
+      alertas,
+    };
+  }
+
+  // ── 2.0: procesos ──
+  listarProcesos(buzonId: string): Proceso[] {
+    return this.procesos
+      .filter((p) => p.buzon_id === buzonId)
+      .sort((a, b) => a.orden - b.orden)
+      .map((p) => ({ ...p, etiquetas: this.categorias.filter((c) => c.proceso_id === p.id).sort((a, b) => a.orden - b.orden).map((c) => c.clave) }));
+  }
+
+  guardarProceso(buzonId: string | null, body: ProcesoIn, id?: string): Proceso {
+    const previo = id ? this.procesos.find((p) => p.id === id) : undefined;
+    if (id && !previo) throw new Error('Proceso no encontrado.');
+    const bid = previo?.buzon_id ?? buzonId!;
+    const clave = body.clave.trim().toUpperCase();
+    if (this.procesos.some((p) => p.buzon_id === bid && p.clave === clave && p.id !== id)) throw new Error(`Ya existe el proceso ${clave}.`);
+    const nuevo: Proceso = {
+      id: previo?.id ?? nuevoId('demo-proc'),
+      buzon_id: bid,
+      clave,
+      nombre: body.nombre,
+      descripcion: body.descripcion ?? null,
+      exclusiones: body.exclusiones ?? null,
+      campos_extraer: body.campos_extraer.map((c) => ({ ...c })),
+      color: body.color ?? null,
+      orden: body.orden ?? previo?.orden ?? this.procesos.filter((p) => p.buzon_id === bid).length + 1,
+      activo: body.activo,
+      etiquetas: [],
+    };
+    this.procesos = previo ? this.procesos.map((p) => (p.id === id ? nuevo : p)) : [...this.procesos, nuevo];
+    return this.listarProcesos(bid).find((p) => p.id === nuevo.id)!;
+  }
+
+  eliminarProceso(id: string): void {
+    this.categorias = this.categorias.map((c) => (c.proceso_id === id ? { ...c, proceso_id: null } : c));
+    this.procesos = this.procesos.filter((p) => p.id !== id);
+  }
+
+  /** Lectura del prompt SOLO para la demo: busca líneas «- CLAVE: señales». */
+  async analizarPrompt(prompt: string): Promise<PropuestaProcesos> {
+    await espera(1800);
+    const paleta = ['#1976D2', '#7B1FA2', '#00796B', '#D32F2F', '#F57C00', '#0097A7'];
+    const procesos: PropuestaProcesos['procesos'] = [];
+    for (const linea of prompt.split(/\r?\n/)) {
+      const m = /^\s*[-•*]\s*([A-Z0-9_]{2,40})\s*[:–-]\s*(.+)$/.exec(linea);
+      if (!m || procesos.some((p) => p.clave === m[1])) continue;
+      const [clave, resto] = [m[1], m[2]];
+      const et = /Etiquetas?:\s*([A-Z0-9_,\s-]+)/i.exec(resto);
+      const etiquetas = (et ? et[1].split(/[,\s]+/).filter((x) => x.length >= 2) : [clave]).map((e) => ({
+        clave: e.toUpperCase(),
+        nombre: e.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (x) => x.toUpperCase()),
+        descripcion: `Se asigna cuando el correo es de ${clave} (${e}).`,
+      }));
+      const exclusion = /No es [^.]*\./i.exec(resto)?.[0] ?? '';
+      procesos.push({
+        clave,
+        nombre: clave,
+        descripcion: resto.replace(/Etiquetas?:[^.]*\.?/i, '').replace(exclusion, '').trim(),
+        exclusiones: exclusion,
+        campos: (this.procesos.find((p) => p.clave === clave)?.campos_extraer ?? [{ clave: 'numero_caso', descripcion: 'Identificador del caso', critico: true }]).map((c) => ({ ...c })),
+        etiquetas,
+        color: paleta[procesos.length % paleta.length],
+      });
+    }
+    if (!procesos.length) throw new Error('No encontré procesos en el prompt. Escribe cada proceso en una línea «- CLAVE: cómo se reconoce».');
+    const instrucciones = /dud[ae][^.]*\./i.exec(prompt)?.[0] ?? '';
+    return { procesos, instrucciones };
+  }
+
+  aplicarPropuesta(buzonId: string, propuesta: PropuestaProcesos, promptArea?: string): ResultadoAplicar {
+    const r: ResultadoAplicar = { procesos_creados: 0, procesos_actualizados: 0, etiquetas_creadas: 0, etiquetas_actualizadas: 0 };
+    for (const pr of propuesta.procesos) {
+      const previo = this.procesos.find((p) => p.buzon_id === buzonId && p.clave === pr.clave);
+      const p = this.guardarProceso(buzonId, { clave: pr.clave, nombre: pr.nombre, descripcion: pr.descripcion, exclusiones: pr.exclusiones, campos_extraer: pr.campos, color: previo?.color ?? pr.color ?? null, activo: true }, previo?.id);
+      r[previo ? 'procesos_actualizados' : 'procesos_creados']++;
+      for (const e of pr.etiquetas) {
+        const c = this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.clave);
+        if (c) {
+          this.actualizarCategoria(c.id, { ...c, nombre: e.nombre, descripcion: e.descripcion || c.descripcion, proceso_id: p.id });
+          r.etiquetas_actualizadas++;
+        } else {
+          const nueva = this.crearCategoria(buzonId, {
+            clave: e.clave, nombre: e.nombre, descripcion: e.descripcion || `Etiqueta del proceso ${pr.nombre}.`, ejemplos: [], palabras_clave: null,
+            color: pr.color ?? null, activa: true, es_fallback: false, umbral_confianza: null, campos_extraer: [],
+            acciones: [{ tipo: 'categorizar', parametros: {}, orden: 1, activa: true }],
+          });
+          nueva.proceso_id = p.id;
+          r.etiquetas_creadas++;
+        }
+      }
+    }
+    if (promptArea !== undefined) this.actualizarBuzon(buzonId, { prompt_area: promptArea });
+    return r;
+  }
+
+  // ── 2.0: grupos ──
+  listarGrupos(buzonId: string): Grupo[] {
+    return clonar(this.grupos.filter((g) => g.buzon_id === buzonId).sort((a, b) => a.orden - b.orden));
+  }
+
+  guardarGrupo(buzonId: string | null, body: GrupoIn, id?: string): Grupo {
+    const previo = id ? this.grupos.find((g) => g.id === id) : undefined;
+    if (id && !previo) throw new Error('Grupo no encontrado.');
+    if (body.destino === 'carpeta' && !body.carpeta?.trim()) throw new Error('Elige la carpeta a la que se envían los correos del grupo.');
+    if (body.sin_activos_modo === 'carpeta' && !body.sin_activos_carpeta?.trim()) throw new Error('Elige la carpeta para cuando no haya nadie activo en el grupo.');
+    if (body.sin_activos_modo === 'persona' && !body.sin_activos_persona_id) throw new Error('Elige la persona para cuando no haya nadie activo en el grupo.');
+    const gid = previo?.id ?? nuevoId('demo-g');
+    const bid = previo?.buzon_id ?? buzonId!;
+    const nuevo: Grupo = {
+      id: gid,
+      buzon_id: bid,
+      nombre: body.nombre,
+      etiquetas: [...new Set(body.etiquetas.map((e) => e.toUpperCase()))],
+      destino: body.destino,
+      carpeta: body.carpeta ?? null,
+      sin_activos_modo: body.sin_activos_modo,
+      sin_activos_carpeta: body.sin_activos_carpeta ?? null,
+      sin_activos_persona_id: body.sin_activos_persona_id ?? null,
+      orden: body.orden ?? previo?.orden ?? this.grupos.filter((g) => g.buzon_id === bid).length + 1,
+      activo: body.activo,
+      reglas: body.reglas.map((r, i) => ({
+        ...clonar(r),
+        id: `${gid}-r${i + 1}`,
+        grupo_id: gid,
+        base_nombre: this.bases.find((b) => b.id === r.base_id)?.nombre ?? null,
+        orden: i + 1,
+      })),
+    };
+    this.grupos = previo ? this.grupos.map((g) => (g.id === id ? nuevo : g)) : [...this.grupos, nuevo];
+    return clonar(nuevo);
+  }
+
+  eliminarGrupo(id: string): void {
+    this.grupos = this.grupos.filter((g) => g.id !== id);
+    this.equipo.forEach((p) => delete p.grupos[id]);
+  }
+
+  // ── 2.0: equipo ──
+  listarEquipo(buzonId: string): Persona[] {
+    return this.equipo
+      .filter((p) => p.buzon_id === buzonId)
+      .sort((a, b) => a.orden - b.orden)
+      .map(({ buzon_id: _b, ...p }) => ({
+        ...clonar(p),
+        carga_hoy: this.correos.filter((c) => c.asignado_persona_id === p.id).length,
+        abiertos: this.correos.filter((c) => c.asignado_persona_id === p.id && c.estado === 'revision').length,
+      }));
+  }
+
+  guardarEquipo(buzonId: string, personas: PersonaIn[]): Persona[] {
+    const correos = personas.map((p) => p.correo.trim().toLowerCase());
+    if (new Set(correos).size !== correos.length) throw new Error('Hay correos repetidos en el equipo.');
+    const previos = this.equipo.filter((p) => p.buzon_id === buzonId);
+    const nuevos = personas.map((p, i) => ({
+      id: previos.find((x) => x.correo === p.correo.toLowerCase())?.id ?? nuevoId('demo-p'),
+      buzon_id: buzonId,
+      nombre: p.nombre,
+      correo: p.correo.toLowerCase(),
+      carpeta: p.carpeta || null,
+      disponible: p.disponible,
+      orden: i + 1,
+      carga_hoy: 0,
+      abiertos: 0,
+      grupos: {} as Persona['grupos'],
+    }));
+    personas.forEach((p, i) => {
+      Object.entries(p.grupos).forEach(([gid, m]) => {
+        const respaldo = nuevos.find((x) => x.correo === (m.respaldo ?? '').toLowerCase());
+        nuevos[i].grupos[gid] = { activa: m.activa, respaldo_id: respaldo && respaldo.id !== nuevos[i].id ? respaldo.id : null };
+      });
+    });
+    this.equipo = [...this.equipo.filter((p) => p.buzon_id !== buzonId), ...nuevos];
+    return this.listarEquipo(buzonId);
+  }
+
+  cambiarDisponibilidad(personaId: string, body: DisponibilidadIn): Persona[] {
+    const p = this.equipo.find((x) => x.id === personaId);
+    if (!p) throw new Error('Persona no encontrada.');
+    if (body.disponible !== undefined) p.disponible = body.disponible;
+    if (body.grupo_id && body.activa !== undefined) {
+      p.grupos[body.grupo_id] = { activa: body.activa, respaldo_id: p.grupos[body.grupo_id]?.respaldo_id ?? null };
+    }
+    return this.listarEquipo(p.buzon_id);
+  }
+
+  // ── 2.0: bases ──
+  private conUsos(b: Base): Base {
+    return { ...clonar(b), usos: this.grupos.reduce((n, g) => n + g.reglas.filter((r) => r.base_id === b.id).length, 0) };
+  }
+
+  listarBases(buzonId?: string): Base[] {
+    return this.bases.filter((b) => !buzonId || b.buzones.includes(buzonId)).map((b) => this.conUsos(b));
+  }
+
+  private base(id: string): Base {
+    const b = this.bases.find((x) => x.id === id);
+    if (!b) throw new Error('Base no encontrada.');
+    return b;
+  }
+
+  crearBase(body: BaseIn): Base {
+    if (body.origen === 'sharepoint' && !body.sharepoint_url) throw new Error('Pega el enlace de SharePoint del archivo de la base.');
+    const b: Base = {
+      id: nuevoId('demo-base'), nombre: body.nombre, origen: body.origen, archivo: null, hoja: null, fila_encabezado: null, columnas: [],
+      total_filas: 0, estado: 'sin_cargar', motivo: null, sharepoint_url: body.sharepoint_url ?? null, vinculos: {}, cargada_en: null,
+      cargada_por: null, buzones: [...body.buzones], usos: 0,
+    };
+    this.bases = [...this.bases, b];
+    return this.conUsos(b);
+  }
+
+  actualizarBase(id: string, body: BaseUpdate): Base {
+    const b = this.base(id);
+    Object.assign(b, body);
+    return this.conUsos(b);
+  }
+
+  eliminarBase(id: string): void {
+    if (this.conUsos(this.base(id)).usos) throw new Error('La base está en uso por reglas de asignación: quítala de ellas primero.');
+    this.bases = this.bases.filter((b) => b.id !== id);
+  }
+
+  cargarBase(id: string, leida: LecturaArchivo, archivo: string): ResultadoCarga {
+    const b = this.base(id);
+    const requeridas = new Set<string>();
+    this.grupos.forEach((g) =>
+      g.reglas.filter((r) => r.base_id === id).forEach((r) => {
+        requeridas.add(r.col_responsable);
+        if (r.col_respaldo) requeridas.add(r.col_respaldo);
+        r.cruces.forEach((c) => requeridas.add(c.columna));
+      }),
+    );
+    const faltan = [...requeridas].filter((c) => c && !leida.columnas.includes(c)).sort();
+    const motivo = faltan.length
+      ? `${faltan.length === 1 ? 'Falta la columna ' : 'Faltan las columnas '}${faltan.join(', ')} (la usan las reglas de asignación).`
+      : !leida.total_filas
+        ? 'El archivo no trae filas debajo de los encabezados.'
+        : null;
+    if (motivo) {
+      b.motivo = motivo;
+      if (!b.total_filas) b.estado = 'rechazado';
+      return { ...leida, aceptada: false, motivo, base: this.conUsos(b) };
+    }
+    Object.assign(b, {
+      archivo, hoja: leida.hoja, fila_encabezado: leida.fila_encabezado, columnas: leida.columnas, total_filas: leida.total_filas,
+      estado: 'ok', motivo: null, cargada_en: new Date().toISOString(), cargada_por: 'tú (demostración)',
+    });
+    this.filasPorBase.set(id, leida.filas ?? leida.muestra);
+    return { ...leida, aceptada: true, motivo: null, base: this.conUsos(b) };
+  }
+
+  async sincronizarBase(id: string): Promise<ResultadoCarga> {
+    await espera(900);
+    const b = this.base(id);
+    if (b.origen !== 'sharepoint') throw new Error('Esta base se carga subiendo el archivo, no desde SharePoint.');
+    const filas = this.filasPorBase.get(id) ?? [];
+    Object.assign(b, { estado: 'ok', motivo: null, cargada_en: new Date().toISOString(), cargada_por: 'sistema' });
+    return {
+      hojas: [b.hoja ?? 'Hoja1'], hoja: b.hoja, fila_encabezado: b.fila_encabezado ?? 1, columnas: b.columnas, total_filas: filas.length,
+      muestra: filas.slice(0, 20), titulo: null, aceptada: true, motivo: null, base: this.conUsos(b),
+    };
+  }
+
+  filasBase(id: string, q?: string, limit = 50): { columnas: string[]; items: FilaBase[] } {
+    const b = this.base(id);
+    let filas = this.filasPorBase.get(id) ?? [];
+    if (q) filas = filas.filter((f) => Object.values(f).some((v) => v.toLowerCase().includes(q.toLowerCase())));
+    return { columnas: b.columnas, items: clonar(filas.slice(0, limit)) };
+  }
+
+  vincular(baseId: string, valor: string, correo: string | null): Base {
+    const b = this.base(baseId);
+    const vinculos = { ...b.vinculos };
+    if (correo) vinculos[nrm(valor)] = correo.trim().toLowerCase();
+    else delete vinculos[nrm(valor)];
+    b.vinculos = vinculos;
+    return this.conUsos(b);
+  }
+
+  probarAsignacion(buzonId: string, etiqueta: string, datos: Record<string, unknown>): ResultadoAsignacion {
+    const grupo = this.grupoDeEtiqueta(buzonId, etiqueta);
+    if (!grupo) {
+      return {
+        grupo: null, estado: 'sin_asignar', persona: null, carpeta: null, via: '',
+        traza: [{ estado: 'warn', titulo: 'Sin grupo de asignación', detalle: `La etiqueta ${etiqueta.toUpperCase()} no está en ningún grupo` }],
+      };
+    }
+    const buzon = this.buzones.find((b) => b.id === buzonId);
+    const r = simularAsignacion(grupo, this.listarEquipo(buzonId), this.basesConFilas(), datos, buzon?.al_desactivar ?? 'respaldo', this.cargaHoy());
+    return {
+      ...r,
+      grupo: { id: grupo.id, nombre: grupo.nombre },
+      persona: r.persona ? { id: r.persona.id, nombre: r.persona.nombre, correo: r.persona.correo } : null,
+    };
+  }
 
   crearBuzon(b: BuzonIn): Buzon {
     const nuevo: Buzon = {
@@ -512,7 +1541,16 @@ export class DemoStore {
       en_revision: 0,
       ejecutados_hoy: 0,
       miembros: [],
+      rol: 'admin',
       puede_administrar: true,
+      puede_conectar: true,
+      conexion_compartida: false,
+      conectada_por: null,
+      modo_clasificacion: 'prompt',
+      agente_nombre: null,
+      prompt_area: null,
+      al_desactivar: 'respaldo',
+      borrador_en_hilo: true,
     };
     this.buzones = [...this.buzones, nuevo];
     this.categorias.push(cat(nuevo.id, 'OTROS', 'Otros', 'Sin categoría clara. Revisión humana.', '#A2845E', [], { es_fallback: true, orden: 1 }));
@@ -552,6 +1590,7 @@ export class DemoStore {
       buzon_id: buzonId,
       orden: this.categorias.filter((x) => x.buzon_id === buzonId).length + 1,
       correos_30d: 0,
+      proceso_id: c.proceso_id ?? null,
     };
     this.categorias = [...this.categorias, nueva];
     const b = this.buzones.find((x) => x.id === buzonId);
@@ -562,7 +1601,13 @@ export class DemoStore {
   actualizarCategoria(id: string, c: CategoriaIn): Categoria {
     const i = this.categorias.findIndex((x) => x.id === id);
     if (i < 0) throw new Error('Categoría no encontrada.');
-    this.categorias[i] = { ...this.categorias[i], ...c, id, buzon_id: this.categorias[i].buzon_id };
+    this.categorias[i] = {
+      ...this.categorias[i],
+      ...c,
+      id,
+      buzon_id: this.categorias[i].buzon_id,
+      proceso_id: c.proceso_id ?? null,
+    };
     this.categorias = [...this.categorias];
     return this.categorias[i];
   }
@@ -596,6 +1641,12 @@ export class DemoStore {
     if (f.buzon_id) lista = lista.filter((c) => c.buzon_id === f.buzon_id);
     if (f.estado) lista = lista.filter((c) => c.estado === f.estado);
     if (f.categoria_id) lista = lista.filter((c) => c.categoria_id === f.categoria_id);
+    if (f.grupo_id) lista = lista.filter((c) => c.grupo_id === f.grupo_id);
+    if (f.sin_asignar) {
+      lista = lista.filter(
+        (c) => c.grupo_id && !c.asignado_a && (c.estado === 'revision' || c.estado === 'ejecutado') && this.grupos.find((g) => g.id === c.grupo_id)?.destino === 'personas',
+      );
+    }
     if (f.q) {
       const q = f.q.toLowerCase();
       lista = lista.filter((c) => `${c.asunto} ${c.remitente} ${c.remitente_nombre ?? ''} ${c.resumen ?? ''}`.toLowerCase().includes(q));
@@ -628,7 +1679,8 @@ export class DemoStore {
     const i = this.correos.findIndex((c) => c.id === id);
     if (i < 0) throw new Error('Correo no encontrado.');
     const cat = this.categoriaDe(categoriaId);
-    const c = { ...this.correos[i] };
+    let c = { ...this.correos[i] };
+    const cambio = c.categoria_id !== categoriaId;
     c.categoria_id = categoriaId;
     c.categoria_clave = cat?.clave ?? null;
     c.categoria_nombre = cat?.nombre ?? null;
@@ -637,8 +1689,10 @@ export class DemoStore {
     c.decidido_por = por;
     c.decidido_en = new Date().toISOString();
     c.error = null;
+    // Otra etiqueta puede ser otro grupo: se reasigna antes de ejecutar.
+    if (cambio || !c.grupo_id) c = this.asignarCorreo(c);
     if (ejecutar) {
-      if (cat?.acciones.some((a) => a.tipo === 'asignar_analista')) c.asignado_a = c.asignado_a ?? 'Laura Gómez';
+      if (!c.grupo_id && cat?.acciones.some((a) => a.tipo === 'asignar_analista')) c.asignado_a = c.asignado_a ?? 'Laura Gómez';
       c.estado = 'ejecutado';
       this.registrarEjecuciones(c, por);
     } else {
@@ -646,6 +1700,8 @@ export class DemoStore {
     }
     this.correos[i] = c;
     this.correos = [...this.correos];
+    // Al aprobar, el archivo sale con la salida de la etiqueta final.
+    if (ejecutar) this.generarArchivo(c, por);
     return c;
   }
 
