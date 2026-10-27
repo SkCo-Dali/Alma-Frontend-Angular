@@ -24,17 +24,28 @@ import {
   CorreoDetalle,
   ESTADO_CORREO,
   EstadoCorreo,
+  PERM_VER_BUZON,
+  Persona,
   iconoAccion,
   nombreAccion,
   resumenAccion,
 } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { TrazaAsignacionComponent } from './traza-asignacion.component';
+
+interface AsignacionVista {
+  tipo: 'persona' | 'carpeta' | 'categorizar' | 'sin';
+  icon: string;
+  etiqueta: string;
+  texto: string;
+  correo?: string;
+}
 
 type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
 
 @Component({
   selector: 'alma-bandeja-buzon',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent],
+  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent, TrazaAsignacionComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -101,6 +112,7 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                     <div class="flex w-full flex-wrap items-center gap-1.5">
                       <span class="alma-badge" [class]="'alma-badge ' + estadoMeta[c.estado].clase">{{ estadoMeta[c.estado].nombre }}</span>
                       @if (c.categoria_nombre) { <span class="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-foreground">{{ c.categoria_nombre }}</span> }
+                      @if (c.grupo_id && !c.asignado_a) { <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">Sin asignar</span> }
                       @if (c.confianza !== null) { <span class="ml-auto text-[11px] tabular-nums" [class]="confianzaClase(c.confianza)">{{ (c.confianza * 100) | number: '1.0-0' }}%</span> }
                       @if (c.tiene_adjuntos) { <lucide-icon name="paperclip" [size]="12" class="text-muted-foreground" /> }
                     </div>
@@ -149,8 +161,12 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                     <lucide-icon [name]="d.origen === 'humano' ? 'user-check' : d.origen === 'regla' ? 'list-filter' : 'sparkles'" [size]="13" />
                     {{ d.origen === 'humano' ? 'Decidido por ' + (d.decidido_por || 'una persona') : d.origen === 'regla' ? 'Regla fija' : 'Clasificado por IA' + (d.modelo_ia ? ' · ' + d.modelo_ia : '') }}
                   </span>
-                  @if (d.asignado_a) {
-                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"><lucide-icon name="user" [size]="13" /> Asignado a <b class="text-foreground">{{ d.asignado_a }}</b></span>
+                  @if (asignacion(d); as a) {
+                    @if (a.tipo === 'sin') {
+                      <span class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300"><lucide-icon name="user-x" [size]="13" /> Sin asignar</span>
+                    } @else {
+                      <span class="inline-flex items-center gap-1.5 rounded-xl border border-border/60 px-3 py-1.5 text-xs text-muted-foreground"><lucide-icon [name]="a.icon" [size]="13" /> {{ a.etiqueta }} <b class="text-foreground">{{ a.texto }}</b></span>
+                    }
                   }
                   @if (d.categoria_sugerida_id && d.categoria_sugerida_id !== d.categoria_id && d.origen === 'humano') {
                     <span class="inline-flex items-center gap-1 rounded-xl bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300"><lucide-icon name="alert-triangle" [size]="13" /> Corregido: la IA propuso otra categoría</span>
@@ -232,6 +248,36 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                           </div>
                         </div>
                       </div>
+
+                      <!-- Asignación 2.0 -->
+                      @if (d.grupo_id || d.proceso_clave || d.asignacion_traza.length) {
+                        <section class="rounded-2xl border border-border/60 p-4 lg:col-span-2" aria-labelledby="bz-asig">
+                          <p id="bz-asig" class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="route" [size]="12" /> Asignación</p>
+                          <div class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
+                            <dl class="grid grid-cols-[auto_1fr] content-start gap-x-3 gap-y-1.5 text-xs">
+                              <dt class="text-muted-foreground">Proceso</dt>
+                              <dd class="font-medium text-foreground">{{ d.proceso_clave || '—' }}</dd>
+                              <dt class="text-muted-foreground">Grupo</dt>
+                              <dd class="font-medium text-foreground">{{ d.grupo_nombre || 'Sin grupo' }}</dd>
+                              <dt class="text-muted-foreground">Asignado a</dt>
+                              <dd>
+                                @if (asignacion(d); as a) {
+                                  @if (a.tipo === 'sin') {
+                                    <span class="rounded-full bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-700 dark:text-amber-300">Sin asignar</span>
+                                  } @else {
+                                    <span class="font-medium text-foreground">{{ a.etiqueta }} {{ a.texto }}</span>
+                                    @if (a.correo) { <span class="block text-[11px] text-muted-foreground">{{ a.correo }}</span> }
+                                  }
+                                }
+                              </dd>
+                            </dl>
+                            <div>
+                              <p class="mb-2 text-[11px] font-semibold text-muted-foreground">Recorrido</p>
+                              <alma-traza-asignacion [traza]="d.asignacion_traza" vacio="Este correo no tiene recorrido de asignación." />
+                            </div>
+                          </div>
+                        </section>
+                      }
                     </div>
                   }
                   @case ('correo') {
@@ -336,8 +382,13 @@ export class BandejaBuzonComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly emlSvc = inject(EmlService);
 
-  protected readonly puedeVer = computed(() => this.auth.hasPermission('app.buzon-inteligente.view'));
-  protected readonly puedeRevisar = computed(() => this.auth.hasPermission('app.buzon-inteligente.review'));
+  protected readonly puedeVer = computed(() => this.auth.hasPermission(PERM_VER_BUZON));
+  /** Cualquier rol del buzón (admin, editor o revisor) trabaja la bandeja; el
+   *  backend solo devuelve correos de los buzones que el usuario ve. */
+  protected readonly puedeRevisar = this.puedeVer;
+
+  /** Equipo de cada buzón, para mostrar el nombre de la persona asignada. */
+  private readonly equipos = signal<Record<string, Persona[]>>({});
 
   protected readonly estadoMeta = ESTADO_CORREO;
   protected readonly icono = iconoAccion;
@@ -458,6 +509,7 @@ export class BandejaBuzonComponent {
       this.detalle.set(d);
       this.categoriaDecision = d.categoria_id ?? this.categoriasDe(d.buzon_id)[0]?.id ?? '';
       void this.cargarEml(c.id);
+      void this.cargarEquipo(d.buzon_id, d.asignado_persona_id);
     } catch (e) {
       this.toast.error('No se pudo cargar el detalle', e instanceof Error ? e.message : String(e));
     }
@@ -478,10 +530,40 @@ export class BandejaBuzonComponent {
     }
   }
 
+  /** Nombre de la persona asignada: el correo solo trae su id y su dirección. */
+  private async cargarEquipo(buzonId: string, personaId: string | null): Promise<void> {
+    if (!personaId || this.equipos()[buzonId]?.some((p) => p.id === personaId)) return;
+    try {
+      const equipo = await this.api.listarEquipo(buzonId);
+      this.equipos.update((m) => ({ ...m, [buzonId]: equipo }));
+    } catch {
+      /* sin nombre se muestra el correo */
+    }
+  }
+
+  protected asignacion(d: Correo): AsignacionVista | null {
+    if (d.asignado_persona_id) {
+      const p = this.equipos()[d.buzon_id]?.find((x) => x.id === d.asignado_persona_id);
+      return { tipo: 'persona', icon: 'user', etiqueta: 'Asignado a', texto: p?.nombre ?? d.asignado_a ?? 'una persona', correo: p ? p.correo : undefined };
+    }
+    const a = d.asignado_a ?? '';
+    if (a.startsWith('Carpeta')) return { tipo: 'carpeta', icon: 'folder-input', etiqueta: 'Enviado a', texto: a.replace(/^Carpeta\s*/, 'la carpeta ') };
+    if (a === 'Solo categorizar') return { tipo: 'categorizar', icon: 'tag', etiqueta: '', texto: 'Solo categorizar' };
+    if (a) return { tipo: 'persona', icon: 'user', etiqueta: 'Asignado a', texto: a };
+    // Sin persona ni carpeta: solo es «Sin asignar» si el buzón usa la asignación 2.0.
+    return d.grupo_id || d.asignacion_traza?.length ? { tipo: 'sin', icon: 'user-x', etiqueta: '', texto: 'Sin asignar' } : null;
+  }
+
   private reemplazar(actualizado: Correo): void {
     this.correos.update((l) => l.map((x) => (x.id === actualizado.id ? actualizado : x)));
     this.seleccionado.set(actualizado);
-    void this.api.obtenerCorreo(actualizado.id).then((d) => this.detalle.set(d)).catch(() => undefined);
+    void this.api
+      .obtenerCorreo(actualizado.id)
+      .then((d) => {
+        this.detalle.set(d);
+        void this.cargarEquipo(d.buzon_id, d.asignado_persona_id);
+      })
+      .catch(() => undefined);
     this.porRevisar.update((n) => Math.max(0, n - 1));
   }
 

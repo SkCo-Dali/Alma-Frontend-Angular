@@ -391,6 +391,8 @@ export class CategoriaEditorComponent {
       umbral_confianza: this.umbral() !== null ? this.umbral()! / 100 : null,
       campos_extraer: this.campos().filter((c) => c.clave.trim()).map((c) => ({ clave: c.clave.trim(), descripcion: c.descripcion.trim() })),
       acciones,
+      // El PUT reemplaza la categoría: sin esto la etiqueta quedaría sin su proceso.
+      proceso_id: this.categoria()?.proceso_id ?? null,
     });
   }
 }

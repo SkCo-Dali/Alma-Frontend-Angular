@@ -147,6 +147,14 @@ import {
   Target,
   Timer,
   UserCheck,
+  TrendingDown,
+  TrendingUp,
+  UserX,
+  UserMinus,
+  Upload,
+  Link,
+  FileSpreadsheet,
+  CornerLeftDown,
 } from 'lucide-angular';
 
 export const ALMA_ICONS = {
@@ -294,4 +302,12 @@ export const ALMA_ICONS = {
   Target,
   Timer,
   UserCheck,
+  TrendingDown,
+  TrendingUp,
+  UserX,
+  UserMinus,
+  Upload,
+  Link,
+  FileSpreadsheet,
+  CornerLeftDown,
 };
