@@ -208,6 +208,52 @@ export interface Correo {
   asignacion_traza: PasoTraza[];
   /** Nombre de la persona del equipo asignada (null si es carpeta o nadie). */
   asignado_nombre: string | null;
+  // Migración 060: posible duplicado (misma llave de negocio) y respuestas en el hilo.
+  duplicado_de?: string | null;
+  duplicado_asunto?: string | null;
+  duplicado_estado?: 'posible' | 'confirmado' | 'descartado' | null;
+  respuestas?: number;
+}
+
+/** Un correo de la conversación (pestaña Hilo). */
+export interface MensajeHilo {
+  id: string;
+  remitente: string;
+  remitente_nombre: string | null;
+  asunto: string;
+  recibido_en: string;
+  adjuntos: string[];
+  resumen: string | null;
+  estado: EstadoCorreo;
+  asignado_a: string | null;
+  es_este: boolean;
+}
+
+export interface HiloCorreo {
+  buzon: { nombre: string; direccion: string; carpeta_vigilada: string };
+  items: MensajeHilo[];
+  /** Versión del archivo que está como borrador de respuesta en el hilo. */
+  borrador: ArchivoCorreo | null;
+  ultima_version: number | null;
+}
+
+/** Celdas de un archivo generado (vista previa de la bandeja). */
+export interface CeldasArchivo extends ArchivoCorreo {
+  hoja: string;
+  celdas: string[][];
+  /** Índice (0-based) de la fila de encabezados; arriba va el título. */
+  fila_encabezado: number;
+  /** De dónde sale cada columna (vista «Fórmulas»). */
+  origenes: string[];
+  anotaciones: { estado: 'ok' | 'warn'; texto: string }[];
+}
+
+export interface CorreccionDatos {
+  correo: Correo;
+  archivo: ArchivoGenerado | null;
+  cambios?: string[];
+  /** Cambió un campo crítico (identificador del caso): se ofrece recalcular la asignación. */
+  cambios_criticos?: string[];
 }
 
 export interface Ejecucion {
@@ -237,6 +283,8 @@ export interface FiltroCorreos {
   grupo_id?: string;
   /** Cola del líder: correos de un grupo de personas que quedaron sin responsable. */
   sin_asignar?: boolean;
+  /** «Posibles duplicados» pendientes de decidir (060). */
+  duplicado?: boolean;
 }
 
 export interface ResultadoPrueba {
@@ -293,11 +341,15 @@ export interface ConexionBuzon {
 
 // ── 2.0: procesos ────────────────────────────────────────────────────────────
 
+export type TipoCampo = 'texto' | 'numero' | 'fecha' | 'booleano' | 'lista' | 'tabla';
+
 export interface CampoProceso {
   clave: string;
   descripcion: string;
   /** Lo usan validaciones cruzadas o identifica el caso. */
   critico: boolean;
+  /** Tipo de dato: valida la corrección del revisor (texto si no se declaró). */
+  tipo?: TipoCampo;
 }
 
 export interface Proceso {
@@ -1371,15 +1423,73 @@ export class BuzonApi {
     );
   }
 
-  /** El revisor corrige los datos extraídos. Si el correo ya se ejecutó, devuelve la versión nueva del archivo. */
-  corregirDatos(correoId: string, datos: Record<string, unknown>): Promise<{ correo: Correo; archivo: ArchivoGenerado | null }> {
+  /** El revisor corrige los datos extraídos. Si el correo ya se ejecutó, devuelve la
+   *  versión nueva del archivo como VISTA PREVIA (el borrador del hilo no cambia). */
+  corregirDatos(correoId: string, datos: Record<string, unknown>): Promise<CorreccionDatos> {
     return this.conDemo(
       () =>
-        this.api.fetch<{ correo: Correo; archivo: ArchivoGenerado | null }>(`${BASE}/correos/${correoId}/datos`, {
+        this.api.fetch<CorreccionDatos>(`${BASE}/correos/${correoId}/datos`, {
           method: 'PUT',
           body: JSON.stringify({ datos_extraidos: datos }),
         }),
       () => this.demo.corregirDatos(correoId, datos, this.auth.user().correo),
+    );
+  }
+
+  /** Conversación del correo (pestaña Hilo) y el borrador vigente de Alma. */
+  hilo(correoId: string): Promise<HiloCorreo> {
+    return this.conDemo(
+      () => this.api.fetch<HiloCorreo>(`${BASE}/correos/${correoId}/hilo`),
+      () => this.demo.hilo(correoId),
+    );
+  }
+
+  /** «Es duplicado» (se ignora y queda vinculado) o «No es duplicado» (flujo normal). */
+  decidirDuplicado(correoId: string, esDuplicado: boolean): Promise<Correo> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Correo>(`${BASE}/correos/${correoId}/duplicado`, {
+          method: 'POST',
+          body: JSON.stringify({ es_duplicado: esDuplicado }),
+        }),
+      () => this.demo.decidirDuplicado(correoId, esDuplicado, this.auth.user().correo),
+    );
+  }
+
+  /** Celdas, origen de cada columna y revisión de una versión del archivo. */
+  celdasArchivo(archivoId: string): Promise<CeldasArchivo> {
+    return this.conDemo(
+      () => this.api.fetch<CeldasArchivo>(`${BASE}/archivos/${archivoId}/celdas`),
+      () => this.demo.celdasArchivo(archivoId),
+    );
+  }
+
+  /** «Actualizar borrador»: deja esta versión como borrador de respuesta en el hilo. */
+  actualizarBorrador(archivoId: string): Promise<ArchivoCorreo[]> {
+    return this.conDemo(
+      async () =>
+        (await this.api.fetch<{ items: ArchivoCorreo[] }>(`${BASE}/archivos/${archivoId}/borrador`, { method: 'POST' })).items,
+      () => this.demo.actualizarBorrador(archivoId, this.auth.user().correo),
+    );
+  }
+
+  /** Reasignación manual (editor o administrador del buzón). */
+  reasignar(correoId: string, personaId: string): Promise<Correo> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Correo>(`${BASE}/correos/${correoId}/asignacion`, {
+          method: 'PUT',
+          body: JSON.stringify({ persona_id: personaId }),
+        }),
+      () => this.demo.reasignar(correoId, personaId, this.auth.user().correo),
+    );
+  }
+
+  /** Vuelve a correr la asignación con los datos actuales del correo. */
+  recalcularAsignacion(correoId: string): Promise<Correo> {
+    return this.conDemo(
+      () => this.api.fetch<Correo>(`${BASE}/correos/${correoId}/recalcular-asignacion`, { method: 'POST' }),
+      () => this.demo.recalcularAsignacion(correoId),
     );
   }
 
