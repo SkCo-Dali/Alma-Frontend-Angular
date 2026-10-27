@@ -5,6 +5,10 @@
 import {
   AlertaInicio,
   ArchivoCorreo,
+  CeldasArchivo,
+  CorreccionDatos,
+  HiloCorreo,
+  MensajeHilo,
   ArchivoGenerado,
   ColumnaPlantilla,
   Exportacion,
@@ -879,6 +883,110 @@ export class DemoStore {
     // En orden, para que el round-robin vea la carga que va quedando.
     this.correos.forEach((c, i) => (this.correos[i] = this.asignarCorreo(c)));
     this.correos.filter((c) => c.estado === 'ejecutado').forEach((c) => this.generarArchivo(c, 'sistema', c.decidido_en ?? c.created_at));
+    // Bandeja (060): un posible duplicado y un correo con respuesta en el hilo.
+    const pac = this.correos.filter((c) => c.proceso_clave === 'PAC');
+    if (pac.length >= 2) {
+      const [orig, dup] = [pac[pac.length - 1], pac[0]];
+      this.correos = this.correos.map((c) =>
+        c.id === dup.id ? { ...c, estado: 'revision', duplicado_de: orig.id, duplicado_asunto: orig.asunto, duplicado_estado: 'posible' } : c,
+      );
+    }
+    const conRespuesta = this.correos.find((c) => c.estado === 'ejecutado' && c.proceso_clave);
+    if (conRespuesta) this.correos = this.correos.map((c) => (c.id === conRespuesta.id ? { ...c, respuestas: 1 } : c));
+  }
+
+  // ── Bandeja (060) ──
+  hilo(correoId: string): HiloCorreo {
+    const c = this.correos.find((x) => x.id === correoId);
+    if (!c) throw new Error('Correo no encontrado.');
+    const b = this.buzones.find((x) => x.id === c.buzon_id);
+    const archivos = this.archivosCorreo(correoId);
+    const msg = (x: Correo, esEste: boolean): MensajeHilo => ({
+      id: x.id, remitente: x.remitente, remitente_nombre: x.remitente_nombre, asunto: x.asunto, recibido_en: x.recibido_en,
+      adjuntos: x.adjuntos.map((a) => a.nombre), resumen: x.resumen, estado: x.estado, asignado_a: x.asignado_a, es_este: esEste,
+    });
+    const items = [msg(c, true)];
+    if (c.respuestas) {
+      const r = new Date(new Date(c.recibido_en).getTime() + 3_600_000).toISOString();
+      items.push({ ...msg(c, false), id: `${c.id}-r`, asunto: `RE: ${c.asunto}`, recibido_en: r, adjuntos: [], resumen: 'Muchas gracias, quedamos atentos.' });
+    }
+    return {
+      buzon: { nombre: b?.nombre ?? '', direccion: b?.direccion ?? '', carpeta_vigilada: b?.carpeta_vigilada ?? 'Inbox' },
+      items,
+      borrador: archivos.find((a) => a.borrador_en_hilo) ?? null,
+      ultima_version: archivos[0]?.version ?? null,
+    };
+  }
+
+  decidirDuplicado(correoId: string, esDuplicado: boolean, por: string): Correo {
+    const i = this.correos.findIndex((x) => x.id === correoId);
+    if (i < 0) throw new Error('Correo no encontrado.');
+    const c: Correo = esDuplicado
+      ? { ...this.correos[i], duplicado_estado: 'confirmado', estado: 'ignorado', origen: 'humano', decidido_por: por, decidido_en: new Date().toISOString() }
+      : { ...this.correos[i], duplicado_estado: 'descartado' };
+    this.correos[i] = c;
+    this.correos = [...this.correos];
+    return clonar(c);
+  }
+
+  celdasArchivo(archivoId: string): CeldasArchivo {
+    const a = this.archivos.find((x) => x.id === archivoId);
+    const cont = this.contenidos.get(archivoId);
+    if (!a || !cont) throw new Error('Archivo no encontrado.');
+    const c = this.correos.find((x) => x.id === a.correo_id);
+    const cat = this.categorias.find((x) => x.id === c?.categoria_id);
+    const proceso = this.procesos.find((p) => p.id === cat?.proceso_id);
+    const salida = this.salidas.find((s) => s.id === a.salida_id && s.proceso_id === proceso?.id);
+    const t = salida?.modo === 'plantilla' ? this.plantillas.find((x) => x.id === salida.plantilla_id) : undefined;
+    const enc = t?.titulo.length ?? 0;
+    const encabezados = cont.celdas[enc] ?? [];
+    const datos = cont.celdas.slice(enc + 1);
+    const anotaciones: CeldasArchivo['anotaciones'] = [];
+    encabezados.forEach((h, i) => {
+      const tipo = t ? t.columnas[i]?.origen.tipo : 'campo';
+      if (tipo !== 'campo' && tipo !== 'base') return;
+      const vacias = datos.filter((f) => !String(f[i] ?? '').trim()).length;
+      if (vacias) anotaciones.push({ estado: 'warn', texto: `${vacias} fila${vacias > 1 ? 's' : ''} con «${h}» vacía.` });
+    });
+    if (!anotaciones.length) anotaciones.push({ estado: 'ok', texto: 'Todas las columnas que salen del correo y de las bases tienen valor.' });
+    anotaciones.push({ estado: 'ok', texto: `${datos.length} fila${datos.length !== 1 ? 's' : ''} de datos escritas.` });
+    const origen = (o: OrigenColumna): string =>
+      o.tipo === 'campo' ? `← ${o.campo ?? '?'}` : o.tipo === 'fijo' ? `«${o.valor ?? ''}»` : o.tipo === 'correo' ? `← correo.${o.dato ?? '?'}`
+        : o.tipo === 'fila' ? 'FILA()' : o.tipo === 'base' ? `${o.columna_resultado ?? '?'} ← base por ${o.campo ?? '?'}` : o.tipo === 'formula' ? o.formula ?? '=' : '(vacía)';
+    return {
+      ...clonar(a), hoja: cont.hoja, celdas: clonar(cont.celdas), fila_encabezado: enc,
+      origenes: t ? t.columnas.map((col) => origen(col.origen)) : encabezados.map((h) => `← ${h}`), anotaciones,
+    };
+  }
+
+  actualizarBorrador(archivoId: string, por: string): ArchivoCorreo[] {
+    const a = this.archivos.find((x) => x.id === archivoId);
+    if (!a) throw new Error('Archivo no encontrado.');
+    const ahora = new Date().toISOString();
+    this.archivos = this.archivos.map((x) =>
+      x.correo_id !== a.correo_id ? x : x.id === archivoId ? { ...x, borrador_en_hilo: true, borrador_en: ahora, created_by: x.created_by || por } : { ...x, borrador_en_hilo: false },
+    );
+    return this.archivosCorreo(a.correo_id);
+  }
+
+  reasignar(correoId: string, personaId: string, por: string): Correo {
+    const i = this.correos.findIndex((x) => x.id === correoId);
+    const c = this.correos[i];
+    const p = this.equipo.find((x) => x.id === personaId);
+    if (!c || !p) throw new Error('Persona no encontrada.');
+    const traza = [...(c.asignacion_traza ?? []), { estado: 'ok' as const, titulo: `Reasignado a ${p.nombre}`, detalle: `Manual · ${por}` }];
+    if (p.carpeta) traza.push({ estado: 'ok', titulo: `Movido a «${p.carpeta}»`, detalle: '' });
+    this.correos[i] = { ...c, asignado_persona_id: p.id, asignado_a: p.correo, asignado_nombre: p.nombre, asignacion_traza: traza };
+    this.correos = [...this.correos];
+    return clonar(this.correos[i]);
+  }
+
+  recalcularAsignacion(correoId: string): Correo {
+    const i = this.correos.findIndex((x) => x.id === correoId);
+    if (i < 0) throw new Error('Correo no encontrado.');
+    this.correos[i] = this.asignarCorreo(this.correos[i]);
+    this.correos = [...this.correos];
+    return clonar(this.correos[i]);
   }
 
   // ── Exportación (059) ──
@@ -1038,7 +1146,7 @@ export class DemoStore {
   }
 
   /** Versión siguiente del archivo según la salida de la etiqueta (null si no genera archivo). */
-  private generarArchivo(c: Correo, usuario: string, cuando = new Date().toISOString()): ArchivoGenerado | null {
+  private generarArchivo(c: Correo, usuario: string, cuando = new Date().toISOString(), conBorrador = true): ArchivoGenerado | null {
     const cat = this.categorias.find((x) => x.id === c.categoria_id);
     const proceso = this.procesos.find((p) => p.id === cat?.proceso_id);
     if (!cat || !proceso) return null;
@@ -1063,11 +1171,13 @@ export class DemoStore {
       version,
       filas: m.filas.length,
       tamano: 4_000 + m.filas.length * 120,
-      borrador_en_hilo: !!buzon?.borrador_en_hilo,
-      borrador_en: buzon?.borrador_en_hilo ? cuando : null,
+      borrador_en_hilo: conBorrador && !!buzon?.borrador_en_hilo,
+      borrador_en: conBorrador && buzon?.borrador_en_hilo ? cuando : null,
       created_at: cuando,
       created_by: usuario,
     };
+    // Un borrador nuevo reemplaza al anterior del mismo correo.
+    if (archivo.borrador_en_hilo) this.archivos = this.archivos.map((x) => (x.correo_id === c.id ? { ...x, borrador_en_hilo: false } : x));
     this.archivos = [...this.archivos, archivo];
     this.contenidos.set(archivo.id, { hoja: t?.hoja ?? proceso.clave, formato, separador: t?.separador ?? ';', celdas: [...m.titulo, m.encabezados, ...m.filas] });
     return { id: archivo.id, nombre: archivo.nombre, version, filas: archivo.filas };
@@ -1081,16 +1191,21 @@ export class DemoStore {
     return a;
   }
 
-  corregirDatos(correoId: string, datos: Record<string, unknown>, usuario: string): { correo: Correo; archivo: ArchivoGenerado | null } {
+  corregirDatos(correoId: string, datos: Record<string, unknown>, usuario: string): CorreccionDatos {
     const i = this.correos.findIndex((x) => x.id === correoId);
     if (i < 0) throw new Error('Correo no encontrado.');
+    const antes = this.correos[i].datos_extraidos ?? {};
     let c: Correo = { ...this.correos[i], datos_extraidos: clonar(datos) };
+    const cambios = [...new Set([...Object.keys(antes), ...Object.keys(datos)])].filter((k) => JSON.stringify(antes[k]) !== JSON.stringify(datos[k])).sort();
+    const cat = this.categorias.find((x) => x.id === c.categoria_id);
+    const criticos = new Set((this.procesos.find((p) => p.id === cat?.proceso_id)?.campos_extraer ?? []).filter((f) => f.critico).map((f) => f.clave));
     // Si quedó sin responsable, con los datos corregidos se vuelve a buscar.
     if (!c.asignado_a && c.categoria_id) c = this.asignarCorreo(c);
     this.correos[i] = c;
     this.correos = [...this.correos];
-    const archivo = c.estado === 'ejecutado' ? this.generarArchivo(c, usuario) : null;
-    return { correo: c, archivo };
+    // La corrección genera una vista previa: el borrador del hilo no cambia.
+    const archivo = c.estado === 'ejecutado' ? this.generarArchivo(c, usuario, undefined, false) : null;
+    return { correo: c, archivo, cambios, cambios_criticos: cambios.filter((k) => criticos.has(k)) };
   }
 
   async descargarArchivo(id: string): Promise<Blob> {
@@ -1642,6 +1757,7 @@ export class DemoStore {
     if (f.estado) lista = lista.filter((c) => c.estado === f.estado);
     if (f.categoria_id) lista = lista.filter((c) => c.categoria_id === f.categoria_id);
     if (f.grupo_id) lista = lista.filter((c) => c.grupo_id === f.grupo_id);
+    if (f.duplicado) lista = lista.filter((c) => c.duplicado_estado === 'posible');
     if (f.sin_asignar) {
       lista = lista.filter(
         (c) => c.grupo_id && !c.asignado_a && (c.estado === 'revision' || c.estado === 'ejecutado') && this.grupos.find((g) => g.id === c.grupo_id)?.destino === 'personas',
