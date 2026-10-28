@@ -56,16 +56,14 @@ interface CarpetaPlana {
             @if (b.puede_conectar) {
               <div style="display:grid;gap:4px;justify-items:end;flex-shrink:0">
                 <button type="button" class="btn outline sm" (click)="reconectar.emit(undefined)"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'conectada' ? 'Reconectar' : 'Conectar' }}</button>
-                @if (b.tipo_cuenta === 'gen') {
-                  <button type="button" class="linkbtn xxs" (click)="reconectar.emit(b.conexion_compartida ? 'propia' : 'compartida')">
-                    {{ b.conexion_compartida ? 'Usar la cuenta del buzón' : 'Usar mi cuenta (acceso delegado)' }}
-                  </button>
+                @if (b.conexion_compartida) {
+                  <button type="button" class="linkbtn xxs" (click)="reconectar.emit('propia')">Usar la cuenta del buzón</button>
                 }
               </div>
             }
           </div>
           @if (b.tipo_cuenta === 'gen' && !b.conexion_compartida) {
-            <alma-aviso-cuenta-buzon [direccion]="b.direccion" />
+            <alma-aviso-cuenta-buzon />
           }
           <div class="row between sunk r-xl" style="padding:10px 12px;flex-wrap:nowrap">
             <div style="min-width:0">

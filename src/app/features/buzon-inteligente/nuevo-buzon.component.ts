@@ -17,7 +17,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { aplanar } from './ajustes-tab.component';
 import { AsignacionWizardComponent, EstadoPasoAsignacion } from './asignacion-wizard.component';
 import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
-import { Buzon, BuzonApi, Categoria, DOMINIOS_CORREO, Grupo, ModoConexion, NombreBuzon, Proceso, PruebaSeco, Salida, TipoCuenta } from './buzon.api';
+import { Buzon, BuzonApi, Categoria, DOMINIOS_CORREO, Grupo, NombreBuzon, Proceso, PruebaSeco, Salida, TipoCuenta } from './buzon.api';
 import { ExportacionWizardComponent, SubvistaExportacion } from './exportacion-wizard.component';
 import { ReglasTabComponent } from './reglas-tab.component';
 
@@ -70,7 +70,7 @@ interface FilaResumen {
               <div class="g2">
                 <button type="button" class="optcard" [attr.aria-pressed]="tipo() === 'gen'" [disabled]="!!buzon()" (click)="cambiarTipo('gen')">
                   <span class="row sm b"><lucide-icon name="users" [size]="13" /> Genérica (buzón de área)</span>
-                  <span class="xs muted">Se conecta con la cuenta del buzón o con tu acceso delegado.</span>
+                  <span class="xs muted">Se conecta iniciando sesión con la cuenta del buzón.</span>
                 </button>
                 <button type="button" class="optcard" [attr.aria-pressed]="tipo() === 'per'" [disabled]="!!buzon()" (click)="cambiarTipo('per')">
                   <span class="row sm b"><lucide-icon name="user" [size]="13" /> Personal</span>
@@ -105,20 +105,7 @@ interface FilaResumen {
                 </p>
               }
               @if (!conectado() && tipo() === 'gen') {
-                <p class="sm">Cómo se conecta</p>
-                <div class="g2">
-                  <button type="button" class="optcard" [attr.aria-pressed]="modo() === 'propia'" (click)="modo.set('propia')">
-                    <span class="row sm b"><lucide-icon name="key-round" [size]="13" /> Con la cuenta del buzón</span>
-                    <span class="xs muted">Inicias sesión con {{ correo() || 'la genérica' }}, igual que una cuenta personal. No necesita aprobación de TI.</span>
-                  </button>
-                  <button type="button" class="optcard" [attr.aria-pressed]="modo() === 'compartida'" (click)="modo.set('compartida')">
-                    <span class="row sm b"><lucide-icon name="user-check" [size]="13" /> Con mi cuenta (acceso delegado)</span>
-                    <span class="xs muted">Tu cuenta con acceso completo al buzón. Requiere que TI apruebe el acceso delegado de Alma.</span>
-                  </button>
-                </div>
-                @if (modo() === 'propia') {
-                  <alma-aviso-cuenta-buzon [direccion]="correo()" />
-                }
+                <alma-aviso-cuenta-buzon />
               }
               @if (!conectado()) {
                 @if (buzon()) {
@@ -132,7 +119,7 @@ interface FilaResumen {
                   <button type="button" class="btn primary" [disabled]="!valido() || !dominioOk() || !!duplicado() || conectando()" (click)="conectar()">
                     <lucide-icon name="log-in" [size]="13" /> {{ conectando() ? 'Conectando…' : 'Conectar con Microsoft' }}
                   </button>
-                  <span class="xxs muted">{{ tipo() === 'per' ? 'Debes ser el dueño de la cuenta.' : modo() === 'propia' ? 'Inicia sesión con ' + (correo() || 'la cuenta del buzón') + ', no con la tuya.' : 'Tu cuenta debe tener acceso delegado al buzón.' }}</span>
+                  <span class="xxs muted">{{ tipo() === 'per' ? 'Debes ser el dueño de la cuenta.' : 'Inicia sesión con ' + (correo() || 'la cuenta del buzón') + ', no con la tuya.' }}</span>
                 </div>
                 @if (errorConexion()) {
                   <p class="note b-rose"><lucide-icon name="shield-x" [size]="13" /> <span>{{ errorConexion() }}</span></p>
@@ -260,8 +247,6 @@ export class NuevoBuzonComponent implements OnInit {
   protected readonly buzon = signal<Buzon | null>(null);
   protected readonly categorias = signal<Categoria[]>([]);
   protected readonly tipo = signal<TipoCuenta>('gen');
-  /** Genéricas: con la cuenta del buzón (sin aprobación de TI) o con la del administrador. */
-  protected readonly modo = signal<ModoConexion>('propia');
   protected readonly correo = signal('');
   protected readonly duplicado = signal<NombreBuzon['existente']>(null);
   protected readonly carpetas = signal<{ nombre: string; total: number; nivel: number }[]>([]);
@@ -455,12 +440,12 @@ export class NuevoBuzonComponent implements OnInit {
         return;
       }
       if (this.api.modoDemo()) {
-        this.buzon.set(this.api.simularConexionDemo(b.id, this.modo()));
+        this.buzon.set(this.api.simularConexionDemo(b.id));
         await this.leerCarpetas();
         this.toast.show('Modo demostración', 'Aquí se abre el inicio de sesión de Microsoft; el buzón quedó conectado.');
         return;
       }
-      window.location.assign(this.api.urlConectar(b, c, `/apps/buzon-inteligente/buzones?asistente=${b.id}`, this.modo()));
+      window.location.assign(this.api.urlConectar(b, c, `/apps/buzon-inteligente/buzones?asistente=${b.id}`, 'propia'));
     } catch (e) {
       this.errorConexion.set(e instanceof Error ? e.message : String(e));
     } finally {
