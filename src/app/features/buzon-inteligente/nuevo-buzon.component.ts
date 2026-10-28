@@ -16,7 +16,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { aplanar } from './ajustes-tab.component';
 import { AsignacionWizardComponent, EstadoPasoAsignacion } from './asignacion-wizard.component';
-import { Buzon, BuzonApi, Categoria, Grupo, NombreBuzon, Proceso, PruebaSeco, Salida, TipoCuenta } from './buzon.api';
+import { Buzon, BuzonApi, Categoria, DOMINIOS_CORREO, Grupo, NombreBuzon, Proceso, PruebaSeco, Salida, TipoCuenta } from './buzon.api';
 import { ExportacionWizardComponent, SubvistaExportacion } from './exportacion-wizard.component';
 import { ReglasTabComponent } from './reglas-tab.component';
 
@@ -84,15 +84,35 @@ interface FilaResumen {
               <div class="namebox">
                 <span class="label">Nombre en Alma (estructura {{ '{' }}TIPO{{ '}' }}-{{ '{' }}ALIAS{{ '}' }})</span>
                 <p class="mono bb">{{ nombre() }}</p>
-                @if (!buzon() && duplicado(); as d) {
+                @if (valido() && !dominioOk()) {
+                  <p class="err"><lucide-icon name="x-circle" [size]="13" /> Dominio no permitido</p>
+                } @else if (!buzon() && duplicado(); as d) {
                   <p class="err"><lucide-icon name="x-circle" [size]="13" /> Ya existe {{ d.nombre }}{{ d.misma_direccion ? ' con esta dirección' : '' }}. Usa otra dirección o abre el buzón existente.</p>
                 } @else if (valido()) {
                   <p class="xs" style="color:var(--emerald)"><lucide-icon name="check" [size]="13" /> {{ buzon() ? 'Reservado para este buzón' : 'Nombre disponible' }}</p>
                 }
               </div>
+              @if (valido() && !dominioOk()) {
+                <p class="note b-amber">
+                  <lucide-icon name="alert-triangle" [size]="13" />
+                  <span>
+                    Solo se pueden conectar correos corporativos ({{ dominiosTxt() }}). Revisa la dirección: con otro dominio Microsoft no deja conectar el buzón.
+                    @if (sugerencia(); as s) {
+                      ¿Quisiste decir <button type="button" class="linkbtn" [disabled]="!!buzon()" (click)="cambiarCorreo(s)">{{ s }}</button>?
+                    }
+                  </span>
+                </p>
+              }
               @if (!conectado()) {
+                @if (buzon()) {
+                  <p class="xs muted">
+                    ¿La dirección quedó mal escrita?
+                    <button type="button" class="linkbtn" [disabled]="trabajando()" (click)="cambiarDireccion()">Cambiar dirección</button>
+                    (descarta este borrador sin conectar).
+                  </p>
+                }
                 <div class="row">
-                  <button type="button" class="btn primary" [disabled]="!valido() || !!duplicado() || conectando()" (click)="conectar()">
+                  <button type="button" class="btn primary" [disabled]="!valido() || !dominioOk() || !!duplicado() || conectando()" (click)="conectar()">
                     <lucide-icon name="log-in" [size]="13" /> {{ conectando() ? 'Conectando…' : 'Conectar con Microsoft' }}
                   </button>
                   <span class="xxs muted">{{ tipo() === 'per' ? 'Debes ser el dueño de la cuenta.' : 'Tu cuenta debe tener acceso delegado al buzón.' }}</span>
@@ -255,6 +275,17 @@ export class NuevoBuzonComponent implements OnInit {
     return `${this.tipo() === 'per' ? 'PER' : 'GEN'}-${alias || 'ALIAS'}`;
   });
   protected readonly valido = computed(() => RE_CORREO.test(this.correo().trim()));
+  /** Dominios corporativos conectables (los del ambiente, por /opciones). */
+  private readonly dominios = signal<string[]>(DOMINIOS_CORREO);
+  private readonly dominio = computed(() => this.correo().trim().toLowerCase().split('@')[1] ?? '');
+  protected readonly dominioOk = computed(() => this.dominios().includes(this.dominio()));
+  protected readonly dominiosTxt = computed(() => this.dominios().map((d) => '@' + d).join(', '));
+  /** «…@skandia.com» → «…@skandia.com.co»: el dominio permitido que empieza igual. */
+  protected readonly sugerencia = computed(() => {
+    const d = this.dominio();
+    const ok = d && this.dominios().find((x) => x !== d && x.startsWith(d));
+    return ok ? `${this.correo().trim().split('@')[0]}@${ok}` : null;
+  });
   protected readonly conectado = computed(() => this.buzon()?.estado_conexion === 'conectada');
   protected readonly tieneAlma = computed(() => this.carpetas().some((c) => c.nombre === 'Alma'));
 
@@ -307,6 +338,7 @@ export class NuevoBuzonComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    void this.api.opciones().then((o) => { if (o.dominios_correo?.length) this.dominios.set(o.dominios_correo); }).catch(() => undefined);
     const id = this.reanudar();
     if (id) void this.retomar(id);
   }
@@ -355,6 +387,26 @@ export class NuevoBuzonComponent implements OnInit {
     void this.revisarNombre();
   }
 
+  /** El borrador aún no conectado se descarta para corregir la dirección: el
+   *  buzón nace con ella y no se puede cambiar después. */
+  protected async cambiarDireccion(): Promise<void> {
+    const b = this.buzon();
+    if (!b || this.conectado()) return;
+    this.trabajando.set(true);
+    try {
+      await this.api.eliminarBuzon(b.id);
+      this.buzon.set(null);
+      this.errorConexion.set('');
+      void this.router.navigate([], { queryParams: { asistente: null }, queryParamsHandling: 'merge', replaceUrl: true });
+      void this.revisarNombre();
+      queueMicrotask(() => document.getElementById('nb-correo')?.focus());
+    } catch (e) {
+      this.toast.error('No se pudo descartar el borrador', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.trabajando.set(false);
+    }
+  }
+
   private async revisarNombre(): Promise<void> {
     this.duplicado.set(null);
     if (!this.valido()) return;
@@ -389,7 +441,7 @@ export class NuevoBuzonComponent implements OnInit {
         this.toast.show('Modo demostración', 'Aquí se abre el inicio de sesión de Microsoft; el buzón quedó conectado.');
         return;
       }
-      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones?asistente=${b.id}`));
+      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones?asistente=${b.id}`, b.tipo_cuenta === 'per' ? b.direccion : undefined));
     } catch (e) {
       this.errorConexion.set(e instanceof Error ? e.message : String(e));
     } finally {

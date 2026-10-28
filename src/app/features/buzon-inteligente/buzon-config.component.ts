@@ -226,7 +226,7 @@ export class BuzonConfigComponent {
         this.toast.show('Modo demostración', 'Aquí se abriría el inicio de sesión de Microsoft con tu cuenta.');
         return;
       }
-      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones/${b.id}?tab=ajustes`));
+      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones/${b.id}?tab=ajustes`, b.tipo_cuenta === 'per' ? b.direccion : undefined));
     } catch (e) {
       this.toast.error('No se pudo iniciar la conexión', e instanceof Error ? e.message : String(e));
     }
