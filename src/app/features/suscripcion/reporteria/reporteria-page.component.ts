@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { GridPaginationComponent } from '../../../shared/components/grid-pagination.component';
-import { UW_BADGE } from '../suscripcion.domain';
+import { UW_BADGE, fmtCOP } from '../suscripcion.domain';
 import { FiltroPeriodoComponent } from './filtro-periodo.component';
 import { FiltroValoresComponent, OpcionFiltro } from './filtro-valores.component';
 import { ColumnHeaderMenuComponent } from '../grid/column-header-menu.component';
@@ -169,7 +169,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 
       <!-- ── Indicadores ── -->
       @if (cards().length) {
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
           @for (k of cards(); track k.label) {
             <div class="glass rounded-xl px-3 py-2 shadow-[var(--shadow-sm)]" [class.opacity-60]="cargandoResumen()">
               <p class="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -726,6 +726,16 @@ export class ReporteriaPageComponent {
         valor: n(r.emitidasPorAnalista ?? 0),
         sub: `${n(r.emitidasPorCanalDigital ?? 0)} por el canal digital, sin analista`,
         clase: 'text-foreground',
+      },
+      // APE de las emitidas: con «Por emisión», el de las pólizas emitidas en el periodo.
+      {
+        label: 'APE emitido',
+        icon: 'coins',
+        valor: fmtCOP(r.apeEmitidas ?? 0),
+        sub: (r.apeEmitidasN ?? 0) < r.emitidas
+          ? `sobre ${n(r.apeEmitidasN ?? 0)} de ${n(r.emitidas)} emitidas con APE`
+          : `de ${n(r.emitidas)} pólizas emitidas`,
+        clase: 'text-[#047857] dark:text-[#34d399]',
       },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
       { label: 'Mediana a emisión', icon: 'clock-3', valor: this.duracion(r.tiempoEmision.medianaMin), sub: `hábil · sobre ${r.tiempoEmision.n} emisiones`, clase: 'text-foreground' },
