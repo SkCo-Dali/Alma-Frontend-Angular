@@ -1,191 +1,124 @@
-// Tarjeta de una base de responsables (2.0): estado de la última carga (aceptada o
-// rechazada con su motivo), filas, quién y cuándo la cargó, subir un archivo nuevo
-// (eligiendo hoja y fila de encabezados con la vista previa de /bases/leer),
-// sincronizar desde SharePoint y ver las filas. En las columnas de responsable, los
-// valores que no se reconocen en el equipo se pueden «Vincular a…» una persona.
+// Tarjeta de una base del buzón (prototipo baseCard + baseGrid): archivo y hoja,
+// origen, filas, cuántas filas tienen problemas para la asignación, qué otros grupos
+// la usan y el estado de la última carga (cargada, sincronizada o cambio rechazado
+// con su motivo). «Ver datos y problemas» despliega la hoja en solo lectura con lo
+// que afecta la asignación en ámbar y «Vincular a…» para los responsables que no se
+// reconocen en el equipo. «Actualizar base» lo resuelve el padre (modal mBase).
 
-import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
-import { Base, BuzonApi, FilaBase, LecturaArchivo, Persona } from './buzon.api';
-import { nrm, reconocer } from './buzon-asignacion';
+import { Base, BuzonApi, FilaBase, Grupo, Persona, ReglaAsignacion } from './buzon.api';
+import { normaliza, reconocer } from './buzon-asignacion';
+import { BUZON_PROTO_CSS } from './buzon-proto.styles';
+
+/** Una búsqueda que usa la base: el grupo y la regla. */
+export interface UsoBase {
+  grupo: Grupo;
+  regla: ReglaAsignacion;
+}
+
+/** [mensaje, se puede vincular] por columna con problema. */
+type Problemas = Map<string, [string, boolean]>;
+
+const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1] + LETRAS[i % 26]);
+
+/** «hoy 08:50» o «3 oct» (prototipo: sync). */
+export function cuandoCargada(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const hoy = new Date();
+  const hh = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return d.toDateString() === hoy.toDateString() ? `hoy ${hh}` : d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+}
 
 @Component({
   selector: 'alma-base-card',
-  imports: [DatePipe, DecimalPipe, FormsModule, LucideAngularModule],
+  imports: [FormsModule, LucideAngularModule],
+  styles: [BUZON_PROTO_CSS],
   template: `
-    @let b = base();
-    <div class="flex flex-col gap-2 rounded-xl bg-[var(--surface-sunken)] px-3 py-2.5" [class.ring-2]="abierta()" [class.ring-ring]="abierta()">
-      <div class="flex flex-wrap items-start justify-between gap-2">
-        <div class="min-w-0">
-          <p class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
-            <lucide-icon name="file-spreadsheet" [size]="15" class="text-emerald-600" /> {{ b.nombre }}
-            @if (b.archivo) { <span class="font-mono text-[11px] font-normal text-muted-foreground">{{ b.archivo }}@if (b.hoja) { · hoja «{{ b.hoja }}»}</span> }
-          </p>
-          <p class="text-[11px] text-muted-foreground">
-            {{ b.origen === 'sharepoint' ? 'SharePoint' : 'Archivo subido' }} · {{ b.total_filas | number }} filas
-            @if (b.cargada_en) { · cargada {{ b.cargada_en | date: 'd MMM, h:mm a' }}@if (b.cargada_por) { por {{ b.cargada_por }}} }
-            @if (otrosUsos()) { · {{ otrosUsos() }} }
+    @let f = base();
+    <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px" [style.box-shadow]="abierta() ? '0 0 0 2px var(--ring)' : null">
+      <div class="row between" style="align-items:flex-start">
+        <div style="min-width:0">
+          <p class="sm b"><lucide-icon name="sheet" [size]="13" /> {{ f.nombre }} @if (f.archivo) { <span class="xxs muted mono">{{ f.archivo }}@if (f.hoja) { · hoja «{{ f.hoja }}»}</span> }</p>
+          <p class="xxs muted">
+            {{ f.origen === 'sharepoint' ? 'SharePoint' : 'Archivo subido' }} · {{ f.total_filas.toLocaleString('es-CO') }} filas ·
+            @if (conProblemas()) { <b style="color:var(--amber)">{{ conProblemas() }} con problemas</b> } @else { sin problemas }
+            @if (otros().length) { · también la usa: {{ otros().join(', ') }} }
           </p>
         </div>
-        @switch (b.estado) {
-          @case ('ok') {
-            <span class="alma-badge gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"><lucide-icon name="check" [size]="12" /> {{ b.origen === 'sharepoint' ? 'Sincronizada' : 'Cargada' }}</span>
-          }
-          @case ('rechazado') {
-            <span class="alma-badge gap-1 bg-rose-500/15 text-rose-700 dark:text-rose-300"><lucide-icon name="x-circle" [size]="12" /> Carga rechazada</span>
-          }
-          @default {
-            <span class="alma-badge gap-1 bg-zinc-500/15 text-zinc-600 dark:text-zinc-300"><lucide-icon name="circle-dashed" [size]="12" /> Sin cargar</span>
-          }
+        @if (f.motivo || f.estado === 'rechazado') {
+          <span class="badge b-rose"><lucide-icon name="x-circle" [size]="13" /> Cambio rechazado</span>
+        } @else if (f.estado === 'ok') {
+          <span class="badge b-emerald"><lucide-icon name="check" [size]="13" /> {{ f.origen === 'archivo' ? 'Cargada' : 'Sincronizada' }} {{ cuando(f.cargada_en) }}</span>
+        } @else {
+          <span class="badge b-slate">Sin cargar</span>
         }
       </div>
-      @if (b.motivo) {
-        <p class="flex items-start gap-1.5 rounded-lg bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-700 dark:text-rose-300">
-          <lucide-icon name="x-circle" [size]="13" class="mt-0.5 shrink-0" />
-          <span>{{ b.motivo }}@if (b.estado === 'ok') { <span class="text-muted-foreground"> · Las reglas siguen usando la carga anterior.</span> }</span>
-        </p>
+      @if (f.motivo) {
+        <p class="note b-rose"><lucide-icon name="x-circle" [size]="13" /> <span>{{ f.motivo }}</span></p>
       }
-
-      <div class="flex flex-wrap items-center gap-1.5">
-        <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [attr.aria-expanded]="abierta()" [disabled]="!b.total_filas" (click)="alternarDatos()">
-          <lucide-icon [name]="abierta() ? 'chevron-up' : 'eye'" [size]="14" /> {{ abierta() ? 'Ocultar datos' : 'Ver datos' }}@if (!abierta() && noReconocidos().length) { ({{ noReconocidos().length }} por vincular)}
+      <div class="row">
+        <button type="button" class="btn outline sm" [attr.aria-expanded]="abierta()" (click)="alternar()">
+          <lucide-icon [name]="abierta() ? 'chevron-up' : 'table'" [size]="13" /> {{ abierta() ? 'Ocultar datos' : 'Ver datos y problemas' + (conProblemas() ? ' (' + conProblemas() + ')' : '') }}
         </button>
-        @if (editable()) {
-          <label class="alma-btn alma-btn-outline h-8 cursor-pointer rounded-lg text-xs" [attr.for]="'bf-' + b.id">
-            <lucide-icon name="upload" [size]="14" /> {{ b.total_filas ? 'Actualizar base' : 'Subir archivo' }}
-          </label>
-          <input type="file" class="sr-only" [id]="'bf-' + b.id" accept=".xlsx,.xlsm,.csv" (change)="elegirArchivo($event)" />
-          @if (b.origen === 'sharepoint') {
-            <button type="button" class="alma-btn alma-btn-outline h-8 rounded-lg text-xs" [disabled]="sincronizando()" (click)="sincronizar()">
-              <lucide-icon name="refresh-cw" [size]="14" [class.animate-spin]="sincronizando()" /> Sincronizar ahora
-            </button>
-          }
+        @if (puede()) {
+          <button type="button" class="btn outline sm" (click)="actualizar.emit(f)"><lucide-icon name="refresh-cw" [size]="13" /> Actualizar base</button>
         }
-        @if (b.sharepoint_url) {
-          <a class="alma-btn alma-btn-ghost h-8 rounded-lg text-xs" [href]="b.sharepoint_url" target="_blank" rel="noopener noreferrer"><lucide-icon name="external-link" [size]="14" /> Abrir en SharePoint</a>
+        @if (f.origen === 'sharepoint' && f.sharepoint_url) {
+          <a class="btn ghost" [href]="f.sharepoint_url" target="_blank" rel="noopener noreferrer" aria-label="Abrir en Excel" title="Abrir en Excel"><lucide-icon name="external-link" [size]="16" /></a>
         }
         <ng-content />
       </div>
 
-      <!-- Carga: elegir hoja y fila de encabezados -->
-      @if (lectura(); as l) {
-        <div class="grid gap-2 rounded-xl border border-border/60 bg-card/60 p-3">
-          <p class="text-xs font-semibold text-foreground">Vista previa · {{ archivo()?.name }}</p>
-          <div class="flex flex-wrap items-end gap-2">
-            @if (l.hojas.length > 1) {
-              <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-semibold text-muted-foreground" [attr.for]="'bh-' + b.id">Hoja</label>
-                <select class="alma-input h-8 w-44 text-xs" [id]="'bh-' + b.id" [(ngModel)]="hoja" (ngModelChange)="releer(true)">
-                  @for (h of l.hojas; track h) { <option [value]="h">{{ h }}</option> }
-                </select>
-              </div>
-            }
-            <div class="flex flex-col gap-1">
-              <label class="text-[11px] font-semibold text-muted-foreground" [attr.for]="'be-' + b.id">Fila de encabezados</label>
-              <input type="number" min="1" max="200" class="alma-input h-8 w-24 text-xs" [id]="'be-' + b.id" [(ngModel)]="filaEncabezado" />
-            </div>
-            <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" [disabled]="leyendo()" (click)="releer(false)"><lucide-icon name="rotate-ccw" [size]="13" /> Volver a leer</button>
-            <span class="text-[11px] text-muted-foreground">{{ l.total_filas | number }} filas · {{ l.columnas.length }} columnas</span>
-          </div>
-          @if (l.titulo) { <p class="text-[11px] text-muted-foreground">Encima de los encabezados (se ignora): {{ l.titulo }}</p> }
-          <div class="max-h-48 overflow-auto rounded-lg border border-border/60">
-            <table class="alma-table text-[11px]">
-              <thead><tr>@for (c of l.columnas; track $index) { <th class="whitespace-nowrap" [class.text-amber-700]="faltantes().includes(c)">{{ c }}</th> }</tr></thead>
-              <tbody>
-                @for (f of l.muestra.slice(0, 5); track $index) {
-                  <tr>@for (c of l.columnas; track $index) { <td class="whitespace-nowrap">{{ f[c] }}</td> }</tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          @if (faltantes().length) {
-            <p class="flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200">
-              <lucide-icon name="alert-triangle" [size]="13" class="mt-0.5 shrink-0" />
-              Las búsquedas usan {{ faltantes().length === 1 ? 'la columna' : 'las columnas' }} <b>{{ faltantes().join(', ') }}</b> y este archivo no {{ faltantes().length === 1 ? 'la trae' : 'las trae' }}: la carga se rechazará.
-            </p>
-          }
-          <div class="flex justify-end gap-2">
-            <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" [disabled]="cargando()" (click)="cancelarCarga()">Cancelar</button>
-            <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="cargando() || leyendo()" (click)="cargar()">
-              <lucide-icon [name]="cargando() ? 'loader-2' : 'upload'" [size]="14" [class.animate-spin]="cargando()" /> Cargar en la base
-            </button>
-          </div>
-        </div>
-      } @else if (leyendo()) {
-        <p class="text-xs text-muted-foreground">Leyendo el archivo…</p>
-      }
-
-      <!-- Datos -->
       @if (abierta()) {
-        <div class="grid gap-2 border-t border-border/60 pt-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <p class="text-[11px] text-muted-foreground">Solo lectura · muestra de {{ filas().length }} de {{ b.total_filas | number }} filas · en ámbar lo que afecta la asignación</p>
-            <form class="flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-card/60 px-2" (submit)="$event.preventDefault(); cargarFilas()">
-              <lucide-icon name="search" [size]="13" class="text-muted-foreground" />
-              <input type="search" name="q" class="w-40 border-none bg-transparent text-xs outline-none" placeholder="Buscar en la base" [(ngModel)]="q" aria-label="Buscar en la base" />
-            </form>
+        <div class="stack" style="gap:8px;border-top:1px solid var(--border);padding-top:10px">
+          <div class="row between">
+            <p class="xs muted">Solo lectura · {{ f.total_filas.toLocaleString('es-CO') }} filas (muestra de {{ filas().length }}) · en ámbar lo que afecta la asignación</p>
+            <div class="row">
+              <label class="search sunk" [attr.for]="'qg-' + f.id" style="height:30px"><lucide-icon name="search" [size]="13" class="muted" /><input [id]="'qg-' + f.id" type="search" placeholder="Buscar en la tabla" [ngModel]="qg()" (change)="qg.set($any($event.target).value)" /></label>
+              <label class="row xs" [attr.for]="'sp-' + f.id"><input type="checkbox" [id]="'sp-' + f.id" [checked]="soloProb()" (change)="soloProb.set($any($event.target).checked)" /> Solo filas con problemas ({{ conProblemas() }})</label>
+            </div>
           </div>
-          @if (cargandoFilas()) {
-            <p class="text-xs text-muted-foreground">Cargando filas…</p>
-          } @else {
-            <div class="max-h-80 overflow-auto rounded-lg border border-border/60">
-              <table class="alma-table text-[11px]">
-                <thead>
+          <div class="sheet-wrap">
+            <div class="grid-scroll" style="max-height:300px">
+              <table class="sheet">
+                <tr>
+                  <th class="rh"></th>
+                  @for (c of f.columnas; track $index; let i = $index) {
+                    <th>{{ letra(i) }} · {{ c }}@if (usadas()[c]; as u) { <span class="use">{{ u }}</span> }</th>
+                  }
+                </tr>
+                @for (x of visibles(); track x.i) {
                   <tr>
-                    @for (c of b.columnas; track c) {
-                      <th class="whitespace-nowrap">
-                        {{ c }}
-                        @if (columnasResponsable().includes(c)) { <span class="ml-1 rounded bg-violet-500/15 px-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300">resp.</span> }
-                        @if (columnasCruce().includes(c)) { <span class="ml-1 rounded bg-sky-500/15 px-1 text-[10px] font-semibold text-sky-700 dark:text-sky-300">cruce</span> }
-                      </th>
+                    <td class="rh">{{ x.i + filaDatos() }}</td>
+                    @for (c of f.columnas; track $index) {
+                      @let p = x.p.get(c);
+                      <td [class.prob]="!!p" [attr.title]="p ? p[0] : null">
+                        {{ x.r[c] }}
+                        @if (p) {
+                          <span class="xxs" style="color:var(--amber)">⚠ {{ p[0] }}</span>
+                          @if (p[1] && puede()) {
+                            <select class="input sm" style="min-width:170px;margin-top:4px" [attr.aria-label]="'Vincular ' + x.r[c]" [disabled]="vinculando()" (change)="vincular(x.r[c], $any($event.target).value)">
+                              <option value="">Vincular a…</option>
+                              @for (p2 of equipo(); track p2.id) { <option [value]="p2.correo">{{ p2.nombre }}</option> }
+                            </select>
+                          }
+                        }
+                      </td>
                     }
                   </tr>
-                </thead>
-                <tbody>
-                  @for (f of filas(); track $index) {
-                    <tr>
-                      @for (c of b.columnas; track c) {
-                        @let v = f[c];
-                        @if (columnasResponsable().includes(c) && v && !reconocido(v)) {
-                          <td class="whitespace-nowrap bg-amber-500/10">
-                            <span class="text-amber-800 dark:text-amber-200">{{ v }}</span>
-                            <span class="block text-[10px] text-amber-700 dark:text-amber-300">no se reconoce en el equipo</span>
-                            @if (editable()) {
-                              <select class="alma-input mt-1 h-7 min-w-[150px] text-[11px]" [attr.aria-label]="'Vincular ' + v" [ngModel]="''" (ngModelChange)="vincular(v, $event)" [disabled]="vinculando()">
-                                <option value="">Vincular a…</option>
-                                @for (p of equipo(); track p.id) { <option [value]="p.correo">{{ p.nombre }}</option> }
-                              </select>
-                            }
-                          </td>
-                        } @else if (columnasResponsable().includes(c) && !v) {
-                          <td class="whitespace-nowrap bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-300">vacío → siguiente búsqueda</td>
-                        } @else {
-                          <td class="whitespace-nowrap">{{ v }}</td>
-                        }
-                      }
-                    </tr>
-                  } @empty {
-                    <tr><td [attr.colspan]="b.columnas.length || 1" class="text-center text-muted-foreground">Sin filas para mostrar.</td></tr>
-                  }
-                </tbody>
+                } @empty {
+                  <tr><td class="rh"></td><td [attr.colspan]="f.columnas.length || 1" class="xs muted">{{ cargando() ? 'Leyendo la base…' : 'Sin filas para mostrar.' }}</td></tr>
+                }
               </table>
             </div>
-          }
+          </div>
           @if (vinculos().length) {
-            <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-              <lucide-icon name="link" [size]="12" /> Vínculos guardados:
-              @for (v of vinculos(); track v.clave) {
-                <span class="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5">
-                  {{ v.clave }} = {{ v.persona }}
-                  @if (editable()) {
-                    <button type="button" class="text-muted-foreground hover:text-destructive" [attr.aria-label]="'Quitar vínculo ' + v.clave" (click)="desvincular(v.clave)"><lucide-icon name="x" [size]="11" /></button>
-                  }
-                </span>
-              }
-            </div>
+            <p class="xxs muted"><lucide-icon name="link" [size]="13" /> Vínculos guardados en esta base: {{ vinculos().join(' · ') }}</p>
           }
         </div>
       }
@@ -198,140 +131,107 @@ export class BaseCardComponent {
 
   readonly base = input.required<Base>();
   readonly equipo = input<Persona[]>([]);
-  readonly editable = input(true);
-  /** Columnas que usan las búsquedas como responsable / respaldo y como cruce. */
-  readonly columnasResponsable = input<string[]>([]);
-  readonly columnasCruce = input<string[]>([]);
-  /** Texto de otros grupos que la usan («también la usa: PAC»). */
-  readonly otrosUsos = input('');
+  /** Búsquedas (de todos los grupos del buzón) que usan esta base. */
+  readonly usos = input<UsoBase[]>([]);
+  /** Grupo desde el que se muestra (los demás salen en «también la usa»). */
+  readonly grupoActual = input<Grupo | null>(null);
+  readonly puede = input(true);
   readonly baseChange = output<Base>();
+  readonly actualizar = output<Base>();
 
+  protected readonly letra = letra;
+  protected readonly cuando = cuandoCargada;
   protected readonly abierta = signal(false);
+  protected readonly soloProb = signal(false);
+  protected readonly qg = signal('');
   protected readonly filas = signal<FilaBase[]>([]);
-  protected readonly cargandoFilas = signal(false);
-  protected q = '';
-
-  protected readonly archivo = signal<File | null>(null);
-  protected readonly lectura = signal<LecturaArchivo | null>(null);
-  protected readonly leyendo = signal(false);
   protected readonly cargando = signal(false);
-  protected readonly sincronizando = signal(false);
   protected readonly vinculando = signal(false);
-  protected hoja: string | null = null;
-  protected filaEncabezado: number | null = null;
 
-  protected readonly noReconocidos = computed(() => {
-    const cols = this.columnasResponsable();
-    const vistos = new Set<string>();
-    this.filas().forEach((f) => cols.forEach((c) => f[c] && !this.reconocido(f[c]) && vistos.add(f[c])));
-    return [...vistos];
+  private readonly activas = computed(() => this.usos().filter((u) => u.regla.activa));
+  protected readonly otros = computed(() => [
+    ...new Set(this.usos().filter((u) => u.grupo.id !== this.grupoActual()?.id).map((u) => u.grupo.nombre)),
+  ]);
+  protected readonly usadas = computed(() => {
+    const out: Record<string, string> = {};
+    this.activas().forEach(({ regla: r }) => {
+      r.cruces.forEach((c) => (out[c.columna] = 'cruce'));
+      out[r.col_responsable] = 'resp.';
+      if (r.col_respaldo) out[r.col_respaldo] = 'resp.';
+    });
+    return out;
   });
+  protected readonly filaDatos = computed(() => (this.base().fila_encabezado ?? 1) + 1);
 
-  protected readonly faltantes = computed(() => {
-    const l = this.lectura();
-    if (!l) return [];
-    return [...new Set([...this.columnasResponsable(), ...this.columnasCruce()])].filter((c) => c && !l.columnas.includes(c));
+  /** Prototipo problemasG: lo que hace que una fila no sirva para asignar. */
+  private readonly problemas = computed<Problemas[]>(() => {
+    const filas = this.filas();
+    const b = this.base();
+    return filas.map((row) => {
+      const out: Problemas = new Map();
+      this.activas().forEach(({ regla: r }) => {
+        const ri = r.col_responsable;
+        if (b.columnas.includes(ri) && !out.has(ri)) {
+          if (!row[ri]) out.set(ri, ['vacío → siguiente regla', false]);
+          else if (!reconocer(row[ri], this.equipo(), b.vinculos)) out.set(ri, ['no reconocido en el equipo', true]);
+        }
+        r.cruces.forEach((cz) => {
+          const ci = cz.columna;
+          if (!b.columnas.includes(ci) || out.has(ci)) return;
+          if (!row[ci] || row[ci] === '0') out.set(ci, ['sin valor', false]);
+          else if (!normaliza(row[ci], cz.comparacion)) out.set(ci, ['no tiene el formato de la comparación', false]);
+          else {
+            const k = normaliza(row[ci], cz.comparacion);
+            const d = new Set(filas.filter((x) => normaliza(x[ci], cz.comparacion) === k).map((x) => x[ri]).filter(Boolean));
+            if (d.size > 1) out.set(ci, ['valor repetido con responsables distintos', false]);
+          }
+        });
+      });
+      return out;
+    });
   });
-
+  protected readonly conProblemas = computed(() => this.problemas().filter((p) => p.size).length);
+  protected readonly visibles = computed(() => {
+    const q = this.qg().trim().toLowerCase();
+    const probs = this.problemas();
+    return this.filas()
+      .map((r, i) => ({ r, i, p: probs[i] ?? new Map() }))
+      .filter((x) => (!this.soloProb() || x.p.size) && (!q || Object.values(x.r).join(' ').toLowerCase().includes(q)));
+  });
   protected readonly vinculos = computed(() =>
-    Object.entries(this.base().vinculos ?? {}).map(([clave, correo]) => ({
-      clave,
-      persona: this.equipo().find((p) => p.correo.toLowerCase() === correo.toLowerCase())?.nombre ?? correo,
-    })),
+    Object.entries(this.base().vinculos ?? {}).map(([v, correo]) => `${v} = ${reconocer(correo, this.equipo())?.nombre ?? correo}`),
   );
 
-  protected reconocido(v: string): boolean {
-    return !!reconocer(v, this.equipo(), this.base().vinculos);
+  constructor() {
+    // Lee las filas al mostrar la tarjeta y cada vez que cambia la carga de la base.
+    let clave = '';
+    effect(() => {
+      const b = this.base();
+      const k = `${b.id}|${b.cargada_en}|${b.total_filas}`;
+      if (k === clave) return;
+      clave = k;
+      void this.cargarFilas();
+    });
   }
 
-  protected alternarDatos(): void {
-    this.abierta.update((x) => !x);
-    if (this.abierta() && !this.filas().length) void this.cargarFilas();
-  }
-
-  async cargarFilas(): Promise<void> {
-    this.cargandoFilas.set(true);
-    try {
-      const r = await this.api.filasBase(this.base().id, this.q.trim() || undefined, 100);
-      this.filas.set(r.items);
-    } catch (e) {
-      this.toast.error('No se pudieron leer las filas', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.cargandoFilas.set(false);
-    }
-  }
-
-  protected async elegirArchivo(ev: Event): Promise<void> {
-    const inputEl = ev.target as HTMLInputElement;
-    const f = inputEl.files?.[0];
-    inputEl.value = '';
-    if (!f) return;
-    this.archivo.set(f);
-    this.hoja = null;
-    this.filaEncabezado = null;
-    await this.leer();
-  }
-
-  protected releer(cambioHoja: boolean): void {
-    if (cambioHoja) this.filaEncabezado = null; // otra hoja: que Alma detecte de nuevo la fila
-    void this.leer();
-  }
-
-  private async leer(): Promise<void> {
-    const f = this.archivo();
-    if (!f) return;
-    this.leyendo.set(true);
-    try {
-      const l = await this.api.leerArchivo(f, this.hoja, this.filaEncabezado);
-      this.lectura.set(l);
-      this.hoja = l.hoja;
-      this.filaEncabezado = l.fila_encabezado;
-    } catch (e) {
-      this.toast.error('No se pudo leer el archivo', e instanceof Error ? e.message : String(e));
-      if (!this.lectura()) this.archivo.set(null);
-    } finally {
-      this.leyendo.set(false);
-    }
-  }
-
-  protected cancelarCarga(): void {
-    this.lectura.set(null);
-    this.archivo.set(null);
-  }
-
-  protected async cargar(): Promise<void> {
-    const f = this.archivo();
-    if (!f) return;
+  private async cargarFilas(): Promise<void> {
+    const b = this.base();
+    if (!b.columnas.length) return this.filas.set([]);
     this.cargando.set(true);
     try {
-      const r = await this.api.cargarBase(this.base().id, f, this.hoja, this.filaEncabezado);
-      this.baseChange.emit(r.base);
-      if (r.aceptada) {
-        this.toast.show('Base cargada', `${r.base.nombre}: ${r.total_filas.toLocaleString('es-CO')} filas.`);
-        this.cancelarCarga();
-        if (this.abierta()) void this.cargarFilas();
-      } else {
-        this.toast.error('Carga rechazada', r.motivo ?? 'El archivo no sirve para esta base. Se conserva la carga anterior.');
-      }
-    } catch (e) {
-      this.toast.error('No se pudo cargar la base', e instanceof Error ? e.message : String(e));
+      this.filas.set((await this.api.filasBase(b.id, undefined, 500)).items);
+    } catch {
+      this.filas.set([]);
     } finally {
       this.cargando.set(false);
     }
   }
 
-  protected async sincronizar(): Promise<void> {
-    this.sincronizando.set(true);
-    try {
-      const r = await this.api.sincronizarBase(this.base().id);
-      this.baseChange.emit(r.base);
-      if (r.aceptada) this.toast.show('Base sincronizada', `${r.base.nombre}: ${r.total_filas.toLocaleString('es-CO')} filas.`);
-      else this.toast.error('Sincronización rechazada', r.motivo ?? 'Se conserva la carga anterior.');
-      if (this.abierta()) void this.cargarFilas();
-    } catch (e) {
-      this.toast.error('No se pudo sincronizar', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.sincronizando.set(false);
+  protected alternar(): void {
+    this.abierta.update((x) => !x);
+    if (this.abierta()) {
+      this.soloProb.set(!!this.conProblemas());
+      this.qg.set('');
     }
   }
 
@@ -342,21 +242,11 @@ export class BaseCardComponent {
       const b = await this.api.vincular(this.base().id, valor, correo);
       this.baseChange.emit(b);
       const p = this.equipo().find((x) => x.correo === correo);
-      this.toast.show('Vínculo guardado', `«${valor}» = ${p?.nombre ?? correo} en ${b.nombre}.`);
+      this.toast.show(`«${valor}» vinculado a ${p?.nombre ?? correo} en ${b.nombre}`);
     } catch (e) {
       this.toast.error('No se pudo vincular', e instanceof Error ? e.message : String(e));
     } finally {
       this.vinculando.set(false);
-    }
-  }
-
-  protected async desvincular(clave: string): Promise<void> {
-    try {
-      // La clave ya está normalizada (nrm es idempotente): el backend la vuelve a normalizar igual.
-      const b = await this.api.vincular(this.base().id, nrm(clave), null);
-      this.baseChange.emit(b);
-    } catch (e) {
-      this.toast.error('No se pudo quitar el vínculo', e instanceof Error ? e.message : String(e));
     }
   }
 }

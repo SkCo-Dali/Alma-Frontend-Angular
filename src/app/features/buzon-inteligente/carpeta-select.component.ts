@@ -1,10 +1,11 @@
-// Selector de carpetas del buzón (leídas de Outlook con la conexión vigente).
-// Nunca se supone una carpeta: se elige de la lista. Si el valor guardado ya no
-// existe en el buzón se muestra marcado para que lo corrijan.
+// Selector de carpetas del buzón (prototipo folderSel): carpetas leídas de Outlook
+// con la conexión vigente. Nunca se supone una carpeta: se elige de la lista. Si el
+// valor guardado ya no existe en el buzón se muestra marcado para que lo corrijan.
 
 import { Component, computed, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CarpetaGraph } from './buzon.api';
+import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 export interface CarpetaPlana {
   nombre: string;
@@ -20,10 +21,11 @@ export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[
 @Component({
   selector: 'alma-carpeta-select',
   imports: [FormsModule],
+  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
   template: `
     <select
-      class="alma-input"
-      [class]="compacto() ? 'h-8 text-xs' : ''"
+      class="input sm"
+      [style.min-width]="compacto() ? null : '200px'"
       [attr.aria-label]="ariaLabel()"
       [attr.id]="inputId() || null"
       [disabled]="disabled()"
@@ -32,7 +34,7 @@ export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[
     >
       <option value="">{{ vacia() }}</option>
       @for (c of carpetas(); track $index) {
-        <option [value]="c.nombre">{{ c.nivel ? '— '.repeat(c.nivel) : '' }}{{ c.nombre }}</option>
+        <option [value]="c.nombre">{{ c.nivel ? '— ' : '' }}{{ c.nombre }}</option>
       }
       @if (huerfana(); as h) {
         <option [value]="h">⚠ {{ h }} (no existe en el buzón)</option>

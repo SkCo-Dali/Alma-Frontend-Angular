@@ -52,6 +52,15 @@ import {
   ResumenInicio,
   ResumenSync,
   RolMiembro,
+  CambioRegla,
+  EstadoReglas,
+  NombreBuzon,
+  ProcesoCompletoIn,
+  PromptBuzon,
+  PruebaBorrador,
+  PruebaSeco,
+  TipoCuenta,
+  VersionReglas,
 } from './buzon.api';
 import { nrm, simularAsignacion } from './buzon-asignacion';
 import { matriz, nombreArchivo, salidaPara, sugerirColumna } from './buzon-exportacion';
@@ -308,7 +317,7 @@ function buzonesBase(): Buzon[] {
   return [
     {
       id: B_RECAUDOS,
-      nombre: 'Recaudos',
+      nombre: 'GEN-BACKPAGOS',
       area: 'Recaudos Voluntarios',
       direccion: 'backpagos@skandia.com.co',
       correo_buzon_id: 'demo-correo-buzon-recaudos',
@@ -323,6 +332,7 @@ function buzonesBase(): Buzon[] {
       ultima_sincronizacion: hace(0, 4),
       ultimo_error: null,
       categorias_count: 9,
+      procesos_count: 0,
       pendientes: 0,
       en_revision: 4,
       ejecutados_hoy: 27,
@@ -340,10 +350,18 @@ function buzonesBase(): Buzon[] {
       prompt_area: PROMPT_DEMO,
       al_desactivar: 'respaldo',
       borrador_en_hilo: true,
+      ...camposV2({
+        descripcion: 'Recaudos Voluntarios · aportes y soportes de pago',
+        mod_asignacion: true,
+        mod_bases: true,
+        mod_exportacion: true,
+        version_reglas: 3,
+        discriminacion: [{ a: '4X1000', b: 'PAC', manda: 'Si trae carta de autorización al banco firmada es 4X1000, aunque mencione un contrato PC.' }],
+      }),
     },
     {
       id: B_JURIDICA,
-      nombre: 'Jurídica',
+      nombre: 'GEN-JURIDICA',
       area: 'Vicepresidencia Jurídica',
       direccion: 'juridica@skandia.com.co',
       correo_buzon_id: 'demo-correo-buzon-juridica',
@@ -358,6 +376,7 @@ function buzonesBase(): Buzon[] {
       ultima_sincronizacion: null,
       ultimo_error: null,
       categorias_count: 3,
+      procesos_count: 0,
       pendientes: 0,
       en_revision: 2,
       ejecutados_hoy: 0,
@@ -372,8 +391,39 @@ function buzonesBase(): Buzon[] {
       prompt_area: null,
       al_desactivar: 'roundrobin',
       borrador_en_hilo: false,
+      ...camposV2({ descripcion: 'Vicepresidencia Jurídica · notificaciones y requerimientos', version_reglas: 1 }),
     },
   ];
+}
+
+/** Campos 061 de un buzón demo (los que no se pasan quedan como los crea el backend). */
+function camposV2(p: Partial<Buzon>): Pick<
+  Buzon,
+  | 'tipo_cuenta' | 'descripcion' | 'en_configuracion' | 'mod_asignacion' | 'mod_bases' | 'mod_exportacion'
+  | 'reglas_admin' | 'agente_proyecto' | 'agente_version_fija' | 'modelo' | 'exclusiones_globales' | 'discriminacion'
+  | 'ventana_hilos_dias' | 'respuesta_sin_novedad' | 'tabla_formato' | 'tabla_separador' | 'descarga_en_alma' | 'version_reglas'
+> {
+  return {
+    tipo_cuenta: 'gen',
+    descripcion: null,
+    en_configuracion: false,
+    mod_asignacion: false,
+    mod_bases: false,
+    mod_exportacion: false,
+    reglas_admin: 'alma',
+    agente_proyecto: null,
+    agente_version_fija: null,
+    modelo: null,
+    exclusiones_globales: null,
+    discriminacion: [],
+    ventana_hilos_dias: 15,
+    respuesta_sin_novedad: 'vincular',
+    tabla_formato: 'xlsx',
+    tabla_separador: ';',
+    descarga_en_alma: true,
+    version_reglas: null,
+    ...p,
+  };
 }
 
 function reglasBase(): ReglaFija[] {
@@ -1367,6 +1417,8 @@ export class DemoStore {
       orden: body.orden ?? previo?.orden ?? this.procesos.filter((p) => p.buzon_id === bid).length + 1,
       activo: body.activo,
       etiquetas: [],
+      umbral: body.umbral !== undefined ? body.umbral : (previo?.umbral ?? null),
+      causas_validar: body.causas_validar ?? previo?.causas_validar ?? [],
     };
     this.procesos = previo ? this.procesos.map((p) => (p.id === id ? nuevo : p)) : [...this.procesos, nuevo];
     return this.listarProcesos(bid).find((p) => p.id === nuevo.id)!;
@@ -1432,6 +1484,163 @@ export class DemoStore {
     }
     if (promptArea !== undefined) this.actualizarBuzon(buzonId, { prompt_area: promptArea });
     return r;
+  }
+
+  // ── 061: asistente y reglas con versiones (demo) ──
+  conectarDemo(id: string, por: string): Buzon {
+    const b = this.buzones.find((x) => x.id === id);
+    if (!b) throw new Error('Buzón no encontrado.');
+    Object.assign(b, { estado_conexion: 'conectada', conectada_por: por || 'admin.demo@ejemplo.com.co', conexion_compartida: b.tipo_cuenta === 'gen' });
+    return this.conConteos(b);
+  }
+
+  /** El buzón con sus conteos al día (procesos activos). */
+  conConteos(b: Buzon): Buzon {
+    return { ...b, procesos_count: this.procesos.filter((p) => p.buzon_id === b.id && p.activo).length };
+  }
+
+  /** Cambios del borrador frente a la vigente y prueba del borrador, por buzón. */
+  private cambiosBorrador = new Map<string, CambioRegla[]>();
+  private pruebas = new Map<string, PruebaBorrador>();
+  private versiones = new Map<string, VersionReglas[]>();
+
+  private marcarCambio(buzonId: string, c: CambioRegla): void {
+    this.cambiosBorrador.set(buzonId, [...(this.cambiosBorrador.get(buzonId) ?? []), c]);
+    this.pruebas.delete(buzonId);
+  }
+
+  nombreBuzon(direccion: string, tipo: TipoCuenta): NombreBuzon {
+    const alias = (direccion.split('@')[0] ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const nombre = `${tipo === 'per' ? 'PER' : 'GEN'}-${alias || 'ALIAS'}`;
+    const dir = direccion.trim().toLowerCase();
+    const e = this.buzones.find((b) => b.nombre.toUpperCase() === nombre || b.direccion === dir);
+    return { nombre, disponible: !e, existente: e ? { id: e.id, nombre: e.nombre, misma_direccion: e.direccion === dir } : null };
+  }
+
+  crearCarpeta(_buzonId: string, nombre: string): CarpetaGraph[] {
+    const inbox = this.carpetas[0];
+    if (inbox && !inbox.hijas.some((h) => h.nombre === nombre)) {
+      inbox.hijas = [...inbox.hijas, { id: nuevoId('demo-carpeta'), nombre, total: 0, no_leidos: 0, hijas: [] }];
+    }
+    return clonar(this.carpetas);
+  }
+
+  guardarProcesoCompleto(buzonId: string, body: ProcesoCompletoIn): Proceso {
+    const previo = body.original ? this.procesos.find((p) => p.buzon_id === buzonId && p.clave === body.original) : undefined;
+    if (body.original && !previo) throw new Error(`El proceso ${body.original} ya no existe.`);
+    const paleta = ['#1976D2', '#7B1FA2', '#00796B', '#D32F2F', '#F57C00', '#0097A7'];
+    const color = body.proceso.color ?? previo?.color ?? paleta[this.procesos.length % paleta.length];
+    const p = this.guardarProceso(buzonId, { ...body.proceso, color }, previo?.id);
+    const nuevas = body.etiquetas.map((e) => e.clave);
+    for (const e of body.etiquetas) {
+      const c = this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.clave);
+      if (c && c.proceso_id && c.proceso_id !== p.id && c.activa) throw new Error(`La etiqueta ${e.clave} ya pertenece a otro proceso.`);
+      const campos = { nombre: e.nombre || e.clave, descripcion: e.descripcion, criterio: e.criterio, condicion: e.condicion ?? null, origen: e.origen, proceso_id: p.id, activa: true };
+      if (c) this.categorias = this.categorias.map((x) => (x.id === c.id ? { ...x, ...campos } : x));
+      else {
+        const nueva = this.crearCategoria(buzonId, {
+          clave: e.clave, nombre: campos.nombre, descripcion: e.descripcion, ejemplos: [], palabras_clave: null, color,
+          activa: true, es_fallback: false, umbral_confianza: null, campos_extraer: [],
+          acciones: [{ tipo: 'categorizar', parametros: {}, orden: 1, activa: true }],
+        });
+        Object.assign(nueva, campos);
+      }
+    }
+    this.categorias = this.categorias.map((c) => (c.proceso_id === p.id && !nuevas.includes(c.clave) ? { ...c, activa: false } : c));
+    if (body.discriminacion) {
+      const b = this.buzones.find((x) => x.id === buzonId)!;
+      const quitar = [p.clave, body.original];
+      const pares = b.discriminacion.filter((d) => !quitar.includes(d.a) && !quitar.includes(d.b));
+      this.actualizarBuzon(buzonId, { discriminacion: [...pares, ...body.discriminacion.filter((d) => d.con && d.con !== p.clave).map((d) => ({ a: d.con, b: p.clave, manda: d.manda }))] });
+    }
+    this.marcarCambio(buzonId, previo
+      ? [`Proceso ${p.clave}`, previo.nombre, `${p.nombre} · ${body.etiquetas.length} etiqueta(s)`]
+      : [`Nuevo proceso ${p.clave}`, '', `${p.nombre} · ${p.campos_extraer.length ? p.campos_extraer.length + ' datos' : 'solo categorización'}`]);
+    return this.listarProcesos(buzonId).find((x) => x.id === p.id)!;
+  }
+
+  estadoReglas(buzonId: string): EstadoReglas {
+    const b = this.buzones.find((x) => x.id === buzonId)!;
+    const cambios = this.cambiosBorrador.get(buzonId) ?? [];
+    if (!this.versiones.has(buzonId) && b.version_reglas) {
+      this.versiones.set(buzonId, Array.from({ length: b.version_reglas }, (_, i) => ({
+        version: b.version_reglas! - i, cambios: [], prueba: null, publicada_en: hace(i * 9 + 2, 0), publicada_por: 'admin.demo@ejemplo.com.co',
+      })));
+    }
+    return {
+      version: b.version_reglas,
+      siguiente: (b.version_reglas ?? 0) + 1,
+      borrador: b.version_reglas ? cambios.length > 0 : this.listarProcesos(buzonId).length > 0,
+      cambios: b.version_reglas ? cambios : [],
+      prueba: this.pruebas.get(buzonId) ?? null,
+      procesos: this.listarProcesos(buzonId).length,
+      pares_discriminacion: b.discriminacion.length,
+      versiones: clonar(this.versiones.get(buzonId) ?? []),
+    };
+  }
+
+  async probarBorrador(buzonId: string): Promise<PruebaBorrador> {
+    await espera(1500);
+    const decididos = this.correos.filter((c) => c.buzon_id === buzonId && c.decidido_por).slice(0, 30);
+    const total = decididos.length;
+    const fallo = decididos.find((c) => c.categoria_clave);
+    const prueba: PruebaBorrador = {
+      firma: 'demo', fecha: new Date().toISOString(), total, no_disponibles: 0,
+      proceso_ok: total, etiqueta_ok: Math.max(0, total - (fallo ? 1 : 0)),
+      fallos: fallo ? [{ correo_id: fallo.id, asunto: fallo.asunto, esperado: fallo.categoria_clave!, obtenido: 'OTROS', confianza: 0.42 }] : [],
+    };
+    this.pruebas.set(buzonId, prueba);
+    return prueba;
+  }
+
+  publicarReglas(buzonId: string, por: string): { version: number; cambios: CambioRegla[] } {
+    const b = this.buzones.find((x) => x.id === buzonId)!;
+    if (!this.listarProcesos(buzonId).some((p) => p.activo)) throw new Error('No hay procesos activos que publicar.');
+    const cambios = b.version_reglas ? this.cambiosBorrador.get(buzonId) ?? [] : [['Primera versión', '', `${this.listarProcesos(buzonId).length} proceso(s)`] as CambioRegla];
+    if (b.version_reglas && !cambios.length) throw new Error('El borrador no tiene cambios frente a la versión vigente.');
+    if (!this.pruebas.has(buzonId) && !b.en_configuracion) throw new Error('Prueba el borrador antes de publicarlo.');
+    this.estadoReglas(buzonId);
+    const version = (b.version_reglas ?? 0) + 1;
+    this.versiones.set(buzonId, [{ version, cambios, prueba: this.pruebas.get(buzonId) ?? null, publicada_en: new Date().toISOString(), publicada_por: por }, ...(this.versiones.get(buzonId) ?? [])]);
+    this.actualizarBuzon(buzonId, { ...({ version_reglas: version, en_configuracion: false } as Partial<Buzon>), activo: b.en_configuracion ? true : b.activo });
+    this.cambiosBorrador.delete(buzonId);
+    this.pruebas.delete(buzonId);
+    return { version, cambios };
+  }
+
+  verPrompt(buzonId: string): PromptBuzon {
+    const b = this.buzones.find((x) => x.id === buzonId)!;
+    const procesos = this.listarProcesos(buzonId);
+    const lineas = procesos.map((p) => `- ${p.clave} — ${p.nombre}\n  Señales: ${p.descripcion ?? ''}` + (p.causas_validar?.length ? `\n  Requiere revisión humana si: ${p.causas_validar.join('; ')}` : ''));
+    const prompt = `Eres el asistente de clasificación de correos del área "${b.area ?? b.nombre}" de Skandia (buzón "${b.nombre}").\n\nCONTEXTO DEL ÁREA\n${b.contexto ?? '(sin contexto adicional)'}\n\nPROCESOS\n${lineas.join('\n')}` +
+      (b.discriminacion.length ? `\n\nDISCRIMINACIÓN ENTRE PROCESOS\n${b.discriminacion.map((d) => `- ${d.a} ↔ ${d.b}: ${d.manda}`).join('\n')}` : '') +
+      (b.exclusiones_globales ? `\n\nEXCLUSIONES GLOBALES\n${b.exclusiones_globales}` : '');
+    return { version: b.version_reglas, modo: b.modo_clasificacion, prompt, esquema: { type: 'object', properties: { categoria: {}, confianza: {}, datos_extraidos: {} } } };
+  }
+
+  async proponerProcesos(buzonId: string): Promise<PropuestaProcesos & { correos_leidos: number }> {
+    await espera(1500);
+    const existe = (k: string) => this.procesos.some((p) => p.buzon_id === buzonId && p.clave === k);
+    const procesos: PropuestaProcesos['procesos'] = existe('RECLAMACION') ? [] : [{
+      clave: 'RECLAMACION', nombre: 'Reclamaciones', color: '#C2185B',
+      descripcion: 'El remitente reclama por un aporte no aplicado o aplicado a otro contrato; suele adjuntar el comprobante de pago.',
+      exclusiones: '', campos: [{ clave: 'numero_radicado', descripcion: 'Número de radicado del trámite', critico: true, tipo: 'texto' }],
+      etiquetas: [{ clave: 'RECLAMACION', nombre: 'Reclamación', descripcion: 'Reclamo por un aporte no aplicado.' }],
+    }];
+    return { procesos, instrucciones: procesos.length ? 'Se ve en 7 de los últimos 30 correos.' : '', correos_leidos: 30 };
+  }
+
+  async pruebaSeco(buzonId: string): Promise<PruebaSeco> {
+    await espera(1500);
+    const procesos = this.listarProcesos(buzonId);
+    const grupos = this.grupos.filter((g) => g.buzon_id === buzonId);
+    const resumen = procesos.map((p, i) => {
+      const g = grupos.find((x) => x.etiquetas.some((e) => p.etiquetas.includes(e)));
+      const destino = !g ? 'sin asignar' : g.destino === 'personas' ? `asignado en ${g.nombre}` : g.destino === 'carpeta' ? `a la carpeta «${g.carpeta}»` : 'solo categorizado';
+      return { proceso: p.clave, resultado: (p.campos_extraer.length ? 'datos extraídos · ' : 'solo etiqueta · ') + destino, correos: [9, 5, 3, 2][i % 4] };
+    });
+    const total = resumen.reduce((n, r) => n + r.correos, 0) + 1;
+    return { total, validar: 1, resumen, filas: [] };
   }
 
   // ── 2.0: grupos ──
@@ -1652,6 +1861,7 @@ export class DemoStore {
       ultima_sincronizacion: null,
       ultimo_error: null,
       categorias_count: 1,
+      procesos_count: 0,
       pendientes: 0,
       en_revision: 0,
       ejecutados_hoy: 0,
@@ -1666,7 +1876,13 @@ export class DemoStore {
       prompt_area: null,
       al_desactivar: 'respaldo',
       borrador_en_hilo: true,
+      ...camposV2({
+        tipo_cuenta: b.tipo_cuenta ?? 'gen',
+        descripcion: b.descripcion ?? null,
+        en_configuracion: !!b.en_configuracion,
+      }),
     };
+    if (nuevo.en_configuracion) nuevo.activo = false;
     this.buzones = [...this.buzones, nuevo];
     this.categorias.push(cat(nuevo.id, 'OTROS', 'Otros', 'Sin categoría clara. Revisión humana.', '#A2845E', [], { es_fallback: true, orden: 1 }));
     return nuevo;
@@ -1675,6 +1891,10 @@ export class DemoStore {
   actualizarBuzon(id: string, u: BuzonUpdate): Buzon {
     const i = this.buzones.findIndex((b) => b.id === id);
     if (i < 0) throw new Error('Buzón no encontrado.');
+    const titulos: Partial<Record<keyof BuzonUpdate, string>> = { contexto: 'Contexto del área', exclusiones_globales: 'Exclusiones globales', prompt_area: 'Prompt del área' };
+    for (const k of Object.keys(titulos) as (keyof BuzonUpdate)[]) {
+      if (k in u && u[k] !== this.buzones[i][k]) this.marcarCambio(id, [titulos[k]!, String(this.buzones[i][k] ?? ''), String(u[k] ?? '')]);
+    }
     this.buzones[i] = { ...this.buzones[i], ...u } as Buzon;
     this.buzones = [...this.buzones];
     return this.buzones[i];

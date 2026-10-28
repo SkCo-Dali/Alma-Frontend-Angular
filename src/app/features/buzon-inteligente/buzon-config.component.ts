@@ -1,383 +1,127 @@
-// Configuración de UN buzón (solo admin o editor del buzón: `puede_administrar`):
-// procesos (y lectura del prompt del área), tipos de correo (categorías con sus
-// acciones), reglas fijas, asignación (grupos, equipo, reglas y bases, probar),
-// ajustes (modo, umbral, carpeta, clasificador, contexto para la IA) y un
-// probador de clasificación en vivo.
+// Configuración de UN buzón — réplica de `vConfig` del prototipo validado
+// (contexto-recaudos-pac/buzon-inteligente-v2.html): encabezado con el estado del
+// buzón, pestañas Reglas · Asignación · Exportación · Ajustes (Asignación y
+// Exportación solo si su módulo está activo) y «Activar módulo». Solo el editor del
+// buzón o el administrador de la App (`puede_administrar`); el revisor no entra.
 
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
-import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
-import { TooltipDirective } from '../../shared/tooltip.directive';
-import {
-  AlDesactivar,
-  Buzon,
-  BuzonApi,
-  Categoria,
-  CategoriaIn,
-  ModoClasificacion,
-  PERM_VER_BUZON,
-  ReglaFija,
-  ReglaIn,
-  ResultadoPrueba,
-  iconoAccion,
-  resumenAccion,
-} from './buzon.api';
+import { AjustesTabComponent } from './ajustes-tab.component';
 import { AsignacionTabComponent } from './asignacion-tab.component';
-import { ExportacionTabComponent } from './exportacion-tab.component';
-import { CategoriaEditorComponent } from './categoria-editor.component';
+import { Buzon, BuzonApi, Categoria, PERM_VER_BUZON } from './buzon.api';
+import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { DemoBadgeComponent } from './demo-badge.component';
-import { ProcesosTabComponent } from './procesos-tab.component';
+import { ExportacionTabComponent } from './exportacion-tab.component';
+import { ReglasTabComponent } from './reglas-tab.component';
 
-type Tab = 'procesos' | 'tipos' | 'reglas' | 'asignacion' | 'exportacion' | 'ajustes' | 'probar';
-const TABS: Tab[] = ['procesos', 'tipos', 'reglas', 'asignacion', 'exportacion', 'ajustes', 'probar'];
+type Tab = 'reglas' | 'asig' | 'plant' | 'ajustes';
+type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
+
+/** Degradado del ícono del buzón: personal (azul) o genérico (violeta). */
+export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
+  return b.tipo_cuenta === 'per' ? 'linear-gradient(150deg,#02B1FF,#0062B8)' : 'linear-gradient(150deg,#BF5AF2,#6D4AE0)';
+}
 
 @Component({
   selector: 'alma-buzon-config',
   imports: [
-    DecimalPipe,
-    FormsModule,
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
     AlmaLoaderComponent,
-    AlmaSwitchComponent,
-    TooltipDirective,
-    CategoriaEditorComponent,
     DemoBadgeComponent,
-    ProcesosTabComponent,
+    ReglasTabComponent,
     AsignacionTabComponent,
     ExportacionTabComponent,
+    AjustesTabComponent,
   ],
+  styles: [BUZON_PROTO_CSS],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else if (cargando()) {
-      <div class="flex justify-center py-24"><alma-loader [size]="80" label="Cargando buzón…" /></div>
+      <div style="display:flex;justify-content:center;padding:96px 0"><alma-loader [size]="80" label="Cargando buzón…" /></div>
     } @else if (!buzon()) {
-      <div class="mx-auto mt-10 flex max-w-md flex-col items-center gap-3 px-4 text-center">
-        <lucide-icon name="alert-triangle" [size]="28" class="text-rose-500" />
-        <p class="text-sm font-semibold text-foreground">No se pudo abrir el buzón</p>
-        <p class="text-xs text-muted-foreground">{{ errorCarga() || 'No existe o no tienes acceso a él.' }}</p>
-        <a routerLink="/apps/buzon-inteligente" class="alma-btn alma-btn-outline"><lucide-icon name="arrow-left" [size]="15" /> Volver al inicio</a>
+      <div class="page" style="max-width:460px;text-align:center;justify-items:center">
+        <lucide-icon name="alert-triangle" [size]="28" style="color:var(--rose)" />
+        <p class="sm b">No se pudo abrir el buzón</p>
+        <p class="xs muted">{{ errorCarga() || 'No existe o no tienes acceso a él.' }}</p>
+        <a routerLink="/apps/buzon-inteligente" class="btn outline"><lucide-icon name="arrow-left" [size]="16" /> Volver al inicio</a>
       </div>
     } @else if (!buzon()!.puede_administrar) {
       <!-- El revisor no configura: solo bandeja y métricas. -->
       <alma-access-denied />
     } @else if (buzon(); as b) {
-      <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-4 sm:px-6">
-        <!-- Encabezado -->
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <a routerLink="/apps/buzon-inteligente/buzones" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
-              <lucide-icon name="arrow-left" [size]="16" /> Buzones
-            </a>
-            <div class="flex h-11 w-11 items-center justify-center rounded-2xl text-white" style="background:linear-gradient(150deg,#BF5AF2,#6D4AE0)"><lucide-icon name="mail" [size]="20" /></div>
-            <div>
-              <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">{{ b.nombre }}</h1>
-              <p class="text-on-wallpaper text-sm text-foreground/80">{{ b.direccion }} @if (b.area) {· {{ b.area }}}</p>
+      <div class="page">
+        <div class="ph">
+          <div class="l">
+            <a routerLink="/apps/buzon-inteligente/buzones" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzones</a>
+            <div class="appicon" [style.background]="gradiente()"><lucide-icon name="mail" [size]="20" /></div>
+            <div style="min-width:0">
+              <h1 class="on-wall"><span class="mono" style="font-size:1.25rem">{{ b.nombre }}</span></h1>
+              <p class="on-wall sm" style="color:color-mix(in srgb,var(--foreground) 80%,transparent)">{{ b.descripcion || b.area || 'Sin descripción' }} · {{ b.direccion }}</p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="row">
             <alma-demo-badge />
-            <div class="glass flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs">
-              <span class="text-muted-foreground">Modo</span>
-              <span class="font-semibold" [class.text-emerald-600]="b.modo === 'automatico'">{{ b.modo === 'automatico' ? 'Automático' : 'Solo sugiere' }}</span>
-              <alma-switch [checked]="b.modo === 'automatico'" (checkedChange)="cambiarModo($event)" [disabled]="!puedeGestionar()" ariaLabel="Modo automático" />
-            </div>
+            @if (b.en_configuracion) {
+              <span class="badge b-amber"><lucide-icon name="settings-2" [size]="13" /> En configuración</span>
+            } @else if (!b.activo) {
+              <span class="badge b-slate"><lucide-icon name="pause" [size]="13" /> Pausado</span>
+            } @else {
+              <span class="badge b-emerald"><lucide-icon name="plug-zap" [size]="13" /> Activo · {{ modulosActivos() }}</span>
+            }
           </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="glass inline-flex max-w-full flex-wrap gap-1 rounded-xl p-1" role="tablist" aria-label="Configuración del buzón">
-          @for (t of tabs; track t.id) {
-            <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors" [class]="tab() === t.id ? 'bg-primary text-primary-foreground shadow-[var(--shadow-sm)]' : 'text-muted-foreground hover:text-foreground'" (click)="tab.set(t.id)">
-              <lucide-icon [name]="t.icon" [size]="15" /> {{ t.nombre }}
-              @if (t.id === 'tipos') { <span class="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums">{{ categorias().length }}</span> }
-              @if (t.id === 'reglas') { <span class="rounded-full bg-black/10 px-1.5 text-[10px] tabular-nums">{{ reglas().length }}</span> }
-            </button>
+        <div class="row between">
+          <div class="tabsbar glass" role="tablist" aria-label="Configuración del buzón">
+            @for (t of tabs(); track t.id) {
+              <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" (click)="tab.set(t.id)">
+                <lucide-icon [name]="t.icon" [size]="13" /> {{ t.nombre }}
+              </button>
+            }
+          </div>
+          @if (!b.mod_asignacion || !b.mod_bases || !b.mod_exportacion) {
+            <button type="button" class="btn outline glass" (click)="modulosAbierto.set(true)"><lucide-icon name="plus" [size]="13" /> Activar módulo</button>
           }
         </div>
 
-        @switch (tab()) {
-          <!-- ── PROCESOS ── -->
-          @case ('procesos') {
-            <alma-procesos-tab [buzon]="b" [categorias]="categorias()" (actualizado)="recargarTipos()" />
-          }
-
-          <!-- ── ASIGNACIÓN ── -->
-          @case ('asignacion') {
-            <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" />
-          }
-
-          <!-- ── EXPORTACIÓN ── -->
-          @case ('exportacion') {
-            <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" />
-          }
-
-          <!-- ── TIPOS DE CORREO ── -->
-          @case ('tipos') {
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="text-sm text-muted-foreground">Cada tipo le dice a la IA cómo reconocer el correo, qué datos leer y qué hacer. Ordenados por prioridad.</p>
-              @if (puedeGestionar()) {
-                <button type="button" class="alma-btn alma-btn-primary rounded-xl" (click)="nuevaCategoria()"><lucide-icon name="plus" [size]="16" /> Nuevo tipo de correo</button>
-              }
-            </div>
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-              @for (c of categorias(); track c.id) {
-                <article class="glass flex flex-col gap-3 rounded-2xl p-4 shadow-[var(--shadow-sm)]" [class.opacity-60]="!c.activa">
-                  <div class="flex items-start gap-3">
-                    <span class="mt-0.5 h-9 w-1.5 shrink-0 rounded-full" [style.background]="c.color || '#8E8E93'"></span>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <h3 class="text-sm font-bold text-foreground">{{ c.nombre }}</h3>
-                        <span class="rounded-md bg-[var(--surface-sunken)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{{ c.clave }}</span>
-                        @if (c.es_fallback) { <span class="alma-badge bg-zinc-500/15 text-zinc-600 dark:text-zinc-300">Por defecto</span> }
-                        @if (!c.activa) { <span class="alma-badge bg-zinc-500/15 text-zinc-600">Inactivo</span> }
-                      </div>
-                      <p class="mt-1 line-clamp-3 text-xs leading-snug text-muted-foreground">{{ c.descripcion }}</p>
-                    </div>
-                    @if (puedeGestionar()) {
-                      <div class="flex shrink-0 gap-0.5">
-                        <button type="button" class="alma-btn alma-btn-ghost" almaTooltip="Editar" (click)="editarCategoria(c)"><lucide-icon name="pencil" [size]="15" /></button>
-                        @if (!c.es_fallback) {
-                          <button type="button" class="alma-btn alma-btn-ghost text-destructive" almaTooltip="Eliminar" (click)="eliminarCategoria(c)"><lucide-icon name="trash-2" [size]="15" /></button>
-                        }
-                      </div>
-                    }
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (a of accionesOrdenadas(c); track $index) {
-                      <span class="inline-flex items-center gap-1 rounded-full border border-border/60 bg-[var(--surface-sunken)] px-2 py-0.5 text-[11px] text-foreground" [class.line-through]="!a.activa">
-                        <lucide-icon [name]="icono(a.tipo)" [size]="11" class="text-primary" /> {{ resumen(a) }}
-                      </span>
-                    }
-                    @if (!c.acciones.length) { <span class="text-[11px] italic text-muted-foreground">Sin acciones: queda en la bandeja para revisión.</span> }
-                  </div>
-                  <div class="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span class="inline-flex items-center gap-1"><lucide-icon name="scan-text" [size]="11" /> {{ c.campos_extraer.length }} datos a extraer</span>
-                    <span class="inline-flex items-center gap-1"><lucide-icon name="gauge" [size]="11" /> umbral {{ ((c.umbral_confianza ?? b.umbral_confianza) * 100) | number: '1.0-0' }}%</span>
-                    <span class="inline-flex items-center gap-1 tabular-nums"><lucide-icon name="mail" [size]="11" /> {{ c.correos_30d }} en 30 días</span>
-                  </div>
-                </article>
-              }
-            </div>
-          }
-
-          <!-- ── REGLAS FIJAS ── -->
-          @case ('reglas') {
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="text-sm text-muted-foreground">Atajos sin IA: si el correo cumple todas las condiciones se clasifica directo (útil para notificaciones automáticas).</p>
-              @if (puedeGestionar()) {
-                <button type="button" class="alma-btn alma-btn-primary rounded-xl" (click)="nuevaRegla()"><lucide-icon name="plus" [size]="16" /> Nueva regla</button>
-              }
-            </div>
-            <div class="glass overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]">
-              @if (reglas().length === 0) {
-                <p class="p-8 text-center text-sm text-muted-foreground">No hay reglas fijas. Todo pasa por la IA.</p>
-              } @else {
-                <div class="overflow-x-auto">
-                  <table class="alma-table">
-                    <thead><tr><th>Regla</th><th>Remitente contiene</th><th>Asunto contiene</th><th>Cuerpo contiene</th><th>Clasifica como</th><th class="text-right"></th></tr></thead>
-                    <tbody>
-                      @for (r of reglas(); track r.id) {
-                        <tr [class.opacity-50]="!r.activa">
-                          <td class="font-medium">{{ r.nombre }}</td>
-                          <td class="font-mono text-xs">{{ r.remitente_contiene || '—' }}</td>
-                          <td class="font-mono text-xs">{{ r.asunto_contiene || '—' }}</td>
-                          <td class="font-mono text-xs">{{ r.cuerpo_contiene || '—' }}</td>
-                          <td><span class="alma-badge text-white" [style.background]="colorDe(r.categoria_id)">{{ claveDe(r.categoria_id) }}</span></td>
-                          <td class="text-right">
-                            @if (puedeGestionar()) {
-                              <button type="button" class="alma-btn alma-btn-ghost" (click)="editarRegla(r)"><lucide-icon name="pencil" [size]="15" /></button>
-                              <button type="button" class="alma-btn alma-btn-ghost text-destructive" (click)="eliminarRegla(r)"><lucide-icon name="trash-2" [size]="15" /></button>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- ── AJUSTES ── -->
-          @case ('ajustes') {
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <section class="glass rounded-2xl p-5 shadow-[var(--shadow-sm)] lg:col-span-2">
-                <h2 class="text-sm font-semibold text-foreground">Contexto del área para la IA</h2>
-                <p class="mt-0.5 text-xs text-muted-foreground">Lo que cualquier analista nuevo debería saber: qué hace el área, documentos típicos, glosario, NIT, cuentas, marco legal. Se envía en cada clasificación.</p>
-                <textarea class="alma-input mt-3 min-h-52 py-2 text-sm leading-relaxed" [(ngModel)]="ajustes.contexto" [disabled]="!puedeGestionar()"></textarea>
-              </section>
-              <section class="glass flex flex-col gap-4 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
-                <div>
-                  <h2 class="text-sm font-semibold text-foreground">Parámetros</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Cómo y cuándo actúa Alma sobre este buzón.</p>
-                </div>
-                <div class="flex flex-col gap-1.5"><label class="alma-label">Nombre</label><input class="alma-input" [(ngModel)]="ajustes.nombre" [disabled]="!puedeGestionar()" /></div>
-                <div class="flex flex-col gap-1.5"><label class="alma-label">Área</label><input class="alma-input" [(ngModel)]="ajustes.area" [disabled]="!puedeGestionar()" /></div>
-                <div class="flex flex-col gap-1.5">
-                  <label class="alma-label flex items-center gap-1">Carpeta vigilada <lucide-icon name="info" [size]="12" almaTooltip="Inbox = Bandeja de entrada. Puedes indicar otra carpeta por su nombre." /></label>
-                  <input class="alma-input" [(ngModel)]="ajustes.carpeta_vigilada" [disabled]="!puedeGestionar()" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                  <label class="alma-label">Umbral de confianza para actuar solo: <b class="text-foreground">{{ ajustes.umbral }}%</b></label>
-                  <input type="range" min="50" max="99" class="accent-[var(--primary)]" [(ngModel)]="ajustes.umbral" [disabled]="!puedeGestionar()" />
-                  <p class="text-[11px] text-muted-foreground">Debajo del umbral el correo espera aprobación en la bandeja.</p>
-                </div>
-                <div class="flex flex-col gap-1.5"><label class="alma-label">Correos por ciclo (cada 5 min)</label><input type="number" min="1" max="200" class="alma-input" [(ngModel)]="ajustes.max" [disabled]="!puedeGestionar()" /></div>
-                <label class="flex items-center justify-between text-sm"><span>Buzón activo</span><alma-switch [checked]="ajustes.activo" (checkedChange)="ajustes.activo = $event" [disabled]="!puedeGestionar()" ariaLabel="Buzón activo" /></label>
-                @if (puedeGestionar()) {
-                  <button type="button" class="alma-btn alma-btn-primary rounded-xl" [disabled]="guardandoAjustes()" (click)="guardarAjustes()">
-                    <lucide-icon [name]="guardandoAjustes() ? 'loader-2' : 'save'" [size]="15" [class.animate-spin]="guardandoAjustes()" /> Guardar ajustes
-                  </button>
-                }
-              </section>
-
-              <!-- Clasificador -->
-              <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)] lg:col-span-2">
-                <div>
-                  <h2 class="text-sm font-semibold text-foreground">Modo de clasificación</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Quién decide el proceso y la etiqueta de cada correo.</p>
-                </div>
-                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Modo de clasificación">
-                  @for (m of modosClasificacion; track m.id) {
-                    <button type="button" role="radio" [attr.aria-checked]="ajustes.modo_clasificacion === m.id" class="flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors" [class]="ajustes.modo_clasificacion === m.id ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/50'" [disabled]="!puedeGestionar()" (click)="ajustes.modo_clasificacion = m.id">
-                      <span class="flex items-center gap-1.5 text-sm font-semibold text-foreground"><lucide-icon [name]="m.icon" [size]="15" /> {{ m.nombre }}</span>
-                      <span class="text-xs text-muted-foreground">{{ m.ayuda }}</span>
-                    </button>
-                  }
-                </div>
-                @if (ajustes.modo_clasificacion === 'agente') {
-                  <div class="flex flex-col gap-1.5">
-                    <label class="alma-label" for="aj-agente">Nombre del agente en Foundry *</label>
-                    <input id="aj-agente" class="alma-input" [(ngModel)]="ajustes.agente_nombre" [disabled]="!puedeGestionar()" placeholder="DistribucionCorreosRecaudos" />
-                    <p class="text-[11px] text-muted-foreground">Alma invoca el agente del área y valida cada respuesta contra los procesos y etiquetas de este buzón.</p>
-                  </div>
-                }
-              </section>
-              <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
-                <div>
-                  <h2 class="text-sm font-semibold text-foreground">Al desactivar a alguien</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Qué pasa con los casos que una base le asigna a una persona ausente o inactiva en el grupo.</p>
-                </div>
-                <label class="alma-label sr-only" for="aj-desact">Al desactivar a alguien</label>
-                <select id="aj-desact" class="alma-input" [(ngModel)]="ajustes.al_desactivar" [disabled]="!puedeGestionar()">
-                  <option value="respaldo">Respaldo fijo: va a su respaldo del grupo o de la base</option>
-                  <option value="roundrobin">Round-robin: se reparte entre los activos</option>
-                </select>
-              </section>
-            </div>
-          }
-
-          <!-- ── PROBAR ── -->
-          @case ('probar') {
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
-                <div>
-                  <h2 class="text-sm font-semibold text-foreground">Probar con un correo</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Pega un correo real (o inventa uno) y mira cómo lo clasificaría Alma con la configuración actual. No se ejecuta nada.</p>
-                </div>
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div class="flex flex-col gap-1.5"><label class="alma-label">Remitente</label><input class="alma-input" [(ngModel)]="prueba.remitente" placeholder="asesor@fp.skandia.com.co" /></div>
-                  <div class="flex flex-col gap-1.5"><label class="alma-label">Asunto</label><input class="alma-input" [(ngModel)]="prueba.asunto" placeholder="Exención 4x1000 traslado FPV" /></div>
-                </div>
-                <div class="flex flex-col gap-1.5"><label class="alma-label">Cuerpo</label><textarea class="alma-input min-h-32 py-2" [(ngModel)]="prueba.cuerpo" placeholder="Buen día, adjunto carta de autorización a Davivienda y certificado…"></textarea></div>
-                <div class="flex flex-col gap-1.5"><label class="alma-label">Texto de adjuntos (opcional)</label><textarea class="alma-input min-h-20 py-2" [(ngModel)]="prueba.texto_adjuntos" placeholder="Pega aquí el texto de un PDF para simular el adjunto…"></textarea></div>
-                <div class="flex items-center gap-2">
-                  <button type="button" class="alma-btn alma-btn-primary rounded-xl" [disabled]="probando() || !prueba.asunto" (click)="probar()">
-                    <lucide-icon [name]="probando() ? 'loader-2' : 'sparkles'" [size]="15" [class.animate-spin]="probando()" /> Clasificar con IA
-                  </button>
-                  <button type="button" class="alma-btn alma-btn-outline rounded-xl" (click)="ejemploPrueba()"><lucide-icon name="flask-conical" [size]="15" /> Usar un ejemplo</button>
-                </div>
-              </section>
-              <section class="glass flex flex-col rounded-2xl p-5 shadow-[var(--shadow-sm)]">
-                @if (resultado(); as r) {
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Clasificación</p>
-                      <p class="mt-1 text-xl font-bold text-foreground">{{ r.categoria_nombre ?? 'Sin categoría' }}</p>
-                      <p class="font-mono text-xs text-muted-foreground">{{ r.categoria_clave }}</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Confianza</p>
-                      <p class="mt-1 text-3xl font-bold tabular-nums" [class]="r.cumple_umbral ? 'text-emerald-600' : 'text-amber-600'">{{ (r.confianza * 100) | number: '1.0-0' }}%</p>
-                      <p class="text-[11px]" [class]="r.cumple_umbral ? 'text-emerald-600' : 'text-amber-600'">{{ r.cumple_umbral ? 'Se ejecutaría solo' : 'Iría a revisión' }}</p>
-                    </div>
-                  </div>
-                  <div class="mt-4 h-2 overflow-hidden rounded-full bg-[var(--surface-sunken)]"><div class="h-full rounded-full transition-all" [class]="r.cumple_umbral ? 'bg-emerald-500' : 'bg-amber-500'" [style.width.%]="r.confianza * 100"></div></div>
-                  <div class="mt-4 rounded-xl bg-[var(--surface-sunken)] p-3">
-                    <p class="text-[11px] font-semibold text-muted-foreground">Resumen</p>
-                    <p class="mt-1 text-sm text-foreground">{{ r.resumen }}</p>
-                    <p class="mt-2 text-[11px] font-semibold text-muted-foreground">Por qué</p>
-                    <p class="mt-1 text-xs text-muted-foreground">{{ r.justificacion }}</p>
-                  </div>
-                  @if (entradas(r.datos_extraidos).length) {
-                    <div class="mt-3">
-                      <p class="text-[11px] font-semibold text-muted-foreground">Datos extraídos</p>
-                      <dl class="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                        @for (d of entradas(r.datos_extraidos); track d[0]) {
-                          <dt class="font-mono text-muted-foreground">{{ d[0] }}</dt><dd class="truncate text-foreground">{{ d[1] || '—' }}</dd>
-                        }
-                      </dl>
-                    </div>
-                  }
-                  <div class="mt-3">
-                    <p class="text-[11px] font-semibold text-muted-foreground">Acciones que se ejecutarían</p>
-                    <div class="mt-1 flex flex-wrap gap-1.5">
-                      @for (a of r.acciones_previstas; track $index) {
-                        <span class="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[11px]"><lucide-icon [name]="icono(a.tipo)" [size]="11" class="text-primary" /> {{ resumen(a) }}</span>
-                      }
-                      @if (!r.acciones_previstas.length) { <span class="text-[11px] italic text-muted-foreground">Ninguna: quedaría en la bandeja.</span> }
-                    </div>
-                  </div>
-                } @else {
-                  <div class="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-                    <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><lucide-icon name="sparkles" [size]="26" /></span>
-                    <p class="text-sm text-muted-foreground">El resultado de la clasificación aparecerá aquí.</p>
-                  </div>
-                }
-              </section>
-            </div>
-          }
+        @switch (tabVisible()) {
+          @case ('reglas') { <alma-reglas-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" /> }
+          @case ('asig') { <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" /> }
+          @case ('plant') { <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" /> }
+          @case ('ajustes') { <alma-ajustes-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" (reconectar)="conectar()" /> }
         }
       </div>
 
-      @if (editorAbierto()) {
-        <alma-categoria-editor [categoria]="categoriaEditando()" [guardando]="guardandoCategoria()" (guardar)="guardarCategoria($event)" (cancelar)="editorAbierto.set(false)" />
-      }
-
-      @if (reglaAbierta()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="reglaAbierta.set(false)">
-          <div class="surface-solid w-full max-w-lg rounded-2xl border border-border p-5 shadow-[var(--shadow-lg)]" (click)="$event.stopPropagation()">
-            <div class="mb-4 flex items-center justify-between">
-              <h2 class="text-sm font-semibold text-foreground">{{ reglaEditando() ? 'Editar regla' : 'Nueva regla fija' }}</h2>
-              <button type="button" class="alma-btn alma-btn-ghost" (click)="reglaAbierta.set(false)"><lucide-icon name="x" [size]="16" /></button>
+      @if (modulosAbierto()) {
+        <div class="scrim" (click)="$event.target === $event.currentTarget && modulosAbierto.set(false)">
+          <div class="modal solid" role="dialog" aria-modal="true" aria-label="Activar módulo">
+            <div class="row between">
+              <div><h2 class="sm b">Activar módulo</h2><p class="xs muted">Cada módulo agrega su pestaña al buzón. Desactivarlo conserva su configuración.</p></div>
+              <button type="button" class="btn ghost" (click)="modulosAbierto.set(false)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
             </div>
-            <div class="grid grid-cols-1 gap-3">
-              <div class="flex flex-col gap-1.5"><label class="alma-label">Nombre *</label><input class="alma-input" [(ngModel)]="reglaForm.nombre" /></div>
-              <div class="flex flex-col gap-1.5"><label class="alma-label">Remitente contiene</label><input class="alma-input" [(ngModel)]="reglaForm.remitente_contiene" placeholder="notificaciones@banco.com" /></div>
-              <div class="flex flex-col gap-1.5"><label class="alma-label">Asunto contiene</label><input class="alma-input" [(ngModel)]="reglaForm.asunto_contiene" /></div>
-              <div class="flex flex-col gap-1.5"><label class="alma-label">Cuerpo contiene</label><input class="alma-input" [(ngModel)]="reglaForm.cuerpo_contiene" /></div>
-              <div class="flex flex-col gap-1.5">
-                <label class="alma-label">Clasificar como *</label>
-                <select class="alma-input" [(ngModel)]="reglaForm.categoria_id">
-                  @for (c of categorias(); track c.id) { <option [value]="c.id">{{ c.nombre }} ({{ c.clave }})</option> }
-                </select>
-              </div>
-              <label class="flex items-center gap-2 text-sm"><alma-switch [checked]="reglaForm.activa" (checkedChange)="reglaForm.activa = $event" /> Regla activa</label>
-            </div>
-            @if (errorRegla(); as e) { <p class="mt-3 text-xs text-destructive">{{ e }}</p> }
-            <div class="mt-5 flex justify-end gap-2">
-              <button type="button" class="alma-btn alma-btn-outline" (click)="reglaAbierta.set(false)">Cancelar</button>
-              <button type="button" class="alma-btn alma-btn-primary" [disabled]="guardandoRegla()" (click)="guardarRegla()"><lucide-icon name="save" [size]="15" /> Guardar</button>
+            <div class="g3">
+              @for (m of tarjetasModulos(); track m.id) {
+                <div class="optcard" style="cursor:default">
+                  <span class="row sm b"><lucide-icon [name]="m.icon" [size]="13" /> {{ m.titulo }}</span>
+                  <span class="xs muted">{{ m.desc }}</span>
+                  @if (b[m.id]) {
+                    <span class="badge b-emerald" style="justify-self:start">Activo</span>
+                  } @else if (m.requiere) {
+                    <span class="xxs" style="color:var(--amber)">{{ m.requiere }}</span>
+                    <button type="button" class="btn outline sm" style="justify-self:start" (click)="m.id === 'mod_bases' ? activar('mod_asignacion') : irAReglas()">{{ m.id === 'mod_bases' ? 'Activar asignación' : 'Ir a Reglas' }}</button>
+                  } @else {
+                    <button type="button" class="btn primary sm" style="justify-self:start" (click)="activar(m.id)">Activar</button>
+                  }
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -389,65 +133,41 @@ export class BuzonConfigComponent {
   private readonly auth = inject(AuthService);
   private readonly api = inject(BuzonApi);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly puedeVer = computed(() => this.auth.hasPermission(PERM_VER_BUZON));
-  /** Admin o editor del buzón (el backend lo calcula por buzón). */
-  protected readonly puedeGestionar = computed(() => !!this.buzon()?.puede_administrar);
-
-  protected readonly tabs: { id: Tab; nombre: string; icon: string }[] = [
-    { id: 'procesos', nombre: 'Procesos', icon: 'workflow' },
-    { id: 'tipos', nombre: 'Tipos de correo', icon: 'tags' },
-    { id: 'reglas', nombre: 'Reglas fijas', icon: 'list-filter' },
-    { id: 'asignacion', nombre: 'Asignación', icon: 'route' },
-    { id: 'exportacion', nombre: 'Exportación', icon: 'file-spreadsheet' },
-    { id: 'ajustes', nombre: 'Ajustes e IA', icon: 'sliders-horizontal' },
-    { id: 'probar', nombre: 'Probar', icon: 'flask-conical' },
-  ];
-  protected readonly modosClasificacion: { id: ModoClasificacion; nombre: string; ayuda: string; icon: string }[] = [
-    { id: 'prompt', nombre: 'Prompt de Alma', ayuda: 'Las reglas viven en Alma (procesos y tipos de correo) y Alma arma el prompt.', icon: 'scroll-text' },
-    { id: 'agente', nombre: 'Agente de Foundry', ayuda: 'El área administra su propio agente; Alma lo invoca y valida cada respuesta.', icon: 'bot' },
-  ];
-  private readonly route = inject(ActivatedRoute);
-  protected readonly tab = signal<Tab>(
-    TABS.includes(this.route.snapshot.queryParamMap.get('tab') as Tab) ? (this.route.snapshot.queryParamMap.get('tab') as Tab) : 'procesos',
-  );
-
   protected readonly cargando = signal(true);
   protected readonly errorCarga = signal<string | null>(null);
   protected readonly buzon = signal<Buzon | null>(null);
   protected readonly categorias = signal<Categoria[]>([]);
-  protected readonly reglas = signal<ReglaFija[]>([]);
+  protected readonly modulosAbierto = signal(false);
+  protected readonly tab = signal<Tab>(this.tabInicial());
 
-  protected readonly editorAbierto = signal(false);
-  protected readonly categoriaEditando = signal<Categoria | null>(null);
-  protected readonly guardandoCategoria = signal(false);
-
-  protected readonly reglaAbierta = signal(false);
-  protected readonly reglaEditando = signal<ReglaFija | null>(null);
-  protected readonly guardandoRegla = signal(false);
-  protected readonly errorRegla = signal<string | null>(null);
-  protected reglaForm: ReglaIn = { nombre: '', remitente_contiene: '', asunto_contiene: '', cuerpo_contiene: '', categoria_id: '', orden: 1, activa: true };
-
-  protected readonly guardandoAjustes = signal(false);
-  protected ajustes = {
-    nombre: '',
-    area: '',
-    carpeta_vigilada: 'Inbox',
-    umbral: 80,
-    max: 25,
-    activo: true,
-    contexto: '',
-    modo_clasificacion: 'prompt' as ModoClasificacion,
-    agente_nombre: '',
-    al_desactivar: 'respaldo' as AlDesactivar,
-  };
-
-  protected readonly probando = signal(false);
-  protected readonly resultado = signal<ResultadoPrueba | null>(null);
-  protected prueba = { remitente: '', asunto: '', cuerpo: '', texto_adjuntos: '' };
-
-  protected readonly icono = iconoAccion;
-  protected readonly resumen = resumenAccion;
+  protected readonly gradiente = computed(() => gradienteBuzon(this.buzon()!));
+  protected readonly modulosActivos = computed(() => {
+    const b = this.buzon()!;
+    return ['Reglas', ...(b.mod_asignacion ? ['Asignación'] : []), ...(b.mod_exportacion ? ['Exportación'] : [])].join(' · ');
+  });
+  protected readonly tabs = computed(() => {
+    const b = this.buzon();
+    return [
+      { id: 'reglas' as Tab, nombre: 'Reglas', icon: 'scroll-text' },
+      ...(b?.mod_asignacion ? [{ id: 'asig' as Tab, nombre: 'Asignación', icon: 'user-check' }] : []),
+      ...(b?.mod_exportacion ? [{ id: 'plant' as Tab, nombre: 'Exportación', icon: 'file-spreadsheet' }] : []),
+      { id: 'ajustes' as Tab, nombre: 'Ajustes', icon: 'sliders-horizontal' },
+    ];
+  });
+  /** Si el módulo de la pestaña elegida se apaga, vuelve a Reglas. */
+  protected readonly tabVisible = computed(() => (this.tabs().some((t) => t.id === this.tab()) ? this.tab() : 'reglas'));
+  protected readonly tarjetasModulos = computed(() => {
+    const b = this.buzon()!;
+    const publicado = !!b.version_reglas;
+    return [
+      { id: 'mod_asignacion' as Modulo, icon: 'users', titulo: 'Asignación', desc: 'Grupos de etiquetas, equipo y round-robin entre los activos.', requiere: publicado ? '' : 'Publica las reglas primero: los grupos se arman con sus etiquetas.' },
+      { id: 'mod_bases' as Modulo, icon: 'database', titulo: 'Búsqueda en bases', desc: 'Responsable fijo según una base de Excel (subida o en SharePoint).', requiere: b.mod_asignacion ? '' : 'Activa primero la asignación.' },
+      { id: 'mod_exportacion' as Modulo, icon: 'file-spreadsheet', titulo: 'Exportación', desc: 'Archivo por proceso: tabla según el JSON o plantilla propia.', requiere: publicado ? '' : 'Publica las reglas primero.' },
+    ];
+  });
 
   private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
 
@@ -455,204 +175,61 @@ export class BuzonConfigComponent {
     void this.cargar();
   }
 
-  private async cargar(): Promise<void> {
-    this.cargando.set(true);
-    try {
-      const [b, cats, reglas] = await Promise.all([
-        this.api.obtenerBuzon(this.id),
-        this.api.listarCategorias(this.id),
-        this.api.listarReglas(this.id),
-      ]);
-      this.buzon.set(b);
-      this.categorias.set([...cats].sort((x, y) => x.orden - y.orden));
-      this.reglas.set([...reglas].sort((x, y) => x.orden - y.orden));
-      this.ajustes = {
-        nombre: b.nombre,
-        area: b.area ?? '',
-        carpeta_vigilada: b.carpeta_vigilada,
-        umbral: Math.round(b.umbral_confianza * 100),
-        max: b.max_correos_por_tick,
-        activo: b.activo,
-        contexto: b.contexto ?? '',
-        modo_clasificacion: b.modo_clasificacion ?? 'prompt',
-        agente_nombre: b.agente_nombre ?? '',
-        al_desactivar: b.al_desactivar ?? 'respaldo',
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.errorCarga.set(msg);
-      this.toast.error('No se pudo cargar el buzón', msg);
-    } finally {
-      this.cargando.set(false);
-    }
+  private tabInicial(): Tab {
+    const t = inject(ActivatedRoute).snapshot.queryParamMap.get('tab');
+    return t === 'asig' || t === 'plant' || t === 'ajustes' ? t : 'reglas';
   }
 
-  /** Procesos cambió etiquetas o el prompt del área: se recargan tipos y buzón. */
-  protected async recargarTipos(): Promise<void> {
+  private async cargar(): Promise<void> {
+    this.cargando.set(true);
     try {
       const [b, cats] = await Promise.all([this.api.obtenerBuzon(this.id), this.api.listarCategorias(this.id)]);
       this.buzon.set(b);
       this.categorias.set([...cats].sort((x, y) => x.orden - y.orden));
     } catch (e) {
-      this.toast.error('No se pudieron recargar los tipos de correo', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  protected accionesOrdenadas(c: Categoria) {
-    return [...c.acciones].sort((a, b) => a.orden - b.orden);
-  }
-  protected claveDe(id: string): string {
-    return this.categorias().find((c) => c.id === id)?.clave ?? '—';
-  }
-  protected colorDe(id: string): string {
-    return this.categorias().find((c) => c.id === id)?.color ?? '#8E8E93';
-  }
-  protected entradas(o: Record<string, unknown> | null): [string, string][] {
-    return Object.entries(o ?? {}).map(([k, v]) => [k, v === null || v === undefined ? '' : String(v)]);
-  }
-
-  protected async cambiarModo(auto: boolean): Promise<void> {
-    const b = this.buzon();
-    if (!b) return;
-    try {
-      const actualizado = await this.api.actualizarBuzon(b.id, { modo: auto ? 'automatico' : 'sugerir' });
-      this.buzon.set(actualizado);
-      this.toast.show(auto ? 'Modo automático activado' : 'Modo “solo sugiere” activado', auto ? `Sobre ${Math.round(actualizado.umbral_confianza * 100)}% de confianza Alma actúa sin preguntar.` : 'Todo pasa por la bandeja de revisión.');
-    } catch (e) {
-      this.toast.error('No se pudo cambiar el modo', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  protected async guardarAjustes(): Promise<void> {
-    const b = this.buzon();
-    if (!b) return;
-    if (this.ajustes.modo_clasificacion === 'agente' && !this.ajustes.agente_nombre.trim()) {
-      this.toast.error('Falta el agente', 'Escribe el nombre del agente de Foundry o vuelve al prompt de Alma.');
-      return;
-    }
-    this.guardandoAjustes.set(true);
-    try {
-      const actualizado = await this.api.actualizarBuzon(b.id, {
-        nombre: this.ajustes.nombre.trim(),
-        area: this.ajustes.area.trim() || null,
-        carpeta_vigilada: this.ajustes.carpeta_vigilada.trim() || 'Inbox',
-        umbral_confianza: this.ajustes.umbral / 100,
-        max_correos_por_tick: Number(this.ajustes.max) || 25,
-        activo: this.ajustes.activo,
-        contexto: this.ajustes.contexto.trim() || null,
-        modo_clasificacion: this.ajustes.modo_clasificacion,
-        agente_nombre: this.ajustes.agente_nombre.trim() || null,
-        al_desactivar: this.ajustes.al_desactivar,
-      });
-      this.buzon.set(actualizado);
-      this.toast.show('Ajustes guardados');
-    } catch (e) {
-      this.toast.error('No se pudieron guardar los ajustes', e instanceof Error ? e.message : String(e));
+      this.errorCarga.set(e instanceof Error ? e.message : String(e));
     } finally {
-      this.guardandoAjustes.set(false);
+      this.cargando.set(false);
     }
   }
 
-  // Categorías
-  protected nuevaCategoria(): void {
-    this.categoriaEditando.set(null);
-    this.editorAbierto.set(true);
+  protected irAReglas(): void {
+    this.modulosAbierto.set(false);
+    this.tab.set('reglas');
   }
-  protected editarCategoria(c: Categoria): void {
-    this.categoriaEditando.set(c);
-    this.editorAbierto.set(true);
-  }
-  protected async guardarCategoria(body: CategoriaIn): Promise<void> {
-    this.guardandoCategoria.set(true);
+
+  protected async activar(m: Modulo): Promise<void> {
     try {
-      const actual = this.categoriaEditando();
-      if (actual) await this.api.actualizarCategoria(actual.id, body);
-      else await this.api.crearCategoria(this.id, body);
-      this.editorAbierto.set(false);
-      this.toast.show(actual ? 'Tipo de correo actualizado' : 'Tipo de correo creado', body.nombre);
+      const b = await this.api.actualizarBuzon(this.id, { [m]: true });
+      this.buzon.set(b);
       this.categorias.set((await this.api.listarCategorias(this.id)).sort((x, y) => x.orden - y.orden));
+      this.modulosAbierto.set(false);
+      this.tab.set(m === 'mod_exportacion' ? 'plant' : 'asig');
+      this.toast.show(
+        { mod_asignacion: 'Asignación activada: arma los grupos y el equipo', mod_bases: 'Búsqueda en bases activada: agrégala en Reglas por grupo', mod_exportacion: 'Exportación activada' }[m],
+      );
     } catch (e) {
-      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.guardandoCategoria.set(false);
-    }
-  }
-  protected async eliminarCategoria(c: Categoria): Promise<void> {
-    if (!confirm(`¿Eliminar el tipo “${c.nombre}”? Los correos ya clasificados conservan su histórico.`)) return;
-    try {
-      await this.api.eliminarCategoria(c.id);
-      this.categorias.update((l) => l.filter((x) => x.id !== c.id));
-      this.toast.show('Tipo eliminado', c.nombre);
-    } catch (e) {
-      this.toast.error('No se pudo eliminar', e instanceof Error ? e.message : String(e));
+      this.toast.error('No se pudo activar el módulo', e instanceof Error ? e.message : String(e));
     }
   }
 
-  // Reglas
-  protected nuevaRegla(): void {
-    this.reglaEditando.set(null);
-    this.reglaForm = { nombre: '', remitente_contiene: '', asunto_contiene: '', cuerpo_contiene: '', categoria_id: this.categorias()[0]?.id ?? '', orden: this.reglas().length + 1, activa: true };
-    this.errorRegla.set(null);
-    this.reglaAbierta.set(true);
-  }
-  protected editarRegla(r: ReglaFija): void {
-    this.reglaEditando.set(r);
-    this.reglaForm = { nombre: r.nombre, remitente_contiene: r.remitente_contiene ?? '', asunto_contiene: r.asunto_contiene ?? '', cuerpo_contiene: r.cuerpo_contiene ?? '', categoria_id: r.categoria_id, orden: r.orden, activa: r.activa };
-    this.errorRegla.set(null);
-    this.reglaAbierta.set(true);
-  }
-  protected async guardarRegla(): Promise<void> {
-    const f = this.reglaForm;
-    if (!f.nombre.trim() || !f.categoria_id) {
-      this.errorRegla.set('Nombre y categoría son obligatorios.');
-      return;
-    }
-    if (!f.remitente_contiene && !f.asunto_contiene && !f.cuerpo_contiene) {
-      this.errorRegla.set('Indica al menos una condición.');
-      return;
-    }
-    this.guardandoRegla.set(true);
+  /** Inicio de sesión de Microsoft con la cuenta del administrador (acceso delegado al buzón). */
+  protected async conectar(): Promise<void> {
+    const b = this.buzon();
+    if (!b) return;
     try {
-      const body: ReglaIn = { ...f, remitente_contiene: f.remitente_contiene || null, asunto_contiene: f.asunto_contiene || null, cuerpo_contiene: f.cuerpo_contiene || null };
-      const actual = this.reglaEditando();
-      if (actual) await this.api.actualizarRegla(actual.id, body);
-      else await this.api.crearRegla(this.id, body);
-      this.reglaAbierta.set(false);
-      this.reglas.set((await this.api.listarReglas(this.id)).sort((x, y) => x.orden - y.orden));
-      this.toast.show(actual ? 'Regla actualizada' : 'Regla creada', body.nombre);
+      const c = await this.api.conexion(b.id);
+      if (!c.configurado) {
+        this.toast.error('Correo no configurado', 'El ambiente no tiene credenciales de Microsoft Graph.');
+        return;
+      }
+      if (this.api.modoDemo()) {
+        this.toast.show('Modo demostración', 'Aquí se abriría el inicio de sesión de Microsoft con tu cuenta.');
+        return;
+      }
+      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones/${b.id}?tab=ajustes`));
     } catch (e) {
-      this.errorRegla.set(e instanceof Error ? e.message : String(e));
-    } finally {
-      this.guardandoRegla.set(false);
-    }
-  }
-  protected async eliminarRegla(r: ReglaFija): Promise<void> {
-    if (!confirm(`¿Eliminar la regla “${r.nombre}”?`)) return;
-    try {
-      await this.api.eliminarRegla(r.id);
-      this.reglas.update((l) => l.filter((x) => x.id !== r.id));
-    } catch (e) {
-      this.toast.error('No se pudo eliminar', e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  // Probar
-  protected ejemploPrueba(): void {
-    this.prueba = {
-      remitente: 'mrodriguez@fp.skandia.com.co',
-      asunto: 'Exención 4x1000 traslado FPV - Juan Carlos Mejía',
-      cuerpo: 'Buen día equipo de Recaudos. Adjunto carta de autorización firmada por el afiliado para que Bancolombia debite $15.000.000 de su cuenta y los traslade al Fondo de Pensiones Voluntarias de Skandia (NIT 830.038.085-1), junto con la certificación de Skandia y el comprobante de la transferencia aprobada. Quedo atenta.',
-      texto_adjuntos: 'CERTIFICACION PARA TRASLADOS DE RECURSOS DE CUENTAS CORRIENTES O DE AHORRO A CUENTAS DEL FONDO DE PENSIONES VOLUNTARIAS. Skandia Pensiones y Cesantías S.A. NIT 800.148.514-2 certifica que el traslado de Juan Carlos Mejía Torres CC 79.845.112 contrato 100006818611 corresponde a adición de aportes. Decreto 660 de 2011 Art. 8 Num. 2. Solicitud aprobada No. 8812903 cuenta destino 200-3511643-8 valor 15.000.000.',
-    };
-  }
-  protected async probar(): Promise<void> {
-    this.probando.set(true);
-    try {
-      this.resultado.set(await this.api.probar(this.id, { ...this.prueba, texto_adjuntos: this.prueba.texto_adjuntos || undefined }));
-    } catch (e) {
-      this.toast.error('No se pudo clasificar', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.probando.set(false);
+      this.toast.error('No se pudo iniciar la conexión', e instanceof Error ? e.message : String(e));
     }
   }
 }
