@@ -54,9 +54,6 @@ export interface Buzon {
   max_correos_por_tick: number;
   contexto: string | null;
   activo: boolean;
-  /** Solo en la respuesta de crear: la dirección ya había tenido un buzón que
-   *  se eliminó, y se restauró con su configuración (queda pausado). */
-  restaurado?: boolean;
   ultima_sincronizacion: string | null;
   ultimo_error: string | null;
   categorias_count: number;
@@ -521,9 +518,19 @@ export interface PruebaSeco {
   filas: { asunto: string; proceso: string; etiqueta: string | null; confianza: number; datos: boolean; validar: boolean; destino: string }[];
 }
 
+/** Dominios conectables por defecto; el backend manda los del ambiente en /opciones. */
+export const DOMINIOS_CORREO = ['skandia.com.co'];
+
+export interface OpcionesBuzon {
+  modelos: string[];
+  dominios_correo?: string[];
+}
+
 export interface NombreBuzon {
   nombre: string;
   disponible: boolean;
+  /** La dirección es de un dominio corporativo conectable (BUZON_DOMINIOS_CORREO). */
+  dominio_permitido?: boolean;
   existente: { id: string; nombre: string; misma_direccion: boolean } | null;
 }
 
@@ -1042,8 +1049,8 @@ export class BuzonApi {
     );
   }
 
-  /** Quita el buzón de la App (borrado lógico: el historial se conserva y
-   *  registrar de nuevo la dirección lo restaura). */
+  /** Quita el buzón de la App (borrado lógico: el historial se conserva como
+   *  auditoría; registrar de nuevo la dirección crea un buzón en blanco). */
   eliminarBuzon(id: string): Promise<void> {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/buzones/${id}`, { method: 'DELETE' }),
@@ -1095,7 +1102,9 @@ export class BuzonApi {
    * cuenta. Vuelve por la ruta existente /graph-callback con state
    * "b:<correo_buzon_id>|<ruta>", que ya canjea el código en el backend.
    */
-  urlConectar(correoBuzonId: string, scopes: string, volverA: string): string {
+  /** `cuenta`: la cuenta con la que se debe iniciar sesión (la del buzón personal);
+   *  Microsoft la propone en el selector. */
+  urlConectar(correoBuzonId: string, scopes: string, volverA: string, cuenta?: string): string {
     const redirect = `${window.location.origin}/graph-callback`;
     const qs = new URLSearchParams({
       client_id: environment.azure.clientId,
@@ -1106,6 +1115,7 @@ export class BuzonApi {
       state: `b:${correoBuzonId}|${volverA}`,
       prompt: 'select_account',
     });
+    if (cuenta) qs.set('login_hint', cuenta);
     return `https://login.microsoftonline.com/${environment.azure.tenantId}/oauth2/v2.0/authorize?${qs}`;
   }
 
@@ -1649,11 +1659,11 @@ export class BuzonApi {
     return this.demo.conectarDemo(buzonId, this.auth.user().correo);
   }
 
-  /** Modelos de IA que la plataforma ofrece. */
-  opciones(): Promise<{ modelos: string[] }> {
+  /** Modelos de IA y dominios de correo que la plataforma ofrece. */
+  opciones(): Promise<OpcionesBuzon> {
     return this.conDemo(
-      () => this.api.fetch<{ modelos: string[] }>(`${BASE}/opciones`),
-      () => ({ modelos: ['gpt-5-mini', 'gpt-4.1'] }),
+      () => this.api.fetch<OpcionesBuzon>(`${BASE}/opciones`),
+      () => ({ modelos: ['gpt-5-mini', 'gpt-4.1'], dominios_correo: DOMINIOS_CORREO }),
     );
   }
 

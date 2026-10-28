@@ -394,7 +394,7 @@ export class BuzonesPageComponent {
         return;
       }
       // Los scopes de /conexion ya son los compartidos: la cuenta del administrador con acceso completo al buzón.
-      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, '/apps/buzon-inteligente/buzones'));
+      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, '/apps/buzon-inteligente/buzones', b.tipo_cuenta === 'per' ? b.direccion : undefined));
     } catch (e) {
       this.toast.error('No se pudo iniciar la conexión', e instanceof Error ? e.message : String(e));
     } finally {
