@@ -12,7 +12,6 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { Base, BuzonApi, COMPARACIONES, CampoProceso, Cruce, FilaBase, LecturaArchivo, Persona, ReglaAsignacion } from './buzon.api';
 import { comparacionPara, normaliza, nrm, reconocer } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 /** Estado de una búsqueda mientras se edita (prototipo W). */
 export interface BusquedaW {
@@ -100,7 +99,8 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
 @Component({
   selector: 'alma-regla-editor',
   imports: [FormsModule, LucideAngularModule],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     @let W = w();
     @if (!cols().length) {

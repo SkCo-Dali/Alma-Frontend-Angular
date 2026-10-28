@@ -14,7 +14,6 @@ import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Base, Buzon, BuzonApi, Categoria, DestinoGrupo, Grupo, PasoTraza, Persona, Proceso, SinActivosModo } from './buzon.api';
 import { aGrupoIn } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { EstadoGrupos, activosEn, borradorDe, etiquetasDe, sincronizarGrupos, sinActivosTxt } from './asignacion-ui';
 import { CarpetaPlana, CarpetaSelectComponent, aplanarCarpetas } from './carpeta-select.component';
 import { EquipoTabComponent } from './equipo-tab.component';
@@ -33,7 +32,8 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
 @Component({
   selector: 'alma-asignacion-tab',
   imports: [LucideAngularModule, AlmaLoaderComponent, CarpetaSelectComponent, EquipoTabComponent, GruposFormComponent, ReglasBasesTabComponent, TrazaAsignacionComponent],
-  styles: [BUZON_PROTO_CSS, `:host { display: grid; gap: 16px; min-width: 0; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: grid; gap: 16px; min-width: 0; }`],
   template: `
     <div class="pills glass r-xl" style="padding:4px;justify-self:start" role="tablist">
       @for (s of subs(); track s[0]) {

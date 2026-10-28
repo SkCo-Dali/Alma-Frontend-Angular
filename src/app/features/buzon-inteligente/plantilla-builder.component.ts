@@ -40,7 +40,6 @@ import {
   tplNuevo,
   valorColEj,
 } from './buzon-exportacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 const SEPARADORES = [
   { id: ';', nombre: 'Punto y coma ( ; )' },
@@ -54,7 +53,8 @@ let siguienteId = 0;
 /** Hoja de cálculo de la vista previa (`previewTpl` del prototipo). */
 @Component({
   selector: 'alma-hoja-vista',
-  styles: [BUZON_PROTO_CSS, ':host { display: grid; gap: 12px; min-width: 0; }'],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [':host { display: grid; gap: 12px; min-width: 0; }'],
   template: `
     @let h = hoja();
     <div class="sheet-wrap">
@@ -102,7 +102,7 @@ export class HojaVistaComponent {
 @Component({
   selector: 'alma-plantilla-builder',
   imports: [NgTemplateOutlet, LucideAngularModule, HojaVistaComponent],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let t = tpl();
     <div class="stack" style="gap:12px" [attr.data-rev]="version()">

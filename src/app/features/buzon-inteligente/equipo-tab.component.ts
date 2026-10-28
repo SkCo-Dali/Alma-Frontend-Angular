@@ -11,7 +11,6 @@ import { AccesosApi } from '../../core/services/accesos.api';
 import { ToastService } from '../../core/services/toast.service';
 import { AlDesactivar, Buzon, BuzonApi, DisponibilidadIn, Grupo, MembresiaGrupo, Persona, PersonaIn } from './buzon.api';
 import { aPersonaIn } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { iniciales, nombresDirectorio, parseCorreos, personaNueva, sinActivosTxt } from './asignacion-ui';
 import { CarpetaPlana, CarpetaSelectComponent } from './carpeta-select.component';
 import { ImportEquipoComponent } from './import-equipo.component';
@@ -26,7 +25,8 @@ interface EdicionPersona {
 @Component({
   selector: 'alma-equipo-tab',
   imports: [FormsModule, LucideAngularModule, CarpetaSelectComponent, ImportEquipoComponent],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     <div class="glass r-2xl" style="overflow:hidden">
       <div class="row between" style="padding:14px 16px">

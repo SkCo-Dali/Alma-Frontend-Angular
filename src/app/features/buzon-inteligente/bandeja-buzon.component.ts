@@ -33,7 +33,6 @@ import {
   Proceso,
   resumenAccion,
 } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 type Filtro = 'todos' | 'validar' | 'duplicado' | 'ejecutado' | 'ignorado';
 type Pestana = 'ia' | 'asig' | 'arch' | 'hilo' | 'traza';
@@ -59,8 +58,8 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 @Component({
   selector: 'alma-bandeja-buzon',
   imports: [FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, EmailFrameComponent, AttachmentPreviewComponent],
+  styleUrls: ['./buzon-proto.css'],
   styles: [
-    BUZON_PROTO_CSS,
     `
       .md { display: flex; gap: 16px; height: calc(100dvh - 15rem); min-height: 600px; }
       .md aside { width: 380px; flex: none; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; }

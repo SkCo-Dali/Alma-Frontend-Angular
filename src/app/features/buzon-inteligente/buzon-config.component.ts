@@ -14,7 +14,6 @@ import { AlmaLoaderComponent } from '../../shared/components/alma-loader.compone
 import { AjustesTabComponent } from './ajustes-tab.component';
 import { AsignacionTabComponent } from './asignacion-tab.component';
 import { Buzon, BuzonApi, Categoria, PERM_VER_BUZON } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { ExportacionTabComponent } from './exportacion-tab.component';
 import { ReglasTabComponent } from './reglas-tab.component';
@@ -40,7 +39,7 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
     ExportacionTabComponent,
     AjustesTabComponent,
   ],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />

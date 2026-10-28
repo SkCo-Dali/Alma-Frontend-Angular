@@ -9,7 +9,6 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { Base, Buzon, BuzonApi, Categoria, FilaBase, Grupo, Persona, Proceso, ReglaAsignacionIn } from './buzon.api';
 import { aGrupoIn } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { camposDeGrupo, sinActivosTxt } from './asignacion-ui';
 import { BaseCardComponent, UsoBase } from './base-card.component';
 import { BusquedaW, ReglaEditorComponent, busquedaDe, columnasDe, conDefaults, materializar, nuevaBusqueda } from './regla-editor.component';
@@ -38,7 +37,8 @@ interface ModalQuitar {
 @Component({
   selector: 'alma-reglas-bases-tab',
   imports: [LucideAngularModule, BaseCardComponent, ReglaEditorComponent],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     @if (!gs().length) {
       <div class="glass r-2xl" style="padding:16px"><p class="sm muted">Ningún grupo asigna a personas. Cámbialo en «Grupos y destino».</p></div>

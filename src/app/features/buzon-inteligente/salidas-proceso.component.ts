@@ -8,13 +8,12 @@ import { Component, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ModoSalida } from './buzon.api';
 import { SalidaUI, coberturaExp, extrae, salidaCubre, tplIncompleto } from './buzon-exportacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { ExportacionEstado, ProcesoUI } from './exportacion-estado';
 
 @Component({
   selector: 'alma-salidas-proceso',
   imports: [LucideAngularModule],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let pu = proceso();
     @let ctx = contexto();

@@ -4,11 +4,10 @@
 
 import { Component, input } from '@angular/core';
 import { PasoTraza } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 @Component({
   selector: 'alma-traza-asignacion',
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @if (traza().length) {
       <ol class="tl" aria-label="Recorrido de la asignación">

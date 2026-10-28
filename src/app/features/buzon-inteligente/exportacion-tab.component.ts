@@ -13,7 +13,6 @@ import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Buzon, BuzonApi, BuzonUpdate, Categoria } from './buzon.api';
 import { referenciaPac, tablaJson } from './buzon-exportacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { ExportacionEstado, ProcesoUI, conArchivo } from './exportacion-estado';
 import { HojaVistaComponent, PlantillaBuilderComponent } from './plantilla-builder.component';
 import { SalidasProcesoComponent } from './salidas-proceso.component';
@@ -33,7 +32,8 @@ export function entregaDe(b: Buzon): EntregaExp {
 @Component({
   selector: 'alma-exportacion-tab',
   imports: [LucideAngularModule, AlmaLoaderComponent, SalidasProcesoComponent, PlantillaBuilderComponent, HojaVistaComponent],
-  styles: [BUZON_PROTO_CSS, ':host { display: grid; gap: 16px; }'],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [':host { display: grid; gap: 16px; }'],
   template: `
     @if (est.cargando()) {
       <div class="glass r-2xl empty"><alma-loader [size]="56" label="Cargando exportación…" /></div>

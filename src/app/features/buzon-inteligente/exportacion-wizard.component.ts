@@ -15,7 +15,6 @@ import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Buzon, BuzonApi, BuzonUpdate, Categoria } from './buzon.api';
 import { extrae, referenciaPac, salidasFaltan, tplVacia } from './buzon-exportacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { ExportacionEstado } from './exportacion-estado';
 import { entregaDe } from './exportacion-tab.component';
 import { HojaVistaComponent, PlantillaBuilderComponent } from './plantilla-builder.component';
@@ -35,7 +34,8 @@ export type SubvistaExportacion = 'tb' | 'ref' | null;
 @Component({
   selector: 'alma-exportacion-wizard',
   imports: [LucideAngularModule, AlmaLoaderComponent, SalidasProcesoComponent, PlantillaBuilderComponent, HojaVistaComponent],
-  styles: [BUZON_PROTO_CSS, ':host { display: grid; gap: 16px; }'],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [':host { display: grid; gap: 16px; }'],
   template: `
     @let rev = est.version();
     @if (subvista() === 'tb' && tbSalida(); as x) {

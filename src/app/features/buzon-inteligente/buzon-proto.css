@@ -1,11 +1,7 @@
-// Estilos del prototipo validado del Buzón Inteligente 2.0 (contexto-recaudos-pac/
-// buzon-inteligente-v2.html), para que las pantallas de Alma se vean igual que el
-// artefacto que aprobó el área. Usa los tokens de Alma (--card, --primary, --border…)
-// y agrega los semánticos del prototipo (ámbar, esmeralda, rosa, violeta, cielo).
-// Se incluye en `styles` de cada componente: con la encapsulación de Angular las
-// clases solo aplican dentro de ese componente.
-
-export const BUZON_PROTO_CSS = `
+/* Estilos del prototipo validado del Buzón Inteligente 2.0 (contexto-recaudos-pac/buzon-inteligente-v2.html).
+   Se referencia con styleUrls en cada componente: con la encapsulación de Angular las clases solo aplican
+   dentro de ese componente. Va en archivo y no como constante en `styles`: compartir la misma cadena en
+   línea entre muchos componentes deja colgado ng build (el proceso de esbuild no termina). */
 :host {
   --sunken: oklch(0.62 0.012 286 / 10%);
   --primary-ink: oklch(0.5 0.15 150);
@@ -256,4 +252,3 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 .ph { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .ph .l { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .ph h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
-`;
