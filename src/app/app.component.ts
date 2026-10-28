@@ -16,6 +16,7 @@ import { DockComponent } from './shared/components/dock.component';
 import { HeaderComponent } from './shared/components/header.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
 import { LoginScreenComponent } from './shared/components/login-screen.component';
+import { SinRespuestaScreenComponent } from './shared/components/sin-respuesta-screen.component';
 import { ToastsComponent } from './shared/components/toasts.component';
 
 // Íconos de plataforma/nav que no viven en el catálogo.
@@ -35,6 +36,7 @@ const EXTRA_ICONS = [
     AlmaLoaderComponent,
     LoginScreenComponent,
     InactiveScreenComponent,
+    SinRespuestaScreenComponent,
     AvisoInactividadComponent,
     ToastsComponent,
   ],
@@ -50,6 +52,9 @@ const EXTRA_ICONS = [
       }
       @case ('inactive') {
         <alma-inactive-screen [email]="auth.profile()?.email ?? auth.user().correo" />
+      }
+      @case ('sin-respuesta') {
+        <alma-sin-respuesta-screen [email]="auth.user().correo" />
       }
       @case ('ready') {
         <div class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">

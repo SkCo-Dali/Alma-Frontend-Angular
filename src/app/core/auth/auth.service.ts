@@ -80,12 +80,35 @@ function describirErrorDeToken(err: unknown, scopes: string[]): string {
   return texto;
 }
 
-export type AuthStatus = 'loading' | 'login' | 'inactive' | 'ready';
+// 'sin-respuesta': hay sesión de Microsoft pero el API no entregó el perfil
+// (caído, colgado o con error); se ofrece reintentar en vez de cargar sin fin.
+export type AuthStatus = 'loading' | 'login' | 'inactive' | 'sin-respuesta' | 'ready';
+
+/** Tope para el perfil al arrancar: sin él, un API colgado dejaba el splash
+ *  «Verificando tu sesión…» para siempre (dev, 2026-10-28). */
+const ESPERA_PERFIL_MS = 20_000;
+
+function conTope<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const espera = setTimeout(() => reject(new Error(`Sin respuesta en ${ms / 1000} s`)), ms);
+    promesa.then(
+      (v) => {
+        clearTimeout(espera);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(espera);
+        reject(e);
+      },
+    );
+  });
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private msal: PublicClientApplication | null = null;
   private initPromise: Promise<PublicClientApplication> | null = null;
+  private cargarPerfil: (() => Promise<MeApi | null>) | null = null;
 
   readonly status = signal<AuthStatus>(authEnabled ? 'loading' : 'ready');
   readonly profile = signal<MeApi | null>(null);
@@ -108,6 +131,7 @@ export class AuthService {
    *  de alma.Users. Sin cuenta deja el estado en 'login' (pantalla de ingreso). */
   async init(loadProfile: () => Promise<MeApi | null>): Promise<void> {
     if (!authEnabled) return;
+    this.cargarPerfil = loadProfile;
     try {
       const account = await this.ensureSignedIn();
       if (!account) {
@@ -119,7 +143,7 @@ export class AuthService {
         if (url) this.foto.set(url);
       });
       try {
-        const me = await loadProfile();
+        const me = await conTope(loadProfile(), ESPERA_PERFIL_MS);
         this.profile.set(me);
         // Usuario inactivo: aunque la autenticación sea válida, no entra.
         if (me?.registrado && me.is_active === false) {
@@ -127,13 +151,23 @@ export class AuthService {
           return;
         }
       } catch (err) {
+        // Antes entraba «sin permisos» (apps vacías, sin explicación).
         console.error('[auth] no se pudo cargar /api/users/me', err);
+        this.status.set('sin-respuesta');
+        return;
       }
       this.status.set('ready');
     } catch (err) {
       console.error('[auth] error inicializando MSAL', err);
       this.status.set('ready');
     }
+  }
+
+  /** Pantalla «sin respuesta» → Reintentar: vuelve a pedir el perfil. */
+  async reintentar(): Promise<void> {
+    if (!this.cargarPerfil) return;
+    this.status.set('loading');
+    await this.init(this.cargarPerfil);
   }
 
   /** Soporta comodines por App: 'app.<slug>.*' concede 'app.<slug>.<accion>'. */

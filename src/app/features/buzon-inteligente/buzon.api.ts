@@ -8,7 +8,7 @@
 
 import { Injectable, inject, signal } from '@angular/core';
 import { environment } from '@env/environment';
-import { ApiService } from '../../core/services/api.service';
+import { ApiService, ESPERA_LARGA_MS } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { DEMO, demoCorreoDetalle, demoLeerArchivo, demoMetricas, demoProbar } from './buzon.demo';
 
@@ -1057,7 +1057,7 @@ export class BuzonApi {
         this.api.fetch<ResumenSync>(`${BASE}/buzones/${id}/sincronizar`, {
           method: 'POST',
           body: JSON.stringify({ max_correos: maxCorreos }),
-        }),
+        }, ESPERA_LARGA_MS),
       () => this.demo.sincronizar(id),
     );
   }
@@ -1227,7 +1227,7 @@ export class BuzonApi {
 
   reclasificar(id: string): Promise<Correo> {
     return this.conDemo(
-      () => this.api.fetch<Correo>(`${BASE}/correos/${id}/reclasificar`, { method: 'POST' }),
+      () => this.api.fetch<Correo>(`${BASE}/correos/${id}/reclasificar`, { method: 'POST' }, ESPERA_LARGA_MS),
       () => this.demo.reclasificar(id),
     );
   }
@@ -1238,7 +1238,7 @@ export class BuzonApi {
         this.api.fetch<ResultadoPrueba>(`${BASE}/buzones/${buzonId}/probar`, {
           method: 'POST',
           body: JSON.stringify(body),
-        }),
+        }, ESPERA_LARGA_MS),
       () => demoProbar(this.demo, buzonId, body),
     );
   }
@@ -1308,7 +1308,7 @@ export class BuzonApi {
         this.api.fetch<PropuestaProcesos>(`${BASE}/buzones/${buzonId}/analizar-prompt`, {
           method: 'POST',
           body: JSON.stringify({ prompt }),
-        }),
+        }, ESPERA_LARGA_MS),
       () => this.demo.analizarPrompt(prompt),
     );
   }
@@ -1447,7 +1447,7 @@ export class BuzonApi {
 
   sincronizarBase(id: string): Promise<ResultadoCarga> {
     return this.conDemo(
-      () => this.api.fetch<ResultadoCarga>(`${BASE}/bases/${id}/sincronizar`, { method: 'POST' }),
+      () => this.api.fetch<ResultadoCarga>(`${BASE}/bases/${id}/sincronizar`, { method: 'POST' }, ESPERA_LARGA_MS),
       () => this.demo.sincronizarBase(id),
     );
   }
@@ -1480,7 +1480,7 @@ export class BuzonApi {
         this.api.fetch<ResultadoAsignacion>(`${BASE}/buzones/${buzonId}/probar-asignacion`, {
           method: 'POST',
           body: JSON.stringify({ etiqueta, datos }),
-        }),
+        }, ESPERA_LARGA_MS),
       () => this.demo.probarAsignacion(buzonId, etiqueta, datos),
     );
   }
@@ -1686,7 +1686,7 @@ export class BuzonApi {
   /** Clasifica con el borrador los últimos correos ya decididos (30–90 s). */
   probarBorrador(buzonId: string): Promise<PruebaBorrador> {
     return this.conDemo(
-      () => this.api.fetch<PruebaBorrador>(`${BASE}/buzones/${buzonId}/versiones/probar`, { method: 'POST', body: '{}' }),
+      () => this.api.fetch<PruebaBorrador>(`${BASE}/buzones/${buzonId}/versiones/probar`, { method: 'POST', body: '{}' }, ESPERA_LARGA_MS),
       () => this.demo.probarBorrador(buzonId),
     );
   }
@@ -1701,7 +1701,7 @@ export class BuzonApi {
 
   verPrompt(buzonId: string, cual: 'borrador' | 'vigente' = 'borrador'): Promise<PromptBuzon> {
     return this.conDemo(
-      () => this.api.fetch<PromptBuzon>(`${BASE}/buzones/${buzonId}/prompt?cual=${cual}`),
+      () => this.api.fetch<PromptBuzon>(`${BASE}/buzones/${buzonId}/prompt?cual=${cual}`, undefined, ESPERA_LARGA_MS),
       () => this.demo.verPrompt(buzonId),
     );
   }
@@ -1709,7 +1709,7 @@ export class BuzonApi {
   /** La IA propone procesos nuevos a partir de los correos recientes (no guarda nada). */
   proponerProcesos(buzonId: string): Promise<PropuestaProcesos & { correos_leidos: number }> {
     return this.conDemo(
-      () => this.api.fetch<PropuestaProcesos & { correos_leidos: number }>(`${BASE}/buzones/${buzonId}/proponer-procesos`, { method: 'POST' }),
+      () => this.api.fetch<PropuestaProcesos & { correos_leidos: number }>(`${BASE}/buzones/${buzonId}/proponer-procesos`, { method: 'POST' }, ESPERA_LARGA_MS),
       () => this.demo.proponerProcesos(buzonId),
     );
   }
@@ -1717,7 +1717,7 @@ export class BuzonApi {
   /** Paso 6 del asistente: clasifica los últimos correos sin tocar Outlook. */
   pruebaSeco(buzonId: string, correos = 20): Promise<PruebaSeco> {
     return this.conDemo(
-      () => this.api.fetch<PruebaSeco>(`${BASE}/buzones/${buzonId}/prueba-seco`, { method: 'POST', body: JSON.stringify({ correos }) }),
+      () => this.api.fetch<PruebaSeco>(`${BASE}/buzones/${buzonId}/prueba-seco`, { method: 'POST', body: JSON.stringify({ correos }) }, ESPERA_LARGA_MS),
       () => this.demo.pruebaSeco(buzonId),
     );
   }
