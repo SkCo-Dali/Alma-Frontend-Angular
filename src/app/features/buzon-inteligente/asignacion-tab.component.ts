@@ -4,11 +4,11 @@
 //    (asignar a personas, enviar a una carpeta o solo categorizar) y qué pasa si no
 //    hay nadie activo. «Editar grupos» abre el formulario de grupos (mGrupos).
 //  · Equipo: personas, disponibilidad y membresía por grupo (equipo-tab).
-//  · Reglas y bases: cadena de búsquedas en bases por grupo (reglas-bases-tab). Solo
-//    si el buzón tiene activo el módulo de búsqueda en bases (mod_bases).
+//  · Reglas y bases: cadena de búsquedas en bases por grupo (reglas-bases-tab). Sin el
+//    módulo de búsqueda en bases (mod_bases) se ve en gris, «Desactivado», con «Activar».
 //  · Probar: recorrido de la asignación de un correo con unos datos de prueba.
 
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
@@ -18,6 +18,7 @@ import { EstadoGrupos, activosEn, borradorDe, etiquetasDe, sincronizarGrupos, si
 import { CarpetaPlana, CarpetaSelectComponent, aplanarCarpetas } from './carpeta-select.component';
 import { EquipoTabComponent } from './equipo-tab.component';
 import { GruposFormComponent } from './grupos-form.component';
+import { ModuloEstadoComponent } from './modulo-estado.component';
 import { ReglasBasesTabComponent } from './reglas-bases-tab.component';
 import { TrazaAsignacionComponent } from './traza-asignacion.component';
 
@@ -31,13 +32,18 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
 
 @Component({
   selector: 'alma-asignacion-tab',
-  imports: [LucideAngularModule, AlmaLoaderComponent, CarpetaSelectComponent, EquipoTabComponent, GruposFormComponent, ReglasBasesTabComponent, TrazaAsignacionComponent],
+  imports: [LucideAngularModule, AlmaLoaderComponent, CarpetaSelectComponent, EquipoTabComponent, GruposFormComponent, ModuloEstadoComponent, ReglasBasesTabComponent, TrazaAsignacionComponent],
   styleUrls: ['./buzon-proto.css'],
   styles: [`:host { display: grid; gap: 16px; min-width: 0; }`],
   template: `
+    <alma-modulo-estado nombre="Asignación" [activo]="buzon().mod_asignacion" [puede]="puede()" (irAjustes)="irAModulos.emit()" />
     <div class="pills glass r-xl" style="padding:4px;justify-self:start" role="tablist">
-      @for (s of subs(); track s[0]) {
-        <button type="button" role="tab" [attr.aria-selected]="sub() === s[0]" (click)="sub.set(s[0])"><lucide-icon [name]="s[1]" [size]="13" /> {{ s[2] }}</button>
+      @for (s of subs; track s[0]) {
+        <button type="button" role="tab" [attr.aria-selected]="sub() === s[0]" [style.opacity]="s[0] === 'reglas' && !conBases() ? 0.6 : null" (click)="sub.set(s[0])">
+          <lucide-icon [name]="s[1]" [size]="13" /> {{ s[2] }}
+          @if (s[0] === 'reglas' && !conBases()) { <span class="badge b-slate" style="font-size:0.65rem">Desactivado</span> }
+          @if (s[0] === 'equipo' && !cargando() && !usaPersonas()) { <span class="badge b-slate" style="font-size:0.65rem">No se usa</span> }
+        </button>
       }
     </div>
 
@@ -122,6 +128,9 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
                 @if (g.destino === 'personas' && !pers) {
                   <p class="note b-amber"><lucide-icon name="user-x" [size]="13" /> <span>Nadie activo atiende este grupo: sus correos {{ sinActivos(g) }}. <button type="button" class="linkbtn" (click)="sub.set('equipo')">Ir a Equipo</button></span></p>
                 }
+                @if (puede() && g.etiquetas.length > 1) {
+                  <p class="note b-sky"><lucide-icon name="split" [size]="13" /> <span>¿Alguna etiqueta debe tener otro destino (por ejemplo, solo etiquetar sin mover)? <button type="button" class="linkbtn" (click)="separar(g0)">Sepárala en otro grupo</button></span></p>
+                }
               </article>
             } @empty {
               <div class="glass r-2xl" style="padding:16px"><p class="sm muted">Aún no hay grupos. Usa «Editar grupos» para repartir las etiquetas.</p></div>
@@ -130,11 +139,25 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
         }
 
         @case ('equipo') {
+          @if (!usaPersonas()) {
+            <p class="note b-slate"><lucide-icon name="info" [size]="13" /> <span><b>No se usa:</b> ningún grupo asigna a personas, así que el equipo no recibe correos. Cambia el destino de un grupo a «Asignar a personas» para usarlo. <button type="button" class="linkbtn" (click)="sub.set('grupos')">Ir a Grupos y destino</button></span></p>
+          }
           <alma-equipo-tab [buzon]="buzon()" [grupos]="grupos()" [carpetas]="carpetas()" [(equipo)]="equipo" />
         }
 
         @case ('reglas') {
-          <alma-reglas-bases-tab [buzon]="buzon()" [(grupos)]="grupos" [(bases)]="bases" [equipo]="equipo()" [procesos]="procesos()" [categorias]="categorias()" [(gSel)]="gSel" />
+          <alma-modulo-estado nombre="Búsqueda en bases" [activo]="conBases()" [puede]="puede()" (irAjustes)="irAModulos.emit()" />
+          @if (conBases()) {
+            <alma-reglas-bases-tab [buzon]="buzon()" [(grupos)]="grupos" [(bases)]="bases" [equipo]="equipo()" [procesos]="procesos()" [categorias]="categorias()" [(gSel)]="gSel" />
+          } @else {
+            <div class="glass r-2xl stack" style="padding:16px">
+              <p class="sm b">Búsqueda en bases desactivada</p>
+              <p class="xs muted">Sirve para asignar un responsable fijo según una base de Excel (subida o en SharePoint), por ejemplo por NIT o por cuenta. Si tus grupos no lo necesitan, déjalo apagado.</p>
+              @if (puede()) {
+                <button type="button" class="btn primary sm" style="justify-self:start" (click)="activarModulo.emit('mod_bases')"><lucide-icon name="database" [size]="13" /> Activar búsqueda en bases</button>
+              }
+            </div>
+          }
         }
 
         @case ('probar') {
@@ -195,18 +218,23 @@ export class AsignacionTabComponent {
 
   readonly buzon = input.required<Buzon>();
   readonly categorias = input<Categoria[]>([]);
+  /** «Cambiar en Ajustes → Módulos». */
+  readonly irAModulos = output<void>();
+  readonly activarModulo = output<'mod_bases'>();
 
   protected readonly destinoTxt = DESTINO_TXT;
   protected readonly destinoBadge = DESTINO_BADGE;
   protected readonly sub = signal<Sub>('grupos');
   /** Módulo de búsqueda en bases del buzón (sin el campo, se asume activo). */
-  private readonly conBases = computed(() => this.buzon().mod_bases !== false);
-  protected readonly subs = computed<[Sub, string, string][]>(() => [
+  protected readonly conBases = computed(() => this.buzon().mod_bases !== false);
+  protected readonly subs: [Sub, string, string][] = [
     ['grupos', 'layers', 'Grupos y destino'],
     ['equipo', 'users', 'Equipo'],
-    ...(this.conBases() ? [['reglas', 'database', 'Reglas y bases'] as [Sub, string, string]] : []),
+    ['reglas', 'database', 'Reglas y bases'],
     ['probar', 'flask-conical', 'Probar'],
-  ]);
+  ];
+  /** El equipo solo recibe correos si algún grupo activo asigna a personas. */
+  protected readonly usaPersonas = computed(() => this.grupos().some((g) => g.activo && this.vista(g).destino === 'personas'));
 
   protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -256,10 +284,6 @@ export class AsignacionTabComponent {
 
   constructor() {
     queueMicrotask(() => void this.cargar());
-    // Sin el módulo de bases, «Reglas y bases» no se muestra.
-    effect(() => {
-      if (!this.conBases() && this.sub() === 'reglas') this.sub.set('grupos');
-    });
     // «Probar»: vuelve a correr la asignación al cambiar el grupo, los datos, el equipo o las reglas.
     let turno = 0;
     effect(() => {
@@ -381,6 +405,20 @@ export class AsignacionTabComponent {
   protected editarGrupos(): void {
     this.errGrupos.set(null);
     this.stGrupos.set({ modo: 'custom', grupos: this.grupos().map(borradorDe) });
+  }
+
+  /** «Sepárala en otro grupo»: abre Editar grupos con un grupo nuevo, vacío y en
+   *  «Solo categorizar», listo para recibir la etiqueta con «Va al grupo». */
+  protected separar(g: Grupo): void {
+    const grupos = this.grupos().map(borradorDe);
+    const usados = new Set(grupos.map((x) => x.nombre));
+    let n = 2;
+    while (usados.has(`${g.nombre} · ${n}`)) n++;
+    grupos.splice(grupos.findIndex((x) => x.id === g.id) + 1, 0, {
+      id: null, key: `N${Date.now() % 100000}`, nombre: `${g.nombre} · ${n}`, etiquetas: [], destino: 'categorizar', carpeta: null,
+    });
+    this.errGrupos.set(null);
+    this.stGrupos.set({ modo: 'custom', grupos });
   }
 
   protected cerrarGrupos(): void {
