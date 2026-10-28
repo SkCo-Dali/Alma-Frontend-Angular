@@ -11,7 +11,6 @@ import { AccesosApi } from '../../core/services/accesos.api';
 import { ToastService } from '../../core/services/toast.service';
 import { BuzonApi, Grupo, LecturaArchivo, Persona, PersonaIn } from './buzon.api';
 import { aPersonaIn } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { RE_CORREO, nombresDirectorio } from './asignacion-ui';
 import { CarpetaPlana } from './carpeta-select.component';
 
@@ -33,7 +32,8 @@ const norm = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 @Component({
   selector: 'alma-import-equipo',
   imports: [LucideAngularModule],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     <p class="sm">La hoja debe tener estos encabezados en la fila 1: una fila por persona y una columna por grupo (marca con <b>X</b> los grupos que atiende).</p>
     <div class="sheet-wrap">

@@ -19,7 +19,6 @@ import {
   Proceso,
   TipoCampo,
 } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 /** La base fija que agrega Alma a toda salida: no se redefine en un proceso. */
 export const BASE_FIELDS = ['correlation_id', 'fecha_procesamiento', 'proceso', 'score_confianza', 'etiqueta', 'asunto_correo'];
@@ -76,7 +75,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 @Component({
   selector: 'alma-proceso-editor',
   imports: [FormsModule, LucideAngularModule],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let d = ed();
     <div class="stack" style="gap:12px;border-top:1px solid var(--border);padding-top:12px">

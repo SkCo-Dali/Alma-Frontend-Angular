@@ -5,7 +5,6 @@
 import { Component, computed, input, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CarpetaGraph } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 export interface CarpetaPlana {
   nombre: string;
@@ -21,7 +20,8 @@ export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[
 @Component({
   selector: 'alma-carpeta-select',
   imports: [FormsModule],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     <select
       class="input sm"

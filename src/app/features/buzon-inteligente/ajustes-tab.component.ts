@@ -11,7 +11,6 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, Categoria, CategoriaIn, resumenAccion } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
@@ -26,7 +25,7 @@ interface CarpetaPlana {
 @Component({
   selector: 'alma-ajustes-tab',
   imports: [FormsModule, LucideAngularModule, CategoriaEditorComponent],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
     <div class="g2" style="align-items:start">

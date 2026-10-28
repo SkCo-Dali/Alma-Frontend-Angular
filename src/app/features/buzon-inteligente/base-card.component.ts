@@ -11,7 +11,6 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { Base, BuzonApi, FilaBase, Grupo, Persona, ReglaAsignacion } from './buzon.api';
 import { normaliza, reconocer } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 
 /** Una búsqueda que usa la base: el grupo y la regla. */
 export interface UsoBase {
@@ -37,7 +36,7 @@ export function cuandoCargada(iso: string | null): string {
 @Component({
   selector: 'alma-base-card',
   imports: [FormsModule, LucideAngularModule],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let f = base();
     <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px" [style.box-shadow]="abierta() ? '0 0 0 2px var(--ring)' : null">

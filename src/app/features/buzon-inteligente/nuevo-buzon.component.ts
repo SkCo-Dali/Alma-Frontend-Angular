@@ -17,7 +17,6 @@ import { ToastService } from '../../core/services/toast.service';
 import { aplanar } from './ajustes-tab.component';
 import { AsignacionWizardComponent, EstadoPasoAsignacion } from './asignacion-wizard.component';
 import { Buzon, BuzonApi, Categoria, Grupo, NombreBuzon, Proceso, PruebaSeco, Salida, TipoCuenta } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { ExportacionWizardComponent, SubvistaExportacion } from './exportacion-wizard.component';
 import { ReglasTabComponent } from './reglas-tab.component';
 
@@ -34,7 +33,7 @@ interface FilaResumen {
 @Component({
   selector: 'alma-nuevo-buzon',
   imports: [FormsModule, LucideAngularModule, ReglasTabComponent, AsignacionWizardComponent, ExportacionWizardComponent],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     <div class="scrim">
       <div class="modal solid" [class.full]="paso() === 2" [class.xl]="paso() !== 2" role="dialog" aria-modal="true" aria-label="Nuevo buzón">

@@ -17,7 +17,6 @@ import { AccessDeniedComponent } from '../../shared/components/access-denied.com
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Buzon, BuzonApi, PERM_ADMIN_BUZON, PERM_VER_BUZON, RolMiembro } from './buzon.api';
 import { gradienteBuzon } from './buzon-config.component';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { NuevoBuzonComponent } from './nuevo-buzon.component';
 
@@ -35,7 +34,7 @@ interface MiembroForm {
 @Component({
   selector: 'alma-buzones-page',
   imports: [FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, DemoBadgeComponent, NuevoBuzonComponent],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />

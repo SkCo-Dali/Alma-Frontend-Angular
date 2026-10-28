@@ -5,7 +5,6 @@
 
 import { Component, computed, input, model } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { EstadoGrupos, EtiquetaProceso, GrupoBorrador, ModoGrupos, gruposPorModo } from './asignacion-ui';
 
 const MODOS: [ModoGrupos, string][] = [
@@ -18,7 +17,8 @@ const MODOS: [ModoGrupos, string][] = [
 @Component({
   selector: 'alma-grupos-form',
   imports: [LucideAngularModule],
-  styles: [BUZON_PROTO_CSS, `:host { display: contents; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: contents; }`],
   template: `
     @let s = st();
     <div class="stack" style="gap:6px">

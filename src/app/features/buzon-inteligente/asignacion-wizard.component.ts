@@ -13,7 +13,6 @@ import { AccesosApi } from '../../core/services/accesos.api';
 import { ToastService } from '../../core/services/toast.service';
 import { Base, Buzon, BuzonApi, Categoria, DestinoGrupo, Grupo, Persona, PersonaIn, Proceso } from './buzon.api';
 import { aGrupoIn, aPersonaIn } from './buzon-asignacion';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import {
   EstadoGrupos,
   GrupoBorrador,
@@ -46,7 +45,8 @@ interface CfgEsp {
 @Component({
   selector: 'alma-asignacion-wizard',
   imports: [FormsModule, LucideAngularModule, CarpetaSelectComponent, GruposFormComponent, ImportEquipoComponent, ReglaEditorComponent],
-  styles: [BUZON_PROTO_CSS, `:host { display: grid; gap: 16px; min-width: 0; }`],
+  styleUrls: ['./buzon-proto.css'],
+  styles: [`:host { display: grid; gap: 16px; min-width: 0; }`],
   template: `
     @if (cargando()) {
       <p class="xs muted">Cargando…</p>

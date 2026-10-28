@@ -20,7 +20,6 @@ import {
   PromptBuzon,
   ReglaFija,
 } from './buzon.api';
-import { BUZON_PROTO_CSS } from './buzon-proto.styles';
 import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
 
@@ -45,7 +44,7 @@ interface FijaEd {
 @Component({
   selector: 'alma-reglas-tab',
   imports: [FormsModule, LucideAngularModule, ProcesoEditorComponent],
-  styles: [BUZON_PROTO_CSS],
+  styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
     @if (cargando()) {
