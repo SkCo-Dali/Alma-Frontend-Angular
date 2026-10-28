@@ -5,6 +5,9 @@
 // «Probar y publicar». Lo que se edita es el BORRADOR; publicar crea la versión vN que
 // usa el worker (061). Con `modo="wiz"` es el paso 2 del asistente «Nuevo buzón»: cada
 // proceso se acepta, no hay secciones globales ni publicación (la hace «Activar buzón»).
+// Un proceso existente se actualiza con un prompt nuevo («Actualizar con prompt» o una
+// propuesta con su clave): antes de aceptar se ve qué cambia y qué etiquetas salen. El
+// prompt armado con las reglas actuales se descarga o se edita como base.
 
 import { Component, computed, effect, inject, input, OnInit, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +26,7 @@ import {
 import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
 
-type Modal = 'tpl' | 'ej' | 'pegar' | 'prompt' | 'global' | null;
+type Modal = 'tpl' | 'ej' | 'pegar' | 'prompt' | 'global' | 'eliminar' | null;
 type Global = 'contexto' | 'fijas' | 'exclusiones';
 /** Estado de un proceso dentro del asistente (el borrador ya lo tiene guardado). */
 type EstadoWiz = 'ok' | 'propuesta' | 'revisar';
@@ -32,6 +35,29 @@ interface Pendiente {
   icono: string;
   texto: string;
   bloquea: boolean;
+}
+
+/** Qué cambia al aplicar una propuesta sobre un proceso que ya existe. */
+interface Comparacion {
+  clave: string;
+  /** [qué, antes, después] de nombre, alcance y exclusiones. */
+  textos: [string, string, string][];
+  nuevas: string[];
+  actualizadas: string[];
+  /** Etiquetas activas del proceso que el prompt ya no menciona. */
+  salen: Categoria[];
+  camposMas: string[];
+  camposMenos: string[];
+  /** Tiene etiquetas o datos ajustados a mano (✎) que se reemplazarán. */
+  manuales: boolean;
+}
+
+/** Impacto de eliminar un proceso (salidas: null mientras se consulta). */
+interface Eliminacion {
+  p: Proceso;
+  etiquetas: Categoria[];
+  salidas: number | null;
+  grupos: string[];
 }
 
 interface FijaEd {
@@ -123,6 +149,8 @@ interface FijaEd {
             </article>
           }
           @for (p of propuestas(); track p.clave) {
+            @let t = objetivoDe(p);
+            @let cmp = comparar(p);
             <article class="glass r-2xl stack" style="padding:14px;gap:8px;border-color:var(--violet)">
               <div class="row between" style="flex-wrap:nowrap;align-items:flex-start">
                 <div style="min-width:0">
@@ -132,10 +160,54 @@ interface FijaEd {
                   <p class="xxs" style="color:var(--violet)">{{ notaPropuesta(p) }}</p>
                 </div>
                 <div class="row" style="flex-wrap:nowrap">
-                  <button type="button" class="btn primary sm" (click)="aceptarPropuesta(p)">Aceptar</button>
+                  <button type="button" class="btn primary sm" [disabled]="aceptando()" (click)="aceptarPropuesta(p)">{{ t ? 'Actualizar ' + t.clave : 'Aceptar' }}</button>
                   <button type="button" class="btn ghost danger" (click)="descartarPropuesta(p)" aria-label="Descartar"><lucide-icon name="x" [size]="13" /></button>
                 </div>
               </div>
+              @if (!mismaClave(p) && procesos().length) {
+                <label class="row xs" style="gap:6px">
+                  <span class="muted">Aplicar sobre</span>
+                  <select class="input sm" style="width:auto" [attr.aria-label]="'Aplicar ' + p.clave + ' sobre'" (change)="elegirObjetivo(p, $any($event.target).value)">
+                    <option value="" [selected]="!t">Crear como proceso nuevo</option>
+                    @for (x of procesos(); track x.id) { <option [value]="x.id" [selected]="t?.id === x.id">Actualizar {{ x.clave }} · {{ x.nombre }}</option> }
+                  </select>
+                </label>
+              }
+              @if (cmp) {
+                <div class="stack" style="gap:6px">
+                  <p class="xs b"><lucide-icon name="git-compare" [size]="13" /> Qué cambia en {{ cmp.clave }}</p>
+                  @for (x of cmp.textos; track x[0]) {
+                    <div class="diff">
+                      <p class="xs b">{{ x[0] }}</p>
+                      @if (x[1]) { <p class="del">− {{ x[1] }}</p> }
+                      <p class="add">+ {{ x[2] || '(vacío)' }}</p>
+                    </div>
+                  }
+                  <div class="row" style="gap:6px">
+                    @for (e of cmp.nuevas; track e) { <span class="badge b-emerald">+ {{ e }}</span> }
+                    @for (e of cmp.actualizadas; track e) { <span class="badge b-sky">✎ {{ e }}</span> }
+                    @for (e of cmp.salen; track e.id) { <span class="badge b-rose">− {{ e.clave }}</span> }
+                  </div>
+                  @if (cmp.camposMas.length || cmp.camposMenos.length) {
+                    <p class="xxs muted"><lucide-icon name="braces" [size]="13" /> Datos:
+                      @if (cmp.camposMas.length) { agrega {{ cmp.camposMas.join(', ') }} }
+                      @if (cmp.camposMas.length && cmp.camposMenos.length) { · }
+                      @if (cmp.camposMenos.length) { quita {{ cmp.camposMenos.join(', ') }} }
+                    </p>
+                  }
+                  @if (!cmp.textos.length && !cmp.nuevas.length && !cmp.salen.length && !cmp.camposMas.length && !cmp.camposMenos.length) {
+                    <p class="xxs muted">Sin cambios de alcance, exclusiones, etiquetas ni datos: solo se actualizan los textos de las etiquetas.</p>
+                  }
+                  @if (cmp.salen.length) {
+                    <label class="row xs" style="gap:6px"><input type="checkbox" [checked]="desactivaSalen(p)" (change)="alternarSalen(p)" />
+                      Desactivar {{ cmp.salen.length === 1 ? 'la etiqueta que ya no está' : 'las ' + cmp.salen.length + ' etiquetas que ya no están' }} en el prompt</label>
+                  }
+                  @if (cmp.manuales) {
+                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>{{ cmp.clave }} tiene ajustes hechos a mano en Alma (✎): al actualizar se reemplazan por lo que dice el prompt.</span></p>
+                  }
+                  <p class="xxs muted">Queda en el borrador v{{ siguiente() }}: la versión vigente sigue clasificando hasta que publiques.</p>
+                </div>
+              }
             </article>
           }
           @for (p of procesos(); track p.id) {
@@ -169,8 +241,10 @@ interface FijaEd {
                       @if (estadoWiz(p) !== 'ok') { <button type="button" class="btn primary sm" (click)="aceptarWiz(p)">Aceptar</button> }
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
                     } @else {
-                      <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave"><lucide-icon name="copy" [size]="16" /></button>
-                      <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
+                      <button type="button" class="btn ghost" (click)="abrirPegar(p)" [attr.aria-label]="'Actualizar ' + p.clave + ' con prompt'" title="Actualizar con prompt"><lucide-icon name="file-pen" [size]="16" /></button>
+                      <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave" title="Duplicar"><lucide-icon name="copy" [size]="16" /></button>
+                      <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave" [title]="p.activo ? 'Desactivar' : 'Activar'"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
+                      <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="pedirEliminar(p)" [attr.aria-label]="'Eliminar ' + p.clave" title="Eliminar"><lucide-icon name="trash-2" [size]="16" /></button>
                     }
                   }
                   @if (!abierto && !esWiz()) {
@@ -360,7 +434,17 @@ interface FijaEd {
               </div>
             } @else {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
-                <div class="row between"><div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega la PARTE B de la plantilla o el prompt completo de tu agente, o sube el .txt / .md. Lo que Alma interprete llega como propuestas para aceptar.</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+                <div class="row between">
+                  @if (objetivo(); as o) {
+                    <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Alma te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}.</p></div>
+                  } @else {
+                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega la PARTE B de la plantilla o el prompt completo de tu agente, o sube el .txt / .md. Lo que Alma interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
+                  }
+                  <button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
+                </div>
+                @if (!esWiz()) {
+                  <p class="xxs muted">¿Ajustaste reglas aquí en Alma? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
+                }
                 <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoPrompt" placeholder="1. CONTEXTO DEL ÁREA&#10;…"></textarea>
                 <div class="row between">
                   <label class="btn outline sm" for="prompt-file"><lucide-icon name="file-up" [size]="13" /> Subir .txt o .md</label>
@@ -387,7 +471,51 @@ interface FijaEd {
                 <p class="note b-sky"><lucide-icon name="bot" [size]="13" /> <span>Este buzón clasifica con un agente de Foundry: las instrucciones viven en el agente. Abajo, el prompt que Alma armaría con estas reglas.</span></p>
               }
               <pre class="tpl">{{ prompt()?.prompt ?? 'Cargando…' }}</pre>
+              @if (prompt(); as pr) {
+                <div class="row between">
+                  <p class="xxs muted">Úsalo como prompt base: descárgalo, edítalo y vuelve a subirlo con «Pegar o subir prompt».</p>
+                  <div class="row">
+                    <button type="button" class="btn outline sm" (click)="descargarPrompt(pr)"><lucide-icon name="download" [size]="13" /> Descargar .md</button>
+                    @if (editable()) {
+                      <button type="button" class="btn primary sm" (click)="editarComoBase(pr.prompt)"><lucide-icon name="file-pen" [size]="13" /> Editar como base</button>
+                    }
+                  </div>
+                </div>
+              }
             </div>
+          }
+          @case ('eliminar') {
+            @if (eliminar(); as x) {
+              <div class="modal solid" role="dialog" aria-modal="true" [attr.aria-label]="'Eliminar ' + x.p.clave">
+                <div class="row between"><h2 class="sm b">¿Eliminar {{ x.p.clave }}?</h2><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+                <p class="xs">{{ x.p.nombre }}</p>
+                <div class="stack" style="gap:6px">
+                  <p class="note b-sky"><lucide-icon name="scroll-text" [size]="13" /> <span>Sale del borrador v{{ siguiente() }}. La versión vigente sigue clasificando con {{ x.p.clave }} hasta que publiques.</span></p>
+                  <p class="note b-slate"><lucide-icon name="tag" [size]="13" />
+                    <span>@if (x.etiquetas.length) { {{ x.etiquetas.length }} etiqueta(s) quedan inactivas ({{ claves(x.etiquetas) }}): no se borran, porque los correos ya clasificados las conservan. } @else { No tiene etiquetas activas. }</span></p>
+                  @if (x.salidas === null) {
+                    <p class="xxs muted">Revisando exportación y grupos…</p>
+                  } @else {
+                    @if (x.salidas) {
+                      <p class="note b-amber"><lucide-icon name="file-spreadsheet" [size]="13" /> <span>Se borran <b>ya</b> sus {{ x.salidas }} salida(s) de exportación (no esperan a Publicar).</span></p>
+                    }
+                    @if (x.grupos.length) {
+                      <p class="note b-amber"><lucide-icon name="layers" [size]="13" /> <span>Los grupos {{ x.grupos.join(', ') }} se quedan sin estas etiquetas.</span></p>
+                    }
+                  }
+                </div>
+                @if (x.p.activo) {
+                  <p class="xxs muted">¿Solo quieres dejar de usarlo por un tiempo? Desactívalo: se puede volver a activar y conserva todo.</p>
+                }
+                <div class="row" style="justify-content:flex-end">
+                  <button type="button" class="btn outline" (click)="modal.set(null)">Cancelar</button>
+                  @if (x.p.activo) {
+                    <button type="button" class="btn outline" (click)="modal.set(null); alternarActivo(x.p)"><lucide-icon name="eye-off" [size]="16" /> Desactivar</button>
+                  }
+                  <button type="button" class="btn outline danger" [disabled]="!!descartando()" (click)="confirmarEliminar()"><lucide-icon name="trash-2" [size]="16" /> Eliminar</button>
+                </div>
+              </div>
+            }
           }
           @case ('global') {
             <div class="modal solid" role="dialog" aria-modal="true" [attr.aria-label]="tituloGlobal()">
@@ -457,6 +585,14 @@ export class ReglasTabComponent implements OnInit {
   protected readonly proponiendo = signal(false);
   /** Id del proceso que se está descartando (evita clics repetidos). */
   protected readonly descartando = signal<string | null>(null);
+  protected readonly eliminar = signal<Eliminacion | null>(null);
+  protected readonly aceptando = signal(false);
+  /** «Actualizar con prompt» de un proceso: solo se aplica la parte de ese proceso. */
+  protected readonly objetivo = signal<Proceso | null>(null);
+  /** Propuesta (clave) → proceso (id) sobre el que se aplica; '' = crear como nuevo. */
+  private readonly destinos = signal<Record<string, string>>({});
+  /** Propuestas en las que NO se desactivan las etiquetas que salen (por defecto sí). */
+  private readonly conservarSalen = signal<Set<string>>(new Set());
   protected readonly probando = signal(false);
   protected readonly publicando = signal(false);
   protected readonly errorPrompt = signal('');
@@ -668,7 +804,12 @@ export class ReglasTabComponent implements OnInit {
     this.toast.show(`${p.clave} aceptado`);
   }
 
-  protected async descartarWiz(p: Proceso): Promise<void> {
+  protected descartarWiz(p: Proceso): Promise<void> {
+    return this.quitarProceso(p, 'descartado');
+  }
+
+  /** Borra el proceso del borrador; sus etiquetas quedan inactivas y sin proceso. */
+  private async quitarProceso(p: Proceso, hecho: string): Promise<void> {
     if (this.descartando()) return;
     this.descartando.set(p.id);
     const etiquetas = this.etiquetasDe(p);
@@ -680,14 +821,47 @@ export class ReglasTabComponent implements OnInit {
       // Las etiquetas del proceso quedan inactivas (no se borran: pueden tener historial).
       // proceso_id: null — el proceso ya no existe y mandar su id hace fallar la actualización.
       await Promise.all(etiquetas.map((c) => this.api.actualizarCategoria(c.id, { ...c, proceso_id: null, activa: false })));
-      this.toast.show(`${p.clave} descartado`);
+      this.toast.show(`${p.clave} ${hecho}`);
     } catch (e) {
-      this.toast.error('No se pudo descartar', e instanceof Error ? e.message : String(e));
+      this.toast.error(hecho === 'eliminado' ? 'No se pudo eliminar' : 'No se pudo descartar', e instanceof Error ? e.message : String(e));
     } finally {
       // Aunque falle, la lista refleja lo que quedó en el servidor.
       await this.recargar().catch(() => undefined);
       this.descartando.set(null);
     }
+  }
+
+  // ── Eliminar (pestaña Reglas del buzón) ──
+  protected pedirEliminar(p: Proceso): void {
+    const etiquetas = this.etiquetasDe(p);
+    this.eliminar.set({ p, etiquetas, salidas: null, grupos: [] });
+    this.modal.set('eliminar');
+    const claves = new Set(etiquetas.map((c) => c.clave));
+    const id = this.buzon().id;
+    void Promise.all([
+      this.buzon().mod_exportacion ? this.api.exportacion(id).catch(() => null) : Promise.resolve(null),
+      this.buzon().mod_asignacion ? this.api.listarGrupos(id).catch(() => []) : Promise.resolve([]),
+    ]).then(([exp, grupos]) => {
+      if (this.eliminar()?.p.id !== p.id) return;
+      this.eliminar.set({
+        p, etiquetas,
+        salidas: exp?.procesos.find((x) => x.id === p.id)?.salidas.length ?? 0,
+        grupos: grupos.filter((g) => g.etiquetas.some((e) => claves.has(e))).map((g) => g.nombre),
+      });
+    });
+  }
+
+  protected async confirmarEliminar(): Promise<void> {
+    const x = this.eliminar();
+    if (!x) return;
+    this.modal.set(null);
+    if (this.editando()?.id === x.p.id) this.editando.set(null);
+    await this.quitarProceso(x.p, 'eliminado');
+    this.eliminar.set(null);
+  }
+
+  protected claves(cs: Categoria[]): string {
+    return cs.map((c) => c.clave).join(', ');
   }
 
   // ── Entrada de reglas ──
@@ -698,7 +872,9 @@ export class ReglasTabComponent implements OnInit {
     }
   }
 
-  protected abrirPegar(): void {
+  /** Con `p`, «Actualizar con prompt» de ese proceso: al analizar solo queda su propuesta. */
+  protected abrirPegar(p: Proceso | null = null): void {
+    this.objetivo.set(p);
     this.textoPrompt = this.textoPrompt || this.buzon().prompt_area || '';
     this.errorPrompt.set('');
     this.modal.set('pegar');
@@ -739,8 +915,20 @@ export class ReglasTabComponent implements OnInit {
         this.toast.show(`Alma detectó ${r.procesos.length} proceso(s): revisa y acepta cada uno`);
       } else {
         await this.api.actualizarBuzon(this.buzon().id, { prompt_area: this.textoPrompt });
-        this.propuestas.set(r.procesos);
-        this.toast.show(`Alma detectó ${r.procesos.length} proceso(s): acéptalos para llevarlos al borrador`);
+        this.refrescarBuzon().catch(() => undefined);
+        this.destinos.set({});
+        this.conservarSalen.set(new Set());
+        const o = this.objetivo();
+        if (o) {
+          // Solo la parte del proceso: por su clave o, si la cambió, la que el editor elija.
+          const suya = r.procesos.find((x) => x.clave === o.clave) ?? (r.procesos.length === 1 ? r.procesos[0] : null);
+          this.propuestas.set(suya ? [suya] : r.procesos);
+          if (suya && suya.clave !== o.clave) this.destinos.set({ [suya.clave]: o.id });
+          this.toast.show(suya ? `Revisa qué cambia en ${o.clave} antes de actualizarlo` : `No encontré ${o.clave} en el prompt: elige cuál propuesta lo actualiza`);
+        } else {
+          this.propuestas.set(r.procesos);
+          this.toast.show(`Alma detectó ${r.procesos.length} proceso(s): revisa cada uno y acéptalo para llevarlo al borrador`);
+        }
       }
     } catch (e) {
       this.errorPrompt.set(e instanceof Error ? e.message : String(e));
@@ -771,25 +959,120 @@ export class ReglasTabComponent implements OnInit {
   }
 
   protected notaPropuesta(p: ProcesoPropuesto): string {
-    return this.procesos().some((x) => x.clave === p.clave)
-      ? `Ya existe: al aceptar reemplaza la versión actual de ${p.clave}`
-      : 'Nuevo · ' + (p.campos.length ? `${p.campos.length} datos` : 'solo categorización');
+    const t = this.objetivoDe(p);
+    if (t) return t.clave === p.clave ? `Ya existe: al aceptar actualiza ${p.clave} en el borrador` : `Actualiza ${t.clave} (conserva su clave)`;
+    return 'Nuevo · ' + (p.campos.length ? `${p.campos.length} datos` : 'solo categorización');
+  }
+
+  protected mismaClave(p: ProcesoPropuesto): boolean {
+    return this.procesos().some((x) => x.clave === p.clave);
+  }
+
+  /** Proceso que la propuesta actualiza: el de su misma clave o el que eligió el editor. */
+  protected objetivoDe(p: ProcesoPropuesto): Proceso | null {
+    const ps = this.procesos();
+    const elegido = this.destinos()[p.clave];
+    return ps.find((x) => x.clave === p.clave) ?? (elegido ? ps.find((x) => x.id === elegido) ?? null : null);
+  }
+
+  protected elegirObjetivo(p: ProcesoPropuesto, id: string): void {
+    this.destinos.update((d) => ({ ...d, [p.clave]: id }));
+  }
+
+  protected desactivaSalen(p: ProcesoPropuesto): boolean {
+    return !this.conservarSalen().has(p.clave);
+  }
+
+  protected alternarSalen(p: ProcesoPropuesto): void {
+    this.conservarSalen.update((s) => {
+      const n = new Set(s);
+      if (!n.delete(p.clave)) n.add(p.clave);
+      return n;
+    });
+  }
+
+  /** Antes y después de un proceso existente (null si la propuesta crea uno nuevo). */
+  protected comparar(p: ProcesoPropuesto): Comparacion | null {
+    const t = this.objetivoDe(p);
+    if (!t) return null;
+    const norm = (x: string | null | undefined) => (x ?? '').trim();
+    const textos: [string, string, string][] = [];
+    for (const [k, a, d] of [['Nombre', t.nombre, p.nombre], ['Alcance y señales', t.descripcion, p.descripcion], ['Exclusiones', t.exclusiones, p.exclusiones]] as const) {
+      if (norm(a) !== norm(d)) textos.push([k, norm(a), norm(d)]);
+    }
+    const actuales = this.etiquetasDe(t);
+    const propuestas = new Set(p.etiquetas.map((e) => e.clave));
+    const campos = new Set(t.campos_extraer.map((f) => f.clave));
+    const camposNuevos = new Set(p.campos.map((f) => f.clave));
+    return {
+      clave: t.clave,
+      textos,
+      nuevas: p.etiquetas.filter((e) => !actuales.some((c) => c.clave === e.clave)).map((e) => e.clave),
+      actualizadas: p.etiquetas.filter((e) => actuales.some((c) => c.clave === e.clave)).map((e) => e.clave),
+      salen: actuales.filter((c) => !propuestas.has(c.clave)),
+      camposMas: [...camposNuevos].filter((k) => !campos.has(k)),
+      camposMenos: [...campos].filter((k) => !camposNuevos.has(k)),
+      manuales: actuales.some((c) => c.origen === 'user') || t.campos_extraer.some((f) => f.origen === 'user'),
+    };
   }
 
   protected async aceptarPropuesta(p: ProcesoPropuesto): Promise<void> {
+    const t = this.objetivoDe(p);
+    const cmp = this.comparar(p);
+    this.aceptando.set(true);
     try {
-      await this.api.aplicarPropuesta(this.buzon().id, { procesos: [p], instrucciones: '' });
+      // Sobre otro proceso, la propuesta toma su clave: el backend actualiza por clave.
+      await this.api.aplicarPropuesta(this.buzon().id, { procesos: [t ? { ...p, clave: t.clave } : p], instrucciones: '' });
+      if (cmp?.salen.length && this.desactivaSalen(p)) {
+        await Promise.all(cmp.salen.map((c) => this.api.actualizarCategoria(c.id, { ...c, activa: false })));
+      }
+      // Una etiqueta que el prompt vuelve a nombrar se reactiva (el backend la actualiza pero la deja como estaba).
+      const nombradas = new Set(p.etiquetas.map((e) => e.clave));
+      const dormidas = (await this.api.listarCategorias(this.buzon().id)).filter((c) => !c.activa && nombradas.has(c.clave));
+      await Promise.all(dormidas.map((c) => this.api.actualizarCategoria(c.id, { ...c, activa: true })));
       this.propuestas.update((v) => v.filter((x) => x.clave !== p.clave));
+      if (!this.propuestas().length) this.objetivo.set(null);
       await this.recargar();
-      this.toast.show(`${p.clave} agregado al borrador v${this.siguiente()}`);
+      this.toast.show(t ? `${t.clave} actualizado en el borrador v${this.siguiente()}` : `${p.clave} agregado al borrador v${this.siguiente()}`);
     } catch (e) {
       this.toast.error('No se pudo aceptar la propuesta', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.aceptando.set(false);
     }
   }
 
   protected descartarPropuesta(p: ProcesoPropuesto): void {
     this.propuestas.update((v) => v.filter((x) => x.clave !== p.clave));
+    if (!this.propuestas().length) this.objetivo.set(null);
     this.toast.show('Propuesta descartada');
+  }
+
+  // ── Prompt base ──
+  /** «Ver prompt» → «Editar como base»: el prompt armado con las reglas actuales. */
+  protected editarComoBase(texto: string): void {
+    this.textoPrompt = texto;
+    this.objetivo.set(null);
+    this.errorPrompt.set('');
+    this.modal.set('pegar');
+  }
+
+  protected async usarPromptBase(): Promise<void> {
+    try {
+      this.textoPrompt = (await this.api.verPrompt(this.buzon().id, 'borrador')).prompt;
+      this.errorPrompt.set('');
+    } catch (e) {
+      this.errorPrompt.set(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  protected descargarPrompt(pr: PromptBuzon): void {
+    const nombre = `${this.buzon().nombre}-prompt-${pr.version ? 'v' + pr.version : 'borrador'}.md`;
+    const url = URL.createObjectURL(new Blob([pr.prompt], { type: 'text/markdown;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   protected copiarPreguntas(lista: Pendiente[]): void {
