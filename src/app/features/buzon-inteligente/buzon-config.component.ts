@@ -13,7 +13,7 @@ import { AccessDeniedComponent } from '../../shared/components/access-denied.com
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { AjustesTabComponent } from './ajustes-tab.component';
 import { AsignacionTabComponent } from './asignacion-tab.component';
-import { Buzon, BuzonApi, Categoria, PERM_VER_BUZON } from './buzon.api';
+import { Buzon, BuzonApi, Categoria, ModoConexion, modoConexion, PERM_VER_BUZON } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { ExportacionTabComponent } from './exportacion-tab.component';
 import { ReglasTabComponent } from './reglas-tab.component';
@@ -95,7 +95,7 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
           @case ('reglas') { <alma-reglas-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" /> }
           @case ('asig') { <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" (irAModulos)="tab.set('ajustes')" (activarModulo)="activar($event)" /> }
           @case ('plant') { <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" (irAModulos)="tab.set('ajustes')" /> }
-          @case ('ajustes') { <alma-ajustes-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" (reconectar)="conectar()" /> }
+          @case ('ajustes') { <alma-ajustes-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" (reconectar)="conectar($event)" /> }
         }
       </div>
 
@@ -212,8 +212,9 @@ export class BuzonConfigComponent {
     }
   }
 
-  /** Inicio de sesión de Microsoft con la cuenta del administrador (acceso delegado al buzón). */
-  protected async conectar(): Promise<void> {
+  /** Inicio de sesión de Microsoft: con la cuenta del buzón o, en genéricas con
+   *  acceso delegado, con la del administrador. Sin `modo`, el que ya tiene. */
+  protected async conectar(modo?: ModoConexion): Promise<void> {
     const b = this.buzon();
     if (!b) return;
     try {
@@ -223,10 +224,11 @@ export class BuzonConfigComponent {
         return;
       }
       if (this.api.modoDemo()) {
-        this.toast.show('Modo demostración', 'Aquí se abriría el inicio de sesión de Microsoft con tu cuenta.');
+        this.buzon.set(this.api.simularConexionDemo(b.id, modo ?? modoConexion(b)));
+        this.toast.show('Modo demostración', 'Aquí se abriría el inicio de sesión de Microsoft; el buzón quedó conectado.');
         return;
       }
-      window.location.assign(this.api.urlConectar(c.correo_buzon_id ?? b.correo_buzon_id, c.scopes, `/apps/buzon-inteligente/buzones/${b.id}?tab=ajustes`, b.tipo_cuenta === 'per' ? b.direccion : undefined));
+      window.location.assign(this.api.urlConectar(b, c, `/apps/buzon-inteligente/buzones/${b.id}?tab=ajustes`, modo));
     } catch (e) {
       this.toast.error('No se pudo iniciar la conexión', e instanceof Error ? e.message : String(e));
     }

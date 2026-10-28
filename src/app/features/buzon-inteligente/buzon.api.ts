@@ -404,8 +404,29 @@ export interface ConexionBuzon {
   /** Conectada por un administrador con su cuenta (acceso completo al buzón). */
   compartida: boolean;
   scopes: string;
+  /** Con la cuenta del buzón (personales y genéricas): sin consentimiento de admin. */
+  scopes_propios?: string;
+  /** Con la cuenta de un administrador (solo genéricas): .Shared, requiere consentimiento de admin. */
+  scopes_compartidos?: string | null;
   puede_conectar: boolean;
 }
+
+/** Cómo se conecta una genérica: con la cuenta del buzón o con la de un administrador. */
+export type ModoConexion = 'propia' | 'compartida';
+
+/** El modo con que ya está conectado el buzón; las genéricas nuevas, con la cuenta del buzón. */
+export function modoConexion(b: Pick<Buzon, 'tipo_cuenta' | 'conexion_compartida'>): ModoConexion {
+  return b.tipo_cuenta === 'gen' && b.conexion_compartida ? 'compartida' : 'propia';
+}
+
+/** Buenas prácticas de una genérica conectada con su propia cuenta. */
+export const BUENAS_PRACTICAS_CUENTA_BUZON: readonly string[] = [
+  'La contraseña y el MFA de la cuenta los custodia el responsable del buzón: no los compartas por correo ni chat.',
+  'Inicia sesión en una ventana privada o cierra la sesión al terminar, para no mezclarla con tu cuenta.',
+  'Alma no guarda la contraseña: solo un token cifrado que Microsoft renueva.',
+  'Si TI cambia la contraseña o el MFA, el buzón queda en «Requiere reconexión»: vuelve a conectarlo desde Ajustes.',
+  'Cuando TI habilite el acceso delegado, prefiere «Con mi cuenta»: queda registrado quién conectó el buzón.',
+];
 
 // ── 2.0: procesos ────────────────────────────────────────────────────────────
 
@@ -1084,6 +1105,10 @@ export class BuzonApi {
           compartida: !!b?.conexion_compartida,
           scopes:
             'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite.Shared Mail.Send.Shared',
+          scopes_propios: 'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite',
+          scopes_compartidos: b?.tipo_cuenta === 'gen'
+            ? 'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite.Shared Mail.Send.Shared'
+            : null,
           puede_conectar: !!b?.puede_conectar,
         };
       },
@@ -1098,13 +1123,21 @@ export class BuzonApi {
   }
 
   /**
-   * URL de autorización (OAuth delegado) para conectar el buzón con su propia
-   * cuenta. Vuelve por la ruta existente /graph-callback con state
-   * "b:<correo_buzon_id>|<ruta>", que ya canjea el código en el backend.
+   * URL de autorización (OAuth delegado) para conectar el buzón. Vuelve por la
+   * ruta existente /graph-callback con state "b:<correo_buzon_id>:<p|c>|<ruta>",
+   * que canjea el código en el backend con el modo elegido.
+   * · propia: se inicia sesión con la cuenta del buzón (Microsoft la propone con
+   *   login_hint) y bastan los scopes básicos.
+   * · compartida (solo genéricas): la cuenta del administrador con acceso completo.
    */
-  /** `cuenta`: la cuenta con la que se debe iniciar sesión (la del buzón personal);
-   *  Microsoft la propone en el selector. */
-  urlConectar(correoBuzonId: string, scopes: string, volverA: string, cuenta?: string): string {
+  urlConectar(
+    b: Pick<Buzon, 'tipo_cuenta' | 'direccion' | 'correo_buzon_id' | 'conexion_compartida'>,
+    c: ConexionBuzon,
+    volverA: string,
+    modo: ModoConexion = modoConexion(b),
+  ): string {
+    const compartida = b.tipo_cuenta === 'gen' && modo === 'compartida';
+    const scopes = compartida ? (c.scopes_compartidos ?? c.scopes) : (c.scopes_propios ?? c.scopes);
     const redirect = `${window.location.origin}/graph-callback`;
     const qs = new URLSearchParams({
       client_id: environment.azure.clientId,
@@ -1112,10 +1145,10 @@ export class BuzonApi {
       redirect_uri: redirect,
       response_mode: 'query',
       scope: scopes,
-      state: `b:${correoBuzonId}|${volverA}`,
+      state: `b:${c.correo_buzon_id ?? b.correo_buzon_id}:${compartida ? 'c' : 'p'}|${volverA}`,
       prompt: 'select_account',
     });
-    if (cuenta) qs.set('login_hint', cuenta);
+    if (!compartida) qs.set('login_hint', b.direccion);
     return `https://login.microsoftonline.com/${environment.azure.tenantId}/oauth2/v2.0/authorize?${qs}`;
   }
 
@@ -1655,8 +1688,8 @@ export class BuzonApi {
   }
 
   /** Solo demostración: en vez del inicio de sesión de Microsoft, el buzón queda conectado. */
-  simularConexionDemo(buzonId: string): Buzon {
-    return this.demo.conectarDemo(buzonId, this.auth.user().correo);
+  simularConexionDemo(buzonId: string, modo: ModoConexion = 'propia'): Buzon {
+    return this.demo.conectarDemo(buzonId, this.auth.user().correo, modo === 'compartida');
   }
 
   /** Modelos de IA y dominios de correo que la plataforma ofrece. */

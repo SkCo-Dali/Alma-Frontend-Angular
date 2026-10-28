@@ -50,17 +50,20 @@ export class GraphCallbackComponent {
   protected readonly error = signal<string | null>(null);
   /** A dónde volver: el state del authorize (URL de origen) o la app. */
   protected readonly destino = signal('/apps/suscripcion');
-  /** state = "b:<buzonId>|<url>" (buzón genérico, p.ej. desde Configuración)
-      o "<url>" a secas (flujo del modal de Suscripción). */
+  /** state = "b:<buzonId>[:p|c]|<url>" (buzón, p.ej. desde Configuración;
+      p = con la cuenta del buzón, c = con la de un administrador) o "<url>" a
+      secas (flujo del modal de Suscripción). */
   private buzonId: string | null = null;
+  private compartida: boolean | undefined;
 
   constructor() {
     const qp = this.route.snapshot.queryParamMap;
     let state = qp.get('state') ?? '';
-    const m = /^b:([0-9a-f-]{36})\|(.*)$/i.exec(state);
+    const m = /^b:([0-9a-f-]{36})(?::([pc]))?\|(.*)$/i.exec(state);
     if (m) {
       this.buzonId = m[1];
-      state = m[2];
+      this.compartida = m[2] ? m[2].toLowerCase() === 'c' : undefined;
+      state = m[3];
     }
     // Solo rutas internas: nada de volver a un origen externo inyectado.
     if (state.startsWith('/') && !state.startsWith('//')) this.destino.set(state);
@@ -76,7 +79,7 @@ export class GraphCallbackComponent {
     const redirect = `${window.location.origin}/graph-callback`;
     try {
       if (this.buzonId) {
-        await this.correoApi.conectarBuzon(this.buzonId, code, redirect);
+        await this.correoApi.conectarBuzon(this.buzonId, code, redirect, this.compartida);
       } else {
         await this.api.conectarCuentaCorreo(code, redirect);
       }
