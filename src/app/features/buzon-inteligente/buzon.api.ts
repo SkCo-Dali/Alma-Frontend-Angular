@@ -60,6 +60,8 @@ export interface Buzon {
   ultima_sincronizacion: string | null;
   ultimo_error: string | null;
   categorias_count: number;
+  /** 061: procesos activos (tarjeta de la página Buzones). */
+  procesos_count: number;
   pendientes: number;
   en_revision: number;
   ejecutados_hoy: number;
@@ -80,6 +82,40 @@ export interface Buzon {
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
+  /** 061: genérica (buzón de área) o personal. El nombre es {TIPO}-{ALIAS}. */
+  tipo_cuenta: TipoCuenta;
+  descripcion: string | null;
+  /** 061: el asistente «Nuevo buzón» no ha terminado: no se lee hasta activarlo. */
+  en_configuracion: boolean;
+  /** 061: módulos que el área activó (desactivar conserva la configuración). */
+  mod_asignacion: boolean;
+  mod_bases: boolean;
+  mod_exportacion: boolean;
+  reglas_admin: ReglasAdmin;
+  agente_proyecto: string | null;
+  /** NULL = usa siempre la última versión publicada del agente. */
+  agente_version_fija: string | null;
+  modelo: string | null;
+  exclusiones_globales: string | null;
+  discriminacion: ParDiscriminacion[];
+  ventana_hilos_dias: number;
+  respuesta_sin_novedad: 'vincular' | 'validar';
+  /** 061: «tabla según el JSON» (extensión y separador) y entrega del archivo. */
+  tabla_formato: 'xlsx' | 'csv' | 'txt';
+  tabla_separador: ';' | ',' | '|';
+  descarga_en_alma: boolean;
+  /** Versión publicada de las reglas (vN); null = sin versión publicada. */
+  version_reglas: number | null;
+}
+
+export type TipoCuenta = 'gen' | 'per';
+export type ReglasAdmin = 'alma' | 'foundry';
+
+/** Qué diferencia a dos procesos que se pueden confundir y qué señal manda. */
+export interface ParDiscriminacion {
+  a: string;
+  b: string;
+  manda: string;
 }
 
 export interface BuzonIn {
@@ -91,6 +127,9 @@ export interface BuzonIn {
   umbral_confianza?: number;
   contexto?: string;
   descripcion?: string;
+  /** 061: lo crea el asistente «Nuevo buzón» (queda En configuración). */
+  tipo_cuenta?: TipoCuenta;
+  en_configuracion?: boolean;
 }
 
 export type BuzonUpdate = Partial<
@@ -109,6 +148,21 @@ export type BuzonUpdate = Partial<
     | 'prompt_area'
     | 'al_desactivar'
     | 'borrador_en_hilo'
+    | 'descripcion'
+    | 'mod_asignacion'
+    | 'mod_bases'
+    | 'mod_exportacion'
+    | 'reglas_admin'
+    | 'agente_proyecto'
+    | 'agente_version_fija'
+    | 'modelo'
+    | 'exclusiones_globales'
+    | 'discriminacion'
+    | 'ventana_hilos_dias'
+    | 'respuesta_sin_novedad'
+    | 'tabla_formato'
+    | 'tabla_separador'
+    | 'descarga_en_alma'
   >
 >;
 
@@ -143,6 +197,21 @@ export interface Categoria {
   correos_30d: number;
   /** Proceso al que pertenece la etiqueta (058). */
   proceso_id: string | null;
+  /** 061: «por IA» (la IA decide con el texto) o «por datos» (condición sobre el JSON). */
+  criterio?: CriterioEtiqueta;
+  condicion?: CondicionEtiqueta | null;
+  /** ✦ propuesta de Alma · ✎ ajustada por el área. */
+  origen?: OrigenRegla;
+}
+
+export type CriterioEtiqueta = 'ia' | 'datos';
+export type OrigenRegla = 'ia' | 'user';
+export type OperadorCondicion = '=' | 'contiene' | 'distinto de';
+
+export interface CondicionEtiqueta {
+  campo: string;
+  op: OperadorCondicion;
+  valor: string;
 }
 
 export type CategoriaIn = Omit<Categoria, 'id' | 'buzon_id' | 'correos_30d' | 'orden' | 'proceso_id'> & {
@@ -213,6 +282,8 @@ export interface Correo {
   duplicado_asunto?: string | null;
   duplicado_estado?: 'posible' | 'confirmado' | 'descartado' | null;
   respuestas?: number;
+  /** 061: versión de las reglas con la que se clasificó (null = borrador, antes de publicar). */
+  reglas_version?: number | null;
 }
 
 /** Un correo de la conversación (pestaña Hilo). */
@@ -350,6 +421,12 @@ export interface CampoProceso {
   critico: boolean;
   /** Tipo de dato: valida la corrección del revisor (texto si no se declaró). */
   tipo?: TipoCampo;
+  /** 061: crítico alterno (basta uno del grupo), identificador del caso y origen. */
+  alterno?: boolean;
+  identificador?: boolean;
+  origen?: OrigenRegla;
+  /** Campos de cada elemento cuando el tipo es «tabla» (lista de objetos). */
+  campos?: string[];
 }
 
 export interface Proceso {
@@ -366,6 +443,9 @@ export interface Proceso {
   activo: boolean;
   /** Claves de las etiquetas (categorías) del proceso. */
   etiquetas: string[];
+  /** 061: confianza mínima (null = la del buzón) y causas que llevan a Validar. */
+  umbral?: number | null;
+  causas_validar?: string[];
 }
 
 export interface ProcesoIn {
@@ -377,6 +457,74 @@ export interface ProcesoIn {
   color?: string | null;
   orden?: number | null;
   activo: boolean;
+  umbral?: number | null;
+  causas_validar?: string[];
+}
+
+/** Editor de procesos de Reglas (061): el proceso con sus etiquetas y su discriminación. */
+export interface ProcesoCompletoIn {
+  /** Clave anterior al renombrar; null = proceso nuevo. */
+  original: string | null;
+  proceso: ProcesoIn;
+  etiquetas: { clave: string; nombre?: string; descripcion: string; criterio: CriterioEtiqueta; condicion?: CondicionEtiqueta | null; origen: OrigenRegla }[];
+  discriminacion?: { con: string; manda: string }[];
+}
+
+// ── 061: reglas con versiones ────────────────────────────────────────────────
+
+/** [qué cambió, antes, después] del borrador frente a la versión vigente. */
+export type CambioRegla = [string, string, string];
+
+export interface PruebaBorrador {
+  firma: string;
+  fecha: string;
+  total: number;
+  proceso_ok: number;
+  etiqueta_ok: number;
+  no_disponibles: number;
+  fallos: { correo_id: string; asunto: string; esperado: string; obtenido: string | null; confianza: number }[];
+}
+
+export interface VersionReglas {
+  version: number;
+  cambios: CambioRegla[];
+  prueba: PruebaBorrador | null;
+  publicada_en: string;
+  publicada_por: string;
+}
+
+export interface EstadoReglas {
+  /** Vigente (null = sin versión publicada). */
+  version: number | null;
+  siguiente: number;
+  /** Hay cambios sin publicar. */
+  borrador: boolean;
+  cambios: CambioRegla[];
+  /** Prueba del borrador ACTUAL (null si no se ha probado o cambió después). */
+  prueba: PruebaBorrador | null;
+  procesos: number;
+  pares_discriminacion: number;
+  versiones: VersionReglas[];
+}
+
+export interface PromptBuzon {
+  version: number | null;
+  modo: ModoClasificacion;
+  prompt: string;
+  esquema: Record<string, unknown>;
+}
+
+export interface PruebaSeco {
+  total: number;
+  validar: number;
+  resumen: { proceso: string; resultado: string; correos: number }[];
+  filas: { asunto: string; proceso: string; etiqueta: string | null; confianza: number; datos: boolean; validar: boolean; destino: string }[];
+}
+
+export interface NombreBuzon {
+  nombre: string;
+  disponible: boolean;
+  existente: { id: string; nombre: string; misma_direccion: boolean } | null;
 }
 
 export interface EtiquetaPropuesta {
@@ -857,7 +1005,7 @@ export class BuzonApi {
   listarBuzones(): Promise<Buzon[]> {
     return this.conDemo(
       async () => (await this.api.fetch<{ items: Buzon[] }>(`${BASE}/buzones`)).items,
-      () => this.demo.buzones,
+      () => this.demo.buzones.map((b) => this.demo.conConteos(b)),
     );
   }
 
@@ -867,7 +1015,7 @@ export class BuzonApi {
       () => {
         const b = this.demo.buzones.find((x) => x.id === id);
         if (!b) throw new Error('Buzón no encontrado.');
-        return b;
+        return this.demo.conConteos(b);
       },
     );
   }
@@ -1482,6 +1630,95 @@ export class BuzonApi {
           body: JSON.stringify({ persona_id: personaId }),
         }),
       () => this.demo.reasignar(correoId, personaId, this.auth.user().correo),
+    );
+  }
+
+  // ── 061: asistente «Nuevo buzón» y reglas con versiones ──
+
+  /** Nombre {GEN|PER}-{ALIAS} y si está libre. */
+  nombreBuzon(direccion: string, tipo: TipoCuenta): Promise<NombreBuzon> {
+    const q = `direccion=${encodeURIComponent(direccion)}&tipo=${tipo}`;
+    return this.conDemo(
+      () => this.api.fetch<NombreBuzon>(`${BASE}/buzones/nombre?${q}`),
+      () => this.demo.nombreBuzon(direccion, tipo),
+    );
+  }
+
+  /** Solo demostración: en vez del inicio de sesión de Microsoft, el buzón queda conectado. */
+  simularConexionDemo(buzonId: string): Buzon {
+    return this.demo.conectarDemo(buzonId, this.auth.user().correo);
+  }
+
+  /** Modelos de IA que la plataforma ofrece. */
+  opciones(): Promise<{ modelos: string[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ modelos: string[] }>(`${BASE}/opciones`),
+      () => ({ modelos: ['gpt-5-mini', 'gpt-4.1'] }),
+    );
+  }
+
+  /** Cuenta personal: crea la subcarpeta dedicada (p. ej. «Alma») y devuelve el árbol. */
+  crearCarpeta(buzonId: string, nombre: string): Promise<CarpetaGraph[]> {
+    return this.conDemo(
+      async () =>
+        (await this.api.fetch<{ items: CarpetaGraph[] }>(`${BASE}/buzones/${buzonId}/carpetas`, {
+          method: 'POST',
+          body: JSON.stringify({ nombre, dentro_de_bandeja: true }),
+        })).items,
+      () => this.demo.crearCarpeta(buzonId, nombre),
+    );
+  }
+
+  guardarProcesoCompleto(buzonId: string, body: ProcesoCompletoIn): Promise<Proceso> {
+    return this.conDemo(
+      () => this.api.fetch<Proceso>(`${BASE}/buzones/${buzonId}/procesos-completo`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.guardarProcesoCompleto(buzonId, body),
+    );
+  }
+
+  estadoReglas(buzonId: string): Promise<EstadoReglas> {
+    return this.conDemo(
+      () => this.api.fetch<EstadoReglas>(`${BASE}/buzones/${buzonId}/versiones`),
+      () => this.demo.estadoReglas(buzonId),
+    );
+  }
+
+  /** Clasifica con el borrador los últimos correos ya decididos (30–90 s). */
+  probarBorrador(buzonId: string): Promise<PruebaBorrador> {
+    return this.conDemo(
+      () => this.api.fetch<PruebaBorrador>(`${BASE}/buzones/${buzonId}/versiones/probar`, { method: 'POST', body: '{}' }),
+      () => this.demo.probarBorrador(buzonId),
+    );
+  }
+
+  /** Publica el borrador como vN+1 (y activa el buzón si estaba en configuración). */
+  publicarReglas(buzonId: string): Promise<{ version: number; cambios: CambioRegla[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ version: number; cambios: CambioRegla[] }>(`${BASE}/buzones/${buzonId}/versiones`, { method: 'POST' }),
+      () => this.demo.publicarReglas(buzonId, this.auth.user().correo),
+    );
+  }
+
+  verPrompt(buzonId: string, cual: 'borrador' | 'vigente' = 'borrador'): Promise<PromptBuzon> {
+    return this.conDemo(
+      () => this.api.fetch<PromptBuzon>(`${BASE}/buzones/${buzonId}/prompt?cual=${cual}`),
+      () => this.demo.verPrompt(buzonId),
+    );
+  }
+
+  /** La IA propone procesos nuevos a partir de los correos recientes (no guarda nada). */
+  proponerProcesos(buzonId: string): Promise<PropuestaProcesos & { correos_leidos: number }> {
+    return this.conDemo(
+      () => this.api.fetch<PropuestaProcesos & { correos_leidos: number }>(`${BASE}/buzones/${buzonId}/proponer-procesos`, { method: 'POST' }),
+      () => this.demo.proponerProcesos(buzonId),
+    );
+  }
+
+  /** Paso 6 del asistente: clasifica los últimos correos sin tocar Outlook. */
+  pruebaSeco(buzonId: string, correos = 20): Promise<PruebaSeco> {
+    return this.conDemo(
+      () => this.api.fetch<PruebaSeco>(`${BASE}/buzones/${buzonId}/prueba-seco`, { method: 'POST', body: JSON.stringify({ correos }) }),
+      () => this.demo.pruebaSeco(buzonId),
     );
   }
 

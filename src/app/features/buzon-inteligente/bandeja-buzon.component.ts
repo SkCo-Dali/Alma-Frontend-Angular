@@ -1240,8 +1240,10 @@ export class BandejaBuzonComponent {
   protected origenTexto(c: Correo): string {
     if (c.origen === 'regla') return 'Regla fija';
     if (c.origen === 'humano') return 'Ajustado manualmente';
-    if (c.modelo_ia?.startsWith('agente:')) return `Clasificado por el agente ${c.modelo_ia.slice(7)}`;
-    return 'Clasificado por IA · Prompt de Alma';
+    // 061: versión de las reglas con la que se clasificó (sin versión = borrador, antes de publicar).
+    const v = c.reglas_version ? ` · v${c.reglas_version}` : '';
+    if (c.modelo_ia?.startsWith('agente:')) return `Clasificado por el agente ${c.modelo_ia.slice(7)}${v}`;
+    return `Clasificado por IA · Prompt de Alma${v}`;
   }
 
   protected asignadoTexto(c: Correo): { icon: string; quien: string | null; via: string } | null {
