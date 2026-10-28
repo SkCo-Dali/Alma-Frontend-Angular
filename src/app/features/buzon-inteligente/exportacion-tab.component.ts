@@ -14,6 +14,7 @@ import { AlmaLoaderComponent } from '../../shared/components/alma-loader.compone
 import { Buzon, BuzonApi, BuzonUpdate, Categoria } from './buzon.api';
 import { referenciaPac, tablaJson } from './buzon-exportacion';
 import { ExportacionEstado, ProcesoUI, conArchivo } from './exportacion-estado';
+import { ModuloEstadoComponent } from './modulo-estado.component';
 import { HojaVistaComponent, PlantillaBuilderComponent } from './plantilla-builder.component';
 import { SalidasProcesoComponent } from './salidas-proceso.component';
 
@@ -31,10 +32,11 @@ export function entregaDe(b: Buzon): EntregaExp {
 
 @Component({
   selector: 'alma-exportacion-tab',
-  imports: [LucideAngularModule, AlmaLoaderComponent, SalidasProcesoComponent, PlantillaBuilderComponent, HojaVistaComponent],
+  imports: [LucideAngularModule, AlmaLoaderComponent, SalidasProcesoComponent, PlantillaBuilderComponent, HojaVistaComponent, ModuloEstadoComponent],
   styleUrls: ['./buzon-proto.css'],
   styles: [':host { display: grid; gap: 16px; }'],
   template: `
+    <alma-modulo-estado nombre="Exportación" [activo]="buzon().mod_exportacion" [puede]="puede()" (irAjustes)="irAModulos.emit()" />
     @if (est.cargando()) {
       <div class="glass r-2xl empty"><alma-loader [size]="56" label="Cargando exportación…" /></div>
     } @else if (est.error(); as e) {
@@ -169,6 +171,8 @@ export class ExportacionTabComponent {
   readonly categorias = input<Categoria[]>([]);
   /** El buzón cambió (entrega del archivo): el padre lo reemplaza. */
   readonly buzonActualizado = output<Buzon>();
+  /** «Cambiar en Ajustes → Módulos». */
+  readonly irAModulos = output<void>();
 
   protected readonly est = new ExportacionEstado(this.api, this.toast);
   protected readonly conArchivo = conArchivo;

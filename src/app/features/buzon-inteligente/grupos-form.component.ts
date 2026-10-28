@@ -6,6 +6,7 @@
 import { Component, computed, input, model } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { EstadoGrupos, EtiquetaProceso, GrupoBorrador, ModoGrupos, gruposPorModo } from './asignacion-ui';
+import type { DestinoGrupo } from './buzon.api';
 
 const MODOS: [ModoGrupos, string][] = [
   ['uno', 'Un solo grupo para todo el buzón'],
@@ -13,6 +14,8 @@ const MODOS: [ModoGrupos, string][] = [
   ['etiqueta', 'Un grupo por etiqueta'],
   ['custom', 'Personalizado: yo armo los grupos'],
 ];
+
+const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar' };
 
 @Component({
   selector: 'alma-grupos-form',
@@ -27,6 +30,14 @@ const MODOS: [ModoGrupos, string][] = [
       }
     </div>
     @if (s.modo === 'custom') {
+      <div class="note b-sky">
+        <lucide-icon name="info" [size]="13" />
+        <span>
+          Las etiquetas de un mismo grupo comparten destino. Si una etiqueta debe ir a otro lado, crea un grupo con
+          <b>+ Grupo</b> y muévela con <b>Va al grupo</b>. Después eliges el destino de cada grupo en su tarjeta.
+          <span class="muted">Ejemplo: «4X1000» → enviar a carpeta, y «4X1000 · Solo etiquetar» con 4X1000_INCOMPLETO → solo categorizar.</span>
+        </span>
+      </div>
       <div class="row" style="gap:6px">
         @for (g of s.grupos; track g.key; let i = $index) {
           <span class="chipo"><input class="input sm" style="width:150px;height:24px" [value]="g.nombre" aria-label="Nombre del grupo" (change)="renombrar(i, $any($event.target).value)" /> <button type="button" class="mini" aria-label="Quitar grupo" (click)="quitar(i)">×</button></span>
@@ -52,6 +63,17 @@ const MODOS: [ModoGrupos, string][] = [
           </tbody>
         </table>
       </div>
+      <div class="stack" style="gap:4px">
+        <span class="xs b">Así quedan los grupos</span>
+        <div class="row" style="gap:6px">
+          @for (g of s.grupos; track g.key) {
+            <span class="chipo"><lucide-icon name="layers" [size]="13" /> {{ g.nombre || 'Sin nombre' }} → {{ destinoTxt[g.destino] }}@if (g.destino === 'carpeta' && g.carpeta) { «{{ g.carpeta }}» } · {{ g.etiquetas.length }} etiqueta{{ g.etiquetas.length === 1 ? '' : 's' }}</span>
+          }
+        </div>
+        @if (nuevos()) {
+          <p class="xxs muted">Al guardar, ajusta el destino de los grupos nuevos en su tarjeta si hace falta.</p>
+        }
+      </div>
     } @else {
       <div class="row" style="gap:6px">
         @for (g of s.grupos; track g.key) { <span class="chipo"><lucide-icon name="layers" [size]="13" /> {{ g.nombre }} · {{ g.etiquetas.length }} etiqueta(s)</span> }
@@ -69,6 +91,8 @@ export class GruposFormComponent {
   readonly idp = input('gm');
 
   protected readonly modos = MODOS;
+  protected readonly destinoTxt = DESTINO_TXT;
+  protected readonly nuevos = computed(() => this.st().grupos.some((g) => !g.id));
   protected readonly sinGrupo = computed(() =>
     this.ets()
       .filter((e) => !this.st().grupos.some((g) => g.etiquetas.includes(e[0])))

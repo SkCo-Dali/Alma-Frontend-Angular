@@ -93,8 +93,8 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
 
         @switch (tabVisible()) {
           @case ('reglas') { <alma-reglas-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" /> }
-          @case ('asig') { <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" /> }
-          @case ('plant') { <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" /> }
+          @case ('asig') { <alma-asignacion-tab [buzon]="b" [categorias]="categorias()" (irAModulos)="tab.set('ajustes')" (activarModulo)="activar($event)" /> }
+          @case ('plant') { <alma-exportacion-tab [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" (irAModulos)="tab.set('ajustes')" /> }
           @case ('ajustes') { <alma-ajustes-tab [buzon]="b" (buzonActualizado)="buzon.set($event)" (reconectar)="conectar()" /> }
         }
       </div>
