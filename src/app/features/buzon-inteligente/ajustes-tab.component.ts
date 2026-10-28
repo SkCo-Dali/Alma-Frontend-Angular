@@ -10,7 +10,8 @@ import { Component, computed, inject, input, OnInit, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
-import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, Categoria, CategoriaIn, resumenAccion } from './buzon.api';
+import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
+import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, Categoria, CategoriaIn, ModoConexion, resumenAccion } from './buzon.api';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
@@ -24,7 +25,7 @@ interface CarpetaPlana {
 
 @Component({
   selector: 'alma-ajustes-tab',
-  imports: [FormsModule, LucideAngularModule, CategoriaEditorComponent],
+  imports: [FormsModule, LucideAngularModule, CategoriaEditorComponent, AvisoCuentaBuzonComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
@@ -53,9 +54,19 @@ interface CarpetaPlana {
               <p class="xxs muted">{{ textoConexion() }}</p>
             </div>
             @if (b.puede_conectar) {
-              <button type="button" class="btn outline sm" (click)="reconectar.emit()"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'conectada' ? 'Reconectar' : 'Conectar' }}</button>
+              <div style="display:grid;gap:4px;justify-items:end;flex-shrink:0">
+                <button type="button" class="btn outline sm" (click)="reconectar.emit(undefined)"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'conectada' ? 'Reconectar' : 'Conectar' }}</button>
+                @if (b.tipo_cuenta === 'gen') {
+                  <button type="button" class="linkbtn xxs" (click)="reconectar.emit(b.conexion_compartida ? 'propia' : 'compartida')">
+                    {{ b.conexion_compartida ? 'Usar la cuenta del buzón' : 'Usar mi cuenta (acceso delegado)' }}
+                  </button>
+                }
+              </div>
             }
           </div>
+          @if (b.tipo_cuenta === 'gen' && !b.conexion_compartida) {
+            <alma-aviso-cuenta-buzon [direccion]="b.direccion" />
+          }
           <div class="row between sunk r-xl" style="padding:10px 12px;flex-wrap:nowrap">
             <div style="min-width:0">
               <p class="sm b">Ejecución automática</p>
@@ -165,7 +176,8 @@ export class AjustesTabComponent implements OnInit {
   readonly buzon = input.required<Buzon>();
   readonly buzonActualizado = output<Buzon>();
   /** Volver a conectar con Microsoft (lo resuelve la página: arma la URL de inicio de sesión). */
-  readonly reconectar = output<void>();
+  /** Sin modo: reconectar como ya está; con modo (genéricas): cambiar de forma de conexión. */
+  readonly reconectar = output<ModoConexion | undefined>();
 
   protected readonly carpetas = signal<CarpetaPlana[]>([]);
   protected readonly modelos = signal<string[]>([]);
@@ -190,7 +202,7 @@ export class AjustesTabComponent implements OnInit {
 
   protected readonly textoConexion = computed(() => {
     const b = this.buzon();
-    if (b.estado_conexion === 'conectada') return `Conectado${b.conectada_por ? ' por ' + b.conectada_por : ''}${b.conexion_compartida ? ' · acceso delegado' : ''}`;
+    if (b.estado_conexion === 'conectada') return `Conectado${b.conectada_por ? ' por ' + b.conectada_por : ''}${b.conexion_compartida ? ' · acceso delegado' : b.tipo_cuenta === 'gen' ? ' · con la cuenta del buzón' : ''}`;
     return b.estado_conexion === 'requiere_reconexion' ? 'La conexión venció: hay que volver a conectarlo.' : 'Sin conectar: Alma no lo lee.';
   });
 

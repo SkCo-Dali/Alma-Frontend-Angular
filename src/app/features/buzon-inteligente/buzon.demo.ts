@@ -1487,10 +1487,11 @@ export class DemoStore {
   }
 
   // ── 061: asistente y reglas con versiones (demo) ──
-  conectarDemo(id: string, por: string): Buzon {
+  conectarDemo(id: string, por: string, compartida = false): Buzon {
     const b = this.buzones.find((x) => x.id === id);
     if (!b) throw new Error('Buzón no encontrado.');
-    Object.assign(b, { estado_conexion: 'conectada', conectada_por: por || 'admin.demo@ejemplo.com.co', conexion_compartida: b.tipo_cuenta === 'gen' });
+    const delegada = b.tipo_cuenta === 'gen' && compartida;
+    Object.assign(b, { estado_conexion: 'conectada', conectada_por: delegada ? por || 'admin.demo@ejemplo.com.co' : b.direccion, conexion_compartida: delegada });
     return this.conConteos(b);
   }
 
