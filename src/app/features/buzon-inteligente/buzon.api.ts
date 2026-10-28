@@ -419,15 +419,6 @@ export function modoConexion(b: Pick<Buzon, 'tipo_cuenta' | 'conexion_compartida
   return b.tipo_cuenta === 'gen' && b.conexion_compartida ? 'compartida' : 'propia';
 }
 
-/** Buenas prácticas de una genérica conectada con su propia cuenta. */
-export const BUENAS_PRACTICAS_CUENTA_BUZON: readonly string[] = [
-  'La contraseña y el MFA de la cuenta los custodia el responsable del buzón: no los compartas por correo ni chat.',
-  'Inicia sesión en una ventana privada o cierra la sesión al terminar, para no mezclarla con tu cuenta.',
-  'Alma no guarda la contraseña: solo un token cifrado que Microsoft renueva.',
-  'Si TI cambia la contraseña o el MFA, el buzón queda en «Requiere reconexión»: vuelve a conectarlo desde Ajustes.',
-  'Cuando TI habilite el acceso delegado, prefiere «Con mi cuenta»: queda registrado quién conectó el buzón.',
-];
-
 // ── 2.0: procesos ────────────────────────────────────────────────────────────
 
 export type TipoCampo = 'texto' | 'numero' | 'fecha' | 'booleano' | 'lista' | 'tabla';
