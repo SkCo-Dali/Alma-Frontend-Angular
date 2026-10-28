@@ -167,7 +167,7 @@ interface FijaEd {
                     </button>
                     @if (esWiz()) {
                       @if (estadoWiz(p) !== 'ok') { <button type="button" class="btn primary sm" (click)="aceptarWiz(p)">Aceptar</button> }
-                      <button type="button" class="btn ghost danger" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
+                      <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
                     } @else {
                       <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave"><lucide-icon name="copy" [size]="16" /></button>
                       <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
@@ -455,6 +455,8 @@ export class ReglasTabComponent implements OnInit {
   protected readonly eligioClasificador = signal(false);
   protected readonly analizando = signal(false);
   protected readonly proponiendo = signal(false);
+  /** Id del proceso que se está descartando (evita clics repetidos). */
+  protected readonly descartando = signal<string | null>(null);
   protected readonly probando = signal(false);
   protected readonly publicando = signal(false);
   protected readonly errorPrompt = signal('');
@@ -667,15 +669,24 @@ export class ReglasTabComponent implements OnInit {
   }
 
   protected async descartarWiz(p: Proceso): Promise<void> {
+    if (this.descartando()) return;
+    this.descartando.set(p.id);
+    const etiquetas = this.etiquetasDe(p);
     try {
-      const etiquetas = this.etiquetasDe(p);
-      await this.api.eliminarProceso(p.id);
+      // Si un intento anterior ya lo borró, se sigue con sus etiquetas.
+      await this.api.eliminarProceso(p.id).catch((e: unknown) => {
+        if (!/no encontrado/i.test(e instanceof Error ? e.message : String(e))) throw e;
+      });
       // Las etiquetas del proceso quedan inactivas (no se borran: pueden tener historial).
-      await Promise.all(etiquetas.map((c) => this.api.actualizarCategoria(c.id, { ...c, activa: false })));
-      await this.recargar();
+      // proceso_id: null — el proceso ya no existe y mandar su id hace fallar la actualización.
+      await Promise.all(etiquetas.map((c) => this.api.actualizarCategoria(c.id, { ...c, proceso_id: null, activa: false })));
       this.toast.show(`${p.clave} descartado`);
     } catch (e) {
       this.toast.error('No se pudo descartar', e instanceof Error ? e.message : String(e));
+    } finally {
+      // Aunque falle, la lista refleja lo que quedó en el servidor.
+      await this.recargar().catch(() => undefined);
+      this.descartando.set(null);
     }
   }
 
