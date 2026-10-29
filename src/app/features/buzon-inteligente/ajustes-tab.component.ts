@@ -65,14 +65,7 @@ interface CarpetaPlana {
           @if (b.tipo_cuenta === 'gen' && !b.conexion_compartida) {
             <alma-aviso-cuenta-buzon />
           }
-          <div class="row between sunk r-xl" style="padding:10px 12px;flex-wrap:nowrap">
-            <div style="min-width:0">
-              <p class="sm b">Ejecución automática</p>
-              <p class="xxs muted">Encendida: Alma ejecuta lo que no cae en Validar. Apagada: todo queda para aprobar en la bandeja.</p>
-            </div>
-            <button type="button" class="sw" role="switch" [attr.aria-checked]="b.modo === 'automatico'" aria-label="Ejecución automática" (click)="guardar({ modo: b.modo === 'automatico' ? 'sugerir' : 'automatico' })"></button>
-          </div>
-          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Alma ejecuta automáticamente todo lo que no cae en <b>Validar</b>. Validar es el único punto de ajuste manual.</span></p>
+          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Alma ejecuta automáticamente todo lo que alcanza el umbral de confianza. Solo va a <b>Validar</b> lo que queda por debajo, lo que la IA marca para revisión humana y los posibles duplicados.</span></p>
         </div>
 
         <div class="glass r-2xl stack" style="padding:20px">

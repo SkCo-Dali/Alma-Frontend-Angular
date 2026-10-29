@@ -1279,14 +1279,10 @@ export class BandejaBuzonComponent {
     if (c.estado !== 'revision' || c.duplicado_estado === 'posible') return null;
     const m = (c.justificacion ?? '').split('Requiere humano:')[1]?.trim();
     if (m) return m;
-    const b = this.buzones().find((x) => x.id === c.buzon_id);
-    if (b && b.modo !== 'automatico') {
-      return 'La ejecución automática de este buzón está apagada: todo queda en Validar. Enciéndela en Ajustes del buzón.';
-    }
     if (c.confianza === null) return 'Pendiente de revisión.';
     const u = this.umbralDe(c);
     if (u !== null && c.confianza < u) return `Confianza ${this.pct(c.confianza)}, por debajo del umbral de ${this.pct(u)}.`;
-    return `Confianza ${this.pct(c.confianza)}: quedó en Validar con las reglas vigentes cuando se clasificó.`;
+    return `Confianza ${this.pct(c.confianza)}: alcanza el umbral; Alma lo ejecuta en el próximo ciclo.`;
   }
 
   /** Umbral que aplica (etiqueta → proceso → buzón), como en el worker. */
