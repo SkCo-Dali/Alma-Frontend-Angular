@@ -731,10 +731,15 @@ export class ReporteriaPageComponent {
       {
         label: 'APE emitido',
         icon: 'coins',
-        valor: fmtCOP(r.apeEmitidas ?? 0),
-        sub: (r.apeEmitidasN ?? 0) < r.emitidas
-          ? `sobre ${n(r.apeEmitidasN ?? 0)} de ${n(r.emitidas)} emitidas con APE`
-          : `de ${n(r.emitidas)} pólizas emitidas`,
+        // En millones (MM): la cifra completa de un mes no cabe en la card. La
+        // completa va en el subtítulo, que se lee entero al pasar el mouse.
+        valor: this.millones(r.apeEmitidas ?? 0),
+        sub: [
+          fmtCOP(r.apeEmitidas ?? 0),
+          (r.apeEmitidasN ?? 0) < r.emitidas
+            ? `sobre ${n(r.apeEmitidasN ?? 0)} de ${n(r.emitidas)} emitidas con APE`
+            : `de ${n(r.emitidas)} pólizas emitidas`,
+        ].join(' · '),
         clase: 'text-[#047857] dark:text-[#34d399]',
       },
       { label: 'Emisión automática', icon: 'send', valor: n(r.emisionAutomatica), sub: this.porcentaje(r.emisionAutomatica, r.solicitudes), clase: 'text-primary' },
@@ -990,6 +995,11 @@ export class ReporteriaPageComponent {
   }
 
   /** Minutos -> "2h 15m" / "3d 4h". */
+  /** Monto COP en millones, al estilo financiero: «$ 45.678,9 MM». */
+  protected millones(v: number): string {
+    return `$ ${(v / 1_000_000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} MM`;
+  }
+
   protected duracion(min: number | null | undefined): string {
     if (min == null) return '—';
     if (min < 60) return `${min}m`;
