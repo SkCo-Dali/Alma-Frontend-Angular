@@ -717,12 +717,18 @@ export class BandejaBuzonComponent {
       const buzones = await this.api.listarBuzones();
       this.buzones.set(buzones);
       this.porValidar.set(buzones.reduce((n, b) => n + b.en_revision, 0));
-      const [cats, procs] = await Promise.all([
-        Promise.all(buzones.map((b) => this.api.listarCategorias(b.id))),
-        Promise.all(buzones.map((b) => this.api.listarProcesos(b.id).catch(() => [] as Proceso[]))),
-      ]);
-      this.categorias.set(cats.flat());
-      this.procesos.set(Object.fromEntries(buzones.map((b, i) => [b.id, procs[i]])));
+      // Una sola petición para todos los buzones: antes eran 2 por buzón a la vez
+      // y, con muchos buzones, la ráfaga saturaba la BD (y el login con ella).
+      const cat = await this.api.catalogo().catch(async () => {
+        // Respaldo mientras el backend no tenga /catalogo (despliegues desfasados).
+        const [cats, procs] = await Promise.all([
+          Promise.all(buzones.map((b) => this.api.listarCategorias(b.id))),
+          Promise.all(buzones.map((b) => this.api.listarProcesos(b.id).catch(() => [] as Proceso[]))),
+        ]);
+        return { categorias: cats.flat(), procesos: Object.fromEntries(buzones.map((b, i) => [b.id, procs[i]])) };
+      });
+      this.categorias.set(cat.categorias);
+      this.procesos.set(cat.procesos);
     } catch {
       /* la lista principal informa el error */
     }
