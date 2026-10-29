@@ -3,7 +3,7 @@
 // {TIPO}-{ALIAS}, descripción, carpeta vigilada), Módulos (asignación, búsqueda en
 // bases, exportación), Clasificador (agente de Foundry o prompt de Alma) e Hilos y
 // duplicados. Además, lo que Alma ya tenía y el prototipo no muestra: la conexión con
-// Microsoft, la ejecución automática y las acciones en Outlook de cada etiqueta.
+// Microsoft. Las etiquetas (umbral, acciones en Outlook) se editan en Reglas, junto a su proceso.
 // Cada cambio se guarda al momento (PUT parcial del buzón).
 
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
@@ -11,8 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
-import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, Categoria, CategoriaIn, ModoConexion, resumenAccion } from './buzon.api';
-import { CategoriaEditorComponent } from './categoria-editor.component';
+import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, ModoConexion } from './buzon.api';
 
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
 
@@ -25,7 +24,7 @@ interface CarpetaPlana {
 
 @Component({
   selector: 'alma-ajustes-tab',
-  imports: [FormsModule, LucideAngularModule, CategoriaEditorComponent, AvisoCuentaBuzonComponent],
+  imports: [FormsModule, LucideAngularModule, AvisoCuentaBuzonComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
@@ -65,14 +64,7 @@ interface CarpetaPlana {
           @if (b.tipo_cuenta === 'gen' && !b.conexion_compartida) {
             <alma-aviso-cuenta-buzon />
           }
-          <div class="row between sunk r-xl" style="padding:10px 12px;flex-wrap:nowrap">
-            <div style="min-width:0">
-              <p class="sm b">Ejecución automática</p>
-              <p class="xxs muted">Encendida: Alma ejecuta lo que no cae en Validar. Apagada: todo queda para aprobar en la bandeja.</p>
-            </div>
-            <button type="button" class="sw" role="switch" [attr.aria-checked]="b.modo === 'automatico'" aria-label="Ejecución automática" (click)="guardar({ modo: b.modo === 'automatico' ? 'sugerir' : 'automatico' })"></button>
-          </div>
-          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Alma ejecuta automáticamente todo lo que no cae en <b>Validar</b>. Validar es el único punto de ajuste manual.</span></p>
+          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Alma ejecuta automáticamente todo lo que alcanza el umbral de confianza. Solo va a <b>Validar</b> lo que queda por debajo, lo que la IA marca para revisión humana y los posibles duplicados.</span></p>
         </div>
 
         <div class="glass r-2xl stack" style="padding:20px">
@@ -147,24 +139,10 @@ interface CarpetaPlana {
           <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Un correo ya registrado nunca se vuelve a procesar: se identifica por <span class="mono">internet_message_id</span>.</span></p>
         </div>
 
-        <div class="glass r-2xl stack" style="padding:20px">
-          <h2 class="sm b">Acciones en Outlook por etiqueta</h2>
-          <p class="xxs muted">Qué hace Alma en el buzón al ejecutar cada etiqueta (por defecto, la etiqueta como categoría de Outlook; el destino lo pone la asignación).</p>
-          @for (c of etiquetas(); track c.id) {
-            <div class="row between sunk r-xl" style="padding:8px 12px;flex-wrap:nowrap">
-              <div style="min-width:0"><p class="xs b"><span class="key">{{ c.clave }}</span> {{ c.nombre }}</p><p class="xxs muted trunc">{{ acciones(c) }}</p></div>
-              <button type="button" class="btn ghost" (click)="editando.set(c)" [attr.aria-label]="'Editar acciones de ' + c.clave"><lucide-icon name="pencil" [size]="16" /></button>
-            </div>
-          } @empty {
-            <p class="xs muted">Aún no hay etiquetas.</p>
-          }
-        </div>
+        <p class="note b-sky"><lucide-icon name="tags" [size]="13" /> <span>El umbral, las acciones en Outlook y el resto de cada etiqueta se editan en <b>Reglas</b>, dentro de su proceso (lápiz junto a la etiqueta).</span></p>
       </div>
     </div>
 
-    @if (editando(); as c) {
-      <alma-categoria-editor [categoria]="c" [guardando]="guardandoCategoria()" (guardar)="guardarCategoria(c, $event)" (cancelar)="editando.set(null)" />
-    }
   `,
 })
 export class AjustesTabComponent implements OnInit {
@@ -179,9 +157,6 @@ export class AjustesTabComponent implements OnInit {
 
   protected readonly carpetas = signal<CarpetaPlana[]>([]);
   protected readonly modelos = signal<string[]>([]);
-  protected readonly etiquetas = signal<Categoria[]>([]);
-  protected readonly editando = signal<Categoria | null>(null);
-  protected readonly guardandoCategoria = signal(false);
   protected descripcion = '';
   protected agenteProyecto = '';
   protected agenteNombre = '';
@@ -212,7 +187,6 @@ export class AjustesTabComponent implements OnInit {
     this.versionFija = b.agente_version_fija ?? '';
     this.ventana = b.ventana_hilos_dias;
     void this.api.opciones().then((o) => this.modelos.set(o.modelos)).catch(() => undefined);
-    void this.api.listarCategorias(b.id).then((c) => this.etiquetas.set(c.filter((x) => x.activa)));
     if (b.estado_conexion === 'conectada') {
       void this.api.carpetas(b.id).then((t) => this.carpetas.set(aplanar(t))).catch(() => undefined);
     }
@@ -220,10 +194,6 @@ export class AjustesTabComponent implements OnInit {
 
   protected nombreCarpeta(n: string): string {
     return n.toLowerCase() === 'inbox' ? 'Bandeja de entrada' : n;
-  }
-
-  protected acciones(c: Categoria): string {
-    return c.acciones.filter((a) => a.activa).map((a) => resumenAccion(a)).join(' · ') || 'Sin acciones';
   }
 
   protected async guardar(cambio: BuzonUpdate): Promise<void> {
@@ -254,19 +224,6 @@ export class AjustesTabComponent implements OnInit {
     void this.guardar({ ventana_hilos_dias: v });
   }
 
-  protected async guardarCategoria(c: Categoria, body: CategoriaIn): Promise<void> {
-    this.guardandoCategoria.set(true);
-    try {
-      await this.api.actualizarCategoria(c.id, { ...body, proceso_id: c.proceso_id });
-      this.etiquetas.set((await this.api.listarCategorias(this.buzon().id)).filter((x) => x.activa));
-      this.editando.set(null);
-      this.toast.show('Acciones guardadas', c.clave);
-    } catch (e) {
-      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.guardandoCategoria.set(false);
-    }
-  }
 }
 
 /** Árbol de carpetas → lista con profundidad (raíz y un nivel, como lo lee Graph). */

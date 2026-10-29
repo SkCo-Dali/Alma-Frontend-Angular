@@ -961,6 +961,12 @@ export function iconoAccion(tipo: string): string {
 }
 
 /** Texto corto de una acción para chips ("Mover a 4X1000 Davivienda"). */
+/** Umbral propio y acciones activas de una etiqueta, en una línea. */
+export function resumenEtiqueta(c: Categoria): string {
+  const acc = c.acciones.filter((a) => a.activa).map((a) => resumenAccion(a)).join(' · ') || 'Sin acciones';
+  return `${c.umbral_confianza != null ? `Umbral propio ${Math.round(c.umbral_confianza * 100)} % · ` : ''}${acc}`;
+}
+
 export function resumenAccion(a: { tipo: string; parametros: Record<string, unknown> }): string {
   const p = a.parametros ?? {};
   switch (a.tipo) {

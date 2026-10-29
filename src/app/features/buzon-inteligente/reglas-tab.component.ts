@@ -18,11 +18,14 @@ import {
   BuzonApi,
   Categoria,
   EstadoReglas,
+  CategoriaIn,
   Proceso,
   ProcesoPropuesto,
   PromptBuzon,
   ReglaFija,
+  resumenEtiqueta,
 } from './buzon.api';
+import { CategoriaEditorComponent } from './categoria-editor.component';
 import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
 
@@ -69,7 +72,7 @@ interface FijaEd {
 
 @Component({
   selector: 'alma-reglas-tab',
-  imports: [FormsModule, LucideAngularModule, ProcesoEditorComponent],
+  imports: [FormsModule, LucideAngularModule, ProcesoEditorComponent, CategoriaEditorComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
@@ -145,7 +148,7 @@ interface FijaEd {
             <article class="glass r-2xl stack" style="padding:14px;box-shadow:0 0 0 2px var(--ring)">
               <p class="sm bb">Nuevo proceso</p>
               <alma-proceso-editor [buzon]="b" [procesos]="procesos()" [categorias]="categorias()" [modo]="esWiz() ? 'wiz' : 'buzon'" [siguiente]="siguiente()"
-                (guardado)="alGuardar($event, true)" (cancelado)="editando.set(null)" />
+                (guardado)="alGuardar($event, true)" (cancelado)="editando.set(null)" (editarEtiqueta)="etiquetaEd.set($event)" />
             </article>
           }
           @for (p of propuestas(); track p.clave) {
@@ -254,14 +257,15 @@ interface FijaEd {
               </div>
               @if (abierto) {
                 <alma-proceso-editor [buzon]="b" [proceso]="p" [duplicar]="!!editando()?.duplicar" [procesos]="procesos()" [categorias]="categorias()"
-                  [modo]="esWiz() ? 'wiz' : 'buzon'" [siguiente]="siguiente()" (guardado)="alGuardar($event, !!editando()?.duplicar)" (cancelado)="editando.set(null)" />
+                  [modo]="esWiz() ? 'wiz' : 'buzon'" [siguiente]="siguiente()" (guardado)="alGuardar($event, !!editando()?.duplicar)" (cancelado)="editando.set(null)" (editarEtiqueta)="etiquetaEd.set($event)" />
               } @else {
                 <div class="stack" style="gap:4px">
                   @for (e of etiquetasDe(p); track e.id) {
                     <div class="row xs" style="flex-wrap:nowrap;gap:6px">
                       <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Alma'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
                       <span class="chipo"><lucide-icon [name]="e.criterio === 'datos' ? 'filter' : 'sparkles'" [size]="13" /> {{ e.clave }}</span>
-                      <span class="muted trunc" [title]="criterioTexto(e)">{{ criterioTexto(e) }}</span>
+                      <span class="muted trunc" style="flex:1" [title]="criterioTexto(e) + ' · ' + resumenEt(e)">{{ criterioTexto(e) }}</span>
+                      <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(e)" [title]="'Umbral, acciones en Outlook y más · ' + resumenEt(e)" [attr.aria-label]="'Configurar ' + e.clave"><lucide-icon name="pencil" [size]="13" /></button>
                     </div>
                   }
                 </div>
@@ -285,7 +289,9 @@ interface FijaEd {
                   <p class="xs muted">Respaldo: lo que no encaja en ningún proceso.</p>
                 </div>
               </div>
-              <div class="row xs" style="flex-wrap:nowrap;gap:6px"><span class="orig ia">✦</span><span class="chipo"><lucide-icon name="sparkles" [size]="13" /> {{ r.clave }}</span><span class="muted trunc">Respaldo · nunca pasa a Validar</span></div>
+              <div class="row xs" style="flex-wrap:nowrap;gap:6px"><span class="orig ia">✦</span><span class="chipo"><lucide-icon name="sparkles" [size]="13" /> {{ r.clave }}</span><span class="muted trunc" style="flex:1">Respaldo · sigue el umbral del buzón · {{ resumenEt(r) }}</span>
+                <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(r)" [attr.aria-label]="'Configurar ' + r.clave"><lucide-icon name="pencil" [size]="13" /></button>
+              </div>
               <p class="xxs muted"><lucide-icon name="braces" [size]="13" /> Sin extracción: la salida es solo la base fija</p>
             </article>
           }
@@ -553,6 +559,10 @@ interface FijaEd {
         }
       </div>
     }
+
+    @if (etiquetaEd(); as c) {
+      <alma-categoria-editor [categoria]="c" [guardando]="guardandoEtiqueta()" (guardar)="guardarEtiqueta(c, $event)" (cancelar)="etiquetaEd.set(null)" />
+    }
   `,
 })
 export class ReglasTabComponent implements OnInit {
@@ -573,6 +583,9 @@ export class ReglasTabComponent implements OnInit {
   protected readonly cargando = signal(true);
   protected readonly procesos = signal<Proceso[]>([]);
   protected readonly categorias = signal<Categoria[]>([]);
+  /** Etiqueta abierta en el editor completo (umbral, acciones en Outlook, color…). */
+  protected readonly etiquetaEd = signal<Categoria | null>(null);
+  protected readonly guardandoEtiqueta = signal(false);
   protected readonly fijas = signal<ReglaFija[]>([]);
   protected readonly est = signal<EstadoReglas | null>(null);
   protected readonly propuestas = signal<ProcesoPropuesto[]>([]);
@@ -762,6 +775,25 @@ export class ReglasTabComponent implements OnInit {
     if (this.esWiz()) this.aceptados.update((s) => new Set(s).add(p.clave));
     await this.recargar();
     this.toast.show(this.esWiz() ? `${p.clave} aceptado` : `${p.clave} ${nuevo ? 'creado' : 'actualizado'} en el borrador v${this.siguiente()}`);
+  }
+
+  protected resumenEt(c: Categoria): string {
+    return resumenEtiqueta(c);
+  }
+
+  /** Guarda la etiqueta en el borrador (como el resto de Reglas) sin cambiar su proceso. */
+  protected async guardarEtiqueta(c: Categoria, body: CategoriaIn): Promise<void> {
+    this.guardandoEtiqueta.set(true);
+    try {
+      await this.api.actualizarCategoria(c.id, { ...body, proceso_id: c.proceso_id });
+      this.etiquetaEd.set(null);
+      this.toast.show('Etiqueta guardada en el borrador', c.clave);
+      await this.recargar();
+    } catch (e) {
+      this.toast.error('No se pudo guardar la etiqueta', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoEtiqueta.set(false);
+    }
   }
 
   private async recargar(): Promise<void> {
