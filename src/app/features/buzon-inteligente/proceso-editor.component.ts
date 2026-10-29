@@ -17,6 +17,7 @@ import {
   OperadorCondicion,
   OrigenRegla,
   Proceso,
+  resumenEtiqueta,
   TipoCampo,
 } from './buzon.api';
 
@@ -114,8 +115,14 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
                   <option value="datos" [disabled]="!d.extrae || !d.campos.length">Por datos</option>
                   <option value="ia">Por IA</option>
                 </select>
+                @if (guardadaDe(e.clave); as c) {
+                  <button type="button" class="btn ghost" (click)="editarEtiqueta.emit(c)" [title]="'Umbral, acciones en Outlook y más de ' + c.clave" [attr.aria-label]="'Configurar ' + c.clave"><lucide-icon name="pencil" [size]="13" /></button>
+                }
                 <button type="button" class="btn ghost danger" (click)="d.etiquetas.splice(i, 1)" aria-label="Quitar"><lucide-icon name="x" [size]="13" /></button>
               </div>
+              @if (guardadaDe(e.clave); as c) {
+                <p class="xxs muted trunc">{{ resumen(c) }}</p>
+              }
               @if (e.tipo === 'datos') {
                 <div class="row" style="flex-wrap:nowrap">
                   <select class="input sm" [(ngModel)]="e.campo" aria-label="Campo">
@@ -283,7 +290,19 @@ export class ProcesoEditorComponent implements OnInit {
   /** Versión que recibirá el cambio (rótulo del botón). */
   readonly siguiente = input(1);
   readonly guardado = output<Proceso>();
+  /** Abrir el editor completo de una etiqueta ya guardada (umbral, acciones en Outlook, color…). */
+  readonly editarEtiqueta = output<Categoria>();
   readonly cancelado = output<void>();
+
+  /** La etiqueta ya guardada con esa clave (las nuevas se configuran tras guardar el proceso). */
+  protected guardadaDe(clave: string): Categoria | null {
+    const k = clave.trim().toUpperCase();
+    return k ? this.categorias().find((c) => c.clave.toUpperCase() === k) ?? null : null;
+  }
+
+  protected resumen(c: Categoria): string {
+    return resumenEtiqueta(c);
+  }
 
   protected readonly pestanas: [Pestana, string][] = [['rec', 'Reconocimiento'], ['et', 'Etiquetas'], ['dat', 'Datos (JSON)'], ['val', 'Validar'], ['dis', 'Discriminación']];
   protected readonly tipos = TIPOS_CAMPO;
