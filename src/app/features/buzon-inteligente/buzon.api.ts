@@ -1307,6 +1307,17 @@ export class BuzonApi {
   }
 
   // ── 2.0: procesos ──
+  /** Etiquetas y procesos de todos los buzones visibles en una petición (bandeja). */
+  catalogo(): Promise<{ categorias: Categoria[]; procesos: Record<string, Proceso[]> }> {
+    return this.conDemo(
+      () => this.api.fetch<{ categorias: Categoria[]; procesos: Record<string, Proceso[]> }>(`${BASE}/catalogo`),
+      () => ({
+        categorias: [...this.demo.categorias],
+        procesos: Object.fromEntries(this.demo.buzones.map((b) => [b.id, this.demo.listarProcesos(b.id)])),
+      }),
+    );
+  }
+
   listarProcesos(buzonId: string): Promise<Proceso[]> {
     return this.conDemo(
       async () => (await this.api.fetch<{ items: Proceso[] }>(`${BASE}/buzones/${buzonId}/procesos`)).items,

@@ -354,10 +354,17 @@ export class BuzonLandingComponent {
   constructor() {
     void this.cargar();
     const reloj = setInterval(() => this.ahora.set(Date.now()), 1000);
-    const refresco = setInterval(() => void this.cargar(), REFRESCO_MS);
+    // Sin refrescar con la pestaña oculta (cada pestaña abierta pedía 4 consultas por
+    // minuto); al volver a ella se refresca si los datos ya están vencidos.
+    const refresco = setInterval(() => { if (!document.hidden) void this.cargar(); }, REFRESCO_MS);
+    const alVolver = () => {
+      if (!document.hidden && Date.now() - (this.actualizadoEn() ?? 0) >= REFRESCO_MS) void this.cargar();
+    };
+    document.addEventListener('visibilitychange', alVolver);
     inject(DestroyRef).onDestroy(() => {
       clearInterval(reloj);
       clearInterval(refresco);
+      document.removeEventListener('visibilitychange', alVolver);
     });
   }
 
