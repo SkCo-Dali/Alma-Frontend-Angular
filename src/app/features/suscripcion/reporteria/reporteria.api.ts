@@ -50,6 +50,10 @@ export interface ResumenReporteria {
   emitidasPorAnalista?: number;
   /** Emitidas por el canal digital sin analista (userWEB / PHAROSDIGITAL). */
   emitidasPorCanalDigital?: number;
+  /** APE sumado de las emitidas (Pipeline, TrkApplications.Ape). */
+  apeEmitidas?: number;
+  /** Cuántas de las emitidas traen APE; las demás no suman. */
+  apeEmitidasN?: number;
   /** Evaluaciones totales (actividad del motor), no una por solicitud. */
   evaluaciones: number;
   emisionAutomatica: number;
