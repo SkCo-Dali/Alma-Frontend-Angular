@@ -316,15 +316,48 @@ interface FijaEd {
           }
         } @else {
           <div class="stack">
-            @if (est()?.borrador && est()!.cambios.length) {
-              <div class="glass r-2xl stack" style="padding:16px">
-                <div class="row between"><h2 class="sm b"><lucide-icon name="git-compare" [size]="13" /> Cambios en el prompt · borrador v{{ siguiente() }}</h2><span class="badge b-violet">{{ est()!.cambios.length }}</span></div>
-                @for (x of est()!.cambios; track $index) {
-                  <div class="diff">
-                    <p class="xs b">{{ x[0] }}</p>
-                    @if (x[1]) { <p class="del">− {{ x[1] }}</p> }
-                    <p class="add">+ {{ x[2] }}</p>
+            <div class="glass r-2xl stack" style="padding:16px">
+              <h2 class="sm b">Probar y publicar</h2>
+              <p class="xs muted">Se prueba contra los últimos 30 correos que las analistas ya corrigieron.</p>
+              <div class="row">
+                <button type="button" class="btn outline sm" [disabled]="!est()?.borrador || probando()" (click)="probar()"><lucide-icon name="list-checks" [size]="13" /> {{ probando() ? 'Probando…' : 'Probar borrador' }}</button>
+                <button type="button" class="btn primary sm" [disabled]="!puedePublicar() || publicando()" (click)="publicar()"><lucide-icon name="upload-cloud" [size]="13" /> Publicar v{{ siguiente() }}</button>
+              </div>
+              @if (!est()?.borrador) {
+                <p class="xxs muted">Edita un proceso, acepta una propuesta o carga un prompt para crear un borrador.</p>
+              }
+              @if (est()?.prueba; as pr) {
+                @if (pr.total) {
+                  <div class="g2">
+                    <div class="stat"><p class="l">Proceso correcto</p><p class="v">{{ pr.proceso_ok }}/{{ pr.total }}</p></div>
+                    <div class="stat"><p class="l">Etiqueta correcta</p><p class="v">{{ pr.etiqueta_ok }}/{{ pr.total }}</p></div>
                   </div>
+                  @for (f of pr.fallos; track f.correo_id) {
+                    <p class="xxs muted trunc">✗ {{ f.asunto }} · esperaba <span class="key">{{ f.esperado }}</span> y salió <span class="key">{{ f.obtenido || '—' }}</span></p>
+                  }
+                } @else {
+                  <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Aún no hay correos corregidos con qué comparar: puedes publicar.</span></p>
+                }
+              }
+              @if (est()?.versiones?.length) {
+                <p class="xxs muted">Historial: @for (v of est()!.versiones.slice(0, 5); track v.version; let last = $last) { v{{ v.version }} · {{ v.publicada_por }} · {{ fecha(v.publicada_en) }}{{ last ? '' : ' — ' }} }</p>
+              }
+            </div>
+            @if (est()?.borrador && est()!.cambios.length) {
+              <!-- El detalle del diff se consulta al revisar antes de publicar: plegado por defecto. -->
+              <div class="glass r-2xl stack" style="padding:16px">
+                <button type="button" class="plegable" (click)="verCambios.set(!verCambios())" [attr.aria-expanded]="verCambios()">
+                  <h2 class="sm b"><lucide-icon name="git-compare" [size]="13" /> Cambios en el prompt · borrador v{{ siguiente() }}</h2>
+                  <span class="row" style="gap:6px;flex-wrap:nowrap"><span class="badge b-violet">{{ est()!.cambios.length }}</span><lucide-icon [name]="verCambios() ? 'chevron-up' : 'chevron-down'" [size]="16" /></span>
+                </button>
+                @if (verCambios()) {
+                  @for (x of est()!.cambios; track $index) {
+                    <div class="diff">
+                      <p class="xs b">{{ x[0] }}</p>
+                      @if (x[1]) { <p class="del">− {{ x[1] }}</p> }
+                      <p class="add">+ {{ x[2] }}</p>
+                    </div>
+                  }
                 }
               </div>
             }
@@ -377,33 +410,6 @@ interface FijaEd {
                 }
               </div>
             }
-            <div class="glass r-2xl stack" style="padding:16px">
-              <h2 class="sm b">Probar y publicar</h2>
-              <p class="xs muted">Se prueba contra los últimos 30 correos que las analistas ya corrigieron.</p>
-              <div class="row">
-                <button type="button" class="btn outline sm" [disabled]="!est()?.borrador || probando()" (click)="probar()"><lucide-icon name="list-checks" [size]="13" /> {{ probando() ? 'Probando…' : 'Probar borrador' }}</button>
-                <button type="button" class="btn primary sm" [disabled]="!puedePublicar() || publicando()" (click)="publicar()"><lucide-icon name="upload-cloud" [size]="13" /> Publicar v{{ siguiente() }}</button>
-              </div>
-              @if (!est()?.borrador) {
-                <p class="xxs muted">Edita un proceso, acepta una propuesta o carga un prompt para crear un borrador.</p>
-              }
-              @if (est()?.prueba; as pr) {
-                @if (pr.total) {
-                  <div class="g2">
-                    <div class="stat"><p class="l">Proceso correcto</p><p class="v">{{ pr.proceso_ok }}/{{ pr.total }}</p></div>
-                    <div class="stat"><p class="l">Etiqueta correcta</p><p class="v">{{ pr.etiqueta_ok }}/{{ pr.total }}</p></div>
-                  </div>
-                  @for (f of pr.fallos; track f.correo_id) {
-                    <p class="xxs muted trunc">✗ {{ f.asunto }} · esperaba <span class="key">{{ f.esperado }}</span> y salió <span class="key">{{ f.obtenido || '—' }}</span></p>
-                  }
-                } @else {
-                  <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Aún no hay correos corregidos con qué comparar: puedes publicar.</span></p>
-                }
-              }
-              @if (est()?.versiones?.length) {
-                <p class="xxs muted">Historial: @for (v of est()!.versiones.slice(0, 5); track v.version; let last = $last) { v{{ v.version }} · {{ v.publicada_por }} · {{ fecha(v.publicada_en) }}{{ last ? '' : ' — ' }} }</p>
-              }
-            </div>
           </div>
         }
       </div>
@@ -607,6 +613,8 @@ export class ReglasTabComponent implements OnInit {
   /** Propuestas en las que NO se desactivan las etiquetas que salen (por defecto sí). */
   private readonly conservarSalen = signal<Set<string>>(new Set());
   protected readonly probando = signal(false);
+  /** «Cambios en el prompt» desplegado (plegado por defecto). */
+  protected readonly verCambios = signal(false);
   protected readonly publicando = signal(false);
   protected readonly errorPrompt = signal('');
   protected readonly prompt = signal<PromptBuzon | null>(null);
