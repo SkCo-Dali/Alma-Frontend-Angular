@@ -316,6 +316,8 @@ interface FijaEd {
           }
         } @else {
           <div class="stack">
+            <!-- Encabezado a la par de «Procesos»: separa la columna de la entrada de reglas. -->
+            <h2 class="sm b on-wall">Borrador y publicación</h2>
             <div class="glass r-2xl stack" style="padding:16px">
               <h2 class="sm b">Probar y publicar</h2>
               <p class="xs muted">Se prueba contra los últimos 30 correos que las analistas ya corrigieron.</p>
