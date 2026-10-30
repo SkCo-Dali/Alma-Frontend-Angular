@@ -14,6 +14,7 @@ import { AccessDeniedComponent } from '../../shared/components/access-denied.com
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { CampanaDetalleComponent } from './campana-detalle.component';
 import { CampanaNuevaComponent } from './campana-nueva.component';
+import { CasosPageComponent } from './casos-page.component';
 import { ConfiguracionComponent } from './configuracion.component';
 import { CampanaListada, Conexion, MonitorIaApi, PERM_CAMPANAS, PERM_CONFIG, PERM_VIEW } from './monitor-ia.api';
 import { estadoCampana, fecha } from './monitor-ia.domain';
@@ -31,6 +32,7 @@ const REFRESCO_MS = 5000;
     AlmaLoaderComponent,
     CampanaDetalleComponent,
     CampanaNuevaComponent,
+    CasosPageComponent,
     ConfiguracionComponent,
   ],
   template: `
@@ -44,10 +46,26 @@ const REFRESCO_MS = 5000;
           </a>
           <div>
             <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">Monitor-IA</h1>
-            <p class="text-on-wallpaper text-sm text-foreground/80">Autoevaluación automática de llamadas en Genesys Cloud.</p>
+            <p class="text-on-wallpaper text-sm text-foreground/80">
+              {{ fuente() === 'llamadas' ? 'Autoevaluación automática de llamadas en Genesys Cloud.' : 'Calificación con IA de casos de Salesforce (correo y chat).' }}
+            </p>
+          </div>
+          <!-- Qué se monitorea: llamadas (Genesys) o casos escritos (Salesforce) -->
+          <div class="glass ml-auto inline-flex gap-1 rounded-2xl p-1 shadow-[var(--shadow-sm)]" role="group" aria-label="Qué monitorear">
+            <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium transition-colors"
+                    [class]="claseFuente('llamadas')" [attr.aria-pressed]="fuente() === 'llamadas'" (click)="fuente.set('llamadas')">
+              <lucide-icon name="phone" [size]="14" /> Llamadas
+            </button>
+            <button type="button" class="inline-flex h-8 items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium transition-colors"
+                    [class]="claseFuente('casos')" [attr.aria-pressed]="fuente() === 'casos'" (click)="fuente.set('casos')">
+              <lucide-icon name="mail" [size]="14" /> Casos Salesforce
+            </button>
           </div>
         </div>
 
+        @if (fuente() === 'casos') {
+          <alma-casos-page />
+        } @else {
         <!-- Pestañas -->
         <nav class="glass inline-flex flex-wrap gap-1 rounded-2xl p-1 shadow-[var(--shadow-sm)]" aria-label="Secciones de Monitor-IA">
           <button type="button" class="h-8 rounded-xl px-3.5 text-sm font-medium transition-colors" [class]="clasePestana('campanas')" (click)="ir('campanas')">
@@ -151,6 +169,7 @@ const REFRESCO_MS = 5000;
             }
           }
         }
+        }
       </div>
     }
   `,
@@ -166,6 +185,7 @@ export class MonitorIaPageComponent {
   protected readonly puedeGestionar = computed(() => this.auth.hasPermission(PERM_CAMPANAS));
   protected readonly puedeConfigurar = computed(() => this.auth.hasPermission(PERM_CONFIG));
 
+  protected readonly fuente = signal<'llamadas' | 'casos'>('llamadas');
   protected readonly vista = signal<Vista>('campanas');
   protected readonly abierta = signal<string | null>(null);
   protected readonly conexion = signal<Conexion | null>(null);
@@ -183,7 +203,7 @@ export class MonitorIaPageComponent {
       void this.cargar();
       // Refresco suave del listado mientras hay campañas trabajando en segundo plano.
       this.temporizador = setInterval(() => {
-        if (this.vista() === 'campanas' && !this.abierta() && this.campanas().some((c) => estadoCampana(c.estado).enCurso)) {
+        if (this.fuente() === 'llamadas' && this.vista() === 'campanas' && !this.abierta() && this.campanas().some((c) => estadoCampana(c.estado).enCurso)) {
           void this.cargar(false);
         }
       }, REFRESCO_MS);
@@ -192,6 +212,12 @@ export class MonitorIaPageComponent {
 
   protected estado(c: CampanaListada) {
     return estadoCampana(c.estado);
+  }
+
+  protected claseFuente(f: 'llamadas' | 'casos'): string {
+    return this.fuente() === f
+      ? 'bg-primary text-primary-foreground shadow-sm'
+      : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground';
   }
 
   protected clasePestana(v: Vista): string {
