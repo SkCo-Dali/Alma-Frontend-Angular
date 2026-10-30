@@ -184,6 +184,8 @@ ul.rev li.ok { background: var(--emerald-bg); color: var(--emerald); }
 .namebox { border-radius: 12px; border: 1px dashed var(--input); padding: 10px 12px; display: grid; gap: 4px; }
 .diff { border-radius: 10px; background: var(--sunken); padding: 8px 10px; display: grid; gap: 2px; font-family: var(--mono); font-size: 0.72rem; }
 .diff .del { color: var(--rose); } .diff .add { color: var(--emerald); }
+.plegable { all: unset; box-sizing: border-box; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; }
+.plegable:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
 .mini { border: 0; background: transparent; cursor: pointer; padding: 0 3px; font-weight: 800; color: var(--muted-foreground); }
 .mini:hover { color: var(--foreground); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--primary-ink); font-weight: 650; cursor: pointer; text-decoration: underline; }
