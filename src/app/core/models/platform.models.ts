@@ -27,6 +27,8 @@ export interface Application {
   id: string;
   nombre: string;
   descripcion: string;
+  /** Línea corta para las tarjetas del Inicio (cabe en dos renglones). */
+  resumen?: string;
   categoria: string;
   icono: string;
   /** Ícono estilo App de iOS (imagen full-bleed): ruta a un PNG cuadrado en
