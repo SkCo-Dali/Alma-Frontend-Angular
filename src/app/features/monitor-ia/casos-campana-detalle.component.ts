@@ -33,7 +33,7 @@ const REFRESCO_MS = 3000;
         <section class="glass space-y-3 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="truncate text-lg font-bold text-foreground">{{ c.nombre }}</h2>
+              <h2 class="break-words text-lg font-bold text-foreground">{{ c.nombre }}</h2>
               <p class="text-xs text-muted-foreground">
                 Flujo {{ flujo[c.flujo] }} · creada por {{ c.creado_por }} el {{ fecha(c.creado_en, true) }}
               </p>
@@ -117,8 +117,8 @@ const REFRESCO_MS = 3000;
               @for (k of porCriterio(); track k.clave) {
                 <div class="text-xs">
                   <div class="mb-0.5 flex justify-between gap-2">
-                    <span class="truncate text-foreground" [title]="k.clave">{{ k.clave }}</span>
-                    <span class="tabular-nums text-muted-foreground">{{ k.si }} / {{ k.total }}</span>
+                    <span class="min-w-0 break-words text-foreground">{{ k.clave }}</span>
+                    <span class="shrink-0 tabular-nums text-muted-foreground">{{ k.si }} / {{ k.total }}</span>
                   </div>
                   <div class="h-1.5 overflow-hidden rounded-full bg-destructive/20">
                     <div class="h-full rounded-full bg-emerald-500" [style.width.%]="(k.si / k.total) * 100"></div>
@@ -171,14 +171,14 @@ const REFRESCO_MS = 3000;
                           <span class="font-medium text-foreground">{{ x.case_number ?? x.case_id }}</span>
                         }
                       </td>
-                      <td class="max-w-[12rem] px-3 py-2">
-                        <p class="truncate text-foreground" [title]="x.owner_nombre ?? ''">{{ x.owner_nombre ?? '—' }}</p>
+                      <td class="min-w-[10rem] px-3 py-2">
+                        <p class="text-foreground">{{ x.owner_nombre ?? '—' }}</p>
                         @if (x.pool !== null) { <p class="text-[11px] text-muted-foreground">entre {{ x.pool }}</p> }
                       </td>
                       <td class="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{{ fecha(x.cerrado_en) }}</td>
-                      <td class="max-w-[14rem] px-3 py-2 text-xs">
-                        <p class="truncate text-foreground">{{ x.origen ?? '—' }}</p>
-                        <p class="truncate text-muted-foreground" [title]="x.tema ?? ''">{{ x.tema ?? '' }}</p>
+                      <td class="min-w-[14rem] px-3 py-2 text-xs">
+                        <p class="text-foreground">{{ x.origen ?? '—' }}</p>
+                        <p class="break-words text-muted-foreground">{{ x.tema ?? '' }}</p>
                       </td>
                       <td class="px-3 py-2">
                         <span class="alma-badge whitespace-nowrap" [class]="estadoCaso(x.estado).clase" [attr.title]="x.error">{{ estadoCaso(x.estado).texto }}</span>

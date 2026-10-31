@@ -108,7 +108,7 @@ import { fecha } from './monitor-ia.domain';
               @for (f of lista; track f.id) {
                 <div class="flex items-center justify-between gap-3 px-3 py-2">
                   <div class="min-w-0">
-                    <p class="truncate text-sm text-foreground" [title]="f.name">{{ f.name }}</p>
+                    <p class="break-words text-sm text-foreground">{{ f.name }}</p>
                     @if (f.type) { <p class="text-[11px] text-muted-foreground">{{ f.type }}</p> }
                   </div>
                   <alma-switch [checked]="habilitados().has(f.id)" (checkedChange)="alternarFormulario(f.id, $event)" [ariaLabel]="'Habilitar ' + f.name" />
