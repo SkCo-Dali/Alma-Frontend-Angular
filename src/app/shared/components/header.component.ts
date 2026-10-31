@@ -32,16 +32,14 @@ import { shortName } from '../../core/utils/name';
           alt="Nova Skandia"
           class="hidden h-10 w-auto dark:block"
         />
-        <span class="hidden h-8 w-px bg-border sm:block"></span>
-        <span class="text-on-wallpaper hidden flex-col justify-center sm:flex">
-          <span class="text-[13px] font-semibold leading-tight text-foreground">
-            Conecta · Orquesta · Impulsa
-          </span>
-          <span class="text-[11px] leading-tight text-foreground/70">
-            Suite Digital de Operaciones
-          </span>
-        </span>
       </a>
+
+      <!-- Lema centrado en la barra (como en la propuesta del hub de Nova). -->
+      <span
+        class="text-on-wallpaper pointer-events-none absolute left-1/2 hidden -translate-x-1/2 text-[15px] font-medium text-foreground/80 md:block"
+      >
+        Tu hub de operaciones
+      </span>
 
       <div class="ml-auto flex items-center gap-2">
         <button
