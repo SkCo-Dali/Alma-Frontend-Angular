@@ -74,7 +74,7 @@ const REFRESCO_MS = 60_000;
         <header class="grid justify-items-center gap-2.5 pt-1 text-center">
           <h1 class="text-on-wallpaper text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">Buzón Inteligente</h1>
           <p class="text-on-wallpaper max-w-2xl text-sm text-foreground/80">
-            Cada área describe qué correos recibe, qué datos necesita de cada uno y a quién le corresponden. Alma los lee,
+            Cada área describe qué correos recibe, qué datos necesita de cada uno y a quién le corresponden. Nova los lee,
             incluidos los adjuntos, los clasifica y los asigna a la persona indicada.
           </p>
           <div class="flex flex-wrap items-center justify-center gap-2.5">
@@ -112,7 +112,7 @@ const REFRESCO_MS = 60_000;
               }
             </span>
             <span class="relative inline-flex items-center gap-1.5 self-start rounded-full bg-black/15 px-2.5 py-0.5 text-[11px] font-bold">
-              <lucide-icon name="corner-left-down" [size]="12" /> Paso 3 · cuando Alma duda
+              <lucide-icon name="corner-left-down" [size]="12" /> Paso 3 · cuando Nova duda
             </span>
             <span class="relative">
               <span class="block text-[17px] font-bold leading-snug">Bandeja de revisión</span>
@@ -290,7 +290,7 @@ export class BuzonLandingComponent {
   protected readonly abierto = signal<number | null>(null);
 
   protected readonly pasos: Paso[] = [
-    { icon: 'inbox', titulo: 'Llega el correo', texto: 'Alma vigila la carpeta del buzón y reconoce si es la respuesta de un caso que ya existe.', gradiente: G_BANDEJA },
+    { icon: 'inbox', titulo: 'Llega el correo', texto: 'Nova vigila la carpeta del buzón y reconoce si es la respuesta de un caso que ya existe.', gradiente: G_BANDEJA },
     { icon: 'scan-text', titulo: 'Lo lee completo', texto: 'Cuerpo y adjuntos: PDF, imágenes y Excel pasan por lectura de documentos.', gradiente: G_BUZONES },
     { icon: 'sparkles', titulo: 'Clasifica y estructura', texto: 'Con las reglas del área decide el proceso y la etiqueta y extrae los datos. Si duda, lo deja en Validar para que una persona lo revise.', gradiente: G_METRICAS },
     { icon: 'user-check', titulo: 'Asigna y entrega', texto: 'Busca al responsable en las bases del área, o reparte entre el equipo activo, y mueve el correo a su carpeta.', gradiente: G_BANDEJA },

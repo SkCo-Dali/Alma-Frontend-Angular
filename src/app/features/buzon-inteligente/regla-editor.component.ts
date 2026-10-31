@@ -106,9 +106,9 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
     @if (!cols().length) {
       <p class="sm">¿Dónde está la base con el responsable de cada caso?</p>
       <div class="g3">
-        <label class="optcard" [attr.for]="idp() + '-file'" style="cursor:pointer"><span class="row sm b"><lucide-icon name="upload" [size]="13" /> Subir Excel o CSV</span><span class="xs muted">Alma lee la primera hoja. El archivo queda en Alma; se reemplaza cuando cambie.</span></label>
+        <label class="optcard" [attr.for]="idp() + '-file'" style="cursor:pointer"><span class="row sm b"><lucide-icon name="upload" [size]="13" /> Subir Excel o CSV</span><span class="xs muted">Nova lee la primera hoja. El archivo queda en Nova; se reemplaza cuando cambie.</span></label>
         <input type="file" [id]="idp() + '-file'" accept=".xlsx,.xls,.xlsm,.csv" hidden (change)="subir($event)" />
-        <button type="button" class="optcard" [attr.aria-pressed]="W.browse" (click)="poner({ browse: !W.browse })"><span class="row sm b"><lucide-icon name="cloud" [size]="13" /> SharePoint u OneDrive</span><span class="xs muted">Se edita en Excel en la nube y Alma sincroniza la última versión válida.</span></button>
+        <button type="button" class="optcard" [attr.aria-pressed]="W.browse" (click)="poner({ browse: !W.browse })"><span class="row sm b"><lucide-icon name="cloud" [size]="13" /> SharePoint u OneDrive</span><span class="xs muted">Se edita en Excel en la nube y Nova sincroniza la última versión válida.</span></button>
         @for (b of basesListas(); track b.id) {
           <button type="button" class="optcard" (click)="elegirBase(b.id)"><span class="row sm b"><lucide-icon name="sheet" [size]="13" /> {{ b.nombre }}</span><span class="xxs muted">Ya está en este buzón · {{ b.total_filas.toLocaleString('es-CO') }} filas</span></button>
         }
@@ -124,7 +124,7 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
         </div>
       }
       @if (leyendo()) { <p class="xs muted">Leyendo el archivo…</p> }
-      <p class="xxs muted">Alma lee la hoja de verdad (.xlsx y .csv) y detecta la fila de encabezados.</p>
+      <p class="xxs muted">Nova lee la hoja de verdad (.xlsx y .csv) y detecta la fila de encabezados.</p>
     } @else {
       <div class="row between sunk r-xl" style="padding:8px 12px">
         <span class="row sm"><lucide-icon name="sheet" [size]="13" /> <b>{{ nombre() }}</b> <span class="xxs muted">{{ W.baseId ? 'base del buzón' : 'archivo subido' }} · hoja «{{ hoja() }}» · {{ total().toLocaleString('es-CO') }} filas</span></span>

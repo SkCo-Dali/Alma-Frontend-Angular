@@ -91,12 +91,12 @@ interface FijaEd {
         <p class="sm">¿Quién va a clasificar los correos de este buzón?</p>
         <div class="g2">
           <button type="button" class="optcard" (click)="elegirClasificador('prompt')">
-            <span class="row sm b"><lucide-icon name="scroll-text" [size]="13" /> Prompt generado por Alma</span>
-            <span class="xs muted">Describes los procesos y Alma arma el prompt. Las reglas se editan aquí.</span>
+            <span class="row sm b"><lucide-icon name="scroll-text" [size]="13" /> Prompt generado por Nova</span>
+            <span class="xs muted">Describes los procesos y Nova arma el prompt. Las reglas se editan aquí.</span>
           </button>
           <button type="button" class="optcard" (click)="elegirClasificador('agente')">
             <span class="row sm b"><lucide-icon name="bot" [size]="13" /> Agente propio en Foundry</span>
-            <span class="xs muted">Conectas un agente que tu área ya creó. Alma lo invoca y valida sus respuestas.</span>
+            <span class="xs muted">Conectas un agente que tu área ya creó. Nova lo invoca y valida sus respuestas.</span>
           </button>
         </div>
       </div>
@@ -118,7 +118,7 @@ interface FijaEd {
             </div>
           </div>
           @if (!editable()) {
-            <p class="note b-sky"><lucide-icon name="lock" [size]="13" /> <span>Las reglas de este buzón se administran en Foundry: aquí son de solo lectura. Cámbialo en Ajustes → Clasificador para editarlas desde Alma.</span></p>
+            <p class="note b-sky"><lucide-icon name="lock" [size]="13" /> <span>Las reglas de este buzón se administran en Foundry: aquí son de solo lectura. Cámbialo en Ajustes → Clasificador para editarlas desde Nova.</span></p>
           }
           <div class="flowsteps">
             @for (s of pasos(); track s[0]; let i = $index) {
@@ -137,7 +137,7 @@ interface FijaEd {
             <button type="button" class="btn outline sm" [disabled]="proponiendo()" (click)="proponer()"><lucide-icon name="sparkles" [size]="13" /> {{ proponiendo() ? 'Leyendo correos…' : 'Proponer desde correos reales' }}</button>
             <button type="button" class="btn outline sm" (click)="editar(null)"><lucide-icon name="plus" [size]="13" /> Proceso manual</button>
           </div>
-          <p class="xxs muted">✦ propuesta de Alma · ✎ ajustado por ti. Todo se puede aceptar tal cual o parametrizar.</p>
+          <p class="xxs muted">✦ propuesta de Nova · ✎ ajustado por ti. Todo se puede aceptar tal cual o parametrizar.</p>
         </div>
       }
 
@@ -206,7 +206,7 @@ interface FijaEd {
                       Desactivar {{ cmp.salen.length === 1 ? 'la etiqueta que ya no está' : 'las ' + cmp.salen.length + ' etiquetas que ya no están' }} en el prompt</label>
                   }
                   @if (cmp.manuales) {
-                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>{{ cmp.clave }} tiene ajustes hechos a mano en Alma (✎): al actualizar se reemplazan por lo que dice el prompt.</span></p>
+                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>{{ cmp.clave }} tiene ajustes hechos a mano en Nova (✎): al actualizar se reemplazan por lo que dice el prompt.</span></p>
                   }
                   <p class="xxs muted">Queda en el borrador v{{ siguiente() }}: la versión vigente sigue clasificando hasta que publiques.</p>
                 </div>
@@ -262,7 +262,7 @@ interface FijaEd {
                 <div class="stack" style="gap:4px">
                   @for (e of etiquetasDe(p); track e.id) {
                     <div class="row xs" style="flex-wrap:nowrap;gap:6px">
-                      <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Alma'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
+                      <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Nova'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
                       <span class="chipo"><lucide-icon [name]="e.criterio === 'datos' ? 'filter' : 'sparkles'" [size]="13" /> {{ e.clave }}</span>
                       <span class="muted trunc" style="flex:1" [title]="criterioTexto(e) + ' · ' + resumenEt(e)">{{ criterioTexto(e) }}</span>
                       <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(e)" [title]="'Umbral, acciones en Outlook y más · ' + resumenEt(e)" [attr.aria-label]="'Configurar ' + e.clave"><lucide-icon name="pencil" [size]="13" /></button>
@@ -275,7 +275,7 @@ interface FijaEd {
                   } @else { Sin extracción: la salida es solo la base fija }
                 </p>
                 @if (jsonAbierto() === p.clave) {
-                  <pre class="json"><span class="ln">{{ '{' }}</span><span class="ln base"><span class="c">  // base fija · la agrega Alma</span></span>@for (k of baseFields; track k; let i = $index) {<span class="ln base">  <span class="k">"{{ k }}"</span>: <span [class]="k === 'score_confianza' ? 'n' : 's'">{{ ejemploBase(k, p) }}</span>{{ i < baseFields.length - 1 || p.campos_extraer.length ? ',' : '' }}</span>}@if (p.campos_extraer.length) {<span class="ln"><span class="c">  // datos de interés</span></span>}@for (f of p.campos_extraer; track f.clave; let last = $last) {<span class="ln" [class.idf]="f.identificador">  <span class="k">"{{ f.clave }}"</span>: <span [class]="f.tipo === 'texto' || f.tipo === 'fecha' || !f.tipo ? 's' : 'n'">{{ ejemploCampo(f) }}</span>{{ last ? '' : ',' }}@if (f.critico) {<span class="c"> // crítico{{ f.alterno ? ' (basta uno del grupo)' : '' }}</span>}</span>}<span class="ln">{{ '}' }}</span></pre>
+                  <pre class="json"><span class="ln">{{ '{' }}</span><span class="ln base"><span class="c">  // base fija · la agrega Nova</span></span>@for (k of baseFields; track k; let i = $index) {<span class="ln base">  <span class="k">"{{ k }}"</span>: <span [class]="k === 'score_confianza' ? 'n' : 's'">{{ ejemploBase(k, p) }}</span>{{ i < baseFields.length - 1 || p.campos_extraer.length ? ',' : '' }}</span>}@if (p.campos_extraer.length) {<span class="ln"><span class="c">  // datos de interés</span></span>}@for (f of p.campos_extraer; track f.clave; let last = $last) {<span class="ln" [class.idf]="f.identificador">  <span class="k">"{{ f.clave }}"</span>: <span [class]="f.tipo === 'texto' || f.tipo === 'fecha' || !f.tipo ? 's' : 'n'">{{ ejemploCampo(f) }}</span>{{ last ? '' : ',' }}@if (f.critico) {<span class="c"> // crítico{{ f.alterno ? ' (basta uno del grupo)' : '' }}</span>}</span>}<span class="ln">{{ '}' }}</span></pre>
                 }
               }
             </article>
@@ -423,7 +423,7 @@ interface FijaEd {
         @switch (modal()) {
           @case ('tpl') {
             <div class="modal solid" role="dialog" aria-modal="true" aria-label="Plantilla de prompt">
-              <div class="row between"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala en la IA corporativa (Copilot o Claude). La PARTE A le dice a la IA cómo ayudarte; la PARTE B es lo que Alma lee.</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              <div class="row between"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala en la IA corporativa (Copilot o Claude). La PARTE A le dice a la IA cómo ayudarte; la PARTE B es lo que Nova lee.</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
               <pre class="tpl">{{ plantilla }}</pre>
               <div class="row between">
                 <button type="button" class="btn outline sm" (click)="modal.set('ej')"><lucide-icon name="book-open" [size]="13" /> Ver ejemplo completo</button>
@@ -443,21 +443,21 @@ interface FijaEd {
           @case ('pegar') {
             @if (analizando()) {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Analizando">
-                <h2 class="sm b">Alma está leyendo el prompt…</h2>
+                <h2 class="sm b">Nova está leyendo el prompt…</h2>
                 <p class="xs muted">Separa procesos, etiquetas, datos a extraer, discriminación y Validar.</p>
               </div>
             } @else {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
                 <div class="row between">
                   @if (objetivo(); as o) {
-                    <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Alma te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}.</p></div>
+                    <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Nova te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}.</p></div>
                   } @else {
-                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega la PARTE B de la plantilla o el prompt completo de tu agente, o sube el .txt / .md. Lo que Alma interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
+                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega la PARTE B de la plantilla o el prompt completo de tu agente, o sube el .txt / .md. Lo que Nova interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
                   }
                   <button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
                 </div>
                 @if (!esWiz()) {
-                  <p class="xxs muted">¿Ajustaste reglas aquí en Alma? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
+                  <p class="xxs muted">¿Ajustaste reglas aquí en Nova? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
                 }
                 <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoPrompt" placeholder="1. CONTEXTO DEL ÁREA&#10;…"></textarea>
                 <div class="row between">
@@ -465,7 +465,7 @@ interface FijaEd {
                   <input type="file" id="prompt-file" accept=".txt,.md" hidden (change)="subirPrompt($event)" />
                   <div class="row">
                     <button type="button" class="btn outline sm" (click)="textoPrompt = ejemplo; errorPrompt.set('')">Usar ejemplo</button>
-                    <button type="button" class="btn primary sm" (click)="analizar()"><lucide-icon name="sparkles" [size]="13" /> Analizar con Alma</button>
+                    <button type="button" class="btn primary sm" (click)="analizar()"><lucide-icon name="sparkles" [size]="13" /> Analizar con Nova</button>
                   </div>
                 </div>
                 @if (errorPrompt()) { <p class="err">{{ errorPrompt() }}</p> }
@@ -482,7 +482,7 @@ interface FijaEd {
                 </div>
               }
               @if (b.modo_clasificacion === 'agente') {
-                <p class="note b-sky"><lucide-icon name="bot" [size]="13" /> <span>Este buzón clasifica con un agente de Foundry: las instrucciones viven en el agente. Abajo, el prompt que Alma armaría con estas reglas.</span></p>
+                <p class="note b-sky"><lucide-icon name="bot" [size]="13" /> <span>Este buzón clasifica con un agente de Foundry: las instrucciones viven en el agente. Abajo, el prompt que Nova armaría con estas reglas.</span></p>
               }
               <pre class="tpl">{{ prompt()?.prompt ?? 'Cargando…' }}</pre>
               @if (prompt(); as pr) {
@@ -638,14 +638,14 @@ export class ReglasTabComponent implements OnInit {
   protected readonly etiquetasActivas = computed(() => this.categorias().filter((c) => c.activa));
   protected readonly infoClasificador = computed(() => {
     const b = this.buzon();
-    return b.modo_clasificacion === 'agente' ? `Agente Foundry ${b.agente_nombre ?? ''}`.trim() : `Prompt de Alma · ${b.modelo ?? 'modelo de la plataforma'}`;
+    return b.modo_clasificacion === 'agente' ? `Agente Foundry ${b.agente_nombre ?? ''}`.trim() : `Prompt de Nova · ${b.modelo ?? 'modelo de la plataforma'}`;
   });
   protected readonly pasos = computed<[string, string][]>(() => [
     ['Entrada', 'Prompt, correos o manual'],
     ['Revisión', 'Aceptar o parametrizar'],
     ['Discriminación', 'Qué diferencia los procesos'],
     ['Probar', 'Banco de casos'],
-    ['Publicar', this.buzon().modo_clasificacion === 'agente' ? 'Al agente' : 'En Alma'],
+    ['Publicar', this.buzon().modo_clasificacion === 'agente' ? 'Al agente' : 'En Nova'],
   ]);
   protected readonly paso = computed(() => (this.est()?.prueba ? 5 : this.est()?.borrador ? 3 : this.procesos().length ? 2 : 1));
   protected readonly puedePublicar = computed(() => {
@@ -954,7 +954,7 @@ export class ReglasTabComponent implements OnInit {
         // En el asistente se cargan de una vez y quedan «Por revisar».
         await this.api.aplicarPropuesta(this.buzon().id, r, this.textoPrompt);
         await this.recargar();
-        this.toast.show(`Alma detectó ${r.procesos.length} proceso(s): revisa y acepta cada uno`);
+        this.toast.show(`Nova detectó ${r.procesos.length} proceso(s): revisa y acepta cada uno`);
       } else {
         await this.api.actualizarBuzon(this.buzon().id, { prompt_area: this.textoPrompt });
         this.refrescarBuzon().catch(() => undefined);
@@ -969,7 +969,7 @@ export class ReglasTabComponent implements OnInit {
           this.toast.show(suya ? `Revisa qué cambia en ${o.clave} antes de actualizarlo` : `No encontré ${o.clave} en el prompt: elige cuál propuesta lo actualiza`);
         } else {
           this.propuestas.set(r.procesos);
-          this.toast.show(`Alma detectó ${r.procesos.length} proceso(s): revisa cada uno y acéptalo para llevarlo al borrador`);
+          this.toast.show(`Nova detectó ${r.procesos.length} proceso(s): revisa cada uno y acéptalo para llevarlo al borrador`);
         }
       }
     } catch (e) {

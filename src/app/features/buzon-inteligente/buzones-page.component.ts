@@ -166,7 +166,7 @@ interface MiembroForm {
             </div>
             <p class="xs muted">
               @if (c.accion === 'desconectar') {
-                Alma deja de leer {{ c.buzon.direccion }} y borra la conexión. Reglas, equipo e historial se conservan; se reanuda conectándolo de nuevo.
+                Nova deja de leer {{ c.buzon.direccion }} y borra la conexión. Reglas, equipo e historial se conservan; se reanuda conectándolo de nuevo.
               } @else {
                 Deja de verse y de leerse. Reglas, miembros e historial se conservan como auditoría: registrar de nuevo la misma dirección lo restaura.
               }
@@ -295,7 +295,7 @@ export class BuzonesPageComponent {
 
   protected clasificador(b: Buzon): string {
     if (!b.version_reglas && !b.procesos_count) return 'Sin clasificador';
-    return b.modo_clasificacion === 'agente' ? 'Agente Foundry' : 'Prompt de Alma';
+    return b.modo_clasificacion === 'agente' ? 'Agente Foundry' : 'Prompt de Nova';
   }
 
   protected nombreRol(r: string): string {
@@ -351,7 +351,7 @@ export class BuzonesPageComponent {
     try {
       if (c.accion === 'desconectar') {
         await this.api.desconectarBuzon(c.buzon.id);
-        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Alma ya no lo lee.`);
+        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Nova ya no lo lee.`);
       } else {
         await this.api.eliminarBuzon(c.buzon.id);
         this.toast.show('Buzón quitado de la App', `${c.buzon.nombre} · ${c.buzon.direccion}`);
@@ -372,7 +372,7 @@ export class BuzonesPageComponent {
     this.trabajando.set(b.id);
     try {
       await this.api.actualizarBuzon(b.id, { activo: true });
-      this.toast.show('Buzón reanudado', `Alma vuelve a leer ${b.direccion}.`);
+      this.toast.show('Buzón reanudado', `Nova vuelve a leer ${b.direccion}.`);
       await this.cargar();
     } catch (e) {
       this.toast.error('No se pudo reanudar', e instanceof Error ? e.message : String(e));

@@ -64,7 +64,7 @@ interface CarpetaPlana {
           @if (b.tipo_cuenta === 'gen' && !b.conexion_compartida) {
             <alma-aviso-cuenta-buzon />
           }
-          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Alma ejecuta automáticamente todo lo que alcanza el umbral de confianza. Solo va a <b>Validar</b> lo que queda por debajo, lo que la IA marca para revisión humana y los posibles duplicados.</span></p>
+          <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Nova ejecuta automáticamente todo lo que alcanza el umbral de confianza. Solo va a <b>Validar</b> lo que queda por debajo, lo que la IA marca para revisión humana y los posibles duplicados.</span></p>
         </div>
 
         <div class="glass r-2xl stack" style="padding:20px">
@@ -88,11 +88,11 @@ interface CarpetaPlana {
           <div class="g2">
             <button type="button" class="optcard" [attr.aria-pressed]="b.modo_clasificacion === 'agente'" (click)="guardar({ modo_clasificacion: 'agente' })">
               <span class="row sm b"><lucide-icon name="bot" [size]="13" /> Agente de Foundry</span>
-              <span class="xs muted">El área administra su agente; Alma lo invoca y valida cada respuesta.</span>
+              <span class="xs muted">El área administra su agente; Nova lo invoca y valida cada respuesta.</span>
             </button>
             <button type="button" class="optcard" [attr.aria-pressed]="b.modo_clasificacion === 'prompt'" (click)="guardar({ modo_clasificacion: 'prompt' })">
-              <span class="row sm b"><lucide-icon name="scroll-text" [size]="13" /> Prompt generado por Alma</span>
-              <span class="xs muted">Las reglas viven en Alma; salida estructurada estricta.</span>
+              <span class="row sm b"><lucide-icon name="scroll-text" [size]="13" /> Prompt generado por Nova</span>
+              <span class="xs muted">Las reglas viven en Nova; salida estructurada estricta.</span>
             </button>
           </div>
           @if (b.modo_clasificacion === 'agente') {
@@ -108,10 +108,10 @@ interface CarpetaPlana {
             </div>
             <div class="fld">
               <span class="label">¿Dónde se editan las reglas?</span>
-              <label class="row sm" for="ra-f"><input type="radio" name="ra" id="ra-f" [checked]="b.reglas_admin === 'foundry'" (change)="guardar({ reglas_admin: 'foundry' })" /> En Foundry (en Alma son de solo lectura)</label>
-              <label class="row sm" for="ra-a"><input type="radio" name="ra" id="ra-a" [checked]="b.reglas_admin === 'alma'" (change)="guardar({ reglas_admin: 'alma' })" /> En Alma, que publica nuevas versiones al agente</label>
+              <label class="row sm" for="ra-f"><input type="radio" name="ra" id="ra-f" [checked]="b.reglas_admin === 'foundry'" (change)="guardar({ reglas_admin: 'foundry' })" /> En Foundry (en Nova son de solo lectura)</label>
+              <label class="row sm" for="ra-a"><input type="radio" name="ra" id="ra-a" [checked]="b.reglas_admin === 'alma'" (change)="guardar({ reglas_admin: 'alma' })" /> En Nova, que publica nuevas versiones al agente</label>
             </div>
-            <p class="note b-amber"><lucide-icon name="shield-alert" [size]="13" /> <span>Leer la versión publicada del agente y publicarle reglas desde Alma requiere que TI habilite el acceso de Alma al proyecto de Foundry. Mientras tanto Alma invoca el agente por su nombre.</span></p>
+            <p class="note b-amber"><lucide-icon name="shield-alert" [size]="13" /> <span>Leer la versión publicada del agente y publicarle reglas desde Nova requiere que TI habilite el acceso de Nova al proyecto de Foundry. Mientras tanto Nova invoca el agente por su nombre.</span></p>
           } @else {
             <div class="g2">
               <div class="fld">
@@ -176,7 +176,7 @@ export class AjustesTabComponent implements OnInit {
   protected readonly textoConexion = computed(() => {
     const b = this.buzon();
     if (b.estado_conexion === 'conectada') return `Conectado${b.conectada_por ? ' por ' + b.conectada_por : ''}${b.conexion_compartida ? ' · acceso delegado' : b.tipo_cuenta === 'gen' ? ' · con la cuenta del buzón' : ''}`;
-    return b.estado_conexion === 'requiere_reconexion' ? 'La conexión venció: hay que volver a conectarlo.' : 'Sin conectar: Alma no lo lee.';
+    return b.estado_conexion === 'requiere_reconexion' ? 'La conexión venció: hay que volver a conectarlo.' : 'Sin conectar: Nova no lo lee.';
   });
 
   ngOnInit(): void {

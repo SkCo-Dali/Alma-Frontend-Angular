@@ -22,7 +22,7 @@ import { AuthService } from '../../core/auth/auth.service';
         @if (email(); as e) {
           <span class="font-medium text-foreground">({{ e }})</span>
         }
-        está inactiva en Alma. Contacta al administrador de la plataforma para habilitar
+        está inactiva en Nova. Contacta al administrador de la plataforma para habilitar
         tu acceso.
       </p>
       <button

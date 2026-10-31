@@ -81,7 +81,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
             <alma-sphere />
           </span>
           <div>
-            <h1 class="text-sm font-semibold text-foreground">Agente Alma</h1>
+            <h1 class="text-sm font-semibold text-foreground">Agente Nova</h1>
             <p class="text-xs text-muted-foreground">Asistente de Servicio al Cliente</p>
           </div>
         </header>
@@ -141,7 +141,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
               @if (pensando()) {
                 <div class="flex items-center gap-2 text-sm text-muted-foreground">
                   <lucide-icon name="loader-2" [size]="16" class="animate-spin" />
-                  Alma está pensando…
+                  Nova está pensando…
                 </div>
               }
             </div>
@@ -172,7 +172,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
             </button>
           </div>
           <p class="mx-auto mt-1.5 max-w-3xl text-center text-[11px] text-muted-foreground">
-            Alma usa solo información oficial de Skandia. Verifica los datos antes de actuar.
+            Nova usa solo información oficial de Skandia. Verifica los datos antes de actuar.
           </p>
         </div>
       </section>

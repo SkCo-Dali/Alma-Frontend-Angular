@@ -44,7 +44,7 @@ const norm = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
       </table>
     </div>
     <ul class="rev xs">
-      <li><span><b>correo</b>: obligatorio. Es lo que Alma usa para reconocer a la persona en las bases (también su nombre).</span></li>
+      <li><span><b>correo</b>: obligatorio. Es lo que Nova usa para reconocer a la persona en las bases (también su nombre).</span></li>
       <li><span><b>carpeta</b>: carpeta del buzón donde caen sus correos; debe existir en el buzón. Vacío = sin carpeta (queda en la carpeta vigilada).</span></li>
       <li><span><b>estado</b>: activo o inactivo · <b>respaldo</b>: correo de quien lo cubre.</span></li>
     </ul>

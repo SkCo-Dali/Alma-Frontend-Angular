@@ -95,7 +95,7 @@ export type SubvistaExportacion = 'tb' | 'ref' | null;
           <div class="fld">
             <span class="label">Entrega</span>
             <label class="row xs" for="nb-eh"><input type="checkbox" id="nb-eh" [checked]="E.borrador_en_hilo" (change)="guardarEntrega({ borrador_en_hilo: chk($event) })" /> Borrador en el hilo</label>
-            <label class="row xs" for="nb-ea"><input type="checkbox" id="nb-ea" [checked]="E.descarga_en_alma" (change)="guardarEntrega({ descarga_en_alma: chk($event) })" /> Descarga en Alma</label>
+            <label class="row xs" for="nb-ea"><input type="checkbox" id="nb-ea" [checked]="E.descarga_en_alma" (change)="guardarEntrega({ descarga_en_alma: chk($event) })" /> Descarga en Nova</label>
           </div>
         </div>
         @if (est.cargando()) {

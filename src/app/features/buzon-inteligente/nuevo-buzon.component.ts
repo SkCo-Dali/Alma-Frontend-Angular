@@ -83,7 +83,7 @@ interface FilaResumen {
                   [placeholder]="(tipo() === 'per' ? 'nombre.apellido' : 'area') + '@skandia.com.co'" />
               </div>
               <div class="namebox">
-                <span class="label">Nombre en Alma (estructura {{ '{' }}TIPO{{ '}' }}-{{ '{' }}ALIAS{{ '}' }})</span>
+                <span class="label">Nombre en Nova (estructura {{ '{' }}TIPO{{ '}' }}-{{ '{' }}ALIAS{{ '}' }})</span>
                 <p class="mono bb">{{ nombre() }}</p>
                 @if (valido() && !dominioOk()) {
                   <p class="err"><lucide-icon name="x-circle" [size]="13" /> Dominio no permitido</p>
@@ -143,7 +143,7 @@ interface FilaResumen {
                     }
                   </div>
                   @if (tipo() === 'per' && !tieneAlma()) {
-                    <button type="button" class="btn outline sm" style="justify-self:start" (click)="crearSubcarpeta()"><lucide-icon name="folder-plus" [size]="13" /> Crear subcarpeta «Alma» (recomendado)</button>
+                    <button type="button" class="btn outline sm" style="justify-self:start" (click)="crearSubcarpeta()"><lucide-icon name="folder-plus" [size]="13" /> Crear subcarpeta «Nova» (recomendado)</button>
                   }
                 </div>
                 <div class="fld">
@@ -152,14 +152,14 @@ interface FilaResumen {
                 </div>
               }
               @if (tipo() === 'per') {
-                <p class="note b-amber"><lucide-icon name="shield-alert" [size]="13" /> <span>Cuenta personal: Alma solo leerá la carpeta elegida. Usa una subcarpeta dedicada para no procesar tu correo personal.</span></p>
+                <p class="note b-amber"><lucide-icon name="shield-alert" [size]="13" /> <span>Cuenta personal: Nova solo leerá la carpeta elegida. Usa una subcarpeta dedicada para no procesar tu correo personal.</span></p>
               }
             }
             @case (2) {
               <div class="row between">
                 <p class="sm">¿Quién clasifica los correos?</p>
                 <div class="pills">
-                  <button type="button" [attr.aria-selected]="buzon()!.modo_clasificacion === 'prompt'" (click)="clasificador('prompt')"><lucide-icon name="scroll-text" [size]="13" /> Prompt de Alma</button>
+                  <button type="button" [attr.aria-selected]="buzon()!.modo_clasificacion === 'prompt'" (click)="clasificador('prompt')"><lucide-icon name="scroll-text" [size]="13" /> Prompt de Nova</button>
                   <button type="button" [attr.aria-selected]="buzon()!.modo_clasificacion === 'agente'" (click)="clasificador('agente')"><lucide-icon name="bot" [size]="13" /> Agente de Foundry</button>
                 </div>
               </div>
@@ -168,7 +168,7 @@ interface FilaResumen {
                   <div class="fld"><label class="label" for="nb-ag-p">Proyecto</label><input class="input" id="nb-ag-p" [(ngModel)]="agenteProyecto" (change)="guardarAgente()" /></div>
                   <div class="fld"><label class="label" for="nb-ag-n">Agente</label><input class="input" id="nb-ag-n" [(ngModel)]="agenteNombre" (change)="guardarAgente()" placeholder="Nombre del agente en Foundry" /></div>
                 </div>
-                <p class="note b-amber"><lucide-icon name="plug" [size]="13" /> <span>Leer las instrucciones del agente desde Foundry requiere que TI habilite el acceso de Alma al proyecto. Mientras tanto, pega su prompt con «Pegar o subir prompt» y Alma lo convierte en reglas.</span></p>
+                <p class="note b-amber"><lucide-icon name="plug" [size]="13" /> <span>Leer las instrucciones del agente desde Foundry requiere que TI habilite el acceso de Nova al proyecto. Mientras tanto, pega su prompt con «Pegar o subir prompt» y Nova lo convierte en reglas.</span></p>
               }
               <alma-reglas-tab [buzon]="buzon()!" modo="wiz" (buzonActualizado)="buzon.set($event)" (listo)="reglasListas.set($event)" />
             }
@@ -291,7 +291,7 @@ export class NuevoBuzonComponent implements OnInit {
     return ok ? `${this.correo().trim().split('@')[0]}@${ok}` : null;
   });
   protected readonly conectado = computed(() => this.buzon()?.estado_conexion === 'conectada');
-  protected readonly tieneAlma = computed(() => this.carpetas().some((c) => c.nombre === 'Alma'));
+  protected readonly tieneAlma = computed(() => this.carpetas().some((c) => c.nombre === 'Nova' || c.nombre === 'Alma'));
 
   /** Estado del paso 5 (lo calcula el componente de exportación). */
   private readonly estadoExp = computed(() => this.expWiz()?.estado() ?? null);
@@ -334,7 +334,7 @@ export class NuevoBuzonComponent implements OnInit {
     });
     return [
       { icono: 'plug-zap', titulo: 'Conexión', texto: `${b.nombre} · ${b.direccion} · carpeta «${this.nombreCarpeta(b.carpeta_vigilada)}»`, omitido: false },
-      { icono: 'scroll-text', titulo: 'Reglas', texto: `${b.modo_clasificacion === 'agente' ? 'Agente de Foundry' : 'Prompt de Alma'} · ${procesos.length} procesos · ${conDatos} con extracción`, omitido: false },
+      { icono: 'scroll-text', titulo: 'Reglas', texto: `${b.modo_clasificacion === 'agente' ? 'Agente de Foundry' : 'Prompt de Nova'} · ${procesos.length} procesos · ${conDatos} con extracción`, omitido: false },
       { icono: 'users', titulo: 'Asignación', texto: b.mod_asignacion ? [`${grupos.length} grupos · ${this.personas()} personas`, ...destinos].join(' · ') : 'Omitida: solo categorización', omitido: !b.mod_asignacion },
       { icono: 'database', titulo: 'Formato específico', texto: b.mod_bases ? `${reglasBases} búsqueda(s) en bases` : 'Omitido', omitido: !b.mod_bases },
       { icono: 'file-spreadsheet', titulo: 'Exportación', texto: b.mod_exportacion ? porProceso.join(' · ') : 'Omitida', omitido: !b.mod_exportacion },
@@ -463,9 +463,9 @@ export class NuevoBuzonComponent implements OnInit {
 
   protected async crearSubcarpeta(): Promise<void> {
     try {
-      this.carpetas.set(aplanar(await this.api.crearCarpeta(this.buzon()!.id, 'Alma')));
-      this.carpeta.set('Alma');
-      this.toast.show('Subcarpeta «Alma» creada', 'Mueve allí (o con una regla de Outlook) los correos que Alma debe leer.');
+      this.carpetas.set(aplanar(await this.api.crearCarpeta(this.buzon()!.id, 'Nova')));
+      this.carpeta.set('Nova');
+      this.toast.show('Subcarpeta «Nova» creada', 'Mueve allí (o con una regla de Outlook) los correos que Nova debe leer.');
     } catch (e) {
       this.toast.error('No se pudo crear la subcarpeta', e instanceof Error ? e.message : String(e));
     }
@@ -548,7 +548,7 @@ export class NuevoBuzonComponent implements OnInit {
     this.error.set('');
     try {
       await this.api.publicarReglas(b.id);
-      this.toast.show(`${b.nombre} activado`, 'Reglas v1 publicadas: Alma empieza a leer el buzón.');
+      this.toast.show(`${b.nombre} activado`, 'Reglas v1 publicadas: Nova empieza a leer el buzón.');
       this.cerrado.emit();
       void this.router.navigate(['/apps/buzon-inteligente/buzones', b.id]);
     } catch (e) {
