@@ -39,7 +39,7 @@ const REFRESCO_MS = 5000;
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else {
-      <div class="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 sm:px-6">
+      <div class="mx-auto w-full max-w-[1600px] space-y-4 px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex flex-wrap items-center gap-3">
           <a routerLink="/" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
             <lucide-icon name="arrow-left" [size]="16" /> Inicio
@@ -116,7 +116,7 @@ const REFRESCO_MS = 5000;
               <section class="glass overflow-hidden rounded-3xl shadow-[var(--shadow-sm)]">
                 <header class="flex items-center justify-between border-b border-border/60 px-5 py-3">
                   <h2 class="text-sm font-bold text-foreground">Campañas</h2>
-                  <button type="button" class="alma-btn alma-btn-ghost h-8 rounded-lg text-xs" [disabled]="cargando()" (click)="cargar()">
+                  <button type="button" class="alma-btn alma-btn-ghost h-8 w-auto rounded-lg px-2.5 text-xs" [disabled]="cargando()" (click)="cargar()">
                     <lucide-icon name="refresh-cw" [size]="14" [class.animate-spin]="cargando()" /> Actualizar
                   </button>
                 </header>
@@ -144,9 +144,9 @@ const REFRESCO_MS = 5000;
                       <tbody>
                         @for (c of campanas(); track c.id) {
                           <tr class="cursor-pointer border-t border-border/50 hover:bg-accent/60" tabindex="0" (click)="abrir(c.id)" (keydown.enter)="abrir(c.id)">
-                            <td class="max-w-[16rem] px-4 py-2">
-                              <p class="truncate font-medium text-foreground" [title]="c.nombre">{{ c.nombre }}</p>
-                              <p class="truncate text-[11px] text-muted-foreground">{{ c.form_nombre }}</p>
+                            <td class="min-w-[16rem] px-4 py-2">
+                              <p class="break-words font-medium text-foreground">{{ c.nombre }}</p>
+                              <p class="break-words text-[11px] text-muted-foreground">{{ c.form_nombre }}</p>
                             </td>
                             <td class="px-4 py-2">
                               <span class="alma-badge whitespace-nowrap" [class]="estado(c).clase">

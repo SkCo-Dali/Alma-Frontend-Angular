@@ -201,7 +201,7 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
             <button type="button" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm" [disabled]="!!errorPlantilla() || !cambiada() || guardandoPlantilla()" (click)="guardarPlantilla()">
               <lucide-icon [name]="guardandoPlantilla() ? 'loader-2' : 'save'" [size]="15" [class.animate-spin]="guardandoPlantilla()" /> Guardar como versión {{ v.version + 1 }}
             </button>
-            <button type="button" class="alma-btn alma-btn-ghost h-9 whitespace-nowrap rounded-xl text-sm" [disabled]="!cambiada()" (click)="cargarEnFormulario(v)">
+            <button type="button" class="alma-btn alma-btn-ghost h-9 w-auto whitespace-nowrap rounded-xl px-3 text-sm" [disabled]="!cambiada()" (click)="cargarEnFormulario(v)">
               Descartar cambios
             </button>
           </div>
