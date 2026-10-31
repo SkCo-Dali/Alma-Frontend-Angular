@@ -10,6 +10,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Agente Nova',
     descripcion:
       'Asistente conversacional de Servicio al Cliente: procesos y casos de Salesforce.',
+    resumen: 'Resuelve dudas de procesos y consulta casos de Salesforce.',
     categoria: 'Asistentes',
     icono: 'sparkles',
     iconUrl: '/app-icons/agente-alma.png',
@@ -26,6 +27,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Buzón Inteligente',
     descripcion:
       'Clasifica con IA los correos que llegan a los buzones de cada área y ejecuta la acción acordada: etiquetar, mover, reenviar o asignar.',
+    resumen: 'Clasifica los correos del área y ejecuta la acción acordada.',
     categoria: 'Asistentes',
     icono: 'mail-search',
     color: '#6D4AE0',
@@ -41,6 +43,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Acreditación PAC',
     descripcion:
       'Bandeja de pagos PAC recibidos por correo: cruce con suspense, cargue a Pipeline y respuesta a la empresa.',
+    resumen: 'Cruza los pagos PAC y los carga a Pipeline.',
     categoria: 'Recaudos',
     icono: 'coins',
     color: '#0089B8',
@@ -56,6 +59,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Aplicación de Pagos',
     descripcion:
       'Recaudos: carga del MAESTRO de pagos de extractos y PSE para identificarlos, conciliarlos y aplicarlos a los créditos.',
+    resumen: 'Identifica, concilia y aplica pagos a los créditos.',
     categoria: 'Recaudos',
     icono: 'landmark',
     color: '#0F6CBD',
@@ -71,6 +75,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Monitor-IA',
     descripcion:
       'Autoevaluación automática de llamadas: arma campañas, sortea la muestra por analista y trae las notas de Genesys Cloud.',
+    resumen: 'Autoevaluación de llamadas con muestra por analista.',
     categoria: 'Servicio al Cliente',
     icono: 'bot',
     color: '#7C3AED',
@@ -86,6 +91,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Solicitudes Prestaciones',
     descripcion:
       'Diligencia la solicitud de prestaciones (FOR-0075) con datos prellenados por documento, validaciones en pantalla y PDF listo para firmar.',
+    resumen: 'Solicitud prellenada y lista para firmar.',
     categoria: 'Servicio al Cliente',
     icono: 'file-text',
     color: '#0F6CBD',
@@ -101,6 +107,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Visor de comunicaciones',
     descripcion:
       'Visor de archivos .eml: renderiza el correo, sus encabezados y adjuntos sin exponer el código.',
+    resumen: 'Abre correos .eml con encabezados y adjuntos.',
     categoria: 'Servicio al Cliente',
     icono: 'mail-open',
     color: '#02B1FF',
@@ -116,6 +123,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Suscripción de Seguros',
     descripcion:
       'Bandeja de cotizaciones de Vida: declaraciones, evaluación del motor y emisión.',
+    resumen: 'Cotizaciones de Vida: evaluación y emisión.',
     categoria: 'Suscripción',
     icono: 'brain',
     iconUrl: '/app-icons/suscripcion.png',
@@ -133,6 +141,7 @@ export const APP_CATALOG: Application[] = [
     nombre: 'Motor de Comisiones',
     descripcion:
       'Planes de compensación, parametrización, ejecución del motor e información gerencial.',
+    resumen: 'Planes, parametrización y ejecución de comisiones.',
     categoria: 'Comisiones',
     icono: 'calculator',
     iconUrl: '/app-icons/motor-comisiones.png',

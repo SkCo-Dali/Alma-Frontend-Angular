@@ -1,7 +1,7 @@
-// Inicio "command center": la esfera de Alma saluda sobre la escena solarpunk,
-// con una barra para pedirle cosas al Agente, chips de acciones frecuentes y
-// una fila de widgets (continuar trabajando, pendientes, actividad, novedades
-// y accesos rápidos).
+// Inicio del hub de Nova: saludo sobre la escena solarpunk, una tarjeta para
+// pedirle cosas al Agente (con la esfera y chips de acciones frecuentes), la fila
+// «Tus aplicaciones» y una fila de widgets (continuar trabajando, pendientes,
+// actividad, novedades y accesos rápidos).
 //
 // Los widgets están construidos pero OCULTOS por ahora (MOSTRAR_WIDGETS):
 // se habilitan cuando exista el API de resúmenes que los alimente de verdad.
@@ -32,7 +32,7 @@ interface Chip {
 const CHIPS: Chip[] = [
   { icon: 'message-square-text', label: 'Consultar un caso', action: '>Quiero consultar el estado de un caso de Salesforce' },
   { icon: 'bar-chart-3', label: 'Analizar datos', action: '>Ayúdame a analizar datos de la operación' },
-  { icon: 'zap', label: 'Crear automatización', action: '>Quiero crear una automatización para un proceso repetitivo' },
+  { icon: 'zap', label: 'Automatizar una tarea', action: '>Quiero crear una automatización para un proceso repetitivo' },
 ];
 
 interface Novedad {
@@ -92,8 +92,14 @@ const MOSTRAR_WIDGETS = false;
 
 /** El Agente aún no está habilitado para el público: la barra y los chips que
  *  dependen de él se ven (misma UI) pero deshabilitados y marcados "Muy pronto".
- *  Los chips que NO dependen del Agente (Más acciones) siguen vivos. */
+ *  Un chip con ruta interna (sin '>') sigue vivo. */
 const AGENTE_LISTO = false;
+
+/** Aviso «Alma ahora es Nova» sobre el saludo: retirar 2–4 semanas después del lanzamiento. */
+const AVISO_TRANSICION = true;
+
+/** Cuántas apps muestra «Tus aplicaciones» (una fila en escritorio). */
+const MAX_TUS_APPS = 5;
 
 @Component({
   selector: 'alma-home',
@@ -102,78 +108,143 @@ const AGENTE_LISTO = false;
     <div
       class="mx-auto flex min-h-[72vh] w-full max-w-[1480px] flex-col items-center justify-center"
     >
-      <!-- Saludo + esfera -->
-      <div class="text-on-wallpaper flex w-full flex-col items-center pt-2 text-center">
-        <h1
-          class="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
-        >
-          {{ greeting() }}
-          <lucide-icon name="sprout" [size]="26" class="text-primary" />
-        </h1>
-        <p class="mt-1.5 text-sm text-foreground/80 sm:text-base">¿Qué quieres lograr hoy?</p>
-        <alma-housing [size]="210" [interactive]="true" class="-my-2" />
-      </div>
-
-      <!-- Pídeselo a Nova (deshabilitada mientras el Agente no esté listo) -->
-      <form
-        class="spk-prompt flex w-full max-w-2xl items-center gap-2 rounded-full py-1.5 pl-4 pr-1.5"
-        [class.opacity-85]="!agenteListo"
-        (submit)="$event.preventDefault(); enviarPrompt()"
-      >
-        <lucide-icon name="sparkles" [size]="17" class="shrink-0 text-primary" />
-        <input
-          type="text"
-          name="prompt"
-          [(ngModel)]="prompt"
-          [disabled]="!agenteListo"
-          placeholder="Pregúntale o pídele algo a Nova…"
-          autocomplete="off"
-          class="h-9 w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-        />
-        @if (!agenteListo) {
+      <!-- Saludo -->
+      <div class="text-on-wallpaper flex w-full flex-col items-center pt-4 text-center">
+        @if (avisoTransicion) {
           <span
-            class="shrink-0 whitespace-nowrap rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary"
+            class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-card/70 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-md"
           >
-            Muy pronto
+            <lucide-icon name="sparkles" [size]="13" class="text-primary" />
+            Alma ahora es Nova
           </span>
         }
-        <button
-          type="submit"
-          [disabled]="!agenteListo"
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Enviar a Nova"
-        >
-          <lucide-icon name="arrow-up-right" [size]="17" />
-        </button>
-      </form>
-
-      <!-- Acciones frecuentes: las que dependen del Agente se ven pero esperan -->
-      <div class="mt-4 flex flex-wrap items-center justify-center gap-2.5">
-        @for (chip of chips; track chip.label) {
-          <button
-            type="button"
-            class="spk-chip"
-            [disabled]="esDelAgente(chip) && !agenteListo"
-            [class.opacity-65]="esDelAgente(chip) && !agenteListo"
-            [class.cursor-not-allowed]="esDelAgente(chip) && !agenteListo"
-            [title]="esDelAgente(chip) && !agenteListo ? 'Disponible muy pronto con el Agente Nova' : ''"
-            (click)="accionChip(chip)"
-          >
-            <lucide-icon [name]="chip.icon" [size]="15" class="text-primary" />
-            {{ chip.label }}
-          </button>
-        }
-        <button type="button" class="spk-chip" (click)="launchpad.open.set(true)">
-          <lucide-icon name="more-horizontal" [size]="15" class="text-primary" />
-          Más acciones
-        </button>
+        <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
+          {{ greeting() }}
+        </h1>
+        <p class="mt-2 text-base font-medium text-foreground/80 sm:text-lg">Sigamos adelante.</p>
+        <span aria-hidden="true" class="mt-3 h-1 w-12 rounded-full bg-primary"></span>
       </div>
 
-      @if (!agenteListo) {
-        <p class="text-on-wallpaper mt-3 flex items-center gap-1.5 text-xs text-foreground/80">
-          <lucide-icon name="sparkles" [size]="13" class="text-primary" />
-          El Agente Nova se activará muy pronto: desde aquí podrás pedirle todo esto.
-        </p>
+      <!-- Tarjeta principal: pedirle algo a Nova (deshabilitada mientras el Agente no esté listo) -->
+      <section
+        class="spk-card mt-8 flex w-full max-w-5xl flex-col items-center gap-2 p-5 sm:p-7 md:flex-row md:gap-6"
+      >
+        <div class="order-2 w-full min-w-0 flex-1 md:order-1">
+          <h2 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            ¿Qué movemos hoy?
+          </h2>
+          <form
+            class="spk-prompt mt-5 flex w-full items-center gap-2 rounded-2xl py-1.5 pl-4 pr-1.5"
+            [class.opacity-85]="!agenteListo"
+            (submit)="$event.preventDefault(); enviarPrompt()"
+          >
+            <lucide-icon name="sparkles" [size]="18" class="shrink-0 text-primary" />
+            <input
+              type="text"
+              name="prompt"
+              [(ngModel)]="prompt"
+              [disabled]="!agenteListo"
+              placeholder="Cuéntame qué necesitas…"
+              aria-label="Pregúntale o pídele algo a Nova"
+              autocomplete="off"
+              class="h-11 w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed sm:text-base"
+            />
+            <button
+              type="submit"
+              [disabled]="!agenteListo"
+              class="flex h-11 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors enabled:hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Enviar a Nova"
+            >
+              <lucide-icon name="send" [size]="18" />
+            </button>
+          </form>
+
+          <!-- Acciones frecuentes: las que dependen del Agente se ven pero esperan -->
+          <div class="mt-4 flex flex-wrap items-center gap-2.5">
+            @for (chip of chips; track chip.label) {
+              <button
+                type="button"
+                class="spk-chip"
+                [disabled]="esDelAgente(chip) && !agenteListo"
+                [class.opacity-65]="esDelAgente(chip) && !agenteListo"
+                [class.cursor-not-allowed]="esDelAgente(chip) && !agenteListo"
+                [title]="esDelAgente(chip) && !agenteListo ? 'Disponible muy pronto con el Agente Nova' : ''"
+                (click)="accionChip(chip)"
+              >
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                  <lucide-icon [name]="chip.icon" [size]="14" class="text-primary" />
+                </span>
+                {{ chip.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Esfera de Nova con el estado del Agente -->
+        <div class="order-1 flex shrink-0 flex-col items-center md:order-2">
+          @if (!agenteListo) {
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-foreground"
+              title="El Agente Nova se activará muy pronto: desde aquí podrás pedirle todo esto."
+            >
+              <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+              Agente · Muy pronto
+            </span>
+          }
+          <!-- En móvil la esfera va más pequeña para no empujar la barra fuera de la vista. -->
+          <alma-housing [size]="190" [interactive]="true" class="-my-2 hidden md:block" />
+          <alma-housing [size]="120" [interactive]="true" class="-my-1 md:hidden" />
+        </div>
+      </section>
+
+      <!-- Tus aplicaciones: las del usuario según sus permisos (recientes primero) -->
+      @if (tusApps().length) {
+        <section class="mt-8 w-full max-w-6xl">
+          <header class="text-on-wallpaper mb-3 flex items-baseline justify-between px-1">
+            <h2 class="text-lg font-semibold text-foreground">Tus aplicaciones</h2>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full bg-card/75 px-3 py-1 text-sm font-medium text-foreground shadow-sm backdrop-blur-md transition-colors hover:bg-card"
+              (click)="launchpad.open.set(true)"
+            >
+              Ver todas <lucide-icon name="arrow-right" [size]="14" class="text-primary" />
+            </button>
+          </header>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            @for (app of tusApps(); track app.id) {
+              <a
+                [routerLink]="app.internalRoute ?? null"
+                [attr.href]="app.internalRoute ? null : app.url"
+                [attr.target]="app.internalRoute ? null : '_blank'"
+                [attr.rel]="app.internalRoute ? null : 'noreferrer'"
+                class="spk-card group flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5"
+              >
+                <span class="flex items-start justify-between">
+                  <!-- Glifo de color sobre un cuadro suave del color de la App (como el Dock). -->
+                  <span
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-2"
+                    [style.background]="'color-mix(in srgb, ' + app.color + ' 14%, transparent)'"
+                  >
+                    <alma-app-icon-art [app]="app" [flat]="true" />
+                  </span>
+                  <lucide-icon
+                    name="chevron-right"
+                    [size]="16"
+                    class="text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                  />
+                </span>
+                <span class="min-w-0">
+                  <span class="block truncate text-[15px] font-semibold text-foreground">
+                    {{ app.nombre }}
+                  </span>
+                  <span class="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
+                    {{ app.resumen ?? app.descripcion }}
+                  </span>
+                </span>
+              </a>
+            }
+          </div>
+        </section>
       }
 
       <!-- Widgets (listos, a la espera del API de resúmenes) -->
@@ -358,6 +429,7 @@ export class HomeComponent {
   protected prompt = '';
   protected readonly mostrarWidgets = MOSTRAR_WIDGETS;
   protected readonly agenteListo = AGENTE_LISTO;
+  protected readonly avisoTransicion = AVISO_TRANSICION;
 
   /** Un chip "es del Agente" cuando su acción es un prompt (empieza con '>'). */
   protected esDelAgente(chip: Chip): boolean {
@@ -383,6 +455,19 @@ export class HomeComponent {
       .filter((a): a is Application => !!a);
     const respaldo = this.apps.favorites().filter((a) => !recientes.includes(a));
     return [...recientes, ...respaldo].slice(0, 3);
+  });
+
+  /** Apps del usuario para la fila del Inicio: recientes, luego favoritas y luego
+   *  el resto del catálogo. El Agente queda fuera: ya tiene la tarjeta principal. */
+  protected readonly tusApps = computed<Application[]>(() => {
+    const todas = this.apps.applications().filter((a) => a.id !== 'app-agente-alma');
+    const porId = new Map(todas.map((a) => [a.id, a]));
+    const recientes = this.prefs
+      .recentApps()
+      .map((id) => porId.get(id))
+      .filter((a): a is Application => !!a);
+    const orden = [...recientes, ...todas.filter((a) => a.favorito), ...todas];
+    return [...new Set(orden)].slice(0, MAX_TUS_APPS);
   });
 
   // Donut: 12 de 16 procesos del día (ilustrativo) sobre circunferencia 2π·17.5
