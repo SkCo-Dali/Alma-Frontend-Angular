@@ -38,6 +38,7 @@ import {
   formatoMonto,
   montoDescuadrado,
 } from './recaudos-pac.api';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-recaudos-pac-page',
@@ -49,6 +50,7 @@ import {
     TooltipDirective,
     PanelAccionPagoComponent,
     PanelHistorialPagoComponent,
+    VolverInicioComponent,
   ],
   template: `
     @if (!puedeVer()) {
@@ -58,6 +60,7 @@ import {
         <!-- Encabezado -->
         <div class="flex flex-wrap items-end justify-between gap-3">
           <div>
+            <alma-volver-inicio class="mb-3" />
             <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Acreditación PAC
             </h1>

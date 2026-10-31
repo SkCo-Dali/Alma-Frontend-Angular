@@ -19,6 +19,7 @@ import {
   MENSAJE_BIENVENIDA,
   SUGERENCIAS,
 } from './agente-alma.api';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 interface Mensaje {
   rol: 'user' | 'assistant';
@@ -34,7 +35,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
 
 @Component({
   selector: 'alma-chat-agente',
-  imports: [FormsModule, LucideAngularModule, AlmaHousingComponent, AlmaSphereComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaHousingComponent, AlmaSphereComponent, VolverInicioComponent],
   template: `
     <div class="flex h-[calc(100dvh-11rem)] gap-4">
       <!-- Rail de historial -->
@@ -84,6 +85,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
             <h1 class="text-sm font-semibold text-foreground">Agente Nova</h1>
             <p class="text-xs text-muted-foreground">Asistente de Servicio al Cliente</p>
           </div>
+          <alma-volver-inicio class="ml-auto" />
         </header>
 
         <!-- Mensajes -->
