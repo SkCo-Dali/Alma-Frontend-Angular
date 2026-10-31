@@ -134,7 +134,7 @@ interface ModalQuitar {
           <div class="row between">
             <div>
               <h2 class="sm b">{{ titulo }}</h2>
-              <p class="xs muted">{{ M.modo === 'nueva' ? 'Después úsala en una búsqueda desde «Reglas y bases».' : 'Sube una nueva versión o tómala de SharePoint u OneDrive. Alma revisa que estén las columnas que usan las reglas antes de aceptar el cambio.' }}</p>
+              <p class="xs muted">{{ M.modo === 'nueva' ? 'Después úsala en una búsqueda desde «Reglas y bases».' : 'Sube una nueva versión o tómala de SharePoint u OneDrive. Nova revisa que estén las columnas que usan las reglas antes de aceptar el cambio.' }}</p>
             </div>
             <button type="button" class="btn ghost" aria-label="Cerrar" (click)="cerrarBase()"><lucide-icon name="x" [size]="16" /></button>
           </div>
@@ -168,7 +168,7 @@ interface ModalQuitar {
                 </div>
               </div>
               @if (faltan().length) {
-                <p class="note b-rose"><lucide-icon name="x-circle" [size]="13" /> <span>Faltan {{ faltan().join(', ') }}. Corrige el archivo o ajusta las reglas antes de reemplazar; mientras tanto Alma sigue usando la versión vigente.</span></p>
+                <p class="note b-rose"><lucide-icon name="x-circle" [size]="13" /> <span>Faltan {{ faltan().join(', ') }}. Corrige el archivo o ajusta las reglas antes de reemplazar; mientras tanto Nova sigue usando la versión vigente.</span></p>
               }
             }
           } @else {

@@ -94,7 +94,7 @@ const REFRESCO_MS = 700;
         <div class="flex items-center gap-1.5 text-xs font-medium text-foreground">
           <label [attr.for]="'f-' + ruta">{{ def.rotulo }}</label>
           @if (esSugerido(ruta)) {
-            <button type="button" class="alma-badge bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300" title="Dato sugerido por Alma: confírmalo con el cliente (clic para marcarlo como confirmado)" (click)="confirmar(ruta)">
+            <button type="button" class="alma-badge bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300" title="Dato sugerido por Nova: confírmalo con el cliente (clic para marcarlo como confirmado)" (click)="confirmar(ruta)">
               Sugerido · confirmar
             </button>
           }
@@ -191,7 +191,7 @@ const REFRESCO_MS = 700;
                 <p class="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400"><lucide-icon name="info" [size]="14" class="mt-0.5 shrink-0" /> Los nombres vienen en un solo campo en la base de origen: revisa que cada uno quedó en su casilla.</p>
               }
             }
-            <p class="text-[11px] text-muted-foreground">Lo que encuentra Alma es una sugerencia: confírmalo con el cliente. Lo que digites aquí no se guarda; vive solo en esta pantalla.</p>
+            <p class="text-[11px] text-muted-foreground">Lo que encuentra Nova es una sugerencia: confírmalo con el cliente. Lo que digites aquí no se guarda; vive solo en esta pantalla.</p>
           </section>
 
           <!-- 2. Solicitud -->

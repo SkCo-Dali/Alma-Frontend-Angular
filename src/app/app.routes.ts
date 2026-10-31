@@ -224,7 +224,7 @@ export const routes: Routes = [
       import('./features/solicitudes-prestaciones/solicitudes-prestaciones-page.component').then(
         (m) => m.SolicitudesPrestacionesPageComponent,
       ),
-    title: 'Solicitudes Prestaciones — ALMA',
+    title: 'Solicitudes Prestaciones — Nova',
   },
   {
     path: 'apps/recaudos-acreditacion-pac',

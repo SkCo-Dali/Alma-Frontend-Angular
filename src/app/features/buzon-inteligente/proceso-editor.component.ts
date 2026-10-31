@@ -105,11 +105,11 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
           </div>
         }
         @case ('et') {
-          <p class="xs muted">Por datos: Alma evalúa la condición sobre el JSON (exacto y auditable). Por IA: la IA decide con el texto.</p>
+          <p class="xs muted">Por datos: Nova evalúa la condición sobre el JSON (exacto y auditable). Por IA: la IA decide con el texto.</p>
           @for (e of d.etiquetas; track $index; let i = $index) {
             <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:8px">
               <div class="row" style="flex-wrap:nowrap">
-                <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Alma'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
+                <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Nova'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
                 <input class="input sm mono" style="max-width:240px" [(ngModel)]="e.clave" placeholder="CLAVE_ETIQUETA" aria-label="Clave de etiqueta" />
                 <select class="input sm" style="width:auto" [(ngModel)]="e.tipo" aria-label="Tipo de criterio">
                   <option value="datos" [disabled]="!d.extrae || !d.campos.length">Por datos</option>
@@ -159,7 +159,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
                 <button type="button" [attr.aria-selected]="json()" (click)="verJson(true)"><lucide-icon name="braces" [size]="13" /> JSON</button>
               </div>
               <div class="row">
-                <button type="button" class="btn sm" (click)="restaurar()"><lucide-icon name="undo-2" [size]="13" /> Restaurar propuesta de Alma</button>
+                <button type="button" class="btn sm" (click)="restaurar()"><lucide-icon name="undo-2" [size]="13" /> Restaurar propuesta de Nova</button>
               </div>
             </div>
             <div class="ep-grid">
@@ -212,7 +212,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
               </div>
               <details class="ep-prev sunk r-xl" style="padding:8px 12px" open>
                 <summary>Vista previa del JSON de salida</summary>
-                <pre class="json"><span class="ln">{{ '{' }}</span><span class="ln base"><span class="c">  // base fija · la agrega Alma (6 campos)</span></span>@for (f of d.campos; track $index; let last = $last) {<span class="ln" [class.idf]="f.identificador">  <span class="k">"{{ f.clave || '…' }}"</span>: <span [class]="f.tipo === 'texto' || f.tipo === 'fecha' ? 's' : 'n'">{{ valorEjemplo(f) }}</span>{{ last ? '' : ',' }}@if (f.critico !== '0') {<span class="c"> // crítico{{ f.critico === 'alt' ? ' alterno' : '' }}</span>}</span>}<span class="ln">{{ '}' }}</span></pre>
+                <pre class="json"><span class="ln">{{ '{' }}</span><span class="ln base"><span class="c">  // base fija · la agrega Nova (6 campos)</span></span>@for (f of d.campos; track $index; let last = $last) {<span class="ln" [class.idf]="f.identificador">  <span class="k">"{{ f.clave || '…' }}"</span>: <span [class]="f.tipo === 'texto' || f.tipo === 'fecha' ? 's' : 'n'">{{ valorEjemplo(f) }}</span>{{ last ? '' : ',' }}@if (f.critico !== '0') {<span class="c"> // crítico{{ f.critico === 'alt' ? ' alterno' : '' }}</span>}</span>}<span class="ln">{{ '}' }}</span></pre>
               </details>
             </div>
           }

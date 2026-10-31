@@ -295,7 +295,7 @@ export class BuzonesPageComponent {
 
   protected clasificador(b: Buzon): string {
     if (!b.version_reglas && !b.procesos_count) return 'Sin clasificador';
-    return b.modo_clasificacion === 'agente' ? 'Agente Foundry' : 'Prompt de Alma';
+    return b.modo_clasificacion === 'agente' ? 'Agente Foundry' : 'Prompt de Nova';
   }
 
   protected nombreRol(r: string): string {

@@ -2,7 +2,7 @@
 // del prototipo validado: se copian a la IA corporativa para describir el buzón.
 
 export const PLANTILLA_PROMPT = [
-  "PLANTILLA DE REGLAS · BUZÓN INTELIGENTE (Alma)",
+  "PLANTILLA DE REGLAS · BUZÓN INTELIGENTE (Nova)",
   "Úsala con la IA corporativa autorizada. No pegues datos reales de clientes: nombres, cédulas y cuentas van ficticios.",
   "",
   "═════ PARTE A · Instrucciones para la IA que te ayuda ═════",
@@ -11,7 +11,7 @@ export const PLANTILLA_PROMPT = [
   "Cuando dos procesos se parezcan, pregúntame cuándo es cada uno y qué señal manda.",
   "Devuelve solo la PARTE B completa, con los mismos títulos.",
   "",
-  "═════ PARTE B · Descripción del buzón (esto es lo que Alma lee) ═════",
+  "═════ PARTE B · Descripción del buzón (esto es lo que Nova lee) ═════",
   "1. CONTEXTO DEL ÁREA",
   "   Área, buzón, quién escribe y qué tipo de solicitudes llegan. Glosario de siglas.",
   "2. REGLAS FIJAS (sin IA)",
@@ -35,7 +35,7 @@ export const PLANTILLA_PROMPT = [
   "7. VALIDAR",
   "   Confianza mínima y excepciones (casos que siempre deben revisarse).",
   "",
-  "Nota: no escribas el formato JSON de salida. Alma lo arma con los datos del punto 5",
+  "Nota: no escribas el formato JSON de salida. Nova lo arma con los datos del punto 5",
 ].join('\n');
 
 export const EJEMPLO_PROMPT = [

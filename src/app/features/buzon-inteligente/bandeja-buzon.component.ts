@@ -540,10 +540,10 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                         }
                         @if (h.borrador; as b) {
                           <div class="msg draft">
-                            <div class="row between"><b style="color:var(--rose)">[Borrador] Alma · Buzón Inteligente</b><span class="xs muted">actualizado {{ cuando(b.borrador_en || b.created_at) }}</span></div>
+                            <div class="row between"><b style="color:var(--rose)">[Borrador] Nova · Buzón Inteligente</b><span class="xs muted">actualizado {{ cuando(b.borrador_en || b.created_at) }}</span></div>
                             <span>RE: {{ c.asunto }} · {{ b.salida_nombre || 'Archivo' }}</span>
                             <span class="att x"><lucide-icon name="file-spreadsheet" [size]="12" /> {{ b.nombre }} · v{{ b.version }}</span>
-                            <span class="xs muted">Sin destinatarios · Alma reemplaza este borrador en cada versión que se actualice.</span>
+                            <span class="xs muted">Sin destinatarios · Nova reemplaza este borrador en cada versión que se actualice.</span>
                             @if (h.ultima_version && h.ultima_version > b.version) { <span class="badge b-amber" style="justify-self:start">Hay una versión más nueva (v{{ h.ultima_version }}) en la pestaña Archivo</span> }
                           </div>
                         }
@@ -689,7 +689,7 @@ export class BandejaBuzonComponent {
 
   protected readonly pestanas = computed(() => {
     const t: { id: Pestana; nombre: string; icon: string }[] = [
-      { id: 'ia', nombre: 'Lo que vio Alma', icon: 'sparkles' },
+      { id: 'ia', nombre: 'Lo que vio Nova', icon: 'sparkles' },
       { id: 'asig', nombre: 'Asignación', icon: 'user-check' },
     ];
     if (this.archivos().length) t.push({ id: 'arch', nombre: 'Archivo', icon: 'file-spreadsheet' });
@@ -1216,7 +1216,7 @@ export class BandejaBuzonComponent {
   protected ultimaCorreccion(): string {
     const d = this.detalle();
     const ult = [...(d?.ejecuciones ?? [])].reverse().find((e) => e.tipo === 'datos');
-    return ult ? `${ult.ejecutado_por} · ${this.cuando(ult.ejecutado_en)}` : `Alma · ${this.cuando(d?.created_at ?? new Date().toISOString())}`;
+    return ult ? `${ult.ejecutado_por} · ${this.cuando(ult.ejecutado_en)}` : `Nova · ${this.cuando(d?.created_at ?? new Date().toISOString())}`;
   }
 
   protected acciones(c: CorreoDetalle): { icon: string; texto: string; estado: string | null }[] {
@@ -1248,7 +1248,7 @@ export class BandejaBuzonComponent {
     // 061: versión de las reglas con la que se clasificó (sin versión = borrador, antes de publicar).
     const v = c.reglas_version ? ` · v${c.reglas_version}` : '';
     if (c.modelo_ia?.startsWith('agente:')) return `Clasificado por el agente ${c.modelo_ia.slice(7)}${v}`;
-    return `Clasificado por IA · Prompt de Alma${v}`;
+    return `Clasificado por IA · Prompt de Nova${v}`;
   }
 
   protected asignadoTexto(c: Correo): { icon: string; quien: string | null; via: string } | null {
@@ -1282,7 +1282,7 @@ export class BandejaBuzonComponent {
     if (c.confianza === null) return 'Pendiente de revisión.';
     const u = this.umbralDe(c);
     if (u !== null && c.confianza < u) return `Confianza ${this.pct(c.confianza)}, por debajo del umbral de ${this.pct(u)}.`;
-    return `Confianza ${this.pct(c.confianza)}: alcanza el umbral; Alma lo ejecuta en el próximo ciclo.`;
+    return `Confianza ${this.pct(c.confianza)}: alcanza el umbral; Nova lo ejecuta en el próximo ciclo.`;
   }
 
   /** Umbral que aplica (etiqueta → proceso → buzón), como en el worker. */

@@ -196,7 +196,7 @@ export class HojaVistaComponent {
       <!-- ② Qué va en cada columna -->
       @if (t.paso === 2) {
         <div class="row between">
-          <p class="xs muted">Haz clic en un encabezado para decir qué va en esa columna. ✦ = propuesta de Alma por el nombre. En ámbar: sin asignar.</p>
+          <p class="xs muted">Haz clic en un encabezado para decir qué va en esa columna. ✦ = propuesta de Nova por el nombre. En ámbar: sin asignar.</p>
           <div class="row">
             <button type="button" class="btn outline sm" (click)="proponer()"><lucide-icon name="sparkles" [size]="13" /> Proponer lo que falta</button>
             <button type="button" class="btn outline sm" (click)="agregar()"><lucide-icon name="plus" [size]="13" /> Columna</button>
@@ -238,7 +238,7 @@ export class HojaVistaComponent {
               <p class="sm b">
                 Columna {{ letra(t.sel) }} · {{ c.encabezado || '…' }}
                 @if (c.sug) {
-                  <span class="badge b-violet">✦ Propuesta de Alma</span>
+                  <span class="badge b-violet">✦ Propuesta de Nova</span>
                 }
               </p>
               <div class="row" style="gap:4px">
@@ -472,7 +472,7 @@ export class HojaVistaComponent {
       <label class="upcard" [for]="ids + 'file'">
         <lucide-icon name="upload" [size]="20" />
         <span class="sm b">{{ t.vista || t.columnas.length ? 'Reemplazar con mi plantilla (.xlsx / .csv)' : 'Subir mi plantilla (.xlsx / .csv)' }}</span>
-        <span class="xs muted">Alma lee tus hojas, encuentra la fila de encabezados y propone qué dato va en cada columna.{{ t.columnas.length ? ' Las columnas que coincidan por nombre conservan lo que ya asignaste.' : '' }}</span>
+        <span class="xs muted">Nova lee tus hojas, encuentra la fila de encabezados y propone qué dato va en cada columna.{{ t.columnas.length ? ' Las columnas que coincidan por nombre conservan lo que ya asignaste.' : '' }}</span>
       </label>
       <input type="file" [id]="ids + 'file'" accept=".xlsx,.xls,.csv" hidden (change)="subirModelo($event)" />
     </ng-template>
@@ -669,7 +669,7 @@ export class PlantillaBuilderComponent {
       }
     });
     this.cambio();
-    this.toast.show(na ? `Alma propuso ${na} columna(s): revísalas (✦)` : 'No encontré propuestas para las columnas que faltan');
+    this.toast.show(na ? `Nova propuso ${na} columna(s): revísalas (✦)` : 'No encontré propuestas para las columnas que faltan');
   }
 
   protected agregar(): void {

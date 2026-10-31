@@ -77,7 +77,7 @@ export function entregaDe(b: Buzon): EntregaExp {
           <div class="fld">
             <span class="label">Entrega</span>
             <label class="row sm" for="ex-h"><input type="checkbox" id="ex-h" [disabled]="!puede()" [checked]="E.borrador_en_hilo" (change)="guardarEntrega({ borrador_en_hilo: chk($event) })" /> Borrador en el hilo</label>
-            <label class="row sm" for="ex-a"><input type="checkbox" id="ex-a" [disabled]="!puede()" [checked]="E.descarga_en_alma" (change)="guardarEntrega({ descarga_en_alma: chk($event) })" /> Descarga desde Alma</label>
+            <label class="row sm" for="ex-a"><input type="checkbox" id="ex-a" [disabled]="!puede()" [checked]="E.descarga_en_alma" (change)="guardarEntrega({ descarga_en_alma: chk($event) })" /> Descarga desde Nova</label>
           </div>
         </div>
         <p class="xxs muted">Un correo en Validar genera su archivo cuando se aprueba, con la salida de su etiqueta final.</p>

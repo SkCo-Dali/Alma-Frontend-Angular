@@ -18,7 +18,7 @@ import { AuthService } from '../../core/auth/auth.service';
       >
         <lucide-icon name="unplug" [size]="32" />
       </span>
-      <h1 class="mt-6 text-2xl font-bold text-foreground">No pudimos conectar con Alma</h1>
+      <h1 class="mt-6 text-2xl font-bold text-foreground">No pudimos conectar con Nova</h1>
       <p class="mt-2 max-w-sm text-sm text-muted-foreground">
         Puede ser un problema temporal del servidor. Intenta de nuevo en unos segundos.
       </p>

@@ -34,7 +34,7 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 class="text-sm font-bold text-foreground">Conexión con Salesforce</h2>
-            <p class="text-xs text-muted-foreground">Alma solo LEE casos y usuarios; nunca escribe en Salesforce.</p>
+            <p class="text-xs text-muted-foreground">Nova solo LEE casos y usuarios; nunca escribe en Salesforce.</p>
           </div>
           @if (config(); as c) {
             @if (c.verificada_en) {
@@ -184,7 +184,7 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
             Instrucciones para la IA (prompt de sistema)
             <textarea class="alma-input min-h-64 py-2 font-mono text-xs leading-relaxed" name="sistema" [ngModel]="sistema()" (ngModelChange)="sistema.set($event)"></textarea>
             <span class="block text-[11px] font-normal text-muted-foreground">
-              No hace falta describir el JSON: Alma exige la salida (resumen, un «Si»/«No» por criterio y análisis general).
+              No hace falta describir el JSON: Nova exige la salida (resumen, un «Si»/«No» por criterio y análisis general).
             </span>
           </label>
           <label class="block space-y-1 text-xs font-medium text-foreground">
@@ -382,7 +382,7 @@ export class CasosConfiguracionComponent {
     this.probandoConexion.set(true);
     try {
       this.aplicarConexion(await this.api.probarConexion());
-      this.toast.show('Conexión verificada', 'Alma pudo leer casos de Salesforce.');
+      this.toast.show('Conexión verificada', 'Nova pudo leer casos de Salesforce.');
     } catch (e) {
       this.toast.error('La conexión falló', e instanceof Error ? e.message : String(e));
     } finally {

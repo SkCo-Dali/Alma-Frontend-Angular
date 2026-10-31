@@ -804,7 +804,7 @@ function plantillasBase(): Plantilla[] {
       separador: ';',
       hoja: 'Cargue',
       nombre_archivo: 'Cargue_{codigo_pac}_{fecha}',
-      titulo: [['CARGUE DE APORTES PAC'], ['Generado por Alma · Recaudos']],
+      titulo: [['CARGUE DE APORTES PAC'], ['Generado por Nova · Recaudos']],
       columnas: [
         col('CONSECUTIVO', { tipo: 'fila' }, 'entero'),
         col('CODIGO PAC', { tipo: 'campo', campo: 'codigo_pac' }),
@@ -815,7 +815,7 @@ function plantillasBase(): Plantilla[] {
         col('FECHA RECIBIDO', { tipo: 'correo', dato: 'fecha' }, 'fecha'),
         col('ANALISTA', { tipo: 'base', base_id: 'demo-base-pac', campo: 'codigo_pac', columna_busqueda: 'CODIGO PAC', columna_resultado: 'ANALISTA', comparacion: 'pc' }),
         col('VALOR CON GMF', { tipo: 'formula', formula: '=F{fila}*1.004' }, 'moneda'),
-        col('OBSERVACION', { tipo: 'fijo', valor: 'Cargue automático Alma' }),
+        col('OBSERVACION', { tipo: 'fijo', valor: 'Cargue automático Nova' }),
       ],
       detalle: 'afiliados',
       modelo: 'MODELO_CARGUE_PAC.xlsx',

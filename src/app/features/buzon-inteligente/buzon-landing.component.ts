@@ -112,7 +112,7 @@ const REFRESCO_MS = 60_000;
               }
             </span>
             <span class="relative inline-flex items-center gap-1.5 self-start rounded-full bg-black/15 px-2.5 py-0.5 text-[11px] font-bold">
-              <lucide-icon name="corner-left-down" [size]="12" /> Paso 3 · cuando Alma duda
+              <lucide-icon name="corner-left-down" [size]="12" /> Paso 3 · cuando Nova duda
             </span>
             <span class="relative">
               <span class="block text-[17px] font-bold leading-snug">Bandeja de revisión</span>
