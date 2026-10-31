@@ -15,14 +15,14 @@ import { AlmaHousingComponent } from './alma-housing.component';
     >
       <!-- Logo arriba a la izquierda -->
       <div class="absolute left-6 top-6 flex items-center gap-2">
-        <img src="alma-logo.png?v=2" alt="Alma" class="h-9 w-auto dark:hidden" />
-        <img src="alma-logo-neg.png?v=2" alt="Alma" class="hidden h-9 w-auto dark:block" />
+        <img src="nova-logo.svg" alt="Nova" class="h-9 w-auto dark:hidden" />
+        <img src="nova-logo-neg.svg" alt="Nova" class="hidden h-9 w-auto dark:block" />
       </div>
 
       <alma-housing [size]="224" [interactive]="true" />
 
       <h1 class="mt-8 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-        Bienvenido a Alma
+        Bienvenido a Nova
       </h1>
       <p class="mt-2 text-sm text-muted-foreground">Conecta · Orquesta · Impulsa</p>
 

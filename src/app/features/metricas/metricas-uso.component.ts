@@ -52,7 +52,7 @@ const RANGOS = [7, 30, 90] as const;
               <div class="rounded-lg border border-border bg-background p-4">
                 <div class="flex items-center gap-2 text-xs text-muted-foreground">
                   <lucide-icon name="message-square-text" [size]="16" class="text-primary" />
-                  Agente Alma
+                  Agente Nova
                 </div>
                 <p class="mt-1 text-2xl font-semibold tabular-nums text-foreground">
                   {{ ag.mensajes.toLocaleString('es-CO') }}

@@ -264,7 +264,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                     <div class="ia-grid">
                       <div class="stack">
                         <div class="box sunk">
-                          <p class="cap"><lucide-icon name="sparkles" [size]="13" /> Resumen de Alma</p>
+                          <p class="cap"><lucide-icon name="sparkles" [size]="13" /> Resumen de Nova</p>
                           <p class="sm">{{ c.resumen || 'Sin resumen.' }}</p>
                           @if (porQue(c); as pq) { <p class="cap" style="margin-top:6px">Por qué</p><p class="xs muted">{{ pq }}</p> }
                         </div>
@@ -592,7 +592,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                 <div>
                   <div class="ei"><lucide-icon name="mail-open" [size]="22" /></div>
                   <p class="sm b">Selecciona un correo</p>
-                  <p class="xs muted" style="max-width:360px">Verás qué decidió Alma, los datos que extrajo, a quién lo asignó y el archivo que generó.</p>
+                  <p class="xs muted" style="max-width:360px">Verás qué decidió Nova, los datos que extrajo, a quién lo asignó y el archivo que generó.</p>
                 </div>
               </div>
             }
