@@ -27,7 +27,7 @@ import { DemoBadgeComponent } from './demo-badge.component';
             </a>
             <div>
               <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">Métricas y auditoría</h1>
-              <p class="text-on-wallpaper text-sm text-foreground/80">Qué llega, qué hace Alma sola y qué tan bien le va.</p>
+              <p class="text-on-wallpaper text-sm text-foreground/80">Qué llega, qué hace Nova sola y qué tan bien le va.</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -64,7 +64,7 @@ import { DemoBadgeComponent } from './demo-badge.component';
               <div class="flex items-center justify-between">
                 <h2 class="text-sm font-semibold text-foreground">Correos por día</h2>
                 <div class="flex items-center gap-3 text-[11px] text-muted-foreground">
-                  <span class="inline-flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span> Ejecutados por Alma</span>
+                  <span class="inline-flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span> Ejecutados por Nova</span>
                   <span class="inline-flex items-center gap-1"><span class="h-2.5 w-2.5 rounded-sm bg-amber-400"></span> A revisión</span>
                 </div>
               </div>
@@ -153,7 +153,7 @@ export class MetricasBuzonComponent {
     const pct = m.total ? Math.round((m.automatizados / m.total) * 100) : 0;
     return [
       { label: 'Correos procesados', valor: m.total, icon: 'mail', clase: 'text-foreground', sub: `últimos ${this.dias} días` },
-      { label: 'Resueltos por Alma', valor: `${pct}%`, icon: 'zap', clase: 'text-emerald-600', sub: `${m.automatizados} sin intervención` },
+      { label: 'Resueltos por Nova', valor: `${pct}%`, icon: 'zap', clase: 'text-emerald-600', sub: `${m.automatizados} sin intervención` },
       { label: 'Precisión de la IA', valor: m.precision.porcentaje !== null ? `${m.precision.porcentaje}%` : '—', icon: 'target', clase: 'text-primary', sub: `${m.precision.coincidencias} de ${m.precision.decisiones_humanas} decisiones humanas coinciden` },
       { label: 'Por revisar', valor: m.por_estado['revision'] ?? 0, icon: 'mail-warning', clase: 'text-amber-600', sub: `${m.por_estado['error'] ?? 0} con error` },
       { label: 'Tiempo a decisión', valor: m.tiempo_medio_decision_min !== null ? this.duracion(m.tiempo_medio_decision_min) : '—', icon: 'timer', clase: 'text-foreground', sub: 'promedio desde que llega' },

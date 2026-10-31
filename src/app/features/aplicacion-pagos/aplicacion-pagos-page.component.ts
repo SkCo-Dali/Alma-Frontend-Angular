@@ -275,6 +275,6 @@ export class AplicacionPagosPageComponent {
   }
 
   protected origen(e: ErrorCarga): string {
-    return e.tipo?.startsWith('script:') ? 'Script de Calidad' : 'Validación de Alma';
+    return e.tipo?.startsWith('script:') ? 'Script de Calidad' : 'Validación de Nova';
   }
 }

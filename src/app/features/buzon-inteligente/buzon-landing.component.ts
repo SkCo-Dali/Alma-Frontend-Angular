@@ -32,7 +32,7 @@ interface Modulo {
               Buzón Inteligente
             </h1>
             <p class="text-on-wallpaper mt-2 max-w-2xl text-sm text-foreground/80">
-              Cada área describe qué correos recibe y qué hacer con cada uno. Alma los lee, incluidos
+              Cada área describe qué correos recibe y qué hacer con cada uno. Nova los lee, incluidos
               los adjuntos, los clasifica y ejecuta la acción o la deja lista para aprobar.
             </p>
           </div>
@@ -109,7 +109,7 @@ export class BuzonLandingComponent {
   protected readonly buzones = signal<Buzon[]>([]);
 
   protected readonly pasos = [
-    { titulo: 'Llega el correo', texto: 'Alma vigila la carpeta del buzón del área cada pocos minutos.', icon: 'inbox', color: 'linear-gradient(150deg,#0089B8,#00C83C)' },
+    { titulo: 'Llega el correo', texto: 'Nova vigila la carpeta del buzón del área cada pocos minutos.', icon: 'inbox', color: 'linear-gradient(150deg,#0089B8,#00C83C)' },
     { titulo: 'Lo lee completo', texto: 'Cuerpo y adjuntos: PDF, imágenes y Excel pasan por lectura de documentos.', icon: 'scan-text', color: 'linear-gradient(150deg,#6D4AE0,#BF5AF2)' },
     { titulo: 'Clasifica y extrae', texto: 'Con el contexto que dio el área decide la categoría, la confianza y los datos clave.', icon: 'sparkles', color: 'linear-gradient(150deg,#FF9F0A,#FF375F)' },
     { titulo: 'Actúa o sugiere', texto: 'Etiqueta, mueve, reenvía o asigna. Si duda, lo deja en la bandeja para aprobar en un clic.', icon: 'zap', color: 'linear-gradient(150deg,#00C83C,#0089B8)' },
