@@ -46,12 +46,20 @@ interface Novedad {
 
 /** Novedades de la plataforma (contenido editorial, se actualiza a mano). */
 const NOVEDADES: Novedad[] = [
+  // Aviso de transición de marca: retirar 2–4 semanas después del lanzamiento.
+  {
+    icon: 'sparkles',
+    tono: 'text-primary bg-primary/10',
+    nuevo: true,
+    titulo: 'Alma ahora es Nova',
+    texto: 'Las mismas apps y accesos, con nuevo nombre. Nova. Sigamos adelante.',
+  },
   {
     icon: 'bar-chart-3',
     tono: 'text-primary bg-primary/10',
-    nuevo: true,
+    nuevo: false,
     titulo: 'Nueva plataforma Angular',
-    texto: 'ALMA ahora corre sobre su nueva base: más rápida y lista para apps de otros equipos.',
+    texto: 'Nova corre sobre su nueva base: más rápida y lista para apps de otros equipos.',
   },
 ];
 
@@ -106,7 +114,7 @@ const AGENTE_LISTO = false;
         <alma-housing [size]="210" [interactive]="true" class="-my-2" />
       </div>
 
-      <!-- Pídeselo a Alma (deshabilitada mientras el Agente no esté listo) -->
+      <!-- Pídeselo a Nova (deshabilitada mientras el Agente no esté listo) -->
       <form
         class="spk-prompt flex w-full max-w-2xl items-center gap-2 rounded-full py-1.5 pl-4 pr-1.5"
         [class.opacity-85]="!agenteListo"
@@ -118,7 +126,7 @@ const AGENTE_LISTO = false;
           name="prompt"
           [(ngModel)]="prompt"
           [disabled]="!agenteListo"
-          placeholder="Pregúntale o pídele algo a Alma…"
+          placeholder="Pregúntale o pídele algo a Nova…"
           autocomplete="off"
           class="h-9 w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
         />
@@ -133,7 +141,7 @@ const AGENTE_LISTO = false;
           type="submit"
           [disabled]="!agenteListo"
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Enviar a Alma"
+          aria-label="Enviar a Nova"
         >
           <lucide-icon name="arrow-up-right" [size]="17" />
         </button>
@@ -148,7 +156,7 @@ const AGENTE_LISTO = false;
             [disabled]="esDelAgente(chip) && !agenteListo"
             [class.opacity-65]="esDelAgente(chip) && !agenteListo"
             [class.cursor-not-allowed]="esDelAgente(chip) && !agenteListo"
-            [title]="esDelAgente(chip) && !agenteListo ? 'Disponible muy pronto con el Agente Alma' : ''"
+            [title]="esDelAgente(chip) && !agenteListo ? 'Disponible muy pronto con el Agente Nova' : ''"
             (click)="accionChip(chip)"
           >
             <lucide-icon [name]="chip.icon" [size]="15" class="text-primary" />
@@ -164,7 +172,7 @@ const AGENTE_LISTO = false;
       @if (!agenteListo) {
         <p class="text-on-wallpaper mt-3 flex items-center gap-1.5 text-xs text-foreground/80">
           <lucide-icon name="sparkles" [size]="13" class="text-primary" />
-          El Agente Alma se activará muy pronto: desde aquí podrás pedirle todo esto.
+          El Agente Nova se activará muy pronto: desde aquí podrás pedirle todo esto.
         </p>
       }
 
