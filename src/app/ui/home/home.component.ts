@@ -6,12 +6,13 @@
 // Los widgets están construidos pero OCULTOS por ahora (MOSTRAR_WIDGETS):
 // se habilitan cuando exista el API de resúmenes que los alimente de verdad.
 
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApplicationsService } from '../../core/services/applications.service';
+import { InicioApi, PendientesPorApp } from '../../core/services/inicio.api';
 import { LaunchpadService } from '../../core/services/launchpad.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { AlmaHousingComponent } from '../../shared/components/alma-housing.component';
@@ -220,10 +221,12 @@ const MAX_TUS_APPS = 5;
                 class="spk-card group flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5"
               >
                 <span class="flex items-start justify-between">
-                  <!-- Glifo de color sobre un cuadro suave del color de la App (como el Dock). -->
+                  <!-- Glifo de color sobre un cuadro suave del color de la App (como el Dock);
+                       las Apps con ícono de imagen lo muestran a sangre completa. -->
                   <span
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-2"
-                    [style.background]="'color-mix(in srgb, ' + app.color + ' 14%, transparent)'"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                    [class.p-2]="!app.iconUrl"
+                    [style.background]="app.iconUrl ? null : 'color-mix(in srgb, ' + app.color + ' 14%, transparent)'"
                   >
                     <alma-app-icon-art [app]="app" [flat]="true" />
                   </span>
@@ -237,9 +240,16 @@ const MAX_TUS_APPS = 5;
                   <span class="block truncate text-[15px] font-semibold text-foreground">
                     {{ app.nombre }}
                   </span>
-                  <span class="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
-                    {{ app.resumen ?? app.descripcion }}
-                  </span>
+                  @if (pendienteDe(app); as p) {
+                    <span class="mt-1 flex items-baseline gap-1.5 text-[13px] leading-snug">
+                      <span class="text-base font-bold tabular-nums text-primary">{{ p.n }}</span>
+                      <span class="font-medium text-foreground">{{ p.texto }}</span>
+                    </span>
+                  } @else {
+                    <span class="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
+                      {{ app.resumen ?? app.descripcion }}
+                    </span>
+                  }
                 </span>
               </a>
             }
@@ -424,7 +434,20 @@ export class HomeComponent {
   private readonly apps = inject(ApplicationsService);
   private readonly prefs = inject(PreferencesService);
   private readonly router = inject(Router);
+  private readonly inicioApi = inject(InicioApi);
   protected readonly launchpad = inject(LaunchpadService);
+
+  /** Trabajo pendiente por App (slug → {n, texto}); vacío mientras carga o si falla. */
+  private readonly pendientesPorApp = signal<PendientesPorApp>({});
+
+  constructor() {
+    this.inicioApi
+      .obtenerPendientes()
+      .then((p) => this.pendientesPorApp.set(p ?? {}))
+      .catch(() => {
+        /* sin pendientes las tarjetas muestran su descripción, como antes */
+      });
+  }
 
   protected prompt = '';
   protected readonly mostrarWidgets = MOSTRAR_WIDGETS;
@@ -457,8 +480,9 @@ export class HomeComponent {
     return [...recientes, ...respaldo].slice(0, 3);
   });
 
-  /** Apps del usuario para la fila del Inicio: recientes, luego favoritas y luego
-   *  el resto del catálogo. El Agente queda fuera: ya tiene la tarjeta principal. */
+  /** Apps del usuario para la fila del Inicio: primero las que tienen trabajo
+   *  pendiente, luego recientes, favoritas y el resto del catálogo. El Agente
+   *  queda fuera: ya tiene la tarjeta principal. */
   protected readonly tusApps = computed<Application[]>(() => {
     const todas = this.apps.applications().filter((a) => a.id !== 'app-agente-alma');
     const porId = new Map(todas.map((a) => [a.id, a]));
@@ -466,9 +490,16 @@ export class HomeComponent {
       .recentApps()
       .map((id) => porId.get(id))
       .filter((a): a is Application => !!a);
-    const orden = [...recientes, ...todas.filter((a) => a.favorito), ...todas];
+    this.pendientesPorApp(); // dependencia: reordena cuando llegan los pendientes
+    const conPendientes = todas.filter((a) => this.pendienteDe(a));
+    const orden = [...conPendientes, ...recientes, ...todas.filter((a) => a.favorito), ...todas];
     return [...new Set(orden)].slice(0, MAX_TUS_APPS);
   });
+
+  /** Pendiente de una App (el backend responde por slug; el id es `app-<slug>`). */
+  protected pendienteDe(app: Application) {
+    return this.pendientesPorApp()[app.id.replace(/^app-/, '')] ?? null;
+  }
 
   // Donut: 12 de 16 procesos del día (ilustrativo) sobre circunferencia 2π·17.5
   protected readonly donutDash = `${(12 / 16) * 110} 110`;
