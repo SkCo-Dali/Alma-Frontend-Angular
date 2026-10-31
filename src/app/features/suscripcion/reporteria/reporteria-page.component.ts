@@ -200,7 +200,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
             </span>
             <span
               class="inline-flex items-center gap-1.5"
-              title="Cotizaciones que llegaron por la experiencia digital (userWEB y PHAROSDIGITAL). Muchas las emite después un analista en Alma."
+              title="Cotizaciones que llegaron por la experiencia digital (userWEB y PHAROSDIGITAL). Muchas las emite después un analista en Nova."
             >
               <span class="size-2 rounded-full bg-chart-2"></span>
               Experiencia digital
@@ -235,7 +235,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
               </div>
               <div class="mt-1 flex items-center gap-3 text-[11px] tabular-nums text-muted-foreground">
                 <span class="inline-flex items-center gap-1">
-                  <span class="size-1.5 rounded-full bg-primary"></span>{{ d.total - (d.digital ?? 0) }} Alma
+                  <span class="size-1.5 rounded-full bg-primary"></span>{{ d.total - (d.digital ?? 0) }} Nova
                 </span>
                 <span class="inline-flex items-center gap-1">
                   <span class="size-1.5 rounded-full bg-chart-2"></span>{{ d.digital ?? 0 }} digital
@@ -714,7 +714,7 @@ export class ReporteriaPageComponent {
         label: 'Emitidas',
         icon: 'check-circle-2',
         valor: n(r.emitidas),
-        sub: [this.porcentaje(r.emitidas, r.solicitudes), `${n(r.emitidasDesdeAlma ?? 0)} desde Alma`]
+        sub: [this.porcentaje(r.emitidas, r.solicitudes), `${n(r.emitidasDesdeAlma ?? 0)} desde Nova`]
           .filter(Boolean)
           .join(' · '),
         clase: 'text-[#047857] dark:text-[#34d399]',

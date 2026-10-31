@@ -7,7 +7,7 @@ import { Application } from '../models/platform.models';
 export const APP_CATALOG: Application[] = [
   {
     id: 'app-agente-alma',
-    nombre: 'Agente Alma',
+    nombre: 'Agente Nova',
     descripcion:
       'Asistente conversacional de Servicio al Cliente: procesos y casos de Salesforce.',
     categoria: 'Asistentes',
