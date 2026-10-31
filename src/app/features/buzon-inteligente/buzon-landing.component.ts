@@ -12,6 +12,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { Buzon, BuzonApi, Correo, PERM_ADMIN_BUZON, PERM_VER_BUZON, ResumenInicio } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 interface Paso {
   icon: string;
@@ -27,7 +28,7 @@ const REFRESCO_MS = 60_000;
 
 @Component({
   selector: 'alma-buzon-landing',
-  imports: [DecimalPipe, LucideAngularModule, AccessDeniedComponent, DemoBadgeComponent],
+  imports: [DecimalPipe, LucideAngularModule, AccessDeniedComponent, DemoBadgeComponent, VolverInicioComponent],
   styles: [
     `
       .bz-pulse { animation: bz-pulse 2s infinite; }
@@ -70,6 +71,8 @@ const REFRESCO_MS = 60_000;
       <alma-access-denied />
     } @else {
       <div class="mx-auto w-full max-w-6xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
+        <alma-volver-inicio />
+
         <!-- Encabezado centrado -->
         <header class="grid justify-items-center gap-2.5 pt-1 text-center">
           <h1 class="text-on-wallpaper text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">Buzón Inteligente</h1>
