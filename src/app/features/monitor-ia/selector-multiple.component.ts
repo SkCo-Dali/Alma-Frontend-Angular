@@ -47,7 +47,7 @@ import { ItemCatalogo } from './monitor-ia.api';
         @for (item of visibles(); track item.id) {
           <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-accent/60">
             <alma-checkbox [checked]="elegidos().has(item.id)" (checkedChange)="alternar(item.id, $event)" [ariaLabel]="item.name" />
-            <span class="min-w-0 flex-1 truncate text-foreground" [title]="item.name">{{ item.name }}</span>
+            <span class="min-w-0 flex-1 break-words text-foreground">{{ item.name }}</span>
           </label>
         } @empty {
           <p class="px-3 py-6 text-center text-xs text-muted-foreground">

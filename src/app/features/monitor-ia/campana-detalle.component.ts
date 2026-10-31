@@ -51,7 +51,7 @@ interface GrupoAnalista {
         <section class="glass space-y-3 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-              <h2 class="truncate text-lg font-bold text-foreground">{{ c.nombre }}</h2>
+              <h2 class="break-words text-lg font-bold text-foreground">{{ c.nombre }}</h2>
               <p class="text-xs text-muted-foreground">
                 {{ c.form_nombre }} · creada por {{ c.creado_por }} el {{ fecha(c.creado_en, true) }}
               </p>
