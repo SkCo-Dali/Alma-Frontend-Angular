@@ -24,10 +24,12 @@ import {
   EditCatalogDialogComponent,
 } from './catalog-dialogs.component';
 import { FieldsManagerDialogComponent } from './fields-manager-dialog.component';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-catalogs-page',
   imports: [
+    VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
     PortalDirective,
@@ -44,13 +46,16 @@ import { FieldsManagerDialogComponent } from './fields-manager-dialog.component'
       <div class="w-full max-w-full space-y-6 overflow-x-hidden px-4 py-4 lg:overflow-visible">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex min-w-0 items-center gap-4">
-            <a
-              routerLink="/apps/motor-comisiones"
-              class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
-            >
-              <lucide-icon name="arrow-left" [size]="16" />
-              <span>Volver</span>
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a
+                routerLink="/apps/motor-comisiones"
+                class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
+              >
+                <lucide-icon name="arrow-left" [size]="16" />
+                <span>Volver</span>
+              </a>
+            </div>
             <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">Catálogos</h1>
           </div>
           <button

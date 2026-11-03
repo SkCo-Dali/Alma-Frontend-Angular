@@ -33,6 +33,7 @@ import {
   Proceso,
   resumenAccion,
 } from './buzon.api';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 type Filtro = 'todos' | 'validar' | 'duplicado' | 'ejecutado' | 'ignorado';
 type Pestana = 'ia' | 'asig' | 'arch' | 'hilo' | 'traza';
@@ -57,7 +58,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 @Component({
   selector: 'alma-bandeja-buzon',
-  imports: [FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, EmailFrameComponent, AttachmentPreviewComponent],
+  imports: [VolverInicioComponent, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, EmailFrameComponent, AttachmentPreviewComponent],
   styleUrls: ['./buzon-proto.css'],
   styles: [
     `
@@ -94,7 +95,10 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     } @else {
       <div class="page">
         <div class="row" style="flex-wrap:nowrap">
-          <a routerLink="/apps/buzon-inteligente" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente</a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a routerLink="/apps/buzon-inteligente" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente</a>
+          </div>
           <label class="glass search" style="flex:1;min-width:220px" for="q">
             <lucide-icon name="search" [size]="16" class="muted" />
             <input id="q" type="search" placeholder="Buscar por asunto, remitente o resumen…" [(ngModel)]="q" (keyup.enter)="aplicar()" (search)="aplicar()" />

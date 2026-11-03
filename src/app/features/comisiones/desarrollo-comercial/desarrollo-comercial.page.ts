@@ -13,11 +13,13 @@ import { MOTOR_COMISIONES_PERMS } from '../motor-comisiones.permissions';
 import { DC_SECCIONES, DC_VISTAS, DcSeccionSpec } from './dc-specs';
 import { DesarrolloComercialStore, DcSeccionId } from './desarrollo-comercial.store';
 import { CalificacionAgenteRecord } from './desarrollo-comercial.domain';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-desarrollo-comercial-page',
   providers: [DesarrolloComercialStore],
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -31,13 +33,16 @@ import { CalificacionAgenteRecord } from './desarrollo-comercial.domain';
     } @else {
       <div class="w-full max-w-full space-y-4 overflow-x-hidden px-4 py-4 lg:overflow-visible">
         <div class="flex items-center gap-3">
-          <a
-            routerLink="/apps/motor-comisiones"
-            class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
-          >
-            <lucide-icon name="arrow-left" [size]="16" />
-            <span class="hidden sm:inline">Volver</span>
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/motor-comisiones"
+              class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
+            >
+              <lucide-icon name="arrow-left" [size]="16" />
+              <span class="hidden sm:inline">Volver</span>
+            </a>
+          </div>
           <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">
             Desarrollo Comercial
           </h1>

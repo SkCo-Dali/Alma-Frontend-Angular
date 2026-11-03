@@ -16,11 +16,13 @@ import {
 import { CommissionPlansStore } from './commission-plans.store';
 import { CreatePlanDialogComponent } from './create-plan-dialog.component';
 import { PlansTableComponent } from './plans-table.component';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-compensation-plans-page',
   providers: [CommissionPlansStore],
   imports: [
+    VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
@@ -37,13 +39,16 @@ import { PlansTableComponent } from './plans-table.component';
         <!-- Toolbar de una fila para dejarle el máximo alto a la tabla -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2">
-            <a
-              routerLink="/apps/motor-comisiones"
-              class="alma-btn shrink-0 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-            >
-              <lucide-icon name="arrow-left" [size]="16" />
-              <span class="hidden sm:inline">Volver</span>
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a
+                routerLink="/apps/motor-comisiones"
+                class="alma-btn shrink-0 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              >
+                <lucide-icon name="arrow-left" [size]="16" />
+                <span class="hidden sm:inline">Volver</span>
+              </a>
+            </div>
             <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">
               Planes de Compensación
             </h1>

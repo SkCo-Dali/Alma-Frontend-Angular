@@ -11,21 +11,25 @@ import { AccessDeniedComponent } from '../../shared/components/access-denied.com
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Buzon, BuzonApi, Metricas, iconoAccion, nombreAccion } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-metricas-buzon',
-  imports: [FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, DemoBadgeComponent],
+  imports: [VolverInicioComponent, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, DemoBadgeComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else {
       <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-4 sm:px-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
-              <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
-            </a>
-            <div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
+                <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
+              </a>
+            </div>
+            <div class="min-w-[14rem]">
               <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">Métricas y auditoría</h1>
               <p class="text-on-wallpaper text-sm text-foreground/80">Qué llega, qué hace Nova sola y qué tan bien le va.</p>
             </div>

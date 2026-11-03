@@ -13,22 +13,26 @@ import { AccessDeniedComponent } from '../../shared/components/access-denied.com
 import { TooltipDirective } from '../../shared/tooltip.directive';
 import { EstadoEditorComponent } from './estado-editor.component';
 import { EstadoMeta, PERM_CONFIG, RecaudosPacApi, estiloBadge } from './recaudos-pac.api';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-estados-config-page',
-  imports: [RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EstadoEditorComponent],
+  imports: [VolverInicioComponent, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EstadoEditorComponent],
   template: `
     @if (!puedeConfigurar()) {
       <alma-access-denied />
     } @else {
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <div class="flex flex-wrap items-center gap-2">
-          <a
-            routerLink="/apps/recaudos-acreditacion-pac"
-            class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary"
-          >
-            <lucide-icon name="arrow-left" [size]="16" /> Acreditación PAC
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/recaudos-acreditacion-pac"
+              class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary"
+            >
+              <lucide-icon name="arrow-left" [size]="16" /> Acreditación PAC
+            </a>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-end justify-between gap-3">
