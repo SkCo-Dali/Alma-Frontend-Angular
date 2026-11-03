@@ -25,12 +25,13 @@ import {
 } from './buzon.api';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
 
 @Component({
   selector: 'alma-buzon-config',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, AlmaSwitchComponent, TooltipDirective, CategoriaEditorComponent, DemoBadgeComponent],
+  imports: [VolverInicioComponent, DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, AlmaSwitchComponent, TooltipDirective, CategoriaEditorComponent, DemoBadgeComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -41,9 +42,12 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
         <!-- Encabezado -->
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3">
-            <a routerLink="/apps/buzon-inteligente/buzones" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
-              <lucide-icon name="arrow-left" [size]="16" /> Buzones
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a routerLink="/apps/buzon-inteligente/buzones" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
+                <lucide-icon name="arrow-left" [size]="16" /> Buzones
+              </a>
+            </div>
             <div class="flex h-11 w-11 items-center justify-center rounded-2xl text-white" style="background:linear-gradient(150deg,#BF5AF2,#6D4AE0)"><lucide-icon name="mail" [size]="20" /></div>
             <div>
               <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">{{ b.nombre }}</h1>

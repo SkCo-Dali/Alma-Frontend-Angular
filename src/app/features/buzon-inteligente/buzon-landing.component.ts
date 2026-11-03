@@ -8,6 +8,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { Buzon, BuzonApi } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 interface Modulo {
   title: string;
@@ -20,7 +21,7 @@ interface Modulo {
 
 @Component({
   selector: 'alma-buzon-landing',
-  imports: [LucideAngularModule, AccessDeniedComponent, DemoBadgeComponent],
+  imports: [LucideAngularModule, AccessDeniedComponent, DemoBadgeComponent, VolverInicioComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -28,6 +29,7 @@ interface Modulo {
       <div class="mx-auto w-full max-w-5xl space-y-8 px-4 py-4 sm:px-6 sm:py-6">
         <div class="flex flex-wrap items-end justify-between gap-3">
           <div>
+            <alma-volver-inicio class="mb-4" />
             <h1 class="text-on-wallpaper text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Buzón Inteligente
             </h1>

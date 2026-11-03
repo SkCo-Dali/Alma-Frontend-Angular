@@ -22,11 +22,13 @@ import {
   ultimaActualizacion,
 } from './info-gerencial.api';
 import { InfoGerencialStore } from './info-gerencial.store';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-info-gerencial-page',
   providers: [InfoGerencialStore],
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -42,13 +44,17 @@ import { InfoGerencialStore } from './info-gerencial.store';
       <div class="w-full">
         <div class="mx-auto w-full max-w-[1400px] space-y-6 px-4 py-6 md:px-6 lg:px-8">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
-            <a
-              routerLink="/apps/motor-comisiones"
-              class="alma-btn h-9 w-fit shrink-0 gap-2 rounded-xl px-3 text-muted-foreground hover:text-foreground"
-            >
-              <lucide-icon name="arrow-left" [size]="16" />
-              Volver
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a
+                routerLink="/apps/motor-comisiones"
+                class="glass inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+                aria-label="Volver a Motor de Comisiones"
+              >
+                <lucide-icon name="arrow-left" [size]="16" />
+                <span class="hidden sm:inline">Motor de Comisiones</span>
+              </a>
+            </div>
             <h1 class="text-lg font-bold tracking-tight sm:text-xl">Métricas y Reportes</h1>
           </div>
 
