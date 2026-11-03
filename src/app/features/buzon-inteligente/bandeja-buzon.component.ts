@@ -626,7 +626,8 @@ export class BandejaBuzonComponent {
   // Filtros y lista
   protected q = '';
   protected buzonId = '';
-  protected filtro: Filtro = 'validar';
+  // Se entra en «Todos»; Validar y los demás filtros se eligen arriba o llegan por ?estado=.
+  protected filtro: Filtro = 'todos';
   protected sinAsignar = false;
   private offset = 0;
   private readonly limit = 50;

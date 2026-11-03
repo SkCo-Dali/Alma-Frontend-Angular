@@ -424,7 +424,7 @@ export class BuzonLandingComponent {
   }
 
   protected irBandeja(): void {
-    void this.router.navigate(['/apps/buzon-inteligente/bandeja'], { queryParams: { estado: 'revision' } });
+    void this.router.navigate(['/apps/buzon-inteligente/bandeja']);
   }
 
   /** La cola del líder: correos de grupos de personas que quedaron sin responsable. */
