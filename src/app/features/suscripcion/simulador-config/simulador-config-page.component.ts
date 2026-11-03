@@ -30,6 +30,7 @@ import {
   TipoParametroSim,
   ValorParametroSim,
 } from './simulador-config.api';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 const GRUPO_ICONO: Record<string, string> = {
   generales: 'sliders-horizontal',
@@ -113,6 +114,7 @@ interface GrupoVista {
 @Component({
   selector: 'alma-simulador-config-page',
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -153,13 +155,16 @@ interface GrupoVista {
     } @else {
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <div class="flex items-center gap-3">
-          <a
-            routerLink="/apps/suscripcion"
-            class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-          >
-            <lucide-icon name="arrow-left" [size]="16" />
-            Suscripción de Seguros
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/suscripcion"
+              class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+            >
+              <lucide-icon name="arrow-left" [size]="16" />
+              Suscripción de Seguros
+            </a>
+          </div>
         </div>
 
         <div>

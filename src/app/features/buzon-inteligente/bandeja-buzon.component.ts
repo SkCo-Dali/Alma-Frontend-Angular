@@ -29,12 +29,13 @@ import {
   resumenAccion,
 } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
 
 @Component({
   selector: 'alma-bandeja-buzon',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent],
+  imports: [VolverInicioComponent, DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, TooltipDirective, EmailFrameComponent, AttachmentPreviewComponent, DemoBadgeComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -42,9 +43,12 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
       <div data-full-bleed class="flex flex-col gap-3" [style.height]="'calc(100dvh - 8.5rem)'">
         <!-- Barra superior -->
         <div class="flex shrink-0 flex-wrap items-center gap-2">
-          <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
-            <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
+              <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
+            </a>
+          </div>
           <form class="glass flex h-9 min-w-[220px] flex-1 items-center gap-2 rounded-xl px-3 focus-within:ring-2 focus-within:ring-ring" (submit)="$event.preventDefault(); aplicar()">
             <lucide-icon name="search" [size]="16" class="shrink-0 text-muted-foreground" />
             <input [(ngModel)]="q" name="q" type="search" placeholder="Buscar por asunto, remitente o resumen…" class="h-full flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />

@@ -29,10 +29,12 @@ import { HistorialClienteCardComponent } from './historial-cliente-card.componen
 import { ProductosClienteCardComponent } from './productos-cliente-card.component';
 import { SimuladorHostComponent } from './simulador/simulador-host.component';
 import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-detalle-solicitud',
   imports: [
+    VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
@@ -80,13 +82,16 @@ import { ValidacionPharosDialogComponent } from './validacion-pharos-dialog.comp
         <!-- ── Encabezado: Large Title + identidad + acciones ── -->
         <header class="glass rounded-2xl px-5 py-4 shadow-[var(--shadow-sm)]">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <a
-              routerLink="/apps/suscripcion/cotizaciones"
-              class="-ml-2 flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <lucide-icon name="arrow-left" [size]="16" />
-              Cotizaciones
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a
+                routerLink="/apps/suscripcion/cotizaciones"
+                class="-ml-2 flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <lucide-icon name="arrow-left" [size]="16" />
+                Cotizaciones
+              </a>
+            </div>
             <div class="flex shrink-0 flex-wrap items-center gap-2">
               @if (refrescando()) {
                 <lucide-icon

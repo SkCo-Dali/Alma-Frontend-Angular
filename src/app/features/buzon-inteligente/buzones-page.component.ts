@@ -14,6 +14,7 @@ import { AlmaLoaderComponent } from '../../shared/components/alma-loader.compone
 import { TooltipDirective } from '../../shared/tooltip.directive';
 import { Buzon, BuzonApi, BuzonIn, EstadoConexion } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: string }> = {
   conectada: { nombre: 'Conectado', clase: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', icon: 'plug-zap' },
@@ -23,7 +24,7 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
 
 @Component({
   selector: 'alma-buzones-page',
-  imports: [DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, TooltipDirective, DemoBadgeComponent],
+  imports: [VolverInicioComponent, DecimalPipe, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, TooltipDirective, DemoBadgeComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -31,9 +32,12 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
       <div class="mx-auto w-full max-w-6xl space-y-5 px-4 py-4 sm:px-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-3">
-            <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
-              <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a routerLink="/apps/buzon-inteligente" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
+                <lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente
+              </a>
+            </div>
             <div>
               <h1 class="text-on-wallpaper text-2xl font-bold tracking-tight text-foreground">Buzones y reglas</h1>
               <p class="text-on-wallpaper text-sm text-foreground/80">Un buzón por área. Cada uno tiene sus categorías, reglas y acciones.</p>
