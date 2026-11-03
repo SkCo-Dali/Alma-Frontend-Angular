@@ -19,6 +19,7 @@ import { Buzon, BuzonApi, PERM_ADMIN_BUZON, PERM_VER_BUZON, RolMiembro } from '.
 import { gradienteBuzon } from './buzon-config.component';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { NuevoBuzonComponent } from './nuevo-buzon.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 const ROLES: { id: RolMiembro; nombre: string; ayuda: string }[] = [
   { id: 'editor', nombre: 'Editor', ayuda: 'Configura el buzón (procesos, reglas, asignación y ajustes) y trabaja la bandeja.' },
@@ -33,7 +34,7 @@ interface MiembroForm {
 
 @Component({
   selector: 'alma-buzones-page',
-  imports: [FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, DemoBadgeComponent, NuevoBuzonComponent],
+  imports: [VolverInicioComponent, FormsModule, RouterLink, LucideAngularModule, AccessDeniedComponent, AlmaLoaderComponent, DemoBadgeComponent, NuevoBuzonComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @if (!puedeVer()) {
@@ -44,7 +45,10 @@ interface MiembroForm {
       <div class="page">
         <div class="ph">
           <div class="l">
-            <a routerLink="/apps/buzon-inteligente" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente</a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a routerLink="/apps/buzon-inteligente" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzón Inteligente</a>
+            </div>
             <div style="min-width:0">
               <h1 class="on-wall">Buzones</h1>
               <p class="on-wall sm" style="color:color-mix(in srgb,var(--foreground) 80%,transparent)">Un buzón por área o persona, con sus reglas y los módulos que cada uno active.</p>

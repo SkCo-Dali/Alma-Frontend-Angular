@@ -17,6 +17,7 @@ import { Buzon, BuzonApi, Categoria, ModoConexion, modoConexion, PERM_VER_BUZON 
 import { DemoBadgeComponent } from './demo-badge.component';
 import { ExportacionTabComponent } from './exportacion-tab.component';
 import { ReglasTabComponent } from './reglas-tab.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 type Tab = 'reglas' | 'asig' | 'plant' | 'ajustes';
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
@@ -29,6 +30,7 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
 @Component({
   selector: 'alma-buzon-config',
   imports: [
+    VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
@@ -59,7 +61,10 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
       <div class="page">
         <div class="ph">
           <div class="l">
-            <a routerLink="/apps/buzon-inteligente/buzones" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzones</a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a routerLink="/apps/buzon-inteligente/buzones" class="back glass"><lucide-icon name="arrow-left" [size]="16" /> Buzones</a>
+            </div>
             <div class="appicon" [style.background]="gradiente()"><lucide-icon name="mail" [size]="20" /></div>
             <div style="min-width:0">
               <h1 class="on-wall"><span class="mono" style="font-size:1.25rem">{{ b.nombre }}</span></h1>

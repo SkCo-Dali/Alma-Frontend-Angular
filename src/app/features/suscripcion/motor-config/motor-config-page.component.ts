@@ -26,6 +26,7 @@ import {
   TipoParametro,
   ValorParametro,
 } from './motor-config.api';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 /** Opciones válidas del mapeo código Pipeline → reglas de producto del motor. */
 const MAPA_OPCIONES: Record<string, string> = {
@@ -129,6 +130,7 @@ interface GrupoVista {
 @Component({
   selector: 'alma-motor-config-page',
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -167,13 +169,16 @@ interface GrupoVista {
       <div class="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <!-- Barra superior: volver a la landing de la App -->
         <div class="flex items-center gap-3">
-          <a
-            routerLink="/apps/suscripcion"
-            class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-          >
-            <lucide-icon name="arrow-left" [size]="16" />
-            Suscripción de Seguros
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/suscripcion"
+              class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+            >
+              <lucide-icon name="arrow-left" [size]="16" />
+              Suscripción de Seguros
+            </a>
+          </div>
         </div>
 
         <div>

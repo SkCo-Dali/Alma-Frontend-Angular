@@ -14,6 +14,7 @@ import { MotorDataTableComponent } from './motor-data-table.component';
 import { MotorEjecucionTabComponent } from './motor-ejecucion-tab.component';
 import { MotorTableToolbarComponent } from './motor-table-toolbar.component';
 import { MotorDataTab, MotorTableRow } from './motor.api';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 type Tab = 'motor' | MotorDataTab;
 
@@ -48,6 +49,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
   selector: 'alma-ejecucion-motor-page',
   providers: [EjecucionMotorStore],
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -62,13 +64,16 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
     } @else {
       <div class="mx-auto w-full max-w-7xl space-y-6 px-4 py-4 pb-20 sm:px-6 sm:py-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
-          <a
-            routerLink="/apps/motor-comisiones"
-            class="alma-btn h-9 w-fit shrink-0 gap-2 rounded-xl px-3 text-muted-foreground hover:text-foreground"
-          >
-            <lucide-icon name="arrow-left" [size]="16" />
-            Volver
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/motor-comisiones"
+              class="alma-btn h-9 w-fit shrink-0 gap-2 rounded-xl px-3 text-muted-foreground hover:text-foreground"
+            >
+              <lucide-icon name="arrow-left" [size]="16" />
+              Volver
+            </a>
+          </div>
           <h1 class="text-lg font-bold tracking-tight sm:text-xl">
             Ejecución del motor de Comisiones
           </h1>
