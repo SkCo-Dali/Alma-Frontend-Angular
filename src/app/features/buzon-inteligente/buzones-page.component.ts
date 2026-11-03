@@ -6,6 +6,8 @@
 //  · Administrador de la App: crea, conecta, desconecta, elimina y da accesos (miembros).
 //  · Editor del buzón: lo configura y sincroniza, pero no lo conecta ni lo elimina.
 //  · Revisor: no entra aquí (solo bandeja y métricas).
+//  · Dueño de buzón (065): da de alta y conecta SU buzón; aquí ve la tarjeta de los
+//    buzones donde es «cuenta» con «Conectar», sin configurarlos.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +17,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
-import { Buzon, BuzonApi, PERM_ADMIN_BUZON, PERM_VER_BUZON, RolMiembro } from './buzon.api';
+import { Buzon, BuzonApi, PERM_ADMIN_BUZON, PERM_PROPIO_BUZON, PERM_VER_BUZON, RolMiembro } from './buzon.api';
 import { gradienteBuzon } from './buzon-config.component';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { NuevoBuzonComponent } from './nuevo-buzon.component';
@@ -24,6 +26,7 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
 const ROLES: { id: RolMiembro; nombre: string; ayuda: string }[] = [
   { id: 'editor', nombre: 'Editor', ayuda: 'Configura el buzón (procesos, reglas, asignación y ajustes) y trabaja la bandeja.' },
   { id: 'revisor', nombre: 'Revisor', ayuda: 'Solo la bandeja y las métricas: aprueba, corrige, reclasifica o ignora correos.' },
+  { id: 'cuenta', nombre: 'Cuenta del buzón', ayuda: 'Solo conecta o reconecta el buzón con su cuenta de Microsoft. No lo configura ni trabaja la bandeja.' },
 ];
 
 interface MiembroForm {
@@ -56,8 +59,8 @@ interface MiembroForm {
           </div>
           <div class="row">
             <alma-demo-badge />
-            @if (esAdmin()) {
-              <button type="button" class="btn primary" (click)="asistente.set({ id: null })"><lucide-icon name="plus" [size]="16" /> Nuevo buzón</button>
+            @if (puedeCrear()) {
+              <button type="button" class="btn primary" (click)="asistente.set({ id: null })"><lucide-icon name="plus" [size]="16" /> {{ esAdmin() ? 'Nuevo buzón' : 'Conectar mi buzón' }}</button>
             }
           </div>
         </div>
@@ -116,14 +119,14 @@ interface MiembroForm {
                     @if (b.puede_conectar) { <lucide-icon name="user-plus" [size]="13" class="muted" style="margin-left:6px" /> }
                   </button>
                   <div class="row">
-                    @if (b.puede_conectar && !b.en_configuracion) {
-                      @if (b.estado_conexion !== 'conectada') {
-                        <button type="button" class="btn outline sm" [disabled]="trabajando() === b.id" (click)="conectar(b)"><lucide-icon name="log-in" [size]="13" /> Conectar</button>
-                      } @else if (!b.activo) {
+                    @if (!b.en_configuracion) {
+                      @if (b.estado_conexion !== 'conectada' && (b.puede_conectar || b.puede_reconectar)) {
+                        <button type="button" class="btn outline sm" [disabled]="trabajando() === b.id" (click)="conectar(b)"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'requiere_reconexion' ? 'Reconectar' : 'Conectar' }}</button>
+                      } @else if (b.estado_conexion === 'conectada' && !b.activo && b.puede_conectar) {
                         <button type="button" class="btn outline sm" [disabled]="trabajando() === b.id" (click)="reanudar(b)"><lucide-icon name="play" [size]="13" /> Reanudar</button>
                       }
                     }
-                    @if (b.activo && b.estado_conexion === 'conectada' && !b.en_configuracion) {
+                    @if (b.puede_administrar && b.activo && b.estado_conexion === 'conectada' && !b.en_configuracion) {
                       <button type="button" class="btn ghost" [disabled]="sincronizando() === b.id" (click)="sincronizar(b)" [attr.aria-label]="'Sincronizar ' + b.nombre" title="Sincronizar ahora">
                         <lucide-icon name="refresh-cw" [size]="16" />
                       </button>
@@ -134,9 +137,15 @@ interface MiembroForm {
                       }
                       <button type="button" class="btn ghost danger" (click)="confirmacion.set({ accion: 'eliminar', buzon: b })" [attr.aria-label]="'Eliminar ' + b.nombre" title="Quitar de la App"><lucide-icon name="trash-2" [size]="16" /></button>
                     }
-                    <button type="button" class="btn primary sm" (click)="configurar(b)">
-                      <lucide-icon name="sliders-horizontal" [size]="13" /> {{ b.en_configuracion ? 'Continuar configuración' : 'Configurar' }}
-                    </button>
+                    @if (b.puede_administrar) {
+                      <button type="button" class="btn primary sm" (click)="configurar(b)">
+                        <lucide-icon name="sliders-horizontal" [size]="13" /> {{ b.en_configuracion ? 'Continuar configuración' : 'Configurar' }}
+                      </button>
+                    } @else if (b.en_configuracion && b.estado_conexion !== 'conectada') {
+                      <button type="button" class="btn primary sm" (click)="configurar(b)"><lucide-icon name="log-in" [size]="13" /> Continuar conexión</button>
+                    } @else {
+                      <span class="xxs muted" title="Sus reglas, asignación y ajustes los define el administrador o un editor.">Lo configura el administrador</span>
+                    }
                   </div>
                 </div>
               </article>
@@ -148,9 +157,12 @@ interface MiembroForm {
               @if (editables().length) {
                 <p class="sm b">No hay buzones que coincidan</p>
                 <p class="xs muted">Prueba con otra parte del nombre o del correo.</p>
-              } @else {
+              } @else if (esAdmin()) {
                 <p class="sm b">Aún no hay buzones</p>
                 <p class="xs muted">Crea el buzón del área con «Nuevo buzón»: lo conectas, describes sus reglas y activas lo que necesites.</p>
+              } @else {
+                <p class="sm b">Aún no conectas tu buzón</p>
+                <p class="xs muted">Con «Conectar mi buzón» inicias sesión con tu cuenta de Microsoft. Después el administrador configura sus reglas y lo activa.</p>
               }
             </div>
           </div>
@@ -158,7 +170,7 @@ interface MiembroForm {
       </div>
 
       @if (asistente(); as a) {
-        <alma-nuevo-buzon [reanudar]="a.id" (cerrado)="cerrarAsistente()" />
+        <alma-nuevo-buzon [reanudar]="a.id" [soloConectar]="!esAdmin()" (cerrado)="cerrarAsistente()" />
       }
 
       @if (confirmacion(); as c) {
@@ -245,10 +257,12 @@ export class BuzonesPageComponent {
 
   /** Administrador de la App: crea, conecta, desconecta, elimina y da accesos. */
   protected readonly esAdmin = computed(() => this.auth.hasPermission(PERM_ADMIN_BUZON) || this.buzones().some((b) => b.puede_conectar));
-  /** Solo los buzones que el usuario configura (admin: todos; editor: los suyos). */
-  protected readonly editables = computed(() => this.buzones().filter((b) => b.puede_administrar));
+  /** 065: da de alta y conecta su propio buzón (administrador o «Dueño de buzón»). */
+  protected readonly puedeCrear = computed(() => this.esAdmin() || this.auth.hasPermission(PERM_PROPIO_BUZON));
+  /** Los buzones que el usuario configura (admin: todos; editor: los suyos) y los que conecta como «cuenta». */
+  protected readonly editables = computed(() => this.buzones().filter((b) => b.puede_administrar || b.rol === 'cuenta'));
   /** El revisor no entra a «Buzones». */
-  protected readonly puedeEntrar = computed(() => this.esAdmin() || this.editables().length > 0);
+  protected readonly puedeEntrar = computed(() => this.puedeCrear() || this.editables().length > 0);
   protected readonly visibles = computed(() => {
     const q = this.q().trim().toLowerCase();
     return this.editables().filter((b) => !q || `${b.nombre} ${b.descripcion ?? ''} ${b.area ?? ''} ${b.direccion}`.toLowerCase().includes(q));
@@ -409,7 +423,7 @@ export class BuzonesPageComponent {
   // ── Miembros ──
   protected abrirMiembros(b: Buzon): void {
     if (!b.puede_conectar) return;
-    this.miembrosForm.set(b.miembros.map((m) => ({ email: m.email, name: m.name ?? null, rol: m.rol === 'editor' ? 'editor' : 'revisor' })));
+    this.miembrosForm.set(b.miembros.map((m) => ({ email: m.email, name: m.name ?? null, rol: m.rol === 'editor' || m.rol === 'cuenta' ? m.rol : 'revisor' })));
     this.nuevoEmail = '';
     this.nuevoRol = 'revisor';
     this.errorMiembros.set(null);

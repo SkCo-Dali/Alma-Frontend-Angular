@@ -28,9 +28,10 @@ export type TipoAccion =
   | 'marcar_leido';
 
 /** Rol del usuario en un buzón (migración 058). 'admin' = administrador de la App. */
-export type RolBuzon = 'admin' | 'editor' | 'revisor';
-/** Rol que se asigna a un miembro: editor configura, revisor solo trabaja la bandeja. */
-export type RolMiembro = 'editor' | 'revisor';
+export type RolBuzon = 'admin' | 'editor' | 'revisor' | 'cuenta';
+/** Rol que se asigna a un miembro: editor configura, revisor solo trabaja la bandeja y
+ *  cuenta (065) solo conecta o reconecta el buzón con su cuenta de Microsoft. */
+export type RolMiembro = 'editor' | 'revisor' | 'cuenta';
 export type ModoClasificacion = 'prompt' | 'agente';
 export type AlDesactivar = 'respaldo' | 'roundrobin';
 
@@ -69,6 +70,8 @@ export interface Buzon {
   puede_administrar: boolean;
   /** Solo el administrador de la App: crear, conectar, desconectar, eliminar y dar accesos. */
   puede_conectar: boolean;
+  /** 065: conectar o reconectar con Microsoft (el administrador o la «cuenta» del buzón). */
+  puede_reconectar?: boolean;
   /** La conexión la hizo un administrador con SU cuenta (acceso completo al buzón genérico). */
   conexion_compartida: boolean;
   conectada_por: string | null;
@@ -774,6 +777,8 @@ export const COMPARACIONES: { id: Comparacion; nombre: string }[] = [
 export const PERM_ADMIN_BUZON = 'app.buzon-inteligente.*';
 /** Entrada a la App. */
 export const PERM_VER_BUZON = 'app.buzon-inteligente.view';
+/** 065: «Dueño de buzón», da de alta y conecta su propio buzón. */
+export const PERM_PROPIO_BUZON = 'app.buzon-inteligente.conectar';
 
 // ── Exportación (059) ────────────────────────────────────────────────────────
 
