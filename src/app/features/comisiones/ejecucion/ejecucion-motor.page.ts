@@ -68,10 +68,11 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
             <alma-volver-inicio />
             <a
               routerLink="/apps/motor-comisiones"
-              class="alma-btn h-9 w-fit shrink-0 gap-2 rounded-xl px-3 text-muted-foreground hover:text-foreground"
+              class="glass inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+              aria-label="Volver a Motor de Comisiones"
             >
               <lucide-icon name="arrow-left" [size]="16" />
-              Volver
+              <span class="hidden sm:inline">Motor de Comisiones</span>
             </a>
           </div>
           <h1 class="text-lg font-bold tracking-tight sm:text-xl">

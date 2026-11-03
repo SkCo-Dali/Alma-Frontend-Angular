@@ -37,10 +37,11 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
             <alma-volver-inicio />
             <a
               routerLink="/apps/motor-comisiones"
-              class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
+              class="glass inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+              aria-label="Volver a Motor de Comisiones"
             >
               <lucide-icon name="arrow-left" [size]="16" />
-              <span class="hidden sm:inline">Volver</span>
+              <span class="hidden sm:inline">Motor de Comisiones</span>
             </a>
           </div>
           <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">
