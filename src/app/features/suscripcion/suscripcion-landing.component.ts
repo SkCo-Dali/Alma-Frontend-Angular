@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 interface SuscripcionModule {
   title: string;
@@ -21,7 +22,7 @@ interface SuscripcionModule {
 
 @Component({
   selector: 'alma-suscripcion-landing',
-  imports: [LucideAngularModule, AccessDeniedComponent],
+  imports: [LucideAngularModule, AccessDeniedComponent, VolverInicioComponent],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -29,6 +30,7 @@ interface SuscripcionModule {
       <div class="mx-auto w-full max-w-5xl space-y-8 px-4 py-4 sm:px-6 sm:py-6">
         <!-- Large Title estilo Apple -->
         <div>
+          <alma-volver-inicio class="mb-4" />
           <h1 class="text-on-wallpaper text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Suscripción de Seguros
           </h1>

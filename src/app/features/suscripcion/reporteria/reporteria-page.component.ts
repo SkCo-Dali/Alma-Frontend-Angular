@@ -37,6 +37,7 @@ import {
   ReporteriaApi,
   ResumenReporteria,
 } from './reporteria.api';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 /** La auditoría se lee en hora de Colombia, no en la del equipo de quien mira:
  *  es un registro de cuándo pasaron las cosas en la operación, y dos personas
@@ -46,6 +47,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 @Component({
   selector: 'alma-reporteria-page',
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -64,13 +66,16 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
     <div data-full-bleed class="flex flex-col gap-3 pb-6">
       <!-- ── Encabezado + periodo ── -->
       <div class="flex flex-wrap items-center gap-2">
-        <a
-          routerLink="/apps/suscripcion"
-          class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-        >
-          <lucide-icon name="arrow-left" [size]="16" />
-          Suscripción
-        </a>
+        <div class="flex shrink-0 items-center gap-2">
+          <alma-volver-inicio />
+          <a
+            routerLink="/apps/suscripcion"
+            class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+          >
+            <lucide-icon name="arrow-left" [size]="16" />
+            Suscripción
+          </a>
+        </div>
         <h1 class="mr-auto flex items-center gap-2 text-lg font-bold text-foreground">
           <lucide-icon name="bar-chart-3" [size]="18" class="text-primary" />
           Auditoría y reportería

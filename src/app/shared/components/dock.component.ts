@@ -3,7 +3,9 @@
 // - Magnificación por mousemove (curva BASE + (PEAK-BASE)·t²) con transición CSS.
 // - Nav fijo mínimo: Inicio + "Ver todas" (abre el Launchpad).
 // - Las Apps ancladas son las primeras `dockCount` del orden ÚNICO del usuario;
-//   en pantallas angostas se muestran solo las que caben.
+//   en pantallas angostas se muestran solo las que caben. En el Inicio no se
+//   muestran (ahí las tarjetas «Tus aplicaciones» cumplen ese papel); quedan
+//   fijas Configuración y Accesos.
 // - Reordenamiento drag & drop EN VIVO (desktop + táctil) y menú contextual
 //   (Abrir / Quitar del Dock).
 // - Se auto-oculta fuera del inicio (/apps/*, /admin, /settings, /help); el asa
@@ -366,6 +368,17 @@ export class DockComponent {
         href: a.internalRoute ? undefined : a.url,
       }));
 
+    const plataforma: DockEntry[] = ordered
+      .filter((a) => a.categoria === 'Plataforma')
+      .map((a) => ({
+        key: a.id,
+        label: a.nombre,
+        active: false,
+        kind: 'nav-img' as const,
+        img: a.iconUrl,
+        to: a.internalRoute ?? undefined,
+      }));
+
     return [
       {
         key: 'inicio',
@@ -383,7 +396,10 @@ export class DockComponent {
         icon: 'layout-grid',
       },
       { key: 'sep', label: '', active: false, kind: 'nav-img' },
-      ...apps,
+      // En el Inicio las tarjetas «Tus aplicaciones» ya hacen de lanzador: el Dock
+      // deja solo las Apps de plataforma (Configuración y, si aplica, Accesos) como
+      // accesos fijos. Las ancladas se gestionan en el launchpad.
+      ...(path === '/' ? plataforma : apps),
     ];
   });
 
