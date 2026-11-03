@@ -8,10 +8,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { BandejaSuscripcionComponent } from './bandeja-suscripcion.component';
 import { SimuladorHostComponent } from './simulador/simulador-host.component';
+import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-cotizaciones-page',
   imports: [
+    VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
     AccessDeniedComponent,
@@ -26,13 +28,16 @@ import { SimuladorHostComponent } from './simulador/simulador-host.component';
         <div class="flex flex-col gap-3">
           <!-- Barra superior: volver a la landing de la App -->
           <div class="flex items-center gap-3">
-            <a
-              routerLink="/apps/suscripcion"
-              class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
-            >
-              <lucide-icon name="arrow-left" [size]="16" />
-              Suscripción de Seguros
-            </a>
+            <div class="flex shrink-0 items-center gap-2">
+              <alma-volver-inicio />
+              <a
+                routerLink="/apps/suscripcion"
+                class="glass flex h-8 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] transition-colors hover:text-primary"
+              >
+                <lucide-icon name="arrow-left" [size]="16" />
+                Suscripción de Seguros
+              </a>
+            </div>
           </div>
           <alma-bandeja-suscripcion />
         </div>

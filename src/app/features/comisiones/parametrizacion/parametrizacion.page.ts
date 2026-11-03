@@ -24,11 +24,13 @@ import {
   CATEGORIES,
 } from './parametrizacion.domain';
 import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
+import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
 
 @Component({
   selector: 'alma-parametrizacion-page',
   providers: [ParametrizacionStore],
   imports: [
+    VolverInicioComponent,
     FormsModule,
     RouterLink,
     LucideAngularModule,
@@ -44,13 +46,16 @@ import { ParametrizacionStore, SeccionId } from './parametrizacion.store';
     } @else {
       <div class="w-full max-w-full space-y-4 overflow-x-hidden px-4 py-4 lg:overflow-visible">
         <div class="flex items-center gap-3">
-          <a
-            routerLink="/apps/motor-comisiones"
-            class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
-          >
-            <lucide-icon name="arrow-left" [size]="16" />
-            <span class="hidden sm:inline">Volver</span>
-          </a>
+          <div class="flex shrink-0 items-center gap-2">
+            <alma-volver-inicio />
+            <a
+              routerLink="/apps/motor-comisiones"
+              class="alma-btn shrink-0 gap-2 px-3 text-muted-foreground hover:text-foreground"
+            >
+              <lucide-icon name="arrow-left" [size]="16" />
+              <span class="hidden sm:inline">Volver</span>
+            </a>
+          </div>
           <h1 class="truncate text-lg font-bold tracking-tight sm:text-xl">Parametrización</h1>
         </div>
 
