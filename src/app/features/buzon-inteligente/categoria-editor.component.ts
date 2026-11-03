@@ -147,10 +147,15 @@ function aAccion(f: AccionForm, orden: number): Accion {
                 <div class="flex flex-col gap-1.5">
                   <label class="alma-label flex items-center gap-1">Umbral propio <lucide-icon name="info" [size]="12" almaTooltip="Vacío = usa el umbral del buzón. Con este nivel de confianza o más, en modo automático se ejecuta sin preguntar." /></label>
                   <div class="flex items-center gap-2">
-                    <input type="range" min="50" max="99" class="flex-1 accent-[var(--primary)]" [ngModel]="umbral() ?? 80" (ngModelChange)="umbral.set(+$event)" />
+                    <!-- La de respaldo admite 10–100 %: Nova la usa cuando está segura de que el correo
+                         no es de ningún proceso, así que el área decide qué tan pronto se etiqueta sola. -->
+                    <input type="range" [min]="esFallback ? 10 : 50" [max]="esFallback ? 100 : 99" class="flex-1 accent-[var(--primary)]" [ngModel]="umbral() ?? 80" (ngModelChange)="umbral.set(+$event)" />
                     <span class="w-12 text-right text-sm tabular-nums">{{ umbral() !== null ? umbral() + '%' : 'buzón' }}</span>
                     @if (umbral() !== null) { <button type="button" class="alma-btn alma-btn-ghost" almaTooltip="Usar el del buzón" (click)="umbral.set(null)"><lucide-icon name="rotate-ccw" [size]="14" /></button> }
                   </div>
+                  @if (esFallback) {
+                    <p class="text-xs text-muted-foreground">Respaldo: de 10 a 100 %. Más bajo, más correos que no son de ningún proceso se etiquetan solos como {{ clave || 'OTROS' }}; más alto, más quedan en Validar.</p>
+                  }
                 </div>
               </div>
             }
