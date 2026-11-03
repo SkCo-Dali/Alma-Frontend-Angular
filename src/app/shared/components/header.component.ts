@@ -26,10 +26,10 @@ import { shortName } from '../../core/utils/name';
 
       <a routerLink="/" class="relative flex shrink-0 items-center gap-3" aria-label="Inicio">
         <!-- El ?v= evita que el navegador conserve el logo anterior en caché. -->
-        <img src="alma-logo.png?v=2" alt="Alma Skandia" class="block h-10 w-auto dark:hidden" />
+        <img src="nova-logo.svg" alt="Nova Skandia" class="block h-10 w-auto dark:hidden" />
         <img
-          src="alma-logo-neg.png?v=2"
-          alt="Alma Skandia"
+          src="nova-logo-neg.svg"
+          alt="Nova Skandia"
           class="hidden h-10 w-auto dark:block"
         />
         <span class="hidden h-8 w-px bg-border sm:block"></span>

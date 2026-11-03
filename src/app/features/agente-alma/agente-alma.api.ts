@@ -39,9 +39,9 @@ export const SUGERENCIAS: string[] = [
 ];
 
 export const MENSAJE_BIENVENIDA =
-  'Hola, soy Alma, tu asistente de Servicio al Cliente. Puedo ayudarte con procesos y ' +
+  '¡Hola! Soy Nova, tu asistente de Servicio al Cliente. Puedo ayudarte con procesos y ' +
   'procedimientos y consultar casos en Salesforce. ' +
-  '¿En qué te ayudo?';
+  '¿Qué movemos hoy?';
 
 @Injectable({ providedIn: 'root' })
 export class AgenteAlmaApi {

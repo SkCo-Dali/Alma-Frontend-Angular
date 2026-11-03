@@ -119,7 +119,7 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
               <div class="flex flex-1 flex-col items-center justify-center gap-3 p-10 text-center">
                 <span class="flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary"><lucide-icon name="mail-open" [size]="30" /></span>
                 <p class="text-sm font-semibold text-foreground">Selecciona un correo</p>
-                <p class="max-w-sm text-xs text-muted-foreground">Verás qué decidió Alma, por qué, los datos que extrajo y podrás aprobar o corregir en un clic.</p>
+                <p class="max-w-sm text-xs text-muted-foreground">Verás qué decidió Nova, por qué, los datos que extrajo y podrás aprobar o corregir en un clic.</p>
               </div>
             } @else if (detalle(); as d) {
               <!-- Encabezado del correo -->
@@ -197,7 +197,7 @@ type Panel = 'ia' | 'correo' | 'adjuntos' | 'traza';
                   @case ('ia') {
                     <div class="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
                       <div class="rounded-2xl bg-[var(--surface-sunken)] p-4">
-                        <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="sparkles" [size]="12" /> Resumen de Alma</p>
+                        <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><lucide-icon name="sparkles" [size]="12" /> Resumen de Nova</p>
                         <p class="mt-2 text-sm leading-relaxed text-foreground">{{ d.resumen || 'Sin resumen (el correo aún no fue procesado).' }}</p>
                         @if (d.justificacion) {
                           <p class="mt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Por qué</p>
@@ -351,7 +351,7 @@ export class BandejaBuzonComponent {
     { id: '', nombre: 'Todos', icon: 'inbox' },
   ];
   protected readonly paneles: { id: Panel; nombre: string; icon: string }[] = [
-    { id: 'ia', nombre: 'Decisión de Alma', icon: 'sparkles' },
+    { id: 'ia', nombre: 'Decisión de Nova', icon: 'sparkles' },
     { id: 'correo', nombre: 'Correo', icon: 'mail-open' },
     { id: 'adjuntos', nombre: 'Adjuntos', icon: 'paperclip' },
     { id: 'traza', nombre: 'Traza', icon: 'history' },

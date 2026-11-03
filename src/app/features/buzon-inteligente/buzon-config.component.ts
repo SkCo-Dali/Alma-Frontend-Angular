@@ -170,7 +170,7 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
               <section class="glass flex flex-col gap-4 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
                 <div>
                   <h2 class="text-sm font-semibold text-foreground">Parámetros</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Cómo y cuándo actúa Alma sobre este buzón.</p>
+                  <p class="mt-0.5 text-xs text-muted-foreground">Cómo y cuándo actúa Nova sobre este buzón.</p>
                 </div>
                 <div class="flex flex-col gap-1.5"><label class="alma-label">Nombre</label><input class="alma-input" [(ngModel)]="ajustes.nombre" [disabled]="!puedeGestionar()" /></div>
                 <div class="flex flex-col gap-1.5"><label class="alma-label">Área</label><input class="alma-input" [(ngModel)]="ajustes.area" [disabled]="!puedeGestionar()" /></div>
@@ -200,7 +200,7 @@ type Tab = 'tipos' | 'reglas' | 'ajustes' | 'probar';
               <section class="glass flex flex-col gap-3 rounded-2xl p-5 shadow-[var(--shadow-sm)]">
                 <div>
                   <h2 class="text-sm font-semibold text-foreground">Probar con un correo</h2>
-                  <p class="mt-0.5 text-xs text-muted-foreground">Pega un correo real (o inventa uno) y mira cómo lo clasificaría Alma con la configuración actual. No se ejecuta nada.</p>
+                  <p class="mt-0.5 text-xs text-muted-foreground">Pega un correo real (o inventa uno) y mira cómo lo clasificaría Nova con la configuración actual. No se ejecuta nada.</p>
                 </div>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div class="flex flex-col gap-1.5"><label class="alma-label">Remitente</label><input class="alma-input" [(ngModel)]="prueba.remitente" placeholder="asesor@fp.skandia.com.co" /></div>
@@ -396,7 +396,7 @@ export class BuzonConfigComponent {
     try {
       const actualizado = await this.api.actualizarBuzon(b.id, { modo: auto ? 'automatico' : 'sugerir' });
       this.buzon.set(actualizado);
-      this.toast.show(auto ? 'Modo automático activado' : 'Modo “solo sugiere” activado', auto ? `Sobre ${Math.round(actualizado.umbral_confianza * 100)}% de confianza Alma actúa sin preguntar.` : 'Todo pasa por la bandeja de revisión.');
+      this.toast.show(auto ? 'Modo automático activado' : 'Modo “solo sugiere” activado', auto ? `Sobre ${Math.round(actualizado.umbral_confianza * 100)}% de confianza Nova actúa sin preguntar.` : 'Todo pasa por la bandeja de revisión.');
     } catch (e) {
       this.toast.error('No se pudo cambiar el modo', e instanceof Error ? e.message : String(e));
     }
