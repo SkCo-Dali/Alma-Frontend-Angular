@@ -424,7 +424,7 @@ const CASOS: CasoDef[] = [
                   ></textarea>
                   <span class="block text-[11px] text-muted-foreground">
                     {{ observaciones.length }}/{{ maxObservaciones() }} · Pipeline conserva
-                    la última observación; Alma guarda el historial completo.
+                    la última observación; Nova guarda el historial completo.
                   </span>
                 </label>
               }

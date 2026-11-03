@@ -44,7 +44,7 @@ import { fecha } from './monitor-ia.domain';
                      [placeholder]="c.tiene_secreto ? '•••••••••••• guardado — déjalo vacío para conservarlo' : 'Pega aquí el secreto del cliente OAuth'"
                      [ngModel]="clientSecret()" (ngModelChange)="clientSecret.set($event)" />
               <span class="block text-[11px] font-normal text-muted-foreground">
-                Se guarda cifrado y nunca se vuelve a mostrar. Usa un cliente OAuth propio de Alma con permisos mínimos:
+                Se guarda cifrado y nunca se vuelve a mostrar. Usa un cliente OAuth propio de Nova con permisos mínimos:
                 leer colas, usuarios y analítica de conversaciones, y crear y consultar evaluaciones.
               </span>
             </label>

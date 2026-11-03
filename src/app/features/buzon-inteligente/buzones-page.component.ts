@@ -55,7 +55,7 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
           <div class="glass flex flex-col items-center gap-3 rounded-3xl p-10 text-center">
             <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><lucide-icon name="mail" [size]="26" /></span>
             <p class="text-sm font-semibold text-foreground">Aún no hay buzones</p>
-            <p class="max-w-sm text-xs text-muted-foreground">Registra el buzón de tu área y describe qué correos recibe. Alma empieza a clasificar en minutos.</p>
+            <p class="max-w-sm text-xs text-muted-foreground">Registra el buzón de tu área y describe qué correos recibe. Nova empieza a clasificar en minutos.</p>
             @if (puedeGestionar()) {
               <button type="button" class="alma-btn alma-btn-primary rounded-xl" (click)="abrirNuevo()"><lucide-icon name="plus" [size]="16" /> Nuevo buzón</button>
             }
@@ -96,7 +96,7 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
 
                 <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   @if (!b.activo) {
-                    <span class="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 font-medium text-zinc-700 dark:text-zinc-300" almaTooltip="Alma no lee este buzón hasta que lo reanudes.">
+                    <span class="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 font-medium text-zinc-700 dark:text-zinc-300" almaTooltip="Nova no lee este buzón hasta que lo reanudes.">
                       <lucide-icon name="power-off" [size]="12" /> Pausado
                     </span>
                   }
@@ -213,13 +213,13 @@ const CONEXION: Record<EstadoConexion, { nombre: string; clase: string; icon: st
             @if (c.accion === 'desconectar') {
               <h2 class="text-sm font-semibold text-foreground">¿Desconectar {{ c.buzon.nombre }}?</h2>
               <p class="mt-2 text-xs text-muted-foreground">
-                Alma deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra la conexión con Microsoft y el buzón queda pausado.
+                Nova deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra la conexión con Microsoft y el buzón queda pausado.
                 Se conservan sus categorías, reglas y el historial de correos. Puedes reanudarlo cuando quieras.
               </p>
             } @else {
               <h2 class="text-sm font-semibold text-foreground">¿Quitar {{ c.buzon.nombre }} de la App?</h2>
               <p class="mt-2 text-xs text-muted-foreground">
-                Deja de verse en el Buzón Inteligente y Alma deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra su conexión con Microsoft.
+                Deja de verse en el Buzón Inteligente y Nova deja de leer <span class="font-medium text-foreground">{{ c.buzon.direccion }}</span>: se borra su conexión con Microsoft.
                 No se toca ningún correo en Outlook.
               </p>
               <p class="mt-2 text-xs text-muted-foreground">
@@ -365,7 +365,7 @@ export class BuzonesPageComponent {
     try {
       if (c.accion === 'desconectar') {
         await this.api.desconectarBuzon(c.buzon.id);
-        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Alma ya no lo lee.`);
+        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Nova ya no lo lee.`);
       } else {
         await this.api.eliminarBuzon(c.buzon.id);
         this.toast.show('Buzón quitado de la App', `${c.buzon.nombre} · ${c.buzon.direccion}`);
@@ -386,7 +386,7 @@ export class BuzonesPageComponent {
     this.trabajando.set(b.id);
     try {
       await this.api.actualizarBuzon(b.id, { activo: true });
-      this.toast.show('Buzón reanudado', `Alma vuelve a leer ${b.direccion}.`);
+      this.toast.show('Buzón reanudado', `Nova vuelve a leer ${b.direccion}.`);
       await this.cargar();
     } catch (e) {
       this.toast.error('No se pudo reanudar', e instanceof Error ? e.message : String(e));
