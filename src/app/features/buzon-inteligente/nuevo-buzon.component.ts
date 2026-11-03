@@ -54,7 +54,7 @@ interface FilaResumen {
             </div>
           }
           <div class="nbsteps">
-            @for (n of nombres; track n; let i = $index) {
+            @for (n of soloConectar() ? nombres.slice(0, 1) : nombres; track n; let i = $index) {
               @let st = estadoPaso(i + 1);
               <span [class]="st">{{ st === 'done' ? '✓ ' : st === 'skip' ? '– ' : i + 1 + '. ' }}{{ n }}{{ st === 'skip' ? ' (omitido)' : '' }}</span>
             }
@@ -108,7 +108,7 @@ interface FilaResumen {
                 <alma-aviso-cuenta-buzon />
               }
               @if (!conectado()) {
-                @if (buzon()) {
+                @if (buzon() && !soloConectar()) {
                   <p class="xs muted">
                     ¿La dirección quedó mal escrita?
                     <button type="button" class="linkbtn" [disabled]="trabajando()" (click)="cambiarDireccion()">Cambiar dirección</button>
@@ -215,7 +215,13 @@ interface FilaResumen {
         @if (!subvista()) {
           <div class="row between">
             <button type="button" class="btn outline" [disabled]="paso() === 1 || trabajando()" (click)="atras()">Atrás</button>
-            @if (paso() < 6) {
+            @if (soloConectar()) {
+              <!-- 065: el «Dueño de buzón» solo lo da de alta y lo conecta; el resto lo define el administrador. -->
+              <div class="row">
+                @if (porque()) { <span class="xxs muted">{{ porque() }}</span> }
+                <button type="button" class="btn primary" [disabled]="!puedeSeguir() || trabajando()" (click)="terminarConexion()"><lucide-icon name="check" [size]="13" /> Guardar</button>
+              </div>
+            } @else if (paso() < 6) {
               <div class="row">
                 @if (porque()) { <span class="xxs muted">{{ porque() }}</span> }
                 <button type="button" class="btn primary" [disabled]="!puedeSeguir() || trabajando()" (click)="continuar()">Continuar</button>
@@ -239,6 +245,8 @@ export class NuevoBuzonComponent implements OnInit {
 
   /** Buzón «En configuración» que se retoma (al volver de Microsoft); null = nuevo. */
   readonly reanudar = input<string | null>(null);
+  /** 065: «Dueño de buzón» (no administrador): solo el paso 1, dar de alta y conectar. */
+  readonly soloConectar = input(false);
   readonly cerrado = output<void>();
 
   protected readonly nombres = NOMBRES;
@@ -551,6 +559,22 @@ export class NuevoBuzonComponent implements OnInit {
       this.toast.show(`${b.nombre} activado`, 'Reglas v1 publicadas: Nova empieza a leer el buzón.');
       this.cerrado.emit();
       void this.router.navigate(['/apps/buzon-inteligente/buzones', b.id]);
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.trabajando.set(false);
+    }
+  }
+
+  /** 065: guarda la carpeta que se lee y deja el buzón para que el administrador lo configure. */
+  protected async terminarConexion(): Promise<void> {
+    const b = this.buzon()!;
+    this.error.set('');
+    this.trabajando.set(true);
+    try {
+      await this.api.actualizarBuzon(b.id, { carpeta_vigilada: this.carpeta(), descripcion: this.descripcion.trim() || null });
+      this.toast.show(`${b.nombre} conectado`, 'El administrador configura sus reglas y lo activa.');
+      this.cerrado.emit();
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : String(e));
     } finally {

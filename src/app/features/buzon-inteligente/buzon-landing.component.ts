@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
-import { Buzon, BuzonApi, Correo, PERM_ADMIN_BUZON, PERM_VER_BUZON, ResumenInicio } from './buzon.api';
+import { Buzon, BuzonApi, Correo, PERM_ADMIN_BUZON, PERM_PROPIO_BUZON, PERM_VER_BUZON, ResumenInicio } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
@@ -300,8 +300,9 @@ export class BuzonLandingComponent {
   ];
 
   protected readonly esAdmin = computed(() => this.auth.hasPermission(PERM_ADMIN_BUZON));
-  /** Admin o editor de algún buzón. El revisor no ve «Buzones». */
-  protected readonly puedeConfigurar = computed(() => this.esAdmin() || this.buzones().some((b) => b.puede_administrar));
+  /** Admin, editor de algún buzón o «Dueño de buzón» (065, conecta el suyo). El revisor no ve «Buzones». */
+  protected readonly puedeConfigurar = computed(() =>
+    this.esAdmin() || this.auth.hasPermission(PERM_PROPIO_BUZON) || this.buzones().some((b) => b.puede_administrar || b.rol === 'cuenta'));
 
   protected readonly flujo = computed(() => this.resumen()?.flujo ?? null);
   protected readonly validar = computed(() => this.flujo()?.validar ?? 0);
