@@ -780,6 +780,11 @@ export const PERM_VER_BUZON = 'app.buzon-inteligente.view';
 /** 065: «Dueño de buzón», da de alta y conecta su propio buzón. */
 export const PERM_PROPIO_BUZON = 'app.buzon-inteligente.conectar';
 
+/** Prompt del área: máximo que acepta el backend (BUZON_PROMPT_MAX_CHARS) y desde
+ *  cuánto se avisa que es largo (el análisis tarda minutos). */
+export const PROMPT_MAX_CHARS = 250_000;
+export const PROMPT_LARGO_CHARS = 100_000;
+
 // ── Exportación (059) ────────────────────────────────────────────────────────
 
 export type TipoOrigen = 'campo' | 'fijo' | 'correo' | 'fila' | 'base' | 'formula' | 'vacio';

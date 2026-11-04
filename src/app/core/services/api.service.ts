@@ -54,6 +54,44 @@ async function cuerpo(res: Response): Promise<unknown> {
   }
 }
 
+const NUMERO = new Intl.NumberFormat('es-CO');
+
+/** Un error de validación de FastAPI (422) en palabras: el `detail` llega como
+ *  lista de objetos y, mostrado tal cual, salía «[object Object]». */
+function errorDeCampo(e: { type?: string; loc?: unknown[]; msg?: string; ctx?: Record<string, unknown> }): string {
+  const loc = (e.loc ?? []).filter((x) => x !== 'body' && x !== 'query' && x !== 'path');
+  const campo = loc.length ? `«${loc.join('.')}»` : 'Un dato';
+  const n = (k: string) => NUMERO.format(Number(e.ctx?.[k] ?? 0));
+  switch (e.type) {
+    case 'string_too_long':
+      return `${campo} es demasiado largo: el máximo es ${n('max_length')} caracteres.`;
+    case 'string_too_short':
+      return `${campo} es demasiado corto: el mínimo es ${n('min_length')} caracteres.`;
+    case 'too_long':
+      return `${campo} tiene demasiados elementos: el máximo es ${n('max_length')}.`;
+    case 'missing':
+      return `Falta ${campo}.`;
+    default:
+      return `${campo}: ${e.msg ?? 'valor no válido'}.`;
+  }
+}
+
+/** Mensaje legible para un error del backend, sea cual sea la forma de su cuerpo. */
+export function mensajeDeError(body: unknown, status: number, path: string): string {
+  if (status === 413) return 'El contenido es demasiado grande para enviarlo al servidor.';
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((d) => (typeof d === 'string' ? d : errorDeCampo(d ?? {}))).join(' ');
+  }
+  if (detail && typeof detail === 'object') {
+    const m = (detail as { message?: unknown; detail?: unknown }).message ?? (detail as { detail?: unknown }).detail;
+    if (typeof m === 'string' && m.trim()) return m;
+  }
+  if (status === 502 || status === 503 || status === 504) return SIN_RESPUESTA;
+  return `HTTP ${status} en ${path}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly auth = inject(AuthService);
@@ -72,11 +110,7 @@ export class ApiService {
       esperaMs,
       async (res) => ({ res, body: await cuerpo(res) }),
     );
-    if (!res.ok) {
-      const detail =
-        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
-      throw new Error(detail);
-    }
+    if (!res.ok) throw new Error(mensajeDeError(body, res.status, path));
     return body as T;
   }
 
@@ -108,11 +142,7 @@ export class ApiService {
       ESPERA_ARCHIVOS_MS,
       async (res) => ({ res, body: await cuerpo(res) }),
     );
-    if (!res.ok) {
-      const detail =
-        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
-      throw new Error(detail);
-    }
+    if (!res.ok) throw new Error(mensajeDeError(body, res.status, path));
     return body as T;
   }
 
