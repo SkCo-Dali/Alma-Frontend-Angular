@@ -4,8 +4,12 @@
 // campañas de llamadas (PERM_VIEW / PERM_CAMPANAS / PERM_CONFIG de monitor-ia.api).
 
 import { Injectable, inject } from '@angular/core';
+import { environment } from '@env/environment';
+import { AuthService } from '../../core/auth/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { ItemCatalogo } from './monitor-ia.api';
+
+const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 
 export type Flujo = 'CORREO' | 'CHAT';
 
@@ -177,6 +181,7 @@ const BASE = '/api/monitor-ia/casos';
 @Injectable({ providedIn: 'root' })
 export class MonitorIaCasosApi {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
 
   conexion(): Promise<ConexionSf> {
     return this.api.fetch<ConexionSf>(`${BASE}/conexion`);
@@ -212,13 +217,11 @@ export class MonitorIaCasosApi {
     return this.api.fetch<Plantilla>(`${BASE}/plantillas/${flujo}/versiones/${id}/restaurar`, { method: 'POST' });
   }
 
-  /** La IA puede tardar: se espera más que una consulta normal. */
   probarPlantilla(flujo: Flujo, datos: PlantillaIn, caseNumber: string): Promise<PruebaPlantilla> {
-    return this.api.fetch<PruebaPlantilla>(
-      `${BASE}/plantillas/${flujo}/probar`,
-      { method: 'POST', body: JSON.stringify({ ...datos, case_number: caseNumber }) },
-      120_000,
-    );
+    return this.api.fetch<PruebaPlantilla>(`${BASE}/plantillas/${flujo}/probar`, {
+      method: 'POST',
+      body: JSON.stringify({ ...datos, case_number: caseNumber }),
+    });
   }
 
   // ── Coordinador ──────────────────────────────────────────────────────────
@@ -256,7 +259,11 @@ export class MonitorIaCasosApi {
   }
 
   async exportar(campanaId: string): Promise<{ blob: Blob; nombre: string }> {
-    const res = await this.api.fetchRaw(`${BASE}/campanas/${campanaId}/exportar`);
+    // Como la descarga de Comisiones: ApiService.fetch solo devuelve JSON.
+    const token = await this.auth.getAccessToken();
+    const res = await fetch(`${API_BASE_URL}${BASE}/campanas/${campanaId}/exportar`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!res.ok) {
       let detalle: unknown = null;
       try {
