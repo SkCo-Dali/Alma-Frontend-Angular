@@ -66,12 +66,16 @@ export interface Buzon {
   miembros: MiembroBuzon[];
   /** Rol del usuario en este buzón. */
   rol: RolBuzon | null;
-  /** Admin o editor del buzón: puede configurarlo. */
+  /** Admin, dueño o editor del buzón: puede configurarlo. */
   puede_administrar: boolean;
-  /** Solo el administrador de la App: crear, conectar, desconectar, eliminar y dar accesos. */
+  /** Administrador de la App (compatibilidad: así se reconoce al admin en la lista). */
   puede_conectar: boolean;
-  /** 065: conectar o reconectar con Microsoft (el administrador o la «cuenta» del buzón). */
+  /** 066: conectar, reconectar o desconectar con Microsoft (admin, dueño o editor). */
   puede_reconectar?: boolean;
+  /** 066: decidir quién trabaja el buzón (admin o dueño). */
+  puede_miembros?: boolean;
+  /** 066: quitarlo de la App (solo el administrador). */
+  puede_eliminar?: boolean;
   /** La conexión la hizo un administrador con SU cuenta (acceso completo al buzón genérico). */
   conexion_compartida: boolean;
   conectada_por: string | null;

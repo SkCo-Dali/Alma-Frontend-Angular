@@ -52,7 +52,7 @@ interface CarpetaPlana {
               <p class="sm b">Conexión con Microsoft</p>
               <p class="xxs muted">{{ textoConexion() }}</p>
             </div>
-            @if (b.puede_conectar) {
+            @if (b.puede_reconectar) {
               <div style="display:grid;gap:4px;justify-items:end;flex-shrink:0">
                 <button type="button" class="btn outline sm" (click)="reconectar.emit(undefined)"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'conectada' ? 'Reconectar' : 'Conectar' }}</button>
                 @if (b.conexion_compartida) {

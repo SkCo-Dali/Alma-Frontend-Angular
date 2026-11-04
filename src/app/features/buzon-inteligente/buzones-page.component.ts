@@ -4,10 +4,10 @@
 // vigilada, clasificador y versión, miembros y «Configurar». «Nuevo buzón» abre el
 // asistente de 6 pasos (nuevo-buzon.component). Roles (058):
 //  · Administrador de la App: crea, conecta, desconecta, elimina y da accesos (miembros).
-//  · Editor del buzón: lo configura y sincroniza, pero no lo conecta ni lo elimina.
+//  · Dueño del buzón (066, rol 'cuenta'): da de alta SU buzón y en él lo configura,
+//    lo conecta o desconecta y da accesos como editor o revisor. No lo elimina.
+//  · Editor del buzón: lo configura, sincroniza, conecta y desconecta.
 //  · Revisor: no entra aquí (solo bandeja y métricas).
-//  · Dueño de buzón (065): da de alta y conecta SU buzón; aquí ve la tarjeta de los
-//    buzones donde es «cuenta» con «Conectar», sin configurarlos.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -24,9 +24,9 @@ import { NuevoBuzonComponent } from './nuevo-buzon.component';
 import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
 const ROLES: { id: RolMiembro; nombre: string; ayuda: string }[] = [
-  { id: 'editor', nombre: 'Editor', ayuda: 'Configura el buzón (procesos, reglas, asignación y ajustes) y trabaja la bandeja.' },
+  { id: 'editor', nombre: 'Editor', ayuda: 'Configura el buzón (procesos, reglas, asignación y ajustes), lo conecta o desconecta y trabaja la bandeja.' },
   { id: 'revisor', nombre: 'Revisor', ayuda: 'Solo la bandeja y las métricas: aprueba, corrige, reclasifica o ignora correos.' },
-  { id: 'cuenta', nombre: 'Cuenta del buzón', ayuda: 'Solo conecta o reconecta el buzón con su cuenta de Microsoft. No lo configura ni trabaja la bandeja.' },
+  { id: 'cuenta', nombre: 'Dueño del buzón', ayuda: 'Todo lo del editor y además decide quién trabaja el buzón. Uno por buzón y solo quien tiene «Dueño de buzón» en la App. No lo elimina.' },
 ];
 
 interface MiembroForm {
@@ -109,20 +109,20 @@ interface MiembroForm {
                   <span class="chipo"><lucide-icon [name]="b.modo_clasificacion === 'agente' ? 'bot' : 'scroll-text'" [size]="13" /> {{ clasificador(b) }} · {{ b.version_reglas ? 'v' + b.version_reglas : '—' }}</span>
                 </div>
                 <div class="row between" style="border-top:1px solid var(--border);padding-top:12px">
-                  <button type="button" class="row" style="gap:0;padding-left:6px;border:0;background:none;cursor:pointer" [disabled]="!b.puede_conectar"
-                    (click)="abrirMiembros(b)" [attr.aria-label]="'Miembros de ' + b.nombre" [title]="b.puede_conectar ? 'Quién trabaja en este buzón' : ''">
+                  <button type="button" class="row" style="gap:0;padding-left:6px;border:0;background:none;cursor:pointer" [disabled]="!b.puede_miembros"
+                    (click)="abrirMiembros(b)" [attr.aria-label]="'Miembros de ' + b.nombre" [title]="b.puede_miembros ? 'Quién trabaja en este buzón' : ''">
                     @for (m of b.miembros.slice(0, 5); track m.user_id) {
                       <span class="avatar s" style="margin-left:-6px;border:2px solid var(--card)" [title]="(m.name || m.email) + ' · ' + nombreRol(m.rol)">{{ iniciales(m.name || m.email) }}</span>
                     } @empty {
                       <span class="xs muted" style="margin-left:-6px">Sin miembros</span>
                     }
-                    @if (b.puede_conectar) { <lucide-icon name="user-plus" [size]="13" class="muted" style="margin-left:6px" /> }
+                    @if (b.puede_miembros) { <lucide-icon name="user-plus" [size]="13" class="muted" style="margin-left:6px" /> }
                   </button>
                   <div class="row">
                     @if (!b.en_configuracion) {
-                      @if (b.estado_conexion !== 'conectada' && (b.puede_conectar || b.puede_reconectar)) {
+                      @if (b.estado_conexion !== 'conectada' && b.puede_reconectar) {
                         <button type="button" class="btn outline sm" [disabled]="trabajando() === b.id" (click)="conectar(b)"><lucide-icon name="log-in" [size]="13" /> {{ b.estado_conexion === 'requiere_reconexion' ? 'Reconectar' : 'Conectar' }}</button>
-                      } @else if (b.estado_conexion === 'conectada' && !b.activo && b.puede_conectar) {
+                      } @else if (b.estado_conexion === 'conectada' && !b.activo && b.puede_reconectar) {
                         <button type="button" class="btn outline sm" [disabled]="trabajando() === b.id" (click)="reanudar(b)"><lucide-icon name="play" [size]="13" /> Reanudar</button>
                       }
                     }
@@ -131,20 +131,16 @@ interface MiembroForm {
                         <lucide-icon name="refresh-cw" [size]="16" />
                       </button>
                     }
-                    @if (b.puede_conectar) {
-                      @if (b.activo && b.estado_conexion === 'conectada') {
-                        <button type="button" class="btn ghost" (click)="confirmacion.set({ accion: 'desconectar', buzon: b })" [attr.aria-label]="'Desconectar ' + b.nombre" title="Desconectar"><lucide-icon name="unplug" [size]="16" /></button>
-                      }
+                    @if (b.puede_reconectar && b.activo && b.estado_conexion === 'conectada') {
+                      <button type="button" class="btn ghost" (click)="confirmacion.set({ accion: 'desconectar', buzon: b })" [attr.aria-label]="'Desconectar ' + b.nombre" title="Desconectar"><lucide-icon name="unplug" [size]="16" /></button>
+                    }
+                    @if (b.puede_eliminar) {
                       <button type="button" class="btn ghost danger" (click)="confirmacion.set({ accion: 'eliminar', buzon: b })" [attr.aria-label]="'Eliminar ' + b.nombre" title="Quitar de la App"><lucide-icon name="trash-2" [size]="16" /></button>
                     }
                     @if (b.puede_administrar) {
                       <button type="button" class="btn primary sm" (click)="configurar(b)">
                         <lucide-icon name="sliders-horizontal" [size]="13" /> {{ b.en_configuracion ? 'Continuar configuración' : 'Configurar' }}
                       </button>
-                    } @else if (b.en_configuracion && b.estado_conexion !== 'conectada') {
-                      <button type="button" class="btn primary sm" (click)="configurar(b)"><lucide-icon name="log-in" [size]="13" /> Continuar conexión</button>
-                    } @else {
-                      <span class="xxs muted" title="Sus reglas, asignación y ajustes los define el administrador o un editor.">Lo configura el administrador</span>
                     }
                   </div>
                 </div>
@@ -162,7 +158,7 @@ interface MiembroForm {
                 <p class="xs muted">Crea el buzón del área con «Nuevo buzón»: lo conectas, describes sus reglas y activas lo que necesites.</p>
               } @else {
                 <p class="sm b">Aún no conectas tu buzón</p>
-                <p class="xs muted">Con «Conectar mi buzón» inicias sesión con tu cuenta de Microsoft. Después el administrador configura sus reglas y lo activa.</p>
+                <p class="xs muted">Con «Conectar mi buzón» inicias sesión con tu cuenta de Microsoft; después defines sus reglas y lo activas.</p>
               }
             </div>
           </div>
@@ -170,7 +166,7 @@ interface MiembroForm {
       </div>
 
       @if (asistente(); as a) {
-        <alma-nuevo-buzon [reanudar]="a.id" [soloConectar]="!esAdmin()" (cerrado)="cerrarAsistente()" />
+        <alma-nuevo-buzon [reanudar]="a.id" [puedeDescartar]="esAdmin()" (cerrado)="cerrarAsistente()" />
       }
 
       @if (confirmacion(); as c) {
@@ -201,13 +197,13 @@ interface MiembroForm {
         <div class="scrim" (click)="$event.target === $event.currentTarget && cerrarMiembros()">
           <div class="modal solid" role="dialog" aria-modal="true" aria-label="Miembros del buzón">
             <div class="row between">
-              <div><h2 class="sm b">Quién trabaja en {{ b.nombre }}</h2><p class="xs muted">El editor configura el buzón y trabaja la bandeja; el revisor solo trabaja la bandeja.</p></div>
+              <div><h2 class="sm b">Quién trabaja en {{ b.nombre }}</h2><p class="xs muted">El dueño y el editor configuran el buzón, lo conectan o desconectan y trabajan la bandeja; el revisor solo trabaja la bandeja. Solo el dueño y el administrador deciden quién entra.</p></div>
               <button type="button" class="btn ghost" (click)="cerrarMiembros()" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
             </div>
             <div class="row" style="flex-wrap:nowrap">
               <input class="input" [(ngModel)]="nuevoEmail" (keydown.enter)="agregarMiembro()" placeholder="correo@skandia.com.co" aria-label="Correo" />
               <select class="input" style="width:auto" [(ngModel)]="nuevoRol" aria-label="Rol">
-                @for (r of roles; track r.id) { <option [value]="r.id">{{ r.nombre }}</option> }
+                @for (r of rolesDe(b); track r.id) { <option [value]="r.id">{{ r.nombre }}</option> }
               </select>
               <button type="button" class="btn primary sm" (click)="agregarMiembro()"><lucide-icon name="user-plus" [size]="13" /> Agregar</button>
             </div>
@@ -220,10 +216,14 @@ interface MiembroForm {
                     <div style="min-width:0"><p class="sm b trunc">{{ m.name || m.email }}</p><p class="xxs muted trunc">{{ m.email }}</p></div>
                   </div>
                   <div class="row" style="flex-wrap:nowrap">
-                    <select class="input sm" style="width:auto" [ngModel]="m.rol" (ngModelChange)="cambiarRol(i, $event)" [attr.aria-label]="'Rol de ' + m.email">
-                      @for (r of roles; track r.id) { <option [value]="r.id">{{ r.nombre }}</option> }
-                    </select>
-                    <button type="button" class="btn ghost danger" (click)="quitarMiembro(i)" [attr.aria-label]="'Quitar ' + m.email"><lucide-icon name="x" [size]="13" /></button>
+                    @if (m.rol === 'cuenta' && !b.puede_eliminar) {
+                      <span class="chipo" title="Solo el administrador cambia al dueño del buzón">Dueño del buzón</span>
+                    } @else {
+                      <select class="input sm" style="width:auto" [ngModel]="m.rol" (ngModelChange)="cambiarRol(i, $event)" [attr.aria-label]="'Rol de ' + m.email">
+                        @for (r of rolesDe(b); track r.id) { <option [value]="r.id">{{ r.nombre }}</option> }
+                      </select>
+                      <button type="button" class="btn ghost danger" (click)="quitarMiembro(i)" [attr.aria-label]="'Quitar ' + m.email"><lucide-icon name="x" [size]="13" /></button>
+                    }
                   </div>
                 </div>
               } @empty {
@@ -314,6 +314,11 @@ export class BuzonesPageComponent {
   protected clasificador(b: Buzon): string {
     if (!b.version_reglas && !b.procesos_count) return 'Sin clasificador';
     return b.modo_clasificacion === 'agente' ? 'Agente Foundry' : 'Prompt de Nova';
+  }
+
+  /** El administrador asigna cualquier rol (también el dueño); el dueño, editor o revisor. */
+  protected rolesDe(b: Buzon): typeof ROLES {
+    return b.puede_eliminar ? ROLES : ROLES.filter((r) => r.id !== 'cuenta');
   }
 
   protected nombreRol(r: string): string {
@@ -422,7 +427,7 @@ export class BuzonesPageComponent {
 
   // ── Miembros ──
   protected abrirMiembros(b: Buzon): void {
-    if (!b.puede_conectar) return;
+    if (!b.puede_miembros) return;
     this.miembrosForm.set(b.miembros.map((m) => ({ email: m.email, name: m.name ?? null, rol: m.rol === 'editor' || m.rol === 'cuenta' ? m.rol : 'revisor' })));
     this.nuevoEmail = '';
     this.nuevoRol = 'revisor';
