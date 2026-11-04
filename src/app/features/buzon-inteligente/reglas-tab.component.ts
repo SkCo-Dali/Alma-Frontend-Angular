@@ -21,6 +21,8 @@ import {
   CategoriaIn,
   Proceso,
   ProcesoPropuesto,
+  PROMPT_LARGO_CHARS,
+  PROMPT_MAX_CHARS,
   PromptBuzon,
   ReglaFija,
   resumenEtiqueta,
@@ -445,6 +447,9 @@ interface FijaEd {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Analizando">
                 <h2 class="sm b">Nova está leyendo el prompt…</h2>
                 <p class="xs muted">Separa procesos, etiquetas, datos a extraer, discriminación y Validar.</p>
+                @if (promptLargo()) {
+                  <p class="note b-amber"><lucide-icon name="clock" [size]="13" /> <span>Es un prompt largo ({{ caracteres() }} caracteres): el análisis puede tardar hasta 3 o 4 minutos. No cierres esta ventana.</span></p>
+                }
               </div>
             } @else {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
@@ -460,12 +465,18 @@ interface FijaEd {
                   <p class="xxs muted">¿Ajustaste reglas aquí en Nova? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
                 }
                 <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoPrompt" placeholder="1. CONTEXTO DEL ÁREA&#10;…"></textarea>
+                <p class="xxs muted" style="text-align:right">{{ caracteres() }} de {{ maxCaracteres }} caracteres</p>
+                @if (promptExcedido()) {
+                  <p class="note b-rose"><lucide-icon name="alert-triangle" [size]="13" /> <span>El prompt tiene <b>{{ caracteres() }}</b> caracteres y el máximo es <b>{{ maxCaracteres }}</b>. Quita texto que no sea de reglas (ejemplos repetidos, anexos) o pégalo por partes: un proceso a la vez con «Actualizar con prompt».</span></p>
+                } @else if (promptLargo()) {
+                  <p class="note b-amber"><lucide-icon name="clock" [size]="13" /> <span><b>Prompt largo.</b> Nova lo analiza completo, pero puede tardar hasta 3 o 4 minutos.</span></p>
+                }
                 <div class="row between">
                   <label class="btn outline sm" for="prompt-file"><lucide-icon name="file-up" [size]="13" /> Subir .txt o .md</label>
                   <input type="file" id="prompt-file" accept=".txt,.md" hidden (change)="subirPrompt($event)" />
                   <div class="row">
                     <button type="button" class="btn outline sm" (click)="textoPrompt = ejemplo; errorPrompt.set('')">Usar ejemplo</button>
-                    <button type="button" class="btn primary sm" (click)="analizar()"><lucide-icon name="sparkles" [size]="13" /> Analizar con Nova</button>
+                    <button type="button" class="btn primary sm" [disabled]="promptExcedido()" (click)="analizar()"><lucide-icon name="sparkles" [size]="13" /> Analizar con Nova</button>
                   </div>
                 </div>
                 @if (errorPrompt()) { <p class="err">{{ errorPrompt() }}</p> }
@@ -627,6 +638,16 @@ export class ReglasTabComponent implements OnInit {
   protected readonly aceptados = signal<Set<string>>(new Set());
   private readonly desdeCorreos = signal<Set<string>>(new Set());
   protected textoPrompt = '';
+  protected readonly maxCaracteres = PROMPT_MAX_CHARS.toLocaleString('es-CO');
+  protected caracteres(): string {
+    return this.textoPrompt.length.toLocaleString('es-CO');
+  }
+  protected promptLargo(): boolean {
+    return this.textoPrompt.length > PROMPT_LARGO_CHARS;
+  }
+  protected promptExcedido(): boolean {
+    return this.textoPrompt.length > PROMPT_MAX_CHARS;
+  }
   protected textoGlobal = '';
   protected fijasEd: FijaEd[] = [];
 
@@ -942,6 +963,7 @@ export class ReglasTabComponent implements OnInit {
       this.errorPrompt.set('Pega el prompt o sube el archivo antes de analizar.');
       return;
     }
+    if (this.promptExcedido()) return;
     this.analizando.set(true);
     try {
       const r = await this.api.analizarPrompt(this.buzon().id, this.textoPrompt);
