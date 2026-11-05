@@ -71,6 +71,22 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    id: 'app-masesstory-hl',
+    nombre: 'Masesstory_HL',
+    descripcion:
+      'Afiliaciones y Traslados del Obligatorio: valida las Historias Laborales (HL), consolida sus hojas y clasifica cada caso en OK, NO CUMPLE o NO DETERMINADO.',
+    resumen: 'Valida y consolida Historias Laborales.',
+    categoria: 'Afiliaciones y Traslados',
+    icono: 'clipboard-check',
+    color: '#00C83C',
+    url: '/apps/masesstory-hl',
+    internalRoute: '/apps/masesstory-hl',
+    integrationType: 'internal',
+    requiredPermission: 'app.masesstory-hl.view',
+    estado: 'beta',
+    favorito: false,
+  },
+  {
     id: 'app-monitor-ia',
     nombre: 'Monitor-IA',
     descripcion:
