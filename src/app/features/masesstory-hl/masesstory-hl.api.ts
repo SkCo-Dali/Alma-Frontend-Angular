@@ -4,6 +4,8 @@
 // consolidado.
 
 import { Injectable, inject } from '@angular/core';
+import { environment } from '@env/environment';
+import { AuthService } from '../../core/auth/auth.service';
 import { ApiService } from '../../core/services/api.service';
 
 export const PERM_VIEW = 'app.masesstory-hl.view';
@@ -76,6 +78,7 @@ export type Descarga = 'evaluado' | 'consolidado';
 @Injectable({ providedIn: 'root' })
 export class MasesstoryHlApi {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
 
   /** Sin `loteId` crea un lote nuevo; con él suma la tanda a ese lote. */
   subirTanda(archivos: File[], loteId: string | null): Promise<RespuestaTanda> {
@@ -103,9 +106,14 @@ export class MasesstoryHlApi {
     await this.api.fetch<unknown>(`${BASE}/lotes/${loteId}`, { method: 'DELETE' });
   }
 
-  /** Descarga el Excel y lo entrega al navegador con su nombre. */
+  /** Descarga el Excel (binario) y lo entrega al navegador con su nombre. No usa
+   *  `ApiService`, que responde JSON: pide el archivo con el token de la sesión. */
   async descargar(loteId: string, cual: Descarga, nombre: string): Promise<void> {
-    const res = await this.api.fetchRaw(`${BASE}/lotes/${loteId}/${cual}`);
+    const token = await this.auth.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const base = environment.apiUrl.replace(/\/+$/, '');
+    const res = await fetch(`${base}${BASE}/lotes/${loteId}/${cual}`, { headers });
     if (!res.ok) {
       let detalle = `HTTP ${res.status} al descargar el archivo`;
       try {
