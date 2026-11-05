@@ -263,6 +263,9 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
         }
       }
 
+      @if (quitadosBase().length) {
+        <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Se quitó {{ quitadosBase().join(', ') }} de los datos de este proceso: Nova ya lo agrega a todos los correos (base fija). Guarda para dejarlo así en el borrador.</span></p>
+      }
       @if (errores().length) {
         <div class="note b-rose" style="display:grid">@for (x of errores(); track x) { <span>• {{ x }}</span> }</div>
       }
@@ -309,6 +312,8 @@ export class ProcesoEditorComponent implements OnInit {
   protected readonly tab = signal<Pestana>('rec');
   protected readonly json = signal(false);
   protected readonly errores = signal<string[]>([]);
+  /** Datos de la base fija que traía el proceso (p. ej. asunto_correo desde un prompt) y se quitaron al abrirlo. */
+  protected readonly quitadosBase = signal<string[]>([]);
   protected readonly guardando = signal(false);
   protected readonly ed = signal<Borrador>(this.vacio());
   protected jsonTexto = '';
@@ -344,7 +349,9 @@ export class ProcesoEditorComponent implements OnInit {
   private desde(p: Proceso | null): Borrador {
     if (!p) return { ...this.vacio(), umbral: Math.round((this.buzon().umbral_confianza ?? 0.7) * 100) };
     const cats = this.categorias().filter((c) => c.proceso_id === p.id && c.activa).sort((a, c) => a.orden - c.orden);
-    const campos = p.campos_extraer.map<CampoEd>((f) => ({
+    const deBase = p.campos_extraer.filter((f) => BASE_FIELDS.includes(f.clave)).map((f) => f.clave);
+    this.quitadosBase.set(deBase);
+    const campos = p.campos_extraer.filter((f) => !BASE_FIELDS.includes(f.clave)).map<CampoEd>((f) => ({
       clave: f.clave, tipo: f.tipo ?? 'texto', descripcion: f.descripcion, identificador: !!f.identificador, origen: f.origen ?? 'ia',
       critico: f.critico ? (f.alterno ? 'alt' : '1') : '0',
     }));
