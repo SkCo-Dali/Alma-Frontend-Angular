@@ -1659,6 +1659,7 @@ export class DemoStore {
     const previo = id ? this.grupos.find((g) => g.id === id) : undefined;
     if (id && !previo) throw new Error('Grupo no encontrado.');
     if (body.destino === 'carpeta' && !body.carpeta?.trim()) throw new Error('Elige la carpeta a la que se envían los correos del grupo.');
+    if (body.destino === 'reenviar' && !body.destinatarios?.length) throw new Error('Agrega al menos un correo al que se reenvían los correos del grupo.');
     if (body.sin_activos_modo === 'carpeta' && !body.sin_activos_carpeta?.trim()) throw new Error('Elige la carpeta para cuando no haya nadie activo en el grupo.');
     if (body.sin_activos_modo === 'persona' && !body.sin_activos_persona_id) throw new Error('Elige la persona para cuando no haya nadie activo en el grupo.');
     const gid = previo?.id ?? nuevoId('demo-g');
@@ -1670,6 +1671,8 @@ export class DemoStore {
       etiquetas: [...new Set(body.etiquetas.map((e) => e.toUpperCase()))],
       destino: body.destino,
       carpeta: body.carpeta ?? null,
+      destinatarios: body.destino === 'reenviar' ? [...(body.destinatarios ?? [])] : [],
+      mensaje: body.destino === 'reenviar' || body.destino === 'responder' ? (body.mensaje ?? null) : null,
       sin_activos_modo: body.sin_activos_modo,
       sin_activos_carpeta: body.sin_activos_carpeta ?? null,
       sin_activos_persona_id: body.sin_activos_persona_id ?? null,

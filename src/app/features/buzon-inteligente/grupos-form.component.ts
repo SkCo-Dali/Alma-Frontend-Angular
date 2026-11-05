@@ -15,7 +15,7 @@ const MODOS: [ModoGrupos, string][] = [
   ['custom', 'Personalizado: yo armo los grupos'],
 ];
 
-const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar' };
+const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar', reenviar: 'Reenviar', responder: 'Responder al remitente' };
 
 @Component({
   selector: 'alma-grupos-form',
