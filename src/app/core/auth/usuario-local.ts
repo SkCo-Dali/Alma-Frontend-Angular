@@ -31,6 +31,7 @@ export const USUARIO_LOCAL: User = {
     'app.recaudos-acreditacion-pac.view',
     'app.recaudos-acreditacion-pac.config',
     'app.recaudos-aplicacion-pagos.view',
+    'app.masesstory-hl.view',
     'app.monitor-ia.view',
     'app.monitor-ia.campanas.manage',
     'app.monitor-ia.config',
