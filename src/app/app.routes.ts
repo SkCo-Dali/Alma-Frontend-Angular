@@ -208,6 +208,15 @@ export const routes: Routes = [
       ),
     title: 'Aplicación de Pagos — Nova',
   },
+  // App Masesstory_HL (Afiliaciones y Traslados): validación de Historias Laborales.
+  {
+    path: 'apps/masesstory-hl',
+    loadComponent: () =>
+      import('./features/masesstory-hl/masesstory-hl-page.component').then(
+        (m) => m.MasesstoryHlPageComponent,
+      ),
+    title: 'Masesstory_HL — Nova',
+  },
   // App Monitor-IA (SAC): campañas de autoevaluación automática de llamadas en Genesys.
   {
     path: 'apps/monitor-ia',
