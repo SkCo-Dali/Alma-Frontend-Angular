@@ -42,7 +42,7 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else {
-      <div class="mx-auto w-full max-w-7xl space-y-5 px-4 py-4 sm:px-6">
+      <div class="mx-auto w-full max-w-[1800px] space-y-5 px-4 py-4 sm:px-6">
         <div class="flex flex-wrap items-center gap-3">
           <a routerLink="/" class="glass inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-foreground shadow-[var(--shadow-sm)] hover:text-primary">
             <lucide-icon name="arrow-left" [size]="16" /> Inicio
@@ -97,7 +97,7 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
                 </p>
                 <span class="flex-1"></span>
                 @if (!procesando()) {
-                  <button type="button" class="alma-btn alma-btn-ghost h-9 rounded-lg text-xs" (click)="vaciarCola()">Vaciar selección</button>
+                  <button type="button" class="alma-btn alma-btn-ghost h-9 w-auto rounded-lg px-3 text-xs" (click)="vaciarCola()">Vaciar selección</button>
                   <button type="button" class="alma-btn alma-btn-primary h-9 rounded-lg text-sm" (click)="validar()">
                     <lucide-icon name="clipboard-check" [size]="15" /> Validar
                   </button>
@@ -126,7 +126,7 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
           <!-- Resultados -->
           @if (archivosTotal() > 0) {
             <section class="space-y-4">
-              <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <button type="button" class="glass rounded-2xl px-4 py-3 text-left shadow-[var(--shadow-sm)]" [class.ring-2]="pestana() === 'todos'" (click)="elegirPestana('todos')">
                   <p class="text-[11px] text-muted-foreground">Casos evaluados</p>
                   <p class="text-2xl font-bold tabular-nums text-foreground">{{ casos().length | number }}</p>
@@ -140,27 +140,27 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
                     <p class="text-2xl font-bold tabular-nums" [class]="colorTexto(r)">{{ totales()[r] | number }}</p>
                   </button>
                 }
-                <div class="glass col-span-2 flex flex-col justify-center gap-1.5 rounded-2xl px-4 py-3 shadow-[var(--shadow-sm)] sm:col-span-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p class="text-xs text-muted-foreground">
+                <div class="glass col-span-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-2xl px-4 py-3 shadow-[var(--shadow-sm)] sm:col-span-4">
+                  <p class="min-w-[14rem] flex-1 text-xs text-muted-foreground">
                     @if (venceEn(); as v) { Se borra del servidor el {{ fechaHora(v) }} si no hay más actividad. }
                   </p>
                   <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" class="alma-btn alma-btn-primary h-9 rounded-lg text-sm" [disabled]="!!descargando()" (click)="descargarEvaluado()">
+                    <button type="button" class="alma-btn alma-btn-primary h-9 shrink-0 whitespace-nowrap rounded-lg text-sm" [disabled]="!!descargando()" (click)="descargarEvaluado()">
                       <lucide-icon [name]="descargando() === 'evaluado' ? 'loader-2' : 'download'" [size]="15" [class.animate-spin]="descargando() === 'evaluado'" /> Descargar validación
                     </button>
-                    <button type="button" class="alma-btn alma-btn-primary h-9 rounded-lg text-sm" [disabled]="!!descargando() || procesando()" (click)="descargarConsolidado()">
+                    <button type="button" class="alma-btn alma-btn-primary h-9 shrink-0 whitespace-nowrap rounded-lg text-sm" [disabled]="!!descargando() || procesando()" (click)="descargarConsolidado()">
                       <lucide-icon [name]="descargando() === 'consolidado' ? 'loader-2' : 'download'" [size]="15" [class.animate-spin]="descargando() === 'consolidado'" />
                       {{ etiquetaConsolidado() }}
                     </button>
                     @if (!confirmandoBorrar()) {
-                      <button type="button" class="alma-btn alma-btn-ghost h-9 rounded-lg text-xs" [disabled]="procesando() || !!descargando()" (click)="confirmandoBorrar.set(true)">
+                      <button type="button" class="alma-btn alma-btn-ghost h-9 w-auto shrink-0 whitespace-nowrap rounded-lg px-3 text-xs" [disabled]="procesando() || !!descargando()" (click)="confirmandoBorrar.set(true)">
                         <lucide-icon name="trash-2" [size]="14" /> Nueva validación
                       </button>
                     } @else {
                       <span class="inline-flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2 py-1 text-xs text-destructive">
                         ¿Borrar este lote y empezar de cero?
                         <button type="button" class="alma-btn h-7 rounded-md px-2 text-xs font-semibold" (click)="nuevaValidacion()">Sí, borrar</button>
-                        <button type="button" class="alma-btn alma-btn-ghost h-7 rounded-md px-2 text-xs" (click)="confirmandoBorrar.set(false)">Cancelar</button>
+                        <button type="button" class="alma-btn alma-btn-ghost h-7 w-auto rounded-md px-2 text-xs" (click)="confirmandoBorrar.set(false)">Cancelar</button>
                       </span>
                     }
                   </div>
@@ -200,35 +200,38 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
                       <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
                         <tr>
                           <th class="px-3 py-2">Resultado</th>
+                          <th class="px-3 py-2">Afiliado</th>
                           <th class="px-3 py-2">Archivo</th>
-                          <th class="px-3 py-2">Identificación</th>
-                          <th class="px-3 py-2">Nombre</th>
-                          <th class="px-3 py-2">AFP</th>
-                          <th class="px-3 py-2">Estado</th>
-                          <th class="px-3 py-2 text-right" [attr.title]="'Mínimo ' + minimo('datos_basicos') + '%'">Datos básicos</th>
-                          <th class="px-3 py-2 text-right" [attr.title]="'Mínimo ' + minimo('aportes_afp') + '%'">Aportes</th>
-                          <th class="px-3 py-2 text-right" [attr.title]="'Mínimo ' + minimo('completitud') + '%'">Completitud</th>
-                          <th class="px-3 py-2 text-right" [attr.title]="'Mínimo ' + minimo('consistencia_total') + '%'">Consistencia</th>
+                          <th class="px-3 py-2">AFP / Estado</th>
+                          <th class="px-2 py-2 text-right" [attr.title]="'Mínimo ' + minimo('datos_basicos') + '%'">Datos básicos</th>
+                          <th class="px-2 py-2 text-right" [attr.title]="'Mínimo ' + minimo('aportes_afp') + '%'">Aportes</th>
+                          <th class="px-2 py-2 text-right" [attr.title]="'Mínimo ' + minimo('completitud') + '%'">Completitud</th>
+                          <th class="px-2 py-2 text-right" [attr.title]="'Mínimo ' + minimo('consistencia_total') + '%'">Consistencia</th>
                           <th class="px-3 py-2">Motivo</th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- Nada se trunca: nombre, archivo, estado y motivo hacen salto de línea. -->
                         @for (c of visibles(); track $index) {
                           <tr class="border-t border-border/50 align-top hover:bg-accent/60">
-                            <td class="whitespace-nowrap px-3 py-2">
+                            <td class="whitespace-nowrap px-3 py-2.5">
                               <span class="alma-badge inline-flex items-center gap-1" [class]="insignia(c.resultado)">
                                 <lucide-icon [name]="icono(c.resultado)" [size]="12" /> {{ c.resultado }}
                               </span>
                             </td>
-                            <td class="max-w-[14rem] truncate px-3 py-2" [title]="c.archivo">{{ c.archivo }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 tabular-nums">{{ c.identificacion }}</td>
-                            <td class="max-w-[14rem] truncate px-3 py-2" [title]="c.nombre">{{ c.nombre }}</td>
-                            <td class="whitespace-nowrap px-3 py-2">{{ c.afp }}</td>
-                            <td class="max-w-[10rem] truncate px-3 py-2 text-muted-foreground" [title]="c.estado">{{ c.estado }}</td>
+                            <td class="min-w-[9rem] px-3 py-2.5">
+                              <p class="break-words font-medium text-foreground">{{ c.nombre }}</p>
+                              <p class="text-xs tabular-nums text-muted-foreground">{{ c.identificacion }}</p>
+                            </td>
+                            <td class="min-w-[8rem] break-all px-3 py-2.5 text-xs">{{ c.archivo }}</td>
+                            <td class="min-w-[6.5rem] px-3 py-2.5">
+                              <p class="break-words font-medium text-foreground">{{ c.afp }}</p>
+                              <p class="break-words text-xs text-muted-foreground">{{ c.estado }}</p>
+                            </td>
                             @for (k of componentes; track k) {
-                              <td class="whitespace-nowrap px-3 py-2 text-right tabular-nums" [class]="bajo(c, k) ? 'font-semibold text-destructive' : ''">{{ pct(c[k]) }}</td>
+                              <td class="whitespace-nowrap px-2 py-2.5 text-right tabular-nums" [class]="bajo(c, k) ? 'font-semibold text-destructive' : ''">{{ pct(c[k]) }}</td>
                             }
-                            <td class="min-w-[18rem] px-3 py-2 text-xs text-muted-foreground">{{ c.motivo }}</td>
+                            <td class="min-w-[12rem] break-words px-3 py-2.5 text-xs text-muted-foreground">{{ c.motivo }}</td>
                           </tr>
                         }
                       </tbody>
@@ -238,8 +241,8 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
                     <footer class="flex items-center justify-between border-t border-border/60 px-4 py-2 text-xs text-muted-foreground">
                       <span>Página {{ pagina() + 1 }} de {{ totalPaginas() }}</span>
                       <span class="flex gap-1.5">
-                        <button type="button" class="alma-btn alma-btn-ghost h-8 rounded-lg text-xs" [disabled]="pagina() === 0" (click)="pagina.set(pagina() - 1)">Anterior</button>
-                        <button type="button" class="alma-btn alma-btn-ghost h-8 rounded-lg text-xs" [disabled]="pagina() + 1 >= totalPaginas()" (click)="pagina.set(pagina() + 1)">Siguiente</button>
+                        <button type="button" class="alma-btn alma-btn-ghost h-8 w-auto rounded-lg px-3 text-xs" [disabled]="pagina() === 0" (click)="pagina.set(pagina() - 1)">Anterior</button>
+                        <button type="button" class="alma-btn alma-btn-ghost h-8 w-auto rounded-lg px-3 text-xs" [disabled]="pagina() + 1 >= totalPaginas()" (click)="pagina.set(pagina() + 1)">Siguiente</button>
                       </span>
                     </footer>
                   }
