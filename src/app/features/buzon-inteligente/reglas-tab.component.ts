@@ -836,7 +836,12 @@ export class ReglasTabComponent implements OnInit {
     try {
       await this.api.actualizarProceso(p.id, { ...p, activo: !p.activo });
       await this.recargar();
-      this.toast.show(`${p.clave} ${p.activo ? 'desactivado' : 'activado'} en el borrador`);
+      this.toast.show(
+        `${p.clave} ${p.activo ? 'desactivado' : 'activado'} en el borrador`,
+        p.activo
+          ? 'Publica la nueva versión para que el buzón deje de usar este proceso y sus etiquetas.'
+          : 'Publica la nueva versión para que el buzón vuelva a usarlo.',
+      );
     } catch (e) {
       this.toast.error('No se pudo cambiar el proceso', e instanceof Error ? e.message : String(e));
     }
