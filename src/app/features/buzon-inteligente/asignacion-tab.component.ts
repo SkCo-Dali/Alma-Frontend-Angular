@@ -13,7 +13,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Base, Buzon, BuzonApi, Categoria, DestinoGrupo, Grupo, PasoTraza, Persona, Proceso, SinActivosModo } from './buzon.api';
-import { aGrupoIn } from './buzon-asignacion';
+import { aGrupoIn, destinoEnvioTxt } from './buzon-asignacion';
 import { EstadoGrupos, activosEn, borradorDe, etiquetasDe, sincronizarGrupos, sinActivosTxt } from './asignacion-ui';
 import { CarpetaPlana, CarpetaSelectComponent, aplanarCarpetas } from './carpeta-select.component';
 import { EquipoTabComponent } from './equipo-tab.component';
@@ -24,11 +24,11 @@ import { TrazaAsignacionComponent } from './traza-asignacion.component';
 
 type Sub = 'grupos' | 'equipo' | 'reglas' | 'probar';
 
-const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar' };
-const DESTINO_BADGE: Record<DestinoGrupo, string> = { personas: 'b-emerald', carpeta: 'b-sky', categorizar: 'b-slate' };
+const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar', reenviar: 'Reenviar', responder: 'Responder al remitente' };
+const DESTINO_BADGE: Record<DestinoGrupo, string> = { personas: 'b-emerald', carpeta: 'b-sky', categorizar: 'b-slate', reenviar: 'b-violet', responder: 'b-amber' };
 
 /** Cambios de un grupo que aún no se pueden guardar (p. ej. «a carpeta» sin carpeta). */
-type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id'>>;
+type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id'>>;
 
 @Component({
   selector: 'alma-asignacion-tab',
@@ -84,9 +84,19 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
                       <option value="personas" [selected]="g.destino === 'personas'">Asignar a personas</option>
                       <option value="carpeta" [selected]="g.destino === 'carpeta'">Enviar a una carpeta</option>
                       <option value="categorizar" [selected]="g.destino === 'categorizar'">Solo categorizar</option>
+                      <option value="reenviar" [selected]="g.destino === 'reenviar'">Reenviar a destinatarios</option>
+                      <option value="responder" [selected]="g.destino === 'responder'">Responder al remitente</option>
                     </select>
                   </div>
-                  @if (g.destino === 'carpeta') {
+                  @if (g.destino === 'reenviar') {
+                    <div class="fld">
+                      <label class="label" [attr.for]="'gdst-' + g.id">Reenviar a (separa con coma)</label>
+                      <input class="input sm" [id]="'gdst-' + g.id" [disabled]="!puede() || guardando() === g.id" [value]="(g.destinatarios ?? []).join(', ')"
+                        placeholder="correo@skandia.com.co" (change)="cambiar(g0, { destinatarios: correos($any($event.target).value) })" />
+                    </div>
+                  } @else if (g.destino === 'responder') {
+                    <div class="fld"><span class="label">Resultado</span><p class="sm">Responde solo al remitente, en el mismo hilo, y se queda en la carpeta vigilada</p></div>
+                  } @else if (g.destino === 'carpeta') {
                     <div class="fld">
                       <span class="label">Carpeta del buzón</span>
                       @if (puede()) {
@@ -121,6 +131,18 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'sin_activos_modo' 
                       </div>
                     } @else { <span></span> }
                   </div>
+                }
+                @if (g.destino === 'reenviar' || g.destino === 'responder') {
+                  <div class="fld">
+                    <label class="label" [attr.for]="'gmsg-' + g.id">Mensaje que acompaña el envío (opcional)</label>
+                    <textarea class="input sm" rows="3" [id]="'gmsg-' + g.id" [disabled]="!puede() || guardando() === g.id" [value]="g.mensaje ?? ''"
+                      [placeholder]="g.destino === 'reenviar' ? 'Ej.: Se remite la solicitud, que cumple las validaciones del proceso.' : 'Ej.: Su solicitud no se puede tramitar por el siguiente motivo:'"
+                      (change)="cambiar(g0, { mensaje: $any($event.target).value.trim() || null })"></textarea>
+                    <span class="xxs muted">Se envía desde la cuenta conectada al buzón. Al aprobar en Validar, quien revisa puede agregar su propio mensaje.</span>
+                  </div>
+                }
+                @if (g.destino === 'reenviar' && !(g.destinatarios ?? []).length) {
+                  <p class="note b-amber"><lucide-icon name="mail-x" [size]="13" /> <span>Agrega al menos un correo al que se reenvían estos correos.</span></p>
                 }
                 @if (g.destino === 'carpeta' && !g.carpeta) {
                   <p class="note b-amber"><lucide-icon name="folder-x" [size]="13" /> <span>Elige la carpeta del buzón a la que se envían estos correos.</span></p>
@@ -276,6 +298,8 @@ export class AsignacionTabComponent {
     if (!g) return null;
     if (g.destino === 'carpeta') return [{ estado: 'ok', titulo: `Destino: carpeta «${g.carpeta || '—'}»`, detalle: 'Se etiqueta y se mueve, sin asignar a personas' }];
     if (g.destino === 'categorizar') return [{ estado: 'ok', titulo: 'Destino: solo categorizar', detalle: 'Se etiqueta y se queda en la carpeta vigilada' }];
+    if (g.destino === 'reenviar' || g.destino === 'responder')
+      return [{ estado: 'ok', titulo: destinoEnvioTxt(g), detalle: 'Se envía al ejecutarse (o al aprobarlo en Validar) y se queda en la carpeta vigilada' }];
     if (this.tvHilo()) return [{ estado: 'ok', titulo: 'Continuidad del hilo', detalle: 'Respuesta vinculada a un caso existente → hereda la persona, sin reasignar' }];
     if (!g.etiquetas.length) return [{ estado: 'bad', titulo: 'Sin etiquetas', detalle: 'El grupo no tiene etiquetas: ningún correo llega a él' }];
     return null;
@@ -337,6 +361,11 @@ export class AsignacionTabComponent {
     }
   }
 
+  /** «a@x.co, b@y.co» → lista limpia (el backend valida cada correo). */
+  protected correos(texto: string): string[] {
+    return [...new Set(texto.split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))];
+  }
+
   protected vista(g: Grupo): Grupo {
     return { ...g, ...this.pendientes()[g.id] };
   }
@@ -357,19 +386,28 @@ export class AsignacionTabComponent {
   protected async cambiar(g: Grupo, cambios: Pendiente): Promise<void> {
     const v: Grupo = { ...this.vista(g), ...cambios };
     if (v.destino !== 'carpeta') v.carpeta = null;
+    if (v.destino !== 'reenviar') v.destinatarios = [];
+    if (v.destino !== 'reenviar' && v.destino !== 'responder') v.mensaje = null;
     const sa = v.sin_activos_modo as SinActivosModo;
     const completo =
       (v.destino !== 'carpeta' || !!v.carpeta) &&
+      (v.destino !== 'reenviar' || !!(v.destinatarios ?? []).length) &&
       (v.destino !== 'personas' || sa === 'cola' || (sa === 'carpeta' && !!v.sin_activos_carpeta) || (sa === 'persona' && !!v.sin_activos_persona_id));
     const aviso =
       'destino' in cambios
-        ? `${g.nombre}: ${{ personas: 'se asigna a personas', carpeta: v.carpeta ? `se envía a la carpeta «${v.carpeta}»` : 'elige la carpeta del buzón', categorizar: 'solo se categoriza' }[v.destino]}`
-        : 'carpeta' in cambios
+        ? `${g.nombre}: ${{ personas: 'se asigna a personas', carpeta: v.carpeta ? `se envía a la carpeta «${v.carpeta}»` : 'elige la carpeta del buzón', categorizar: 'solo se categoriza', reenviar: (v.destinatarios ?? []).length ? `se reenvía a ${(v.destinatarios ?? []).join(', ')}` : 'agrega los correos a los que se reenvía', responder: 'se responde al remitente' }[v.destino]}`
+        : 'destinatarios' in cambios
+          ? `${g.nombre}: ${(v.destinatarios ?? []).length ? `se reenvía a ${(v.destinatarios ?? []).join(', ')}` : 'agrega al menos un correo'}`
+          : 'mensaje' in cambios
+            ? `${g.nombre}: mensaje del envío ${v.mensaje ? 'guardado' : 'quitado'}`
+            : 'carpeta' in cambios
           ? `${g.nombre}: ${v.carpeta ? `se envía a la carpeta «${v.carpeta}»` : 'elige una carpeta'}`
           : `${g.nombre}: si no hay nadie activo, ${sinActivosTxt(v, this.equipo())}`;
     const pend: Pendiente = {
       destino: v.destino,
       carpeta: v.carpeta,
+      destinatarios: v.destinatarios ?? [],
+      mensaje: v.mensaje ?? null,
       sin_activos_modo: v.sin_activos_modo,
       sin_activos_carpeta: v.sin_activos_carpeta,
       sin_activos_persona_id: v.sin_activos_persona_id,

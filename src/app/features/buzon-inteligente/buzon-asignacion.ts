@@ -7,12 +7,21 @@
 import type { Base, Comparacion, Grupo, GrupoIn, PasoTraza, Persona, PersonaIn, ResultadoAsignacion } from './buzon.api';
 
 /** Cuerpo del PUT de un grupo (reemplaza también sus búsquedas en bases). */
+/** 067: «Reenviar a a@x, b@y» / «Responder al remitente». */
+export function destinoEnvioTxt(g: Pick<Grupo, 'destino' | 'destinatarios'>): string {
+  return g.destino === 'reenviar'
+    ? `Destino: reenviar a ${(g.destinatarios ?? []).join(', ') || '—'}`
+    : 'Destino: responder al remitente';
+}
+
 export function aGrupoIn(g: Grupo, cambios: Partial<GrupoIn> = {}): GrupoIn {
   return {
     nombre: g.nombre,
     etiquetas: [...g.etiquetas],
     destino: g.destino,
     carpeta: g.carpeta,
+    destinatarios: [...(g.destinatarios ?? [])],
+    mensaje: g.mensaje ?? null,
     sin_activos_modo: g.sin_activos_modo,
     sin_activos_carpeta: g.sin_activos_carpeta,
     sin_activos_persona_id: g.sin_activos_persona_id,
@@ -172,6 +181,10 @@ export function simularAsignacion(
   if (grupo.destino === 'categorizar') {
     paso('ok', 'Destino: solo categorizar', 'Se etiqueta y se queda en la carpeta vigilada');
     return fin('categorizar', null, null, `Grupo ${grupo.nombre} → solo categorizar`);
+  }
+  if (grupo.destino === 'reenviar' || grupo.destino === 'responder') {
+    paso('ok', destinoEnvioTxt(grupo), 'Se envía al ejecutarse (o al aprobarlo en Validar) y se queda en la carpeta vigilada');
+    return fin('categorizar', null, null, `Grupo ${grupo.nombre} → ${grupo.destino === 'reenviar' ? 'reenviar' : 'responder al remitente'}`);
   }
   paso('skip', 'Continuidad del hilo', 'Correo inicial o sin responsable previo: no aplica');
 

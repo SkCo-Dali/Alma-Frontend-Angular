@@ -585,7 +585,8 @@ export interface ResultadoAplicar {
 // ── 2.0: asignación ──────────────────────────────────────────────────────────
 
 export type Comparacion = 'exacta' | 'digitos' | 'doc' | 'pc' | 'aprox';
-export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar';
+/** 067: «reenviar» a direcciones fijas y «responder» al remitente, en el hilo. */
+export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar' | 'reenviar' | 'responder';
 export type SinActivosModo = 'cola' | 'carpeta' | 'persona';
 
 export interface Cruce {
@@ -617,6 +618,10 @@ export interface Grupo {
   etiquetas: string[];
   destino: DestinoGrupo;
   carpeta: string | null;
+  /** 067: a quién se reenvía (destino «reenviar»). */
+  destinatarios?: string[];
+  /** 067: texto que acompaña el reenvío o la respuesta. */
+  mensaje?: string | null;
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta: string | null;
   sin_activos_persona_id: string | null;
@@ -630,6 +635,8 @@ export interface GrupoIn {
   etiquetas: string[];
   destino: DestinoGrupo;
   carpeta?: string | null;
+  destinatarios?: string[];
+  mensaje?: string | null;
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta?: string | null;
   sin_activos_persona_id?: string | null;
@@ -1261,12 +1268,13 @@ export class BuzonApi {
     return resp.arrayBuffer();
   }
 
-  decidir(id: string, categoriaId: string, ejecutar: boolean, comentario?: string): Promise<Correo> {
+  /** `mensaje` (067): lo que el analista agrega al reenvío o la respuesta del grupo de la etiqueta. */
+  decidir(id: string, categoriaId: string, ejecutar: boolean, comentario?: string, mensaje?: string): Promise<Correo> {
     return this.conDemo(
       () =>
         this.api.fetch<Correo>(`${BASE}/correos/${id}/decidir`, {
           method: 'POST',
-          body: JSON.stringify({ categoria_id: categoriaId, ejecutar, comentario }),
+          body: JSON.stringify({ categoria_id: categoriaId, ejecutar, comentario, mensaje: mensaje || undefined }),
         }),
       () => this.demo.decidir(id, categoriaId, ejecutar, this.auth.user().correo),
     );

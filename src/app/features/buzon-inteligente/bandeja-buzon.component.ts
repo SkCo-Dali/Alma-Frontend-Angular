@@ -27,6 +27,7 @@ import {
   Correo,
   CorreoDetalle,
   EstadoCorreo,
+  Grupo,
   HiloCorreo,
   PERM_VER_BUZON,
   Persona,
@@ -215,7 +216,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                           </optgroup>
                         }
                       </select>
-                      <button type="button" class="btn primary sm" [disabled]="accionando() || !categoriaDecision" (click)="aprobar()"><lucide-icon name="check" [size]="13" /> Aprobar y ejecutar</button>
+                      <button type="button" class="btn primary sm" [disabled]="accionando() || !categoriaDecision || !!envio()" (click)="aprobar()"><lucide-icon name="check" [size]="13" /> Aprobar y ejecutar</button>
                       <button type="button" class="btn outline sm" [disabled]="accionando()" (click)="reclasificar()"><lucide-icon name="sparkles" [size]="13" /> Reclasificar</button>
                     }
                     @if (c.estado !== 'ejecutado') {
@@ -224,6 +225,20 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                       <button type="button" class="btn sm" style="margin-left:auto;color:var(--muted-foreground)" (click)="ajuste.set(null)">Cancelar</button>
                     }
                   </div>
+                  @if (envio(); as e) {
+                    <div class="sunk r-xl stack" style="padding:12px;gap:8px" role="group" aria-label="Envío al aprobar">
+                      <p class="sm b"><lucide-icon [name]="e.grupo.destino === 'reenviar' ? 'forward' : 'reply'" [size]="13" />
+                        {{ e.grupo.destino === 'reenviar' ? 'Se reenviará a ' + (e.grupo.destinatarios ?? []).join(', ') : 'Se responderá a ' + c.remitente }}</p>
+                      <p class="xxs muted">Grupo {{ e.grupo.nombre }} · sale desde la cuenta conectada al buzón y el correo se queda en la carpeta vigilada.</p>
+                      @if (e.grupo.mensaje) { <p class="xs" style="white-space:pre-line;border-left:3px solid var(--border);padding-left:8px">{{ e.grupo.mensaje }}</p> }
+                      <label class="label" for="msg-envio">Tu mensaje (opcional){{ e.grupo.destino === 'responder' ? ': por ejemplo, el motivo por el que no se acepta' : '' }}</label>
+                      <textarea class="input sm" id="msg-envio" rows="3" maxlength="2000" [(ngModel)]="mensajeEnvio"></textarea>
+                      <div class="row" style="justify-content:flex-end">
+                        <button type="button" class="btn outline sm" [disabled]="accionando()" (click)="envio.set(null)">Cancelar</button>
+                        <button type="button" class="btn primary sm" [disabled]="accionando()" (click)="confirmarEnvio()"><lucide-icon name="send" [size]="13" /> Enviar y ejecutar</button>
+                      </div>
+                    </div>
+                  }
                 } @else if (c.estado === 'ejecutado' && c.origen !== 'regla') {
                   <div class="row">
                     <button type="button" class="btn outline sm" (click)="iniciarAjuste(c)"><lucide-icon name="sliders-horizontal" [size]="13" /> Ajuste manual</button>
@@ -647,6 +662,11 @@ export class BandejaBuzonComponent {
   protected readonly accionando = signal(false);
   protected readonly ajuste = signal<string | null>(null);
   protected categoriaDecision = '';
+  /** 067: grupos por buzón (para saber si la etiqueta elegida reenvía o responde). */
+  private readonly gruposDe = signal<Record<string, Grupo[]>>({});
+  /** 067: envío que se confirma antes de aprobar (grupo «reenviar» o «responder»). */
+  protected readonly envio = signal<{ grupo: Grupo } | null>(null);
+  protected mensajeEnvio = '';
 
   // Datos: vista, edición y efecto de la corrección
   protected readonly verJson = signal(false);
@@ -812,6 +832,7 @@ export class BandejaBuzonComponent {
       if (this.seleccionado()?.id !== c.id) return;
       this.detalle.set(d);
       this.categoriaDecision = d.categoria_id ?? this.etiquetasPorProceso(d.buzon_id)[0]?.etiquetas[0]?.id ?? '';
+      this.envio.set(null);
       void this.cargarArchivos(d.id);
       if (this.puedeEditar(d.buzon_id)) void this.api.listarEquipo(d.buzon_id).then((l) => this.equipo.set(l)).catch(() => this.equipo.set([]));
     } catch (e) {
@@ -837,11 +858,41 @@ export class BandejaBuzonComponent {
   }
 
   // ── Decisiones ──
+  /** Grupo de la etiqueta elegida si reenvía o responde (067); null si no envía nada. */
+  private async grupoConEnvio(buzonId: string, categoriaId: string): Promise<Grupo | null> {
+    const clave = this.categorias().find((x) => x.id === categoriaId)?.clave;
+    let grupos = this.gruposDe()[buzonId];
+    if (!grupos) {
+      grupos = await this.api.listarGrupos(buzonId).catch(() => [] as Grupo[]);
+      this.gruposDe.update((m) => ({ ...m, [buzonId]: grupos! }));
+    }
+    const g = grupos.find((x) => x.activo && !!clave && x.etiquetas.includes(clave));
+    return g && (g.destino === 'reenviar' || g.destino === 'responder') ? g : null;
+  }
+
   protected async aprobar(): Promise<void> {
     const c = this.detalle();
     if (!c || !this.categoriaDecision) return;
+    const grupo = await this.grupoConEnvio(c.buzon_id, this.categoriaDecision);
+    if (grupo) {
+      // Antes de ejecutar, se muestra a quién sale y se deja agregar un mensaje.
+      this.mensajeEnvio = '';
+      this.envio.set({ grupo });
+      return;
+    }
+    await this.decidirYEjecutar(c);
+  }
+
+  protected async confirmarEnvio(): Promise<void> {
+    const c = this.detalle();
+    if (!c || !this.envio()) return;
+    await this.decidirYEjecutar(c, this.mensajeEnvio.trim() || undefined);
+  }
+
+  private async decidirYEjecutar(c: CorreoDetalle, mensaje?: string): Promise<void> {
     await this.accion(async () => {
-      const r = await this.api.decidir(c.id, this.categoriaDecision, true);
+      const r = await this.api.decidir(c.id, this.categoriaDecision, true, undefined, mensaje);
+      this.envio.set(null);
       if (c.estado === 'revision') this.porValidar.update((n) => Math.max(0, n - 1));
       this.ajuste.set(null);
       await this.refrescar(r);
@@ -1163,7 +1214,10 @@ export class BandejaBuzonComponent {
   protected etiquetasPorProceso(buzonId: string): { proceso: string; etiquetas: Categoria[] }[] {
     const cats = this.categorias().filter((c) => c.buzon_id === buzonId && c.activa);
     const procs = this.procesos()[buzonId] ?? [];
-    const grupos = procs.map((p) => ({ proceso: p.nombre || p.clave, etiquetas: cats.filter((c) => c.proceso_id === p.id) })).filter((g) => g.etiquetas.length);
+    const grupos = procs
+      .filter((p) => p.activo !== false)
+      .map((p) => ({ proceso: p.nombre || p.clave, etiquetas: cats.filter((c) => c.proceso_id === p.id) }))
+      .filter((g) => g.etiquetas.length);
     const sueltas = cats.filter((c) => !procs.some((p) => p.id === c.proceso_id));
     return sueltas.length ? [...grupos, { proceso: grupos.length ? 'Otras etiquetas' : 'Etiquetas', etiquetas: sueltas }] : grupos;
   }
