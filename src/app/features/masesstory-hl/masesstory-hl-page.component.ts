@@ -57,36 +57,37 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
           <div class="flex justify-center py-10"><alma-loader [size]="56" label="Recuperando tu validación…" /></div>
         } @else {
           <!-- Cargar -->
-          <section class="glass rounded-3xl p-5 shadow-[var(--shadow-sm)]">
-            <label
-              class="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors"
-              [class]="arrastrando() ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60'"
-              (dragover)="$event.preventDefault(); arrastrando.set(true)"
-              (dragleave)="arrastrando.set(false)"
-              (drop)="soltar($event)"
-            >
-              <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <lucide-icon [name]="procesando() ? 'loader-2' : 'upload-cloud'" [size]="22" [class.animate-spin]="procesando()" />
-              </span>
-              <span class="text-sm font-semibold text-foreground">Arrastra los Excel de Historia Laboral aquí o haz clic para elegirlos</span>
-              <span class="text-xs text-muted-foreground">
-                Archivos .xlsx con la hoja «Resumen» (y «Detalle mensajes»). Puedes subir hasta ~480 a la vez; se envían por tandas.
-              </span>
-              <input type="file" class="sr-only" multiple accept=".xlsx,.xlsm" [disabled]="procesando()" (change)="elegir($event)" />
-            </label>
-            <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <label class="inline-flex cursor-pointer items-center gap-1 font-medium text-primary hover:underline">
-                <lucide-icon name="folder-input" [size]="13" /> Elegir una carpeta completa
+          <section class="glass space-y-3 rounded-3xl p-3 shadow-[var(--shadow-sm)] sm:p-4">
+            <!-- Una sola fila: el área de arrastre y la carpeta (antes ocupaba ~220 px de alto). -->
+            <div class="flex flex-wrap items-stretch gap-2">
+              <label
+                class="flex min-w-[16rem] flex-1 cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-2.5 transition-colors"
+                [class]="arrastrando() ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60'"
+                (dragover)="$event.preventDefault(); arrastrando.set(true)"
+                (dragleave)="arrastrando.set(false)"
+                (drop)="soltar($event)"
+              >
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <lucide-icon [name]="procesando() ? 'loader-2' : 'upload-cloud'" [size]="18" [class.animate-spin]="procesando()" />
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-foreground">Arrastra los Excel de HL aquí o haz clic para elegirlos</span>
+                  <span class="block text-xs text-muted-foreground">.xlsx con la hoja «Resumen» · hasta ~480 por vez, se envían por tandas</span>
+                </span>
+                <input type="file" class="sr-only" multiple accept=".xlsx,.xlsm" [disabled]="procesando()" (change)="elegir($event)" />
+              </label>
+              <label class="alma-btn alma-btn-outline h-auto min-h-10 w-full shrink-0 cursor-pointer self-stretch rounded-2xl px-4 text-sm font-medium sm:w-auto" [class.opacity-50]="procesando()" [class.pointer-events-none]="procesando()">
+                <lucide-icon name="folder-input" [size]="16" /> Carpeta completa
                 <input type="file" class="sr-only" webkitdirectory [disabled]="procesando()" (change)="elegir($event)" />
               </label>
-              <span class="inline-flex items-center gap-1">
-                <lucide-icon name="info" [size]="13" />
-                Los archivos no se guardan en la base de datos: el lote queda en el servidor solo para generar las descargas y se borra al terminar o a las 3 horas.
-              </span>
             </div>
+            <p class="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+              <lucide-icon name="info" [size]="12" class="mt-px shrink-0" />
+              No se guardan en la base de datos: el lote queda en el servidor solo para generar las descargas y se borra al terminar o a las 3 horas.
+            </p>
 
             @if (cola().length) {
-              <div class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--surface-sunken)] px-4 py-3">
+              <div class="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--surface-sunken)] px-4 py-2.5">
                 <lucide-icon name="file-spreadsheet" [size]="18" class="text-primary" />
                 <p class="text-sm text-foreground">
                   <span class="font-semibold tabular-nums">{{ cola().length | number }}</span> archivo(s) listo(s) ·
@@ -106,7 +107,7 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
             }
 
             @if (procesando()) {
-              <div class="mt-4 space-y-1.5" role="status" aria-live="polite">
+              <div class="space-y-1.5" role="status" aria-live="polite">
                 <div class="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Procesando… tanda {{ tandaActual() }} de {{ tandasTotal() }}</span>
                   <span class="tabular-nums">{{ progreso().hechos | number }} / {{ progreso().total | number }} archivos</span>
@@ -117,7 +118,7 @@ const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
               </div>
             }
             @if (errorCarga(); as e) {
-              <p class="mt-3 flex items-start gap-1.5 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p class="flex items-start gap-1.5 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 <lucide-icon name="alert-triangle" [size]="16" class="mt-0.5 shrink-0" /> {{ e }}
               </p>
             }
