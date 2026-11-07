@@ -1,12 +1,15 @@
 // Consola de Accesos v2: pestañas por permiso — Aplicaciones (solo plataforma),
-// Usuarios, Roles, Auditoría y Métricas.
+// Usuarios, Roles, Auditoría y Métricas. En Aplicaciones, clic en una App abre un
+// panel con quién tiene acceso y con qué rol.
 
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { APP_CATALOG } from '../../core/constants/app-catalog';
-import { AccesosApi, RolCatalogo } from '../../core/services/accesos.api';
+import { AccesosApi, RolCatalogo, UsuarioDirectorio } from '../../core/services/accesos.api';
+import { Application } from '../../core/models/platform.models';
+import { AppAccesosPanelComponent } from '../../features/accesos/app-accesos-panel.component';
 import { AdminTableComponent } from '../../shared/components/admin-table.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { AuditoriaAccesosComponent } from '../../features/accesos/auditoria-accesos.component';
@@ -25,6 +28,7 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
     UsuariosAccesosComponent,
     AuditoriaAccesosComponent,
     MetricasUsoComponent,
+    AppAccesosPanelComponent,
   ],
   template: `
     <a
@@ -63,11 +67,27 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
     @switch (activeTab()) {
       @case ('apps') {
         <!-- Catálogo de Apps registradas en la plataforma (registry del frontend) -->
+        <p class="text-on-wallpaper mb-2 text-xs text-foreground/75">
+          Haz clic en una aplicación para ver quién tiene acceso y con qué rol.
+        </p>
         <alma-admin-table
           [headers]="['Aplicación', 'Categoría', 'Integración', 'Permiso requerido', 'Estado']"
           [rows]="catalogo"
           [rowTpl]="filaApp"
+          [clicable]="true"
+          (filaClic)="abrirApp($any($event))"
         />
+        @if (appSeleccionada(); as app) {
+          <alma-app-accesos-panel
+            [app]="app"
+            [roles]="roles()"
+            [usuarios]="directorio()"
+            [cargando]="directorioCargando() || rolesCargando()"
+            [error]="directorioError() ?? rolesError()"
+            (cerrar)="appSeleccionada.set(null)"
+            (gestionar)="appSeleccionada.set(null); setTab('usuarios')"
+          />
+        }
         <ng-template #filaApp let-a>
           <td class="px-4 py-3">
             <div class="flex items-center gap-2.5">
@@ -79,6 +99,7 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
                 <lucide-icon [name]="a.icono" [size]="16" />
               </div>
               <span class="font-medium text-foreground">{{ a.nombre }}</span>
+              <lucide-icon name="chevron-right" [size]="14" class="text-muted-foreground/60" />
             </div>
           </td>
           <td class="px-4 py-3 text-sm text-muted-foreground">{{ a.categoria }}</td>
@@ -154,6 +175,13 @@ export class AdminComponent {
   protected readonly rolesCargando = signal(true);
   protected readonly rolesError = signal<string | null>(null);
 
+  /** App abierta en el panel de accesos (pestaña Aplicaciones). */
+  protected readonly appSeleccionada = signal<Application | null>(null);
+  protected readonly directorio = signal<UsuarioDirectorio[]>([]);
+  protected readonly directorioCargando = signal(false);
+  protected readonly directorioError = signal<string | null>(null);
+  private directorioPedido = false;
+
   // Admin de App = permiso comodín app.<slug>.*; admin de PLATAFORMA = platform.*
   private readonly esAdminDeApp = computed(() =>
     this.auth.user().permissions.some((p) => p.startsWith('app.') && p.endsWith('.*')),
@@ -197,6 +225,23 @@ export class AdminComponent {
       .then((r) => this.roles.set(r))
       .catch((e) => this.rolesError.set(e instanceof Error ? e.message : String(e)))
       .finally(() => this.rolesCargando.set(false));
+  }
+
+  /** Abre el panel; el directorio se pide la primera vez (se reutiliza luego). */
+  protected abrirApp(app: Application): void {
+    this.appSeleccionada.set(app);
+    if (this.directorioPedido) return;
+    this.directorioPedido = true;
+    this.directorioCargando.set(true);
+    this.directorioError.set(null);
+    this.accesos
+      .listarUsuarios()
+      .then((u) => this.directorio.set(u))
+      .catch((e) => {
+        this.directorioPedido = false;
+        this.directorioError.set(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => this.directorioCargando.set(false));
   }
 
   protected setTab(t: Tab): void {
