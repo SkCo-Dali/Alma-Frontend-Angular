@@ -1,9 +1,9 @@
 // Tabla estándar de la consola /admin: área de scroll con altura acotada + header
 // sticky y paginado en cliente estilo Dali. Las filas se definen con un <ng-template>
-// del consumidor (let-row).
+// del consumidor (let-row). Con [clicable] cada fila se puede abrir (filaClic).
 
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, TemplateRef, computed, input, signal } from '@angular/core';
+import { Component, TemplateRef, computed, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 
 const TAMANOS = [10, 25, 50] as const;
@@ -30,7 +30,13 @@ const TAMANOS = [10, 25, 50] as const;
           </thead>
           <tbody class="divide-y divide-border">
             @for (row of visibles(); track $index) {
-              <tr class="hover:bg-[var(--surface-sunken)]">
+              <tr
+                class="hover:bg-[var(--surface-sunken)]"
+                [class.cursor-pointer]="clicable()"
+                [attr.tabindex]="clicable() ? 0 : null"
+                (click)="clicable() && filaClic.emit(row)"
+                (keydown.enter)="clicable() && filaClic.emit(row)"
+              >
                 <ng-container
                   [ngTemplateOutlet]="rowTpl()"
                   [ngTemplateOutletContext]="{ $implicit: row }"
@@ -108,6 +114,9 @@ export class AdminTableComponent<T = unknown> {
   readonly rowTpl = input.required<TemplateRef<{ $implicit: T }>>();
   readonly emptyMessage = input('Sin registros.');
   readonly maxHeight = input('calc(100dvh - 13rem)');
+  /** Filas clicables (cursor y Enter); el consumidor escucha filaClic. */
+  readonly clicable = input(false);
+  readonly filaClic = output<T>();
 
   protected readonly tamanos = TAMANOS;
   protected readonly tamano = signal<number>(25);
