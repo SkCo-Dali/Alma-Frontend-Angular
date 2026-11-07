@@ -6,12 +6,23 @@
 // Fuera del Inicio y del Agente, la isla también da acceso al Agente Nova: en
 // reposo muestra el orbe con «Pregúntale a Nova», y con un proceso o un aviso el
 // orbe queda como burbuja a la izquierda (solo si el usuario tiene el Agente).
+// Al tocarlo la isla se agranda en un chat rápido con Nova (IslaChatService) y
+// ofrece «Abrir en el Agente» para seguir la misma conversación en la App.
 //
 // El tamaño de cada estado es fijo (ancho/alto/radio) para poder animar el
 // cambio de forma con CSS; el contenido entra con un fundido corto.
 
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
-import { Component, ElementRef, HostListener, computed, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
@@ -19,6 +30,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ActividadIsla, IslaService, TonoAviso } from '../../core/services/isla.service';
 import { ApplicationsService } from '../../core/services/applications.service';
 import { AlmaSphereComponent } from './alma-sphere.component';
+import { IslaChatService } from '../../features/agente-alma/isla-chat.service';
 
 const ICONO_AVISO: Record<TonoAviso, string> = {
   info: 'info',
@@ -34,7 +46,7 @@ const MAX_FILAS = 3;
 
 @Component({
   selector: 'alma-isla',
-  imports: [DecimalPipe, NgTemplateOutlet, LucideAngularModule, AlmaSphereComponent],
+  imports: [DecimalPipe, NgTemplateOutlet, FormsModule, LucideAngularModule, AlmaSphereComponent],
   host: {
     // Escritorio: centrada en el header. Móvil: debajo del header y solo si hay algo.
     class:
@@ -75,21 +87,21 @@ const MAX_FILAS = 3;
       <button
         type="button"
         class="isla isla-burbuja flex h-10 w-10 items-center justify-center rounded-full p-1.5"
-        aria-label="Abrir el Agente Nova"
-        (click)="abrirAgente()"
+        aria-label="Pregúntale a Nova"
+        (click)="chatSvc.abrir()"
       >
         <alma-sphere />
       </button>
     }
 
     <div
-      role="button"
-      tabindex="0"
+      [attr.role]="isla.modo() === 'chat' ? 'dialog' : 'button'"
+      [attr.tabindex]="isla.modo() === 'chat' ? null : 0"
       class="isla cursor-pointer text-left outline-none focus-visible:ring-2 focus-visible:ring-primary"
       [style.width]="'min(' + forma().w + 'px, 92vw)'"
       [style.height.px]="forma().h"
       [style.border-radius.px]="forma().r"
-      [attr.aria-expanded]="isla.modo() === 'expandida'"
+      [attr.aria-expanded]="isla.modo() === 'chat' ? null : isla.modo() === 'expandida'"
       [attr.aria-label]="etiqueta()"
       (click)="clic()"
       (keydown.enter)="clic()"
@@ -137,6 +149,84 @@ const MAX_FILAS = 3;
               </span>
             </span>
           }
+        }
+        @case ('chat') {
+          <span
+            class="isla-contenido flex h-full cursor-default flex-col"
+            (click)="$event.stopPropagation()"
+            (keydown)="$event.stopPropagation()"
+          >
+            <span class="flex items-center gap-2 px-3.5 pb-2 pt-3">
+              <span class="h-7 w-7 shrink-0"><alma-sphere /></span>
+              <span class="flex-1 text-[14px] font-semibold">Nova</span>
+              @if (chatSvc.mensajes().length > 0) {
+                <button
+                  type="button"
+                  class="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white disabled:opacity-40"
+                  aria-label="Nueva conversación"
+                  title="Nueva conversación"
+                  [disabled]="chatSvc.respondiendo()"
+                  (click)="chatSvc.nueva()"
+                >
+                  <lucide-icon name="message-square-plus" [size]="15" />
+                </button>
+              }
+              <button
+                type="button"
+                class="inline-flex h-7 items-center gap-1 rounded-full bg-white/10 px-3 text-[12px] font-medium hover:bg-white/20 disabled:opacity-40"
+                [disabled]="chatSvc.respondiendo()"
+                (click)="abrirEnAgente()"
+              >
+                Abrir en el Agente <lucide-icon name="arrow-up-right" [size]="12" />
+              </button>
+              <button
+                type="button"
+                class="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white"
+                aria-label="Cerrar"
+                (click)="cerrarTodo()"
+              >
+                <lucide-icon name="x" [size]="15" />
+              </button>
+            </span>
+
+            @if (chatSvc.mensajes().length === 0) {
+              <span class="px-4 pb-2 text-[13px] text-white/70">¡Hola! Soy Nova. ¿Qué movemos hoy?</span>
+            } @else {
+              <span #chatScroll class="flex flex-1 flex-col gap-2 overflow-y-auto px-3.5 py-1" aria-live="polite">
+                @for (m of chatSvc.mensajes(); track m.key) {
+                  @if (m.rol === 'user') {
+                    <span class="max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/25 px-3 py-2 text-[13px]">{{ m.contenido }}</span>
+                  } @else if (m.contenido) {
+                    <span class="max-w-[92%] self-start whitespace-pre-wrap rounded-2xl rounded-bl-md bg-white/[0.08] px-3 py-2 text-[13px] leading-relaxed">{{ m.contenido }}</span>
+                  }
+                }
+                @if (chatSvc.pensando()) {
+                  <span class="self-start px-1 text-[12px] text-white/60">Nova está pensando…</span>
+                }
+              </span>
+            }
+
+            <form class="flex items-center gap-2 px-3 pb-3 pt-2" (submit)="$event.preventDefault(); enviar()">
+              <input
+                #chatInput
+                type="text"
+                name="pregunta"
+                [(ngModel)]="pregunta"
+                autocomplete="off"
+                placeholder="Cuéntame qué necesitas…"
+                aria-label="Pregunta para Nova"
+                class="h-10 min-w-0 flex-1 rounded-full bg-white/10 px-4 text-[13px] text-white outline-none placeholder:text-white/45 focus:bg-white/15"
+              />
+              <button
+                type="submit"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                aria-label="Enviar a Nova"
+                [disabled]="!pregunta.trim() || chatSvc.respondiendo()"
+              >
+                <lucide-icon name="send" [size]="16" />
+              </button>
+            </form>
+          </span>
         }
         @case ('expandida') {
           <span class="isla-contenido flex flex-col gap-1 p-3" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
@@ -220,6 +310,7 @@ const MAX_FILAS = 3;
 })
 export class IslaComponent {
   protected readonly isla = inject(IslaService);
+  protected readonly chatSvc = inject(IslaChatService);
   private readonly router = inject(Router);
   private readonly apps = inject(ApplicationsService);
   private readonly el = inject(ElementRef<HTMLElement>);
@@ -240,6 +331,24 @@ export class IslaComponent {
     return this.apps.applications().some((a) => a.id === ID_AGENTE);
   });
 
+  protected pregunta = '';
+  private readonly chatScroll = viewChild<ElementRef<HTMLElement>>('chatScroll');
+  private readonly chatInput = viewChild<ElementRef<HTMLInputElement>>('chatInput');
+
+  constructor() {
+    // Al abrir el chat, foco en la pregunta.
+    effect(() => {
+      const input = this.chatInput();
+      if (this.isla.modo() === 'chat' && input) setTimeout(() => input.nativeElement.focus(), 320);
+    });
+    // Siempre al último mensaje mientras llega la respuesta.
+    effect(() => {
+      this.chatSvc.mensajes();
+      const el = this.chatScroll()?.nativeElement;
+      if (el) requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
+    });
+  }
+
   /** Con la isla ocupada, el orbe pasa a una burbuja a la izquierda. */
   protected readonly burbujaAgente = computed(
     () => this.orbeEnIsla() && ['actividad', 'aviso'].includes(this.isla.modo()),
@@ -259,6 +368,8 @@ export class IslaComponent {
         return { w: 380, h: this.isla.aviso()?.detalle ? 68 : 52, r: 26 };
       case 'actividad':
         return { w: 320, h: 40, r: 20 };
+      case 'chat':
+        return { w: 460, h: this.chatSvc.mensajes().length ? 440 : 150, r: 28 };
       case 'expandida': {
         const filas = this.filas().length;
         return { w: 420, h: 24 + filas * 96 + (this.restantes() ? 22 : 0), r: 30 };
@@ -272,7 +383,8 @@ export class IslaComponent {
     const a = this.isla.aviso();
     if (a) return `${a.titulo}. Clic para cerrar`;
     const n = this.isla.actividades().length;
-    if (n === 0) return this.orbeEnIsla() ? 'Pregúntale a Nova: abrir el Agente' : 'Tu hub de operaciones';
+    if (this.isla.chat()) return 'Chat con Nova';
+    if (n === 0) return this.orbeEnIsla() ? 'Pregúntale a Nova' : 'Tu hub de operaciones';
     return `${n} ${n === 1 ? 'proceso' : 'procesos'} en curso. Clic para ver el detalle`;
   });
 
@@ -289,13 +401,30 @@ export class IslaComponent {
   }
 
   protected clic(): void {
-    if (this.isla.modo() === 'reposo' && this.orbeEnIsla()) this.abrirAgente();
+    const modo = this.isla.modo();
+    if (modo === 'chat') return;
+    if (modo === 'reposo' && this.orbeEnIsla()) this.chatSvc.abrir();
     else this.isla.alternar();
   }
 
-  protected abrirAgente(): void {
+  protected enviar(): void {
+    const texto = this.pregunta;
+    this.pregunta = '';
+    void this.chatSvc.enviar(texto);
+  }
+
+  /** Sigue la misma conversación en la App del Agente. */
+  protected abrirEnAgente(): void {
+    const id = this.chatSvc.conversacionId();
     this.isla.cerrar();
-    void this.router.navigateByUrl(RUTA_AGENTE);
+    this.chatSvc.nueva();
+    void this.router.navigate([RUTA_AGENTE], { queryParams: id ? { conversacion: id } : {} });
+  }
+
+  /** Cierra la isla; si Nova sigue respondiendo, queda como actividad. */
+  protected cerrarTodo(): void {
+    if (this.isla.chat()) this.chatSvc.alCerrar();
+    this.isla.cerrar();
   }
 
   protected ver(act: ActividadIsla): void {
@@ -305,11 +434,11 @@ export class IslaComponent {
 
   @HostListener('document:click', ['$event'])
   protected clicFuera(ev: MouseEvent): void {
-    if (!this.el.nativeElement.contains(ev.target as Node)) this.isla.cerrar();
+    if (!this.el.nativeElement.contains(ev.target as Node)) this.cerrarTodo();
   }
 
   @HostListener('document:keydown.escape')
   protected escape(): void {
-    this.isla.cerrar();
+    this.cerrarTodo();
   }
 }
