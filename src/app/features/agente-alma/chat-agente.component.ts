@@ -20,6 +20,7 @@ import {
   SUGERENCIAS,
 } from './agente-alma.api';
 import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
+import { ActivatedRoute } from '@angular/router';
 
 interface Mensaje {
   rol: 'user' | 'assistant';
@@ -183,6 +184,7 @@ function nuevoMensaje(rol: 'user' | 'assistant', contenido: string): Mensaje {
 })
 export class ChatAgenteComponent implements AfterViewChecked {
   private readonly api = inject(AgenteAlmaApi);
+  private readonly route = inject(ActivatedRoute);
 
   @ViewChild('scroll') private scrollEl?: ElementRef<HTMLElement>;
 
@@ -212,6 +214,10 @@ export class ChatAgenteComponent implements AfterViewChecked {
 
   constructor() {
     void this.cargarConversaciones();
+
+    // Conversación iniciada en la isla («Abrir en el Agente»): ?conversacion=<id>.
+    const desdeIsla = this.route.snapshot.queryParamMap.get('conversacion');
+    if (desdeIsla) setTimeout(() => void this.abrirConversacion(desdeIsla));
 
     // Mensaje escrito desde el Inicio ("Pregúntale o pídele algo a Alma…"):
     // se recoge una sola vez y se envía apenas monta el chat.

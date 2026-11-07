@@ -6,7 +6,11 @@
 // - Avisos: mensajes breves (los antiguos toasts). Se muestran de a uno, en cola,
 //   y la isla vuelve a su estado anterior al cerrarse cada uno.
 //
-// Las Apps solo reportan; la isla decide qué mostrar: aviso > actividades > reposo.
+// - Chat: conversación rápida con el Agente Nova dentro de la isla. Mientras
+//   está abierto, los avisos esperan en cola para no interrumpir.
+//
+// Las Apps solo reportan; la isla decide qué mostrar:
+// chat > aviso > actividades > reposo.
 
 import { Injectable, computed, signal } from '@angular/core';
 
@@ -46,9 +50,11 @@ export class IslaService {
   readonly actividades = signal<ActividadIsla[]>([]);
   readonly aviso = signal<AvisoIsla | null>(null);
   readonly expandida = signal(false);
+  readonly chat = signal(false);
 
   /** Lo que la pastilla muestra ahora mismo. */
-  readonly modo = computed<'aviso' | 'expandida' | 'actividad' | 'reposo'>(() => {
+  readonly modo = computed<'chat' | 'aviso' | 'expandida' | 'actividad' | 'reposo'>(() => {
+    if (this.chat()) return 'chat';
     if (this.aviso()) return 'aviso';
     if (this.actividades().length === 0) return 'reposo';
     return this.expandida() ? 'expandida' : 'actividad';
@@ -80,7 +86,7 @@ export class IslaService {
 
   avisar(titulo: string, detalle?: string, tono: TonoAviso = 'info'): void {
     this.cola.push({ id: ++this.seq, titulo, detalle, tono });
-    if (!this.aviso()) this.siguienteAviso();
+    if (!this.aviso() && !this.chat()) this.siguienteAviso();
   }
 
   /** Cierra el aviso visible (clic sobre la isla) y pasa al siguiente. */
@@ -98,6 +104,27 @@ export class IslaService {
     this.temporizador = setTimeout(() => this.siguienteAviso(), ms);
   }
 
+  // ── Chat con el Agente ──────────────────────────────────────────────────
+
+  abrirChat(): void {
+    this.expandida.set(false);
+    // El aviso visible vuelve a la cola: se muestra al cerrar el chat.
+    const visible = this.aviso();
+    if (visible) {
+      if (this.temporizador) clearTimeout(this.temporizador);
+      this.temporizador = null;
+      this.cola.unshift(visible);
+      this.aviso.set(null);
+    }
+    this.chat.set(true);
+  }
+
+  cerrarChat(): void {
+    if (!this.chat()) return;
+    this.chat.set(false);
+    if (!this.aviso()) this.siguienteAviso();
+  }
+
   // ── Expandir ────────────────────────────────────────────────────────────
 
   alternar(): void {
@@ -110,5 +137,6 @@ export class IslaService {
 
   cerrar(): void {
     this.expandida.set(false);
+    this.cerrarChat();
   }
 }
