@@ -17,7 +17,6 @@ import { HeaderComponent } from './shared/components/header.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
 import { LoginScreenComponent } from './shared/components/login-screen.component';
 import { SinRespuestaScreenComponent } from './shared/components/sin-respuesta-screen.component';
-import { ToastsComponent } from './shared/components/toasts.component';
 
 // Íconos de plataforma/nav que no viven en el catálogo.
 const EXTRA_ICONS = [
@@ -38,7 +37,6 @@ const EXTRA_ICONS = [
     InactiveScreenComponent,
     SinRespuestaScreenComponent,
     AvisoInactividadComponent,
-    ToastsComponent,
   ],
   template: `
     @switch (auth.status()) {
@@ -70,7 +68,6 @@ const EXTRA_ICONS = [
             </div>
           </main>
           <alma-dock />
-          <alma-toasts />
           <alma-aviso-inactividad />
         </div>
       }

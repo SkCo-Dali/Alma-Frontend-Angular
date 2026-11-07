@@ -9,10 +9,11 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { shortName } from '../../core/utils/name';
+import { IslaComponent } from './isla.component';
 
 @Component({
   selector: 'alma-header',
-  imports: [RouterLink, LucideAngularModule],
+  imports: [RouterLink, LucideAngularModule, IslaComponent],
   template: `
     <header
       class="sticky top-0 z-30 flex h-20 items-center gap-4 bg-transparent px-4 md:px-6"
@@ -34,12 +35,8 @@ import { shortName } from '../../core/utils/name';
         />
       </a>
 
-      <!-- Lema centrado en la barra (como en la propuesta del hub de Nova). -->
-      <span
-        class="text-on-wallpaper pointer-events-none absolute left-1/2 hidden -translate-x-1/2 text-[15px] font-medium text-foreground/80 md:block"
-      >
-        Tu hub de operaciones
-      </span>
+      <!-- Isla de Nova: lema en reposo; procesos en curso y avisos cuando los hay. -->
+      <alma-isla />
 
       <div class="ml-auto flex items-center gap-2">
         <button
