@@ -47,7 +47,6 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
 
 @Component({
   selector: 'alma-ejecucion-motor-page',
-  providers: [EjecucionMotorStore],
   imports: [
     VolverInicioComponent,
     FormsModule,
