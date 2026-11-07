@@ -13,8 +13,11 @@
 //   con temporizadores: disparado → esperando correo → revisa tu correo → listo.
 // - Cada tab de datos tiene sus propios filtros y su propia página; la búsqueda
 //   solo se aplica al pulsar "Filtrar" (o Enter), nunca al teclear.
+// - Es un servicio global (no de la pantalla): el monitoreo sigue al navegar a
+//   otra App y la isla de Nova muestra los jobs activos y la ingesta en curso.
 
-import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
+import { IslaService } from '../../../core/services/isla.service';
 import { ComisionesToast } from '../comisiones-toast.service';
 import {
   DEFAULT_MOTOR_PAGE_SIZE,
@@ -33,6 +36,15 @@ const RUN_PHASE2_MS = 10 * 60 * 1000;
 const ADF_TRIGGERED_MS = 10_000;
 const ADF_WAITING_EMAIL_MS = 4 * 60 * 1000;
 const ADF_CHECK_EMAIL_MS = 30_000;
+
+/** Pantalla a la que lleva «Ver» desde la isla. */
+const RUTA_EJECUCION = '/apps/motor-comisiones/ejecucion-motor';
+
+const DETALLE_ADF: Partial<Record<AdfPhase, string>> = {
+  triggered: 'Pipeline disparado',
+  waiting_email: 'Procesando la ingesta',
+  check_email: 'Revisa tu correo',
+};
 
 /** Lista de respaldo si el API de jobs no responde (mismos ids que Databricks). */
 const JOBS_FALLBACK: MotorJob[] = [
@@ -140,10 +152,18 @@ const filtrosCorreosVacios = (): FiltrosCorreos => ({
   search: '',
 });
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class EjecucionMotorStore implements OnDestroy {
   private readonly api = inject(MotorApi);
   private readonly toast = inject(ComisionesToast);
+  private readonly isla = inject(IslaService);
+
+  /** Ids de actividad que esta store tiene publicados en la isla. */
+  private readonly enIsla = new Set<string>();
+
+  constructor() {
+    effect(() => this.sincronizarIsla());
+  }
 
   readonly jobs = signal<MotorJob[]>([]);
   readonly jobsState = signal<Record<number, JobState>>({});
@@ -748,6 +768,61 @@ export class EjecucionMotorStore implements OnDestroy {
       this.toast.errorGenericoConMensaje(msg, 'Error al excluir');
       return false;
     }
+  }
+
+  // ── Isla de Nova ──────────────────────────────────────────────────────────
+
+  /** Publica en la isla cada job activo y la ingesta; retira lo que terminó.
+   *  El aviso de fin («Proceso completado», «Error en ejecución») ya lo da el
+   *  toast de consultarEstado, que también se pinta en la isla. */
+  private sincronizarIsla(): void {
+    const jobs = this.jobs();
+    const estados = this.jobsState();
+    const adf = this.adfPhase();
+
+    untracked(() => {
+      const activos = new Set<string>();
+      for (const job of jobs) {
+        const st = estados[job.job_id];
+        if (!st || !['pending', 'running', 'terminating'].includes(st.phase)) continue;
+        const id = `motor-${job.job_id}`;
+        activos.add(id);
+        this.isla.reportar({
+          id,
+          titulo: job.nombre,
+          icono: 'workflow',
+          progreso: Math.round(st.progress),
+          detalle:
+            st.phase === 'pending'
+              ? 'Esperando el cluster'
+              : st.phase === 'terminating'
+                ? 'Finalizando'
+                : `Ejecutando${st.elapsedText ? ' · ' + st.elapsedText : ''}`,
+          ruta: RUTA_EJECUCION,
+          accion:
+            st.phase !== 'terminating' && st.runId
+              ? { etiqueta: 'Cancelar', ejecutar: () => void this.cancelarJob(job.job_id) }
+              : undefined,
+        });
+      }
+
+      const detalleAdf = DETALLE_ADF[adf];
+      if (detalleAdf) {
+        activos.add('motor-adf');
+        this.isla.reportar({
+          id: 'motor-adf',
+          titulo: 'Ingesta SQL → Databricks',
+          icono: 'database',
+          progreso: null,
+          detalle: detalleAdf,
+          ruta: RUTA_EJECUCION,
+        });
+      }
+
+      for (const id of this.enIsla) if (!activos.has(id)) this.isla.terminar(id);
+      this.enIsla.clear();
+      for (const id of activos) this.enIsla.add(id);
+    });
   }
 
   ngOnDestroy(): void {
