@@ -3,14 +3,22 @@
 // curso con anillo de progreso; aviso → mensaje breve; expandida → detalle de
 // cada proceso con «Ver» y su acción.
 //
+// Fuera del Inicio y del Agente, la isla también da acceso al Agente Nova: en
+// reposo muestra el orbe con «Pregúntale a Nova», y con un proceso o un aviso el
+// orbe queda como burbuja a la izquierda (solo si el usuario tiene el Agente).
+//
 // El tamaño de cada estado es fijo (ancho/alto/radio) para poder animar el
 // cambio de forma con CSS; el contenido entra con un fundido corto.
 
 import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Component, ElementRef, HostListener, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter, map } from 'rxjs/operators';
 import { LucideAngularModule } from 'lucide-angular';
 import { ActividadIsla, IslaService, TonoAviso } from '../../core/services/isla.service';
+import { ApplicationsService } from '../../core/services/applications.service';
+import { AlmaSphereComponent } from './alma-sphere.component';
 
 const ICONO_AVISO: Record<TonoAviso, string> = {
   info: 'info',
@@ -18,17 +26,21 @@ const ICONO_AVISO: Record<TonoAviso, string> = {
   error: 'alert-triangle',
 };
 
+const ID_AGENTE = 'app-agente-alma';
+const RUTA_AGENTE = '/apps/agente-alma';
+
 /** Filas visibles en la isla expandida (el resto se resume en «y N más»). */
 const MAX_FILAS = 3;
 
 @Component({
   selector: 'alma-isla',
-  imports: [DecimalPipe, NgTemplateOutlet, LucideAngularModule],
+  imports: [DecimalPipe, NgTemplateOutlet, LucideAngularModule, AlmaSphereComponent],
   host: {
     // Escritorio: centrada en el header. Móvil: debajo del header y solo si hay algo.
     class:
       'fixed left-1/2 top-[84px] z-40 flex -translate-x-1/2 items-start gap-1.5 md:absolute md:top-[22px]',
     '[class.max-md:hidden]': "isla.modo() === 'reposo'",
+    '[class.md:-translate-x-[calc(50%+23px)]]': 'burbujaAgente()',
   },
   styles: [
     `
@@ -58,6 +70,18 @@ const MAX_FILAS = 3;
     `,
   ],
   template: `
+    <!-- Acceso al Agente mientras la isla está ocupada (proceso o aviso). -->
+    @if (burbujaAgente()) {
+      <button
+        type="button"
+        class="isla isla-burbuja flex h-10 w-10 items-center justify-center rounded-full p-1.5"
+        aria-label="Abrir el Agente Nova"
+        (click)="abrirAgente()"
+      >
+        <alma-sphere />
+      </button>
+    }
+
     <div
       role="button"
       tabindex="0"
@@ -67,16 +91,23 @@ const MAX_FILAS = 3;
       [style.border-radius.px]="forma().r"
       [attr.aria-expanded]="isla.modo() === 'expandida'"
       [attr.aria-label]="etiqueta()"
-      (click)="isla.alternar()"
-      (keydown.enter)="isla.alternar()"
-      (keydown.space)="$event.preventDefault(); isla.alternar()"
+      (click)="clic()"
+      (keydown.enter)="clic()"
+      (keydown.space)="$event.preventDefault(); clic()"
     >
       @switch (isla.modo()) {
         @case ('reposo') {
-          <span class="isla-contenido flex h-full items-center justify-center gap-2 text-[13px] font-medium text-white/85">
-            <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
-            Tu hub de operaciones
-          </span>
+          @if (orbeEnIsla()) {
+            <span class="isla-contenido flex h-full items-center gap-2.5 pl-1 pr-4 text-[13px] font-medium text-white/90">
+              <span class="h-7 w-7 shrink-0"><alma-sphere /></span>
+              Pregúntale a Nova
+            </span>
+          } @else {
+            <span class="isla-contenido flex h-full items-center justify-center gap-2 text-[13px] font-medium text-white/85">
+              <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+              Tu hub de operaciones
+            </span>
+          }
         }
         @case ('aviso') {
           @if (isla.aviso(); as a) {
@@ -190,7 +221,29 @@ const MAX_FILAS = 3;
 export class IslaComponent {
   protected readonly isla = inject(IslaService);
   private readonly router = inject(Router);
+  private readonly apps = inject(ApplicationsService);
   private readonly el = inject(ElementRef<HTMLElement>);
+
+  private readonly ruta = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  /** El orbe da acceso al Agente fuera del Inicio (que ya tiene su tarjeta) y
+   *  fuera del propio Agente, solo si el usuario tiene la App. */
+  protected readonly orbeEnIsla = computed(() => {
+    const ruta = this.ruta().split(/[?#]/)[0];
+    if (ruta === '/' || ruta.startsWith(RUTA_AGENTE)) return false;
+    return this.apps.applications().some((a) => a.id === ID_AGENTE);
+  });
+
+  /** Con la isla ocupada, el orbe pasa a una burbuja a la izquierda. */
+  protected readonly burbujaAgente = computed(
+    () => this.orbeEnIsla() && ['actividad', 'aviso'].includes(this.isla.modo()),
+  );
 
   protected readonly principal = computed(() => this.isla.actividades()[0] ?? null);
   protected readonly secundaria = computed(() => this.isla.actividades()[1] ?? null);
@@ -211,7 +264,7 @@ export class IslaComponent {
         return { w: 420, h: 24 + filas * 96 + (this.restantes() ? 22 : 0), r: 30 };
       }
       default:
-        return { w: 232, h: 36, r: 18 };
+        return this.orbeEnIsla() ? { w: 196, h: 36, r: 18 } : { w: 232, h: 36, r: 18 };
     }
   });
 
@@ -219,7 +272,7 @@ export class IslaComponent {
     const a = this.isla.aviso();
     if (a) return `${a.titulo}. Clic para cerrar`;
     const n = this.isla.actividades().length;
-    if (n === 0) return 'Tu hub de operaciones';
+    if (n === 0) return this.orbeEnIsla() ? 'Pregúntale a Nova: abrir el Agente' : 'Tu hub de operaciones';
     return `${n} ${n === 1 ? 'proceso' : 'procesos'} en curso. Clic para ver el detalle`;
   });
 
@@ -233,6 +286,16 @@ export class IslaComponent {
     if (progreso == null) return `${c * 0.28} ${c}`;
     const p = Math.max(0, Math.min(100, progreso));
     return `${(p / 100) * c} ${c}`;
+  }
+
+  protected clic(): void {
+    if (this.isla.modo() === 'reposo' && this.orbeEnIsla()) this.abrirAgente();
+    else this.isla.alternar();
+  }
+
+  protected abrirAgente(): void {
+    this.isla.cerrar();
+    void this.router.navigateByUrl(RUTA_AGENTE);
   }
 
   protected ver(act: ActividadIsla): void {
