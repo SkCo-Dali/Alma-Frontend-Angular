@@ -236,7 +236,7 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
         </header>
 
         <!-- Banner de datos incompletos -->
-        @if (sel.datos_incompletos) {
+        @if (sel.datos_incompletos && puedeVerSalud()) {
           <div
             class="rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
           >
@@ -274,7 +274,7 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
                 </p>
               </div>
             </div>
-            @if (sel.evaluacion.alertas.length > 0) {
+            @if (puedeVerSalud() && sel.evaluacion.alertas.length > 0) {
               <ul class="mt-3 grid gap-1.5 border-t border-border/40 pt-3 sm:grid-cols-2">
                 @for (a of sel.evaluacion.alertas; track $index) {
                   <li
@@ -316,7 +316,14 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
                   Declaraciones
                 </p>
                 <div class="mt-1.5">
-                  @if (sel.declaraciones) {
+                  @if (!puedeVerSalud()) {
+                    <span
+                      class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      title="Tu rol no incluye información de salud"
+                    >
+                      Sin acceso a salud
+                    </span>
+                  } @else if (sel.declaraciones) {
                     <span
                       class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium"
                       [class]="veredicto().cls"
@@ -335,14 +342,16 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
               </div>
             </div>
             <div class="flex flex-col gap-2">
-              <button
-                type="button"
-                [disabled]="!sel.declaraciones"
-                (click)="modal.set('declaraciones')"
-                class="alma-btn h-9 w-full rounded-xl border border-primary text-primary hover:bg-primary hover:text-white"
-              >
-                Ver cuestionario
-              </button>
+              @if (puedeVerSalud()) {
+                <button
+                  type="button"
+                  [disabled]="!sel.declaraciones"
+                  (click)="modal.set('declaraciones')"
+                  class="alma-btn h-9 w-full rounded-xl border border-primary text-primary hover:bg-primary hover:text-white"
+                >
+                  Ver cuestionario
+                </button>
+              }
               <!-- Validación Pharos: terceros, declaraciones del producto,
                    CertifiAportes y fechas del nodo, leídos en vivo del core. -->
               <button
@@ -426,10 +435,13 @@ import { VolverInicioComponent } from '../../shared/components/volver-inicio.com
         <div class="columns-1 gap-3 md:columns-2 xl:columns-3">
           <alma-historial-cliente-card [solicitudId]="sel.tarea_id" />
           <alma-productos-cliente-card [solicitudId]="sel.tarea_id" />
-          <alma-correos-cliente-card
-            [solicitudId]="sel.tarea_id"
-            [nroCotizacion]="sel.nro_cotizacion"
-          />
+          <!-- El buzón de Suscripción trae soportes médicos: pide salud.view. -->
+          @if (puedeVerSalud()) {
+            <alma-correos-cliente-card
+              [solicitudId]="sel.tarea_id"
+              [nroCotizacion]="sel.nro_cotizacion"
+            />
+          }
         </div>
 
         <!-- Modales -->
@@ -529,6 +541,11 @@ export class DetalleSolicitudComponent {
   );
   protected readonly puedeEmitir = computed(() =>
     this.auth.hasPermission('app.suscripcion.solicitudes.emit'),
+  );
+  // Datos de salud (declaraciones, alertas, exámenes, buzón): el rol «Consulta»
+  // no los tiene y el backend los entrega vacíos.
+  protected readonly puedeVerSalud = computed(() =>
+    this.auth.hasPermission('app.suscripcion.salud.view'),
   );
 
   protected readonly veredicto = computed(() => {

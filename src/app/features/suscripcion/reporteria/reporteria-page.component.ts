@@ -38,6 +38,7 @@ import {
   ResumenReporteria,
 } from './reporteria.api';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { AuthService } from '../../../core/auth/auth.service';
 
 /** La auditoría se lee en hora de Colombia, no en la del equipo de quien mira:
  *  es un registro de cuándo pasaron las cosas en la operación, y dos personas
@@ -344,6 +345,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           </div>
         </section>
 
+        @if (puedeVerSalud()) {
         <section class="glass rounded-2xl p-4 shadow-[var(--shadow-sm)]">
           <h2 class="mb-1 text-sm font-bold text-foreground">Alertas más frecuentes</h2>
           <p class="mb-3 text-[11px] text-muted-foreground">
@@ -383,6 +385,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
             <p class="text-sm text-muted-foreground">Sin exclusiones.</p>
           }
         </section>
+        }
       </div>
 
       <!-- ── Auditoría ── -->
@@ -537,6 +540,11 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
 })
 export class ReporteriaPageComponent {
   private readonly api = inject(ReporteriaApi);
+  private readonly auth = inject(AuthService);
+  // El top de alertas/exclusiones nombra condiciones de salud: el rol «Consulta» no lo ve.
+  protected readonly puedeVerSalud = computed(() =>
+    this.auth.hasPermission('app.suscripcion.salud.view'),
+  );
 
   // Periodo (aplica a TODOS los indicadores y a la auditoría).
   protected desdeInput = '';
