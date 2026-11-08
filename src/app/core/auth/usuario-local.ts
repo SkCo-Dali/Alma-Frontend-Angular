@@ -17,6 +17,7 @@ export const USUARIO_LOCAL: User = {
   roles: ['admin', 'operations.analyst'],
   permissions: [
     'app.suscripcion.view',
+    'app.suscripcion.salud.view',
     'app.suscripcion.solicitudes.manage',
     'app.suscripcion.solicitudes.emit',
     'app.suscripcion.motor.config',
