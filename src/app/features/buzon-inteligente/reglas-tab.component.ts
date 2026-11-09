@@ -24,6 +24,7 @@ import {
   PROMPT_LARGO_CHARS,
   PROMPT_MAX_CHARS,
   PromptBuzon,
+  PropuestaProcesos,
   ReglaFija,
   resumenEtiqueta,
 } from './buzon.api';
@@ -32,7 +33,9 @@ import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component'
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
 
 type Modal = 'tpl' | 'ej' | 'pegar' | 'prompt' | 'global' | 'eliminar' | null;
-type Global = 'contexto' | 'fijas' | 'exclusiones';
+type Global = 'contexto' | 'generales' | 'fijas' | 'exclusiones';
+/** 069: desde cuántos caracteres se condensa una parte (lo corto queda literal). */
+const TRANSCRIBIR_DESDE = 4000;
 /** Estado de un proceso dentro del asistente (el borrador ya lo tiene guardado). */
 type EstadoWiz = 'ok' | 'propuesta' | 'revisar';
 
@@ -445,7 +448,7 @@ interface FijaEd {
           @case ('pegar') {
             @if (analizando()) {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Analizando">
-                <h2 class="sm b">Nova está leyendo el prompt…</h2>
+                <h2 class="sm b">{{ transcribiendo() || 'Nova está leyendo el prompt…' }}</h2>
                 <p class="xs muted">Separa procesos, etiquetas, datos a extraer, discriminación y Validar.</p>
                 @if (promptLargo()) {
                   <p class="note b-amber"><lucide-icon name="clock" [size]="13" /> <span>Es un prompt largo ({{ caracteres() }} caracteres): el análisis puede tardar hasta 3 o 4 minutos. No cierres esta ventana.</span></p>
@@ -567,7 +570,11 @@ interface FijaEd {
                 }
                 <button type="button" class="btn outline sm" style="justify-self:start" (click)="fijasEd.push({ nombre: '', campo: 'remitente_contiene', valor: '', categoria_id: etiquetasActivas()[0]?.id ?? '' })"><lucide-icon name="plus" [size]="13" /> Agregar regla fija</button>
               } @else {
-                <textarea class="input" rows="8" style="height:auto" [(ngModel)]="textoGlobal"></textarea>
+                @if (globalEd() === 'generales') {
+                  <p class="xs muted">Lo del prompt del área que aplica a todo el buzón (reglas comunes, preprocesamiento, exclusiones, orden de evaluación). Va completo a la IA en cada correo.</p>
+                }
+                <textarea class="input" [class.mono]="globalEd() === 'generales'" [attr.rows]="globalEd() === 'generales' ? 18 : 8" style="height:auto" [(ngModel)]="textoGlobal"></textarea>
+                @if (globalEd() === 'generales') { <p class="xxs muted" style="text-align:right">{{ textoGlobal.length.toLocaleString('es-CO') }} caracteres</p> }
               }
               <div class="row" style="justify-content:flex-end">
                 <button type="button" class="btn outline" (click)="modal.set(null)">Cancelar</button>
@@ -630,6 +637,8 @@ export class ReglasTabComponent implements OnInit {
   protected readonly verCambios = signal(false);
   protected readonly publicando = signal(false);
   protected readonly errorPrompt = signal('');
+  /** 069: progreso de la transcripción por proceso ('' = no está transcribiendo). */
+  protected readonly transcribiendo = signal('');
   protected readonly prompt = signal<PromptBuzon | null>(null);
   protected readonly promptCual = signal<'vigente' | 'borrador'>('vigente');
   protected readonly globalEd = signal<Global>('contexto');
@@ -679,11 +688,18 @@ export class ReglasTabComponent implements OnInit {
     const fijas = this.fijas().filter((f) => f.activa);
     return [
       { id: 'contexto' as Global, titulo: 'Contexto del área', texto: b.contexto || '—' },
+      {
+        id: 'generales' as Global,
+        titulo: 'Reglas generales del área',
+        texto: b.reglas_generales
+          ? `${b.reglas_generales.length.toLocaleString('es-CO')} caracteres · ${b.reglas_generales.slice(0, 140).replace(/\s+/g, ' ')}…`
+          : '— (se llenan al cargar el prompt del área)',
+      },
       { id: 'fijas' as Global, titulo: 'Reglas fijas (sin IA)', texto: fijas.length ? fijas.map((f) => `${f.nombre} → ${f.categoria_clave}`).join(' · ') : 'Ninguna' },
       { id: 'exclusiones' as Global, titulo: 'Exclusiones globales', texto: b.exclusiones_globales || '—' },
     ];
   });
-  protected readonly tituloGlobal = computed(() => ({ contexto: 'Contexto del área', fijas: 'Reglas fijas', exclusiones: 'Exclusiones globales' })[this.globalEd()]);
+  protected readonly tituloGlobal = computed(() => ({ contexto: 'Contexto del área', generales: 'Reglas generales del área', fijas: 'Reglas fijas', exclusiones: 'Exclusiones globales' })[this.globalEd()]);
 
   /** Pares de procesos sin discriminación y procesos con una sola etiqueta sin criterio. */
   private readonly faltantes = computed<Pendiente[]>(() => {
@@ -963,6 +979,40 @@ export class ReglasTabComponent implements OnInit {
     });
   }
 
+  /** 069: condensa con fidelidad (quita solo lo redundante) el texto de cada proceso y lo
+   *  general, de a 3 en paralelo. Lo corto, o lo que falle, queda literal. */
+  private async transcribir(r: PropuestaProcesos): Promise<void> {
+    const partes: { nombre: string; texto: string; poner: (t: string) => void }[] = [
+      ...r.procesos.map((p) => ({ nombre: p.clave, texto: p.reglas ?? '', poner: (t: string) => (p.reglas = t) })),
+      { nombre: 'reglas generales', texto: r.reglas_generales ?? '', poner: (t: string) => (r.reglas_generales = t) },
+    ].filter((x) => x.texto.length >= TRANSCRIBIR_DESDE);
+    let hechas = 0;
+    let antes = 0;
+    let despues = 0;
+    const cola = [...partes];
+    const trabajar = async (): Promise<void> => {
+      for (let x = cola.shift(); x; x = cola.shift()) {
+        this.transcribiendo.set(`Nova está transcribiendo ${x.nombre} (${hechas + 1} de ${partes.length})…`);
+        const c = await this.api.condensar(this.buzon().id, x.texto, x.nombre === 'reglas generales' ? 'reglas generales del buzón' : `proceso ${x.nombre}`)
+          .catch(() => null);
+        if (c) {
+          x.poner(c.texto);
+          antes += c.original;
+          despues += c.resultado;
+        }
+        hechas++;
+      }
+    };
+    try {
+      await Promise.all([trabajar(), trabajar(), trabajar()]);
+      if (antes > despues) {
+        this.toast.show('Transcripción completa', `Se conservaron todas las secciones del prompt (${antes.toLocaleString('es-CO')} → ${despues.toLocaleString('es-CO')} caracteres sin lo redundante).`);
+      }
+    } finally {
+      this.transcribiendo.set('');
+    }
+  }
+
   protected async analizar(): Promise<void> {
     if (!this.textoPrompt.trim()) {
       this.errorPrompt.set('Pega el prompt o sube el archivo antes de analizar.');
@@ -972,6 +1022,7 @@ export class ReglasTabComponent implements OnInit {
     this.analizando.set(true);
     try {
       const r = await this.api.analizarPrompt(this.buzon().id, this.textoPrompt);
+      await this.transcribir(r);
       if (!r.procesos.length) {
         this.errorPrompt.set('No reconocí procesos, etiquetas ni un JSON de salida en el texto. Revisa que incluya las etiquetas y los datos a extraer, o usa el ejemplo.');
         return;
@@ -983,7 +1034,10 @@ export class ReglasTabComponent implements OnInit {
         await this.recargar();
         this.toast.show(`Nova detectó ${r.procesos.length} proceso(s): revisa y acepta cada uno`);
       } else {
-        await this.api.actualizarBuzon(this.buzon().id, { prompt_area: this.textoPrompt });
+        await this.api.actualizarBuzon(this.buzon().id, {
+          prompt_area: this.textoPrompt,
+          ...(r.reglas_generales ? { reglas_generales: r.reglas_generales } : {}),
+        });
         this.refrescarBuzon().catch(() => undefined);
         this.destinos.set({});
         this.conservarSalen.set(new Set());
@@ -1165,7 +1219,7 @@ export class ReglasTabComponent implements OnInit {
         return { nombre: f.nombre, campo, valor: f[campo] ?? '', categoria_id: f.categoria_id };
       });
     } else {
-      this.textoGlobal = (s === 'contexto' ? b.contexto : b.exclusiones_globales) ?? '';
+      this.textoGlobal = (s === 'contexto' ? b.contexto : s === 'generales' ? b.reglas_generales : b.exclusiones_globales) ?? '';
     }
     this.modal.set('global');
   }
@@ -1187,7 +1241,10 @@ export class ReglasTabComponent implements OnInit {
         }
       } else {
         const texto = this.textoGlobal.trim() || null;
-        await this.api.actualizarBuzon(id, s === 'contexto' ? { contexto: texto } : { exclusiones_globales: texto });
+        await this.api.actualizarBuzon(
+          id,
+          s === 'contexto' ? { contexto: texto } : s === 'generales' ? { reglas_generales: texto } : { exclusiones_globales: texto },
+        );
       }
       this.modal.set(null);
       await this.recargar();
