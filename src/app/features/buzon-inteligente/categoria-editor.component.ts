@@ -1,8 +1,8 @@
 // Editor de una categoría (tipo de correo) del Buzón Inteligente: cómo reconocerla
-// (descripción en lenguaje natural, ejemplos, palabras clave), qué datos extraer y qué
-// acciones ejecutar. Modal autocontenido; emite la categoría lista para guardar.
+// (descripción en lenguaje natural, ejemplos, palabras clave), qué datos extraer (opcional,
+// se activa) y qué acciones ejecutar. Modal autocontenido; emite la categoría lista para guardar.
 
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
@@ -96,13 +96,17 @@ function aAccion(f: AccionForm, orden: number): Accion {
         </div>
 
         <!-- Pasos -->
-        <div class="flex gap-1 border-b border-border/60 px-5 py-2">
-          @for (p of pasos; track p.id; let i = $index) {
+        <div class="flex items-center gap-1 border-b border-border/60 px-5 py-2">
+          @for (p of pasos(); track p.id; let i = $index) {
             <button type="button" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" [class]="paso() === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'" (click)="paso.set(p.id)">
               <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold" [class]="paso() === p.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'">{{ i + 1 }}</span>
               {{ p.nombre }}
             </button>
           }
+          <!-- Opcional: casi siempre basta con Reconocer y Acciones. -->
+          <label class="ml-auto flex items-center gap-2 text-xs text-muted-foreground" almaTooltip="Actívalo si la IA debe leer datos del correo (cédula, valor, radicado…) para la bandeja o las acciones.">
+            <alma-switch [checked]="extraer()" (checkedChange)="alternarExtraer($event)" ariaLabel="Extraer datos" /> Extraer datos
+          </label>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -248,11 +252,13 @@ export class CategoriaEditorComponent {
   readonly guardar = output<CategoriaIn>();
   readonly cancelar = output<void>();
 
-  protected readonly pasos = [
+  /** «Datos a extraer» solo aparece si se activa (o si el tipo ya tiene datos). */
+  protected readonly extraer = signal(false);
+  protected readonly pasos = computed(() => [
     { id: 'reconocer' as const, nombre: 'Reconocer' },
-    { id: 'extraer' as const, nombre: 'Datos a extraer' },
+    ...(this.extraer() ? [{ id: 'extraer' as const, nombre: 'Datos a extraer' }] : []),
     { id: 'acciones' as const, nombre: 'Acciones' },
-  ];
+  ]);
   protected readonly paso = signal<'reconocer' | 'extraer' | 'acciones'>('reconocer');
   protected readonly colores = COLORES;
   protected readonly tipos = TIPOS_ACCION;
@@ -292,6 +298,7 @@ export class CategoriaEditorComponent {
       this.umbral.set(c.umbral_confianza !== null ? Math.round(c.umbral_confianza * 100) : null);
       this.activa.set(c.activa);
       this.campos.set(c.campos_extraer.map((x) => ({ ...x })));
+      this.extraer.set(c.campos_extraer.length > 0);
       this.acciones.set([...c.acciones].sort((a, b) => a.orden - b.orden).map(aForm));
     });
   }
@@ -326,6 +333,11 @@ export class CategoriaEditorComponent {
   protected quitarEjemplo(i: number): void {
     this.ejemplos.update((l) => l.filter((_, j) => j !== i));
   }
+  protected alternarExtraer(on: boolean): void {
+    this.extraer.set(on);
+    if (on && !this.campos().length) this.agregarCampo();
+    if (!on && this.paso() === 'extraer') this.paso.set('acciones');
+  }
   protected agregarCampo(): void {
     this.campos.update((l) => [...l, { clave: '', descripcion: '' }]);
   }
@@ -350,7 +362,7 @@ export class CategoriaEditorComponent {
   protected siguiente(): void {
     if (this.paso() === 'reconocer') {
       if (!this.validarBase()) return;
-      this.paso.set('extraer');
+      this.paso.set(this.extraer() ? 'extraer' : 'acciones');
     } else if (this.paso() === 'extraer') {
       this.paso.set('acciones');
     }
@@ -394,7 +406,8 @@ export class CategoriaEditorComponent {
       activa: this.activa(),
       es_fallback: this.esFallback,
       umbral_confianza: this.umbral() !== null ? this.umbral()! / 100 : null,
-      campos_extraer: this.campos().filter((c) => c.clave.trim()).map((c) => ({ clave: c.clave.trim(), descripcion: c.descripcion.trim() })),
+      // Apagado: no se extrae nada (aunque hubiera datos escritos).
+      campos_extraer: !this.extraer() ? [] : this.campos().filter((c) => c.clave.trim()).map((c) => ({ clave: c.clave.trim(), descripcion: c.descripcion.trim() })),
       acciones,
       // El PUT reemplaza la categoría: sin esto la etiqueta quedaría sin su proceso.
       proceso_id: this.categoria()?.proceso_id ?? null,

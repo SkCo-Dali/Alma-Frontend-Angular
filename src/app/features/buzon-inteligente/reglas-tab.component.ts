@@ -299,16 +299,9 @@ interface FijaEd {
                 }
               </div>
               @if (r.activa) {
-                <div class="fld">
-                  <label class="label" for="sin-proceso">Cuando un correo no es de ningún proceso</label>
-                  <select class="input sm" id="sin-proceso" [disabled]="!editable()" (change)="cambiarSinProceso($any($event.target).value)">
-                    <option value="descartar" [selected]="buzon().sin_proceso === 'descartar'">Descartarlo: queda sin tocar en Outlook y no va a Validar</option>
-                    <option value="acciones" [selected]="buzon().sin_proceso !== 'descartar'">Etiquetarlo OTROS y aplicar sus acciones y su grupo</option>
-                  </select>
-                  <span class="xxs muted">{{ buzon().sin_proceso === 'descartar'
-                    ? 'No se etiqueta, no se mueve ni se asigna; en Nova queda en «Ignorados». Solo va a Validar si la IA no está segura de que no es de un proceso.'
-                    : 'Se etiqueta OTROS y sigue el destino de su grupo en Asignación (solo etiquetar, carpeta, reenviar…).' }}</span>
-                </div>
+                <p class="xxs muted">{{ accionesActivas(r)
+                  ? 'No va a Validar: se le aplican solas las acciones de abajo (y su grupo de Asignación, si tiene).'
+                  : 'No va a Validar: sin acciones, queda sin tocar en Outlook y en Nova pasa a «Ignorados». Agrégale acciones con el lápiz si quieres etiquetarlo, moverlo o reenviarlo.' }}</p>
                 <div class="row xs" style="flex-wrap:nowrap;gap:6px"><span class="orig ia">✦</span><span class="chipo"><lucide-icon name="sparkles" [size]="13" /> {{ r.clave }}</span><span class="muted trunc" style="flex:1">Confianza mínima · {{ resumenEt(r) }}</span>
                   <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(r)" [attr.aria-label]="'Configurar ' + r.clave"><lucide-icon name="pencil" [size]="13" /></button>
                 </div>
@@ -887,15 +880,9 @@ export class ReglasTabComponent implements OnInit {
     }
   }
 
-  protected async cambiarSinProceso(modo: 'descartar' | 'acciones'): Promise<void> {
-    try {
-      await this.api.actualizarBuzon(this.buzon().id, { sin_proceso: modo });
-      await this.refrescarBuzon();
-      this.toast.show(modo === 'descartar' ? 'Lo que no es de ningún proceso se descarta' : 'Lo que no es de ningún proceso se etiqueta OTROS',
-        modo === 'descartar' ? 'Queda sin tocar en Outlook y en «Ignorados».' : 'Sigue el destino de su grupo en Asignación.');
-    } catch (e) {
-      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
-    }
+  /** Acciones activas de OTROS: sin ninguna (ni grupo), lo que no es de un proceso se descarta. */
+  protected accionesActivas(c: Categoria): number {
+    return (c.acciones ?? []).filter((a) => a.activa !== false).length;
   }
 
   protected async alternarActivo(p: Proceso): Promise<void> {
