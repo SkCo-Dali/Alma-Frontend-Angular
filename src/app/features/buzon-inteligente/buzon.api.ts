@@ -85,6 +85,8 @@ export interface Buzon {
   prompt_area: string | null;
   /** 069: secciones generales del prompt (de todo el buzón), completas. */
   reglas_generales?: string | null;
+  /** 070: lo que la IA marca como OTROS → descartar sin tocar o etiquetar y aplicar su grupo. */
+  sin_proceso?: 'descartar' | 'acciones';
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
@@ -153,6 +155,7 @@ export type BuzonUpdate = Partial<
     | 'agente_nombre'
     | 'prompt_area'
     | 'reglas_generales'
+    | 'sin_proceso'
     | 'al_desactivar'
     | 'borrador_en_hilo'
     | 'descripcion'
