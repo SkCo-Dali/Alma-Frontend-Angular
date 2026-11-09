@@ -34,7 +34,7 @@ export const TIPOS_CAMPO: { id: TipoCampo; nombre: string }[] = [
   { id: 'tabla', nombre: 'lista de objetos' },
 ];
 
-type Pestana = 'rec' | 'reg' | 'et' | 'dat' | 'val' | 'dis';
+type Pestana = 'rec' | 'et' | 'dat' | 'val' | 'dis';
 type Critico = '0' | '1' | 'alt';
 
 interface EtiquetaEd {
@@ -68,8 +68,6 @@ interface Borrador {
   umbral: number;
   extras: string[];
   disc: { con: string; manda: string }[];
-  /** 069: texto completo del proceso (del prompt del área). */
-  reglas: string;
 }
 
 const RE_MAYUS = /^[A-Z0-9]+(_[A-Z0-9]+)*$/;
@@ -242,12 +240,6 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
             <button type="button" class="btn outline sm" style="justify-self:start" (click)="d.extras.push('')"><lucide-icon name="plus" [size]="13" /> Agregar causa</button>
           </div>
         }
-        @case ('reg') {
-          <p class="xs muted">El texto del prompt del área que es de este proceso: reglas de decisión, extracción, score, ejemplos y formato de salida. Va completo a la IA en cada correo (si el proceso está activo); edítalo aquí y publica para que el buzón lo use.</p>
-          <textarea class="input mono" id="ep-reglas" rows="18" style="height:auto" [(ngModel)]="d.reglas" aria-label="Reglas completas del proceso"
-            placeholder="Se llena al cargar el prompt del área con «Pegar o subir prompt»."></textarea>
-          <p class="xxs muted" style="text-align:right">{{ d.reglas.length.toLocaleString('es-CO') }} caracteres</p>
-        }
         @case ('dis') {
           <p class="xs muted">Pares de procesos que se pueden confundir con {{ d.clave || 'este proceso' }}: cuándo es cada uno y qué señal manda.</p>
           @if (!otros().length) {
@@ -315,7 +307,7 @@ export class ProcesoEditorComponent implements OnInit {
     return resumenEtiqueta(c);
   }
 
-  protected readonly pestanas: [Pestana, string][] = [['rec', 'Reconocimiento'], ['reg', 'Reglas completas'], ['et', 'Etiquetas'], ['dat', 'Datos (JSON)'], ['val', 'Validar'], ['dis', 'Discriminación']];
+  protected readonly pestanas: [Pestana, string][] = [['rec', 'Reconocimiento'], ['et', 'Etiquetas'], ['dat', 'Datos (JSON)'], ['val', 'Validar'], ['dis', 'Discriminación']];
   protected readonly tipos = TIPOS_CAMPO;
   protected readonly tab = signal<Pestana>('rec');
   protected readonly json = signal(false);
@@ -348,7 +340,7 @@ export class ProcesoEditorComponent implements OnInit {
 
   private vacio(): Borrador {
     return {
-      nombre: '', clave: '', senales: '', excl: [], extrae: false, campos: [], af: [], extras: [], disc: [], reglas: '',
+      nombre: '', clave: '', senales: '', excl: [], extrae: false, campos: [], af: [], extras: [], disc: [],
       etiquetas: [{ clave: '', criterio: '', tipo: 'ia', origen: 'user', campo: '', op: '=', valor: '' }],
       umbral: 70,
     };
@@ -374,7 +366,6 @@ export class ProcesoEditorComponent implements OnInit {
       af: p.campos_extraer.find((f) => f.tipo === 'tabla')?.campos ?? [],
       umbral: Math.round((p.umbral ?? this.buzon().umbral_confianza ?? 0.7) * 100),
       extras: [...(p.causas_validar ?? [])],
-      reglas: p.reglas ?? '',
       disc: this.buzon().discriminacion
         .filter((x) => x.a === p.clave || x.b === p.clave)
         .map((x) => ({ con: x.a === p.clave ? x.b : x.a, manda: x.manda })),
@@ -514,7 +505,6 @@ export class ProcesoEditorComponent implements OnInit {
           clave: d.clave, nombre: d.nombre.trim(), descripcion: d.senales.trim(), exclusiones: d.excl.map((x) => x.trim()).filter(Boolean).join('\n') || null,
           campos_extraer: campos, color: p && !this.duplicar() ? p.color : null, activo: p?.activo ?? true,
           umbral: d.umbral / 100, causas_validar: d.extras.map((x) => x.trim()).filter(Boolean),
-          reglas: d.reglas.trim() || null,
         },
         etiquetas: ets.map((e) => ({
           clave: e.clave,

@@ -77,11 +77,25 @@ interface CfgEsp {
                 <option value="personas" [selected]="g.destino === 'personas'">Asignar a personas</option>
                 <option value="carpeta" [selected]="g.destino === 'carpeta'">Enviar a una carpeta</option>
                 <option value="categorizar" [selected]="g.destino === 'categorizar'">Solo categorizar</option>
+                <option value="reenviar" [selected]="g.destino === 'reenviar'">Reenviar a destinatarios</option>
+                <option value="responder" [selected]="g.destino === 'responder'">Responder al remitente</option>
               </select>
               @if (g.destino === 'carpeta') {
                 <alma-carpeta-select [carpetas]="carpetas()" [valor]="g.carpeta" (valorChange)="ponerGrupo(g.key, { carpeta: $event })" />
+              } @else if (g.destino === 'reenviar') {
+                <input class="input sm" [attr.aria-label]="'Reenviar ' + g.nombre + ' a'" placeholder="correo@skandia.com.co, otro@skandia.com.co"
+                  [value]="(g.destinatarios ?? []).join(', ')" (change)="ponerGrupo(g.key, { destinatarios: correosDe($any($event.target).value) })" />
               }
             </div>
+            @if (g.destino === 'reenviar' || g.destino === 'responder') {
+              <div class="row" style="flex-wrap:nowrap;padding-left:158px">
+                <input class="input sm" [attr.aria-label]="'Mensaje del envío de ' + g.nombre" placeholder="Mensaje que acompaña el envío (opcional)"
+                  [value]="g.mensaje ?? ''" (change)="ponerGrupo(g.key, { mensaje: $any($event.target).value.trim() || null })" />
+              </div>
+              @if (g.destino === 'reenviar' && !(g.destinatarios ?? []).length) {
+                <p class="xxs muted" style="padding-left:158px">Agrega al menos un correo para guardar este destino.</p>
+              }
+            }
           }
         </div>
         @if (gp().length) {
@@ -318,7 +332,12 @@ export class AsignacionWizardComponent {
     void this.sincronizar();
   }
 
-  protected ponerGrupo(key: string, cambios: Partial<Pick<GrupoBorrador, 'destino' | 'carpeta'>>): void {
+  /** «a@x.co, b@y.co» → lista limpia (el backend valida cada correo). */
+  protected correosDe(texto: string): string[] {
+    return [...new Set(texto.split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))];
+  }
+
+  protected ponerGrupo(key: string, cambios: Partial<Pick<GrupoBorrador, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje'>>): void {
     const destino = cambios.destino as DestinoGrupo | undefined;
     this.ponerSt({
       ...this.st(),

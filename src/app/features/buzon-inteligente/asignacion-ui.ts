@@ -21,6 +21,10 @@ export interface GrupoBorrador {
   etiquetas: string[];
   destino: DestinoGrupo;
   carpeta: string | null;
+  /** 067: destino «reenviar». */
+  destinatarios?: string[];
+  /** 067: texto que acompaña el reenvío o la respuesta. */
+  mensaje?: string | null;
 }
 
 export interface EstadoGrupos {
@@ -53,7 +57,10 @@ export function camposDeGrupo(g: { etiquetas: string[] }, categorias: Categoria[
 }
 
 export function borradorDe(g: Grupo): GrupoBorrador {
-  return { id: g.id, key: g.id, nombre: g.nombre, etiquetas: [...g.etiquetas], destino: g.destino, carpeta: g.carpeta };
+  return {
+    id: g.id, key: g.id, nombre: g.nombre, etiquetas: [...g.etiquetas], destino: g.destino, carpeta: g.carpeta,
+    destinatarios: [...(g.destinatarios ?? [])], mensaje: g.mensaje ?? null,
+  };
 }
 
 /** Grupos propuestos por modo. Conserva destino, carpeta e id de los grupos previos con la misma llave o nombre. */
@@ -69,6 +76,8 @@ export function gruposPorModo(modo: ModoGrupos, ets: EtiquetaProceso[], prev: Gr
       etiquetas,
       destino: o ? o.destino : key === 'OTROS' ? 'categorizar' : 'personas',
       carpeta: o?.carpeta ?? null,
+      destinatarios: o?.destinatarios ?? [],
+      mensaje: o?.mensaje ?? null,
     };
   };
   if (modo === 'uno') return [mk('TODOS', 'Todo el buzón', ets.map((e) => e[0]))];
@@ -91,11 +100,15 @@ export async function sincronizarGrupos(
   const out: GrupoBorrador[] = [];
   for (const [i, b] of borrador.entries()) {
     const nombre = b.nombre.trim() || `Grupo ${i + 1}`;
-    const valido = b.destino !== 'carpeta' || !!b.carpeta;
+    const valido = (b.destino !== 'carpeta' || !!b.carpeta) && (b.destino !== 'reenviar' || !!b.destinatarios?.length);
+    const envio = {
+      destinatarios: b.destino === 'reenviar' ? [...(b.destinatarios ?? [])] : [],
+      mensaje: b.destino === 'reenviar' || b.destino === 'responder' ? (b.mensaje ?? null) : null,
+    };
     const previo = b.id ? actuales.find((g) => g.id === b.id) : undefined;
     if (previo) {
       const cambios: Partial<GrupoIn> = { nombre, etiquetas: [...b.etiquetas], orden: i + 1 };
-      if (valido) Object.assign(cambios, { destino: b.destino, carpeta: b.destino === 'carpeta' ? b.carpeta : null });
+      if (valido) Object.assign(cambios, { destino: b.destino, carpeta: b.destino === 'carpeta' ? b.carpeta : null, ...envio });
       const cuerpo = aGrupoIn(previo, cambios);
       if (JSON.stringify(cuerpo) !== JSON.stringify(aGrupoIn(previo))) await api.actualizarGrupo(previo.id, cuerpo);
       out.push(b);
@@ -105,6 +118,7 @@ export async function sincronizarGrupos(
         etiquetas: [...b.etiquetas],
         destino: b.destino,
         carpeta: b.destino === 'carpeta' ? b.carpeta : null,
+        ...envio,
         sin_activos_modo: 'cola',
         orden: i + 1,
         activo: true,
