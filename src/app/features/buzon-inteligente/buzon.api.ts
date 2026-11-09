@@ -83,6 +83,8 @@ export interface Buzon {
   agente_nombre: string | null;
   /** Prompt con el que el área ya trabaja (lo lee «Leer el prompt del área»). */
   prompt_area: string | null;
+  /** 069: secciones generales del prompt (de todo el buzón), completas. */
+  reglas_generales?: string | null;
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
@@ -150,6 +152,7 @@ export type BuzonUpdate = Partial<
     | 'modo_clasificacion'
     | 'agente_nombre'
     | 'prompt_area'
+    | 'reglas_generales'
     | 'al_desactivar'
     | 'borrador_en_hilo'
     | 'descripcion'
@@ -462,6 +465,8 @@ export interface Proceso {
   /** 061: confianza mínima (null = la del buzón) y causas que llevan a Validar. */
   umbral?: number | null;
   causas_validar?: string[];
+  /** 069: texto completo de las secciones del prompt que son de este proceso. */
+  reglas?: string | null;
 }
 
 export interface ProcesoIn {
@@ -475,6 +480,7 @@ export interface ProcesoIn {
   activo: boolean;
   umbral?: number | null;
   causas_validar?: string[];
+  reglas?: string | null;
 }
 
 /** Editor de procesos de Reglas (061): el proceso con sus etiquetas y su discriminación. */
@@ -567,12 +573,27 @@ export interface ProcesoPropuesto {
   campos: CampoProceso[];
   etiquetas: EtiquetaPropuesta[];
   color?: string;
+  /** 069: texto del prompt que es de este proceso (literal o condensado). */
+  reglas?: string;
 }
 
 /** Lo que Alma lee del prompt del área. No se guarda hasta aplicarla. */
 export interface PropuestaProcesos {
   procesos: ProcesoPropuesto[];
   instrucciones: string;
+  /** 069: secciones del prompt que son de todo el buzón. */
+  reglas_generales?: string;
+  /** 069: en cuántas secciones se partió el prompt. */
+  secciones?: number;
+}
+
+/** 069: resultado de condensar un texto (si falla o es corto, vuelve el original). */
+export interface Condensado {
+  texto: string;
+  original: number;
+  resultado: number;
+  condensado: boolean;
+  error?: string;
 }
 
 export interface ResultadoAplicar {
@@ -1383,6 +1404,18 @@ export class BuzonApi {
           body: JSON.stringify({ prompt }),
         }, ESPERA_LARGA_MS),
       () => this.demo.analizarPrompt(prompt),
+    );
+  }
+
+  /** 069: condensa con fidelidad el texto de un proceso o las reglas generales (no guarda nada). */
+  condensar(buzonId: string, texto: string, deQue: string): Promise<Condensado> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Condensado>(`${BASE}/buzones/${buzonId}/condensar`, {
+          method: 'POST',
+          body: JSON.stringify({ texto, de_que: deQue }),
+        }, ESPERA_LARGA_MS),
+      () => ({ texto, original: texto.length, resultado: texto.length, condensado: false }),
     );
   }
 
