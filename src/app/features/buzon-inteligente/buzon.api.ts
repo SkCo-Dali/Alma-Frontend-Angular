@@ -87,6 +87,8 @@ export interface Buzon {
   reglas_generales?: string | null;
   /** 070: lo que la IA marca como OTROS → descartar sin tocar o etiquetar y aplicar su grupo. */
   sin_proceso?: 'descartar' | 'acciones';
+  /** 071: categoría de Outlook para lo que queda en Validar ('' = no se pone). */
+  etiqueta_validar?: string;
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
@@ -156,6 +158,7 @@ export type BuzonUpdate = Partial<
     | 'prompt_area'
     | 'reglas_generales'
     | 'sin_proceso'
+    | 'etiqueta_validar'
     | 'al_desactivar'
     | 'borrador_en_hilo'
     | 'descripcion'
@@ -269,6 +272,10 @@ export interface Correo {
   categoria_color: string | null;
   confianza: number | null;
   justificacion: string | null;
+  /** 071: qué le falta al correo para su proceso (por qué quedó en Validar). */
+  motivo_validacion?: string | null;
+  /** 071: tokens de entrada que el servicio de IA reutilizó. */
+  tokens_cacheados?: number | null;
   datos_extraidos: Record<string, unknown> | null;
   estado: EstadoCorreo;
   origen: OrigenDecision | null;
@@ -578,6 +585,8 @@ export interface ProcesoPropuesto {
   color?: string;
   /** 069: texto del prompt que es de este proceso (literal o condensado). */
   reglas?: string;
+  /** 071: lo que el prompt llamaba «VALIDAR» (estado, no etiqueta). */
+  causas_validar?: string[];
 }
 
 /** Lo que Alma lee del prompt del área. No se guarda hasta aplicarla. */
