@@ -1336,6 +1336,7 @@ export class BandejaBuzonComponent {
 
   protected motivoValidar(c: Correo): string | null {
     if (c.estado !== 'revision' || c.duplicado_estado === 'posible') return null;
+    if (c.motivo_validacion?.trim()) return c.motivo_validacion.trim();
     const m = (c.justificacion ?? '').split('Requiere humano:')[1]?.trim();
     if (m) return m;
     if (c.confianza === null) return 'Pendiente de revisión.';

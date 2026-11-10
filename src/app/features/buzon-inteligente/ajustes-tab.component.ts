@@ -10,6 +10,7 @@ import { Component, computed, inject, input, OnInit, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
+import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
 import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
 import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, ModoConexion } from './buzon.api';
 
@@ -24,7 +25,7 @@ interface CarpetaPlana {
 
 @Component({
   selector: 'alma-ajustes-tab',
-  imports: [FormsModule, LucideAngularModule, AvisoCuentaBuzonComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent, AvisoCuentaBuzonComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
@@ -65,6 +66,18 @@ interface CarpetaPlana {
             <alma-aviso-cuenta-buzon />
           }
           <p class="note b-sky"><lucide-icon name="zap" [size]="13" /> <span>Nova ejecuta automáticamente todo lo que alcanza el umbral de confianza. Solo va a <b>Validar</b> lo que queda por debajo, lo que la IA marca para revisión humana y los posibles duplicados.</span></p>
+          <div class="sunk r-xl stack" style="padding:10px 12px;gap:6px">
+            <div class="row between" style="flex-wrap:nowrap">
+              <div style="min-width:0">
+                <p class="sm b">Marcar en Outlook lo que queda en Validar</p>
+                <p class="xxs muted">Le pone esta categoría al correo para que quien trabaja desde Outlook sepa que debe revisarlo en Nova. Se quita al aprobarlo, ignorarlo o cuando Nova lo resuelve.</p>
+              </div>
+              <alma-switch [checked]="!!b.etiqueta_validar" (checkedChange)="alternarEtiquetaValidar($event)" ariaLabel="Marcar en Outlook lo que queda en Validar" />
+            </div>
+            @if (b.etiqueta_validar) {
+              <input class="input sm" [(ngModel)]="etiquetaValidar" (change)="guardarEtiquetaValidar()" maxlength="80" aria-label="Nombre de la categoría de Outlook" />
+            }
+          </div>
         </div>
 
         <div class="glass r-2xl stack" style="padding:20px">
@@ -162,6 +175,7 @@ export class AjustesTabComponent implements OnInit {
   protected agenteNombre = '';
   protected versionFija = '';
   protected ventana = 15;
+  protected etiquetaValidar = 'Nova · Validar';
 
   protected readonly modulos = computed(() => {
     const b = this.buzon();
@@ -186,6 +200,7 @@ export class AjustesTabComponent implements OnInit {
     this.agenteNombre = b.agente_nombre ?? '';
     this.versionFija = b.agente_version_fija ?? '';
     this.ventana = b.ventana_hilos_dias;
+    this.etiquetaValidar = b.etiqueta_validar || 'Nova · Validar';
     void this.api.opciones().then((o) => this.modelos.set(o.modelos)).catch(() => undefined);
     if (b.estado_conexion === 'conectada') {
       void this.api.carpetas(b.id).then((t) => this.carpetas.set(aplanar(t))).catch(() => undefined);
@@ -194,6 +209,19 @@ export class AjustesTabComponent implements OnInit {
 
   protected nombreCarpeta(n: string): string {
     return n.toLowerCase() === 'inbox' ? 'Bandeja de entrada' : n;
+  }
+
+  protected alternarEtiquetaValidar(on: boolean): void {
+    void this.guardar({ etiqueta_validar: on ? this.etiquetaValidar.trim() || 'Nova · Validar' : '' });
+  }
+
+  protected guardarEtiquetaValidar(): void {
+    const v = this.etiquetaValidar.trim();
+    if (!v) {
+      this.etiquetaValidar = this.buzon().etiqueta_validar || 'Nova · Validar';
+      return;
+    }
+    void this.guardar({ etiqueta_validar: v });
   }
 
   protected async guardar(cambio: BuzonUpdate): Promise<void> {

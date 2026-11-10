@@ -1605,7 +1605,6 @@ export class DemoStore {
     if (!this.listarProcesos(buzonId).some((p) => p.activo)) throw new Error('No hay procesos activos que publicar.');
     const cambios = b.version_reglas ? this.cambiosBorrador.get(buzonId) ?? [] : [['Primera versión', '', `${this.listarProcesos(buzonId).length} proceso(s)`] as CambioRegla];
     if (b.version_reglas && !cambios.length) throw new Error('El borrador no tiene cambios frente a la versión vigente.');
-    if (!this.pruebas.has(buzonId) && !b.en_configuracion) throw new Error('Prueba el borrador antes de publicarlo.');
     this.estadoReglas(buzonId);
     const version = (b.version_reglas ?? 0) + 1;
     this.versiones.set(buzonId, [{ version, cambios, prueba: this.pruebas.get(buzonId) ?? null, publicada_en: new Date().toISOString(), publicada_por: por }, ...(this.versiones.get(buzonId) ?? [])]);

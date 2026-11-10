@@ -219,7 +219,7 @@ interface FijaEd {
               }
             </article>
           }
-          @for (p of procesos(); track p.id) {
+          @for (p of procesos(); track p.id; let i = $index, primero = $first, ultimo = $last) {
             @let abierto = editando()?.id === p.id;
             <article class="glass r-2xl stack" style="padding:14px;gap:8px" [style.opacity]="p.activo ? 1 : 0.6" [style.box-shadow]="abierto ? '0 0 0 2px var(--ring)' : null">
               <div class="row" style="flex-wrap:nowrap;gap:10px;align-items:flex-start">
@@ -251,6 +251,11 @@ interface FijaEd {
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
                     } @else {
                       <button type="button" class="btn ghost" (click)="abrirPegar(p)" [attr.aria-label]="(p.reglas ? 'Reglas de ' : 'Actualizar con prompt ') + p.clave" [title]="p.reglas ? 'Reglas del proceso' : 'Actualizar con prompt'"><lucide-icon name="file-pen" [size]="16" /></button>
+                      @if (procesos().length > 1) {
+                        <!-- Orden de evaluación: OTROS siempre va de último. -->
+                        <button type="button" class="btn ghost" [disabled]="primero" (click)="mover(i, -1)" [attr.aria-label]="'Subir ' + p.clave" title="Evaluar antes"><lucide-icon name="arrow-up" [size]="16" /></button>
+                        <button type="button" class="btn ghost" [disabled]="ultimo" (click)="mover(i, 1)" [attr.aria-label]="'Bajar ' + p.clave" title="Evaluar después"><lucide-icon name="arrow-down" [size]="16" /></button>
+                      }
                       <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave" title="Duplicar"><lucide-icon name="copy" [size]="16" /></button>
                       <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave" [title]="p.activo ? 'Desactivar' : 'Activar'"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="pedirEliminar(p)" [attr.aria-label]="'Eliminar ' + p.clave" title="Eliminar"><lucide-icon name="trash-2" [size]="16" /></button>
@@ -334,27 +339,14 @@ interface FijaEd {
             <!-- Encabezado a la par de «Procesos»: separa la columna de la entrada de reglas. -->
             <h2 class="sm b on-wall">Borrador y publicación</h2>
             <div class="glass r-2xl stack" style="padding:16px">
-              <h2 class="sm b">Probar y publicar</h2>
-              <p class="xs muted">Se prueba contra los últimos 30 correos que las analistas ya corrigieron.</p>
+              <h2 class="sm b">Publicar</h2>
+              <p class="xs muted">Nova clasifica con la versión publicada. Lo que edites queda en un borrador hasta que lo publiques.</p>
               <div class="row">
-                <button type="button" class="btn outline sm" [disabled]="!est()?.borrador || probando()" (click)="probar()"><lucide-icon name="list-checks" [size]="13" /> {{ probando() ? 'Probando…' : 'Probar borrador' }}</button>
-                <button type="button" class="btn primary sm" [disabled]="!puedePublicar() || publicando()" (click)="publicar()"><lucide-icon name="upload-cloud" [size]="13" /> Publicar v{{ siguiente() }}</button>
+                <button type="button" class="btn primary sm" [disabled]="!puedePublicar() || publicando()" (click)="publicar()"><lucide-icon name="upload-cloud" [size]="13" /> {{ publicando() ? 'Publicando…' : 'Publicar v' + siguiente() }}</button>
+                @if (est()?.borrador) { <span class="xxs muted">{{ est()!.cambios.length }} cambio(s) sin publicar</span> }
               </div>
               @if (!est()?.borrador) {
                 <p class="xxs muted">Edita un proceso, acepta una propuesta o carga un prompt para crear un borrador.</p>
-              }
-              @if (est()?.prueba; as pr) {
-                @if (pr.total) {
-                  <div class="g2">
-                    <div class="stat"><p class="l">Proceso correcto</p><p class="v">{{ pr.proceso_ok }}/{{ pr.total }}</p></div>
-                    <div class="stat"><p class="l">Etiqueta correcta</p><p class="v">{{ pr.etiqueta_ok }}/{{ pr.total }}</p></div>
-                  </div>
-                  @for (f of pr.fallos; track f.correo_id) {
-                    <p class="xxs muted trunc">✗ {{ f.asunto }} · esperaba <span class="key">{{ f.esperado }}</span> y salió <span class="key">{{ f.obtenido || '—' }}</span></p>
-                  }
-                } @else {
-                  <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Aún no hay correos corregidos con qué comparar: puedes publicar.</span></p>
-                }
               }
               @if (est()?.versiones?.length) {
                 <p class="xxs muted">Historial: @for (v of est()!.versiones.slice(0, 5); track v.version; let last = $last) { v{{ v.version }} · {{ v.publicada_por }} · {{ fecha(v.publicada_en) }}{{ last ? '' : ' — ' }} }</p>
@@ -378,43 +370,32 @@ interface FijaEd {
                 }
               </div>
             }
-            <div class="glass r-2xl stack" style="padding:16px">
-              <div class="row between">
-                <h2 class="sm b"><lucide-icon name="alert-circle" [size]="13" /> Pendientes ({{ pendientes().length }})</h2>
-                @if (pendientes().length) {
+            @if (pendientes().length) {
+              <div class="glass r-2xl stack" style="padding:16px">
+                <div class="row between">
+                  <h2 class="sm b"><lucide-icon name="alert-circle" [size]="13" /> Pendientes ({{ pendientes().length }})</h2>
                   <button type="button" class="btn outline sm" (click)="copiarPreguntas(pendientes())"><lucide-icon name="copy" [size]="13" /> Copiar como preguntas para la IA</button>
+                </div>
+                @for (x of pendientes(); track x.texto) {
+                  <p class="note b-amber"><lucide-icon [name]="x.icono" [size]="13" /> <span>{{ x.texto }}</span></p>
                 }
               </div>
-              @for (x of pendientes(); track x.texto) {
-                <p class="note b-amber"><lucide-icon [name]="x.icono" [size]="13" /> <span>{{ x.texto }}</span></p>
-              } @empty {
-                <p class="note b-emerald"><lucide-icon name="check" [size]="13" /> <span>Sin pendientes.</span></p>
-              }
-            </div>
+            }
+            <!-- Lo general del prompt se edita en «Reglas de X» → pestaña «General del área»;
+                 el orden, con las flechas de cada proceso. Aquí queda solo lo poco usado. -->
             <div class="glass r-2xl stack" style="padding:16px">
-              <h2 class="sm b">Secciones globales</h2>
-              @for (g of globales(); track g.id) {
+              <button type="button" class="plegable" (click)="verAvanzado.set(!verAvanzado())" [attr.aria-expanded]="verAvanzado()">
+                <h2 class="sm b"><lucide-icon name="sliders-horizontal" [size]="13" /> Avanzado</h2>
+                <lucide-icon [name]="verAvanzado() ? 'chevron-up' : 'chevron-down'" [size]="16" />
+              </button>
+              @if (verAvanzado()) {
                 <div class="row between sunk r-xl" style="padding:8px 12px;flex-wrap:nowrap;align-items:flex-start">
-                  <div style="min-width:0"><p class="xs b">{{ g.titulo }}</p><p class="xxs muted">{{ g.texto }}</p></div>
+                  <div style="min-width:0"><p class="xs b">Reglas fijas (sin IA)</p><p class="xxs muted">{{ textoFijas() }}</p></div>
                   @if (editable()) {
-                    <button type="button" class="btn ghost" (click)="editarGlobal(g.id)" [attr.aria-label]="'Editar ' + g.titulo"><lucide-icon name="pencil" [size]="16" /></button>
+                    <button type="button" class="btn ghost" (click)="editarGlobal('fijas')" aria-label="Editar reglas fijas"><lucide-icon name="pencil" [size]="16" /></button>
                   }
                 </div>
               }
-              <div class="sunk r-xl" style="padding:8px 12px;display:grid;gap:6px">
-                <p class="xs b">Orden de evaluación</p>
-                <div class="row" style="gap:6px">
-                  @for (p of procesos(); track p.id; let i = $index) {
-                    <span class="chipo">{{ i + 1 }}. {{ p.clave }}
-                      @if (editable()) {
-                        <button type="button" class="mini" (click)="mover(i, -1)" [attr.aria-label]="'Subir ' + p.clave">‹</button>
-                        <button type="button" class="mini" (click)="mover(i, 1)" [attr.aria-label]="'Bajar ' + p.clave">›</button>
-                      }
-                    </span>
-                  }
-                  @if (respaldo(); as r) { @if (r.activa) { <span class="chipo">{{ procesos().length + 1 }}. {{ r.clave }}</span> } }
-                </div>
-              </div>
             </div>
             @if (b.discriminacion.length) {
               <div class="glass r-2xl stack" style="padding:16px">
@@ -468,7 +449,9 @@ interface FijaEd {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
                 <div class="row between">
                   @if (objetivo(); as o) {
-                    @if (o.reglas) {
+                    @if (pestana() === 'general') {
+                      <div><h2 class="sm b">Reglas generales del área</h2><p class="xs muted">Aplican a todos los procesos de {{ buzon().nombre }}. Se guardan en el borrador y entran al publicar.</p></div>
+                    } @else if (o.reglas) {
                       <div><h2 class="sm b">Reglas de {{ o.clave }}</h2><p class="xs muted">Es el texto completo de {{ o.clave }} que va a la IA en cada correo. Edítalo y guárdalo tal cual, o analízalo con Nova para actualizar también sus señales, etiquetas y datos (te muestra qué cambia antes de aplicarlo).</p></div>
                     } @else {
                       <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Nova te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}, y desde ahí guarda sus reglas completas.</p></div>
@@ -478,6 +461,32 @@ interface FijaEd {
                   }
                   <button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
                 </div>
+                @if (objetivo(); as o) {
+                  @if (!esWiz()) {
+                    <div class="row" style="gap:6px" role="tablist" aria-label="Qué reglas editar">
+                      <button type="button" role="tab" class="btn sm" [class.primary]="pestana() === 'proceso'" [class.outline]="pestana() !== 'proceso'" [attr.aria-selected]="pestana() === 'proceso'" (click)="pestana.set('proceso')">{{ o.clave }}</button>
+                      <button type="button" role="tab" class="btn sm" [class.primary]="pestana() === 'general'" [class.outline]="pestana() !== 'general'" [attr.aria-selected]="pestana() === 'general'" (click)="abrirGeneral()">General del área</button>
+                    </div>
+                  }
+                }
+                @if (pestana() === 'general' && objetivo()) {
+                  <p class="xs muted">Lo del prompt que aplica a todo el buzón (reglas comunes, preprocesamiento, exclusiones). Va completo a la IA en cada correo: entre más corto, menos tokens.</p>
+                  <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoGeneral" aria-label="Reglas generales del área"></textarea>
+                  <p class="xxs muted" style="text-align:right">{{ textoGeneral.length.toLocaleString('es-CO') }} caracteres · unos {{ tokensDe(textoGeneral) }} tokens en cada correo</p>
+                  @if (condensado(); as cd) {
+                    <p class="note b-emerald"><lucide-icon name="sparkles" [size]="13" /> <span>Condensado de {{ cd.original.toLocaleString('es-CO') }} a {{ cd.resultado.toLocaleString('es-CO') }} caracteres (−{{ menos(cd) }} %). Revísalo antes de guardar; nada se guarda hasta que pulses «Guardar». <button type="button" class="linkbtn xs" (click)="volverOriginalGeneral()">Volver al original</button></span></p>
+                  }
+                  @if (verContexto()) {
+                    <div class="fld"><label class="label" for="g-ctx">Contexto del área</label><textarea class="input" id="g-ctx" rows="3" style="height:auto" [(ngModel)]="contextoGeneral"></textarea></div>
+                  }
+                  @if (verExclusiones()) {
+                    <div class="fld"><label class="label" for="g-exc">Exclusiones globales</label><textarea class="input" id="g-exc" rows="3" style="height:auto" [(ngModel)]="exclusionesGeneral"></textarea></div>
+                  }
+                  <div class="row between">
+                    <button type="button" class="btn outline sm" [disabled]="condensando() || textoGeneral.length < 4000" (click)="condensarGeneral()" [title]="textoGeneral.length < 4000 ? 'Es corto: no hace falta condensarlo' : 'Quita lo redundante sin perder reglas'"><lucide-icon [name]="condensando() ? 'loader-2' : 'minimize-2'" [size]="13" [class.animate-spin]="condensando()" /> {{ condensando() ? 'Condensando… (puede tardar 1 a 2 min)' : 'Condensar con Nova' }}</button>
+                    <button type="button" class="btn primary sm" [disabled]="guardandoGlobal() || condensando()" (click)="guardarGeneral()"><lucide-icon name="save" [size]="13" /> Guardar en el borrador</button>
+                  </div>
+                } @else {
                 @if (!esWiz()) {
                   <p class="xxs muted">¿Ajustaste reglas aquí en Nova? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
                 }
@@ -500,6 +509,7 @@ interface FijaEd {
                   </div>
                 </div>
                 @if (errorPrompt()) { <p class="err">{{ errorPrompt() }}</p> }
+                }
               </div>
             }
           }
@@ -649,7 +659,6 @@ export class ReglasTabComponent implements OnInit {
   private readonly destinos = signal<Record<string, string>>({});
   /** Propuestas en las que NO se desactivan las etiquetas que salen (por defecto sí). */
   private readonly conservarSalen = signal<Set<string>>(new Set());
-  protected readonly probando = signal(false);
   /** «Cambios en el prompt» desplegado (plegado por defecto). */
   protected readonly verCambios = signal(false);
   protected readonly publicando = signal(false);
@@ -660,6 +669,16 @@ export class ReglasTabComponent implements OnInit {
   protected readonly prompt = signal<PromptBuzon | null>(null);
   protected readonly promptCual = signal<'vigente' | 'borrador'>('vigente');
   protected readonly globalEd = signal<Global>('contexto');
+  protected readonly verAvanzado = signal(false);
+  protected readonly pestana = signal<'proceso' | 'general'>('proceso');
+  protected textoGeneral = '';
+  protected contextoGeneral = '';
+  protected exclusionesGeneral = '';
+  private originalGeneral = '';
+  protected readonly verContexto = signal(false);
+  protected readonly verExclusiones = signal(false);
+  protected readonly condensando = signal(false);
+  protected readonly condensado = signal<{ original: number; resultado: number } | null>(null);
   protected readonly guardandoGlobal = signal(false);
   /** Asistente: procesos aceptados y los que llegaron como propuesta desde correos. */
   protected readonly aceptados = signal<Set<string>>(new Set());
@@ -699,24 +718,12 @@ export class ReglasTabComponent implements OnInit {
   protected readonly paso = computed(() => (this.est()?.prueba ? 5 : this.est()?.borrador ? 3 : this.procesos().length ? 2 : 1));
   protected readonly puedePublicar = computed(() => {
     const e = this.est();
-    return !!e && e.borrador && (!!e.prueba || this.buzon().en_configuracion);
+    return !!e && e.borrador;
   });
 
-  protected readonly globales = computed(() => {
-    const b = this.buzon();
+  protected readonly textoFijas = computed(() => {
     const fijas = this.fijas().filter((f) => f.activa);
-    return [
-      { id: 'contexto' as Global, titulo: 'Contexto del área', texto: b.contexto || '—' },
-      {
-        id: 'generales' as Global,
-        titulo: 'Reglas generales del área',
-        texto: b.reglas_generales
-          ? `${b.reglas_generales.length.toLocaleString('es-CO')} caracteres · ${b.reglas_generales.slice(0, 140).replace(/\s+/g, ' ')}…`
-          : '— (se llenan al cargar el prompt del área)',
-      },
-      { id: 'fijas' as Global, titulo: 'Reglas fijas (sin IA)', texto: fijas.length ? fijas.map((f) => `${f.nombre} → ${f.categoria_clave}`).join(' · ') : 'Ninguna' },
-      { id: 'exclusiones' as Global, titulo: 'Exclusiones globales', texto: b.exclusiones_globales || '—' },
-    ];
+    return fijas.length ? fijas.map((f) => `${f.nombre} → ${f.categoria_clave}`).join(' · ') : 'Ninguna: todo lo clasifica la IA.';
   });
   protected readonly tituloGlobal = computed(() => ({ contexto: 'Contexto del área', generales: 'Reglas generales del área', fijas: 'Reglas fijas', exclusiones: 'Exclusiones globales' })[this.globalEd()]);
 
@@ -740,13 +747,8 @@ export class ReglasTabComponent implements OnInit {
     }
     return out;
   });
-  protected readonly pendientes = computed<Pendiente[]>(() => {
-    const out = [...this.faltantes()];
-    if (this.procesos().filter((p) => p.activo).length === 1) {
-      out.unshift({ icono: 'layers', texto: 'Solo hay 1 proceso. ¿El buzón recibe otros tipos de correo? Usa «Proponer desde correos reales».', bloquea: false });
-    }
-    return out;
-  });
+  /** Solo lo que impide que el buzón funcione bien (las sugerencias van en el asistente). */
+  protected readonly pendientes = computed<Pendiente[]>(() => this.faltantes().filter((x) => x.bloquea));
   protected readonly pendientesWiz = computed<Pendiente[]>(() => {
     const out: Pendiente[] = [];
     const n = this.procesos().length;
@@ -996,6 +998,7 @@ export class ReglasTabComponent implements OnInit {
   /** Con `p`, «Actualizar con prompt» de ese proceso: al analizar solo queda su propuesta. */
   protected abrirPegar(p: Proceso | null = null): void {
     this.objetivo.set(p);
+    this.pestana.set('proceso');
     // Un proceso con reglas completas (069) se edita sobre SU texto; si no las tiene
     // (cargado antes), sobre el prompt del área, como antes.
     this.textoPrompt = p?.reglas ? p.reglas : this.textoPrompt || this.buzon().prompt_area || '';
@@ -1276,7 +1279,68 @@ export class ReglasTabComponent implements OnInit {
     );
   }
 
-  // ── Secciones globales ──
+  // ── General del área (pestaña del editor de reglas) ──
+  protected abrirGeneral(): void {
+    const b = this.buzon();
+    this.textoGeneral = this.originalGeneral = b.reglas_generales ?? '';
+    this.contextoGeneral = b.contexto ?? '';
+    this.exclusionesGeneral = b.exclusiones_globales ?? '';
+    // Contexto y exclusiones solo se muestran en los buzones que ya los usan.
+    this.verContexto.set(!!this.contextoGeneral.trim());
+    this.verExclusiones.set(!!this.exclusionesGeneral.trim());
+    this.condensado.set(null);
+    this.pestana.set('general');
+  }
+
+  protected tokensDe(t: string): string {
+    return Math.round(t.length / 4).toLocaleString('es-CO');
+  }
+
+  protected menos(c: { original: number; resultado: number }): number {
+    return c.original ? Math.round((1 - c.resultado / c.original) * 100) : 0;
+  }
+
+  protected async condensarGeneral(): Promise<void> {
+    this.condensando.set(true);
+    try {
+      const r = await this.api.condensar(this.buzon().id, this.textoGeneral, 'las reglas generales del área');
+      if (r.condensado) {
+        this.textoGeneral = r.texto;
+        this.condensado.set({ original: r.original, resultado: r.resultado });
+      } else {
+        this.toast.show('Se deja como está', r.error ? 'Nova no pudo condensarlo; no se perdió nada.' : 'No había partes redundantes que quitar.');
+      }
+    } catch (e) {
+      this.toast.error('No se pudo condensar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.condensando.set(false);
+    }
+  }
+
+  protected volverOriginalGeneral(): void {
+    this.textoGeneral = this.originalGeneral;
+    this.condensado.set(null);
+  }
+
+  protected async guardarGeneral(): Promise<void> {
+    this.guardandoGlobal.set(true);
+    try {
+      await this.api.actualizarBuzon(this.buzon().id, {
+        reglas_generales: this.textoGeneral.trim() || null,
+        ...(this.verContexto() ? { contexto: this.contextoGeneral.trim() || null } : {}),
+        ...(this.verExclusiones() ? { exclusiones_globales: this.exclusionesGeneral.trim() || null } : {}),
+      });
+      this.modal.set(null);
+      await this.recargar();
+      this.toast.show('Reglas generales guardadas en el borrador', 'Publica para que Nova las use.');
+    } catch (e) {
+      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoGlobal.set(false);
+    }
+  }
+
+  // ── Reglas fijas ──
   protected editarGlobal(s: Global): void {
     const b = this.buzon();
     this.globalEd.set(s);
@@ -1323,21 +1387,10 @@ export class ReglasTabComponent implements OnInit {
     }
   }
 
-  // ── Probar, publicar y ver prompt ──
-  protected async probar(): Promise<void> {
-    this.probando.set(true);
-    try {
-      const r = await this.api.probarBorrador(this.buzon().id);
-      this.est.set(await this.api.estadoReglas(this.buzon().id));
-      this.toast.show(r.total ? `Prueba completada: ${r.proceso_ok}/${r.total} procesos correctos` : 'Aún no hay correos corregidos para comparar');
-    } catch (e) {
-      this.toast.error('No se pudo probar el borrador', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.probando.set(false);
-    }
-  }
-
+  // ── Publicar y ver prompt ──
   protected async publicar(): Promise<void> {
+    const n = this.est()?.cambios.length ?? 0;
+    if (!confirm(`¿Publicar v${this.siguiente()}? ${n} cambio(s): desde ya Nova clasifica los correos nuevos con estas reglas.`)) return;
     this.publicando.set(true);
     try {
       const r = await this.api.publicarReglas(this.buzon().id);
