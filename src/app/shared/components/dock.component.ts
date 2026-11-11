@@ -9,7 +9,8 @@
 // - Reordenamiento drag & drop EN VIVO (desktop + táctil) y menú contextual
 //   (Abrir / Quitar del Dock).
 // - Se auto-oculta fuera del inicio (/apps/*, /admin, /settings, /help); el asa
-//   inferior lo invoca.
+//   inferior lo invoca. Se vuelve a ocultar en cuanto el cursor se aleja del
+//   Dock (o sale de la ventana), venga de donde venga.
 
 import { NgTemplateOutlet } from '@angular/common';
 import { LaunchpadService } from '../../core/services/launchpad.service';
@@ -18,6 +19,7 @@ import {
   DestroyRef,
   ElementRef,
   QueryList,
+  ViewChild,
   ViewChildren,
   computed,
   inject,
@@ -93,9 +95,9 @@ interface DockEntry {
       [style.transform]="hidden() ? 'translateY(130px)' : 'translateY(0)'"
       [style.opacity]="hidden() ? 0 : 1"
       (mouseenter)="cancelarOcultar()"
-      (mouseleave)="alSalirDelPanel($event)"
     >
       <nav
+        #navEl
         aria-label="Dock de navegación"
         class="glass-strong pointer-events-auto relative flex items-end gap-1.5 rounded-3xl border border-border px-4 pb-1 pt-1.5 shadow-[var(--shadow-lg)]"
         (mousemove)="onMove($event)"
@@ -231,6 +233,7 @@ export class DockComponent {
   private readonly router = inject(Router);
 
   @ViewChildren('iconEl') private iconEls!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChild('navEl') private navEl?: ElementRef<HTMLElement>;
 
   protected readonly launchpad = inject(LaunchpadService);
   protected readonly pathname = signal(this.router.url);
@@ -270,15 +273,43 @@ export class DockComponent {
   }
 
   /**
-   * El Dock DESLIZA bajo el cursor al mostrarse/ocultarse, lo que dispara un
-   * mouseleave "fantasma" con el cursor quieto. Si el cursor sigue pegado al
-   * borde inferior (sobre la línea invocadora, por debajo del Dock) NO ocultamos:
-   * no se fue, es el Dock el que pasó por debajo.
+   * Auto-ocultado por PROXIMIDAD, no por `mouseleave` del panel. El mouseleave
+   * fallaba en dos casos y el Dock quedaba visible para siempre:
+   *  - Se invocaba desde el asa y el cursor se iba sin llegar a entrar al Dock
+   *    (el panel nunca recibía mouseleave).
+   *  - Se salía del Dock pegado al borde inferior (de lado o hacia abajo): se
+   *    ignoraba para tolerar el mouseleave "fantasma" del deslizamiento, y no
+   *    llegaba otro.
+   * Ahora, mientras está invocado, cada movimiento del cursor decide: cerca del
+   * Dock (su rect con margen, hasta el borde inferior para cubrir el asa y el
+   * deslizamiento) ⇒ se queda; lejos ⇒ se oculta con el retardo cancelable.
    */
-  protected alSalirDelPanel(e: MouseEvent): void {
-    if (!this.insideApp()) return;
-    if (window.innerHeight - e.clientY < 28) return;
-    this.programarOcultar();
+  private readonly onDocMove = (e: MouseEvent): void => {
+    if (!this.puedeOcultar()) return;
+    if (this.cercaDelDock(e.clientX, e.clientY)) this.cancelarOcultar();
+    else if (this.ocultarTimer === null) this.programarOcultar();
+  };
+
+  /** El cursor salió de la ventana (p. ej. por el borde inferior). */
+  private readonly onDocOut = (e: MouseEvent): void => {
+    if (e.relatedTarget === null && this.puedeOcultar()) this.programarOcultar();
+  };
+
+  private puedeOcultar(): boolean {
+    if (!this.insideApp() || !this.summoned()) return false;
+    // No esconderlo en medio de una interacción con el propio Dock.
+    if (this.menuCtx() || this.dragAppId() || this.launchpad.open()) return false;
+    // Navegación por teclado dentro del Dock.
+    if (this.navEl?.nativeElement.querySelector(':focus-visible')) return false;
+    return true;
+  }
+
+  private cercaDelDock(x: number, y: number): boolean {
+    const nav = this.navEl?.nativeElement;
+    if (!nav) return false;
+    const r = nav.getBoundingClientRect();
+    const M = 16;
+    return x >= r.left - M && x <= r.right + M && y >= r.top - M;
   }
 
   // Ancho de viewport reactivo (cuántas apps caben en el Dock)
@@ -324,7 +355,13 @@ export class DockComponent {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.cancelarOcultar());
+    document.addEventListener('mousemove', this.onDocMove, { passive: true });
+    document.addEventListener('mouseout', this.onDocOut);
+    inject(DestroyRef).onDestroy(() => {
+      this.cancelarOcultar();
+      document.removeEventListener('mousemove', this.onDocMove);
+      document.removeEventListener('mouseout', this.onDocOut);
+    });
     window.addEventListener('resize', this.onResize);
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
