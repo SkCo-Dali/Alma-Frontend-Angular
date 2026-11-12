@@ -36,6 +36,7 @@ export const USUARIO_LOCAL: User = {
     'app.monitor-ia.campanas.manage',
     'app.monitor-ia.campanas.propias',
     'app.monitor-ia.config',
+    'app.monitor-ia.*',   // administrador de la App: solo él ve y cambia las conexiones
     'app.solicitudes-prestaciones.diligenciar',
     'app.solicitudes-prestaciones.auditoria.view',
     'platform.admin',
