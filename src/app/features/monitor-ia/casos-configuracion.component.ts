@@ -1,15 +1,19 @@
 // Configuración de los casos de Salesforce (Administrador):
-//   · Conexión: Connected App con flujo client credentials. El secreto es de escritura:
-//     se guarda cifrado y nunca vuelve al navegador.
-//   · Plantilla de cada flujo (Correo / Chat): qué casos entran, el prompt, los criterios
-//     y el modelo. Guardar crea una versión nueva; se puede probar con un caso real antes.
+//   · Conexión: Connected App con flujo client credentials. Solo un administrador de Nova o
+//     de la App la ve y la cambia. Ninguna llave vuelve al navegador (ni el Client ID ni el
+//     secreto): la pantalla solo dice que están guardadas y un valor nuevo las reemplaza.
+//   · Plantilla de cada flujo (Correo / Chat): qué casos entran (filtros de Origen y de
+//     «Responder a» con operadores), el prompt, los criterios y el modelo. Guardar crea una
+//     versión nueva; se puede probar con un caso real antes.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import {
+  CondicionFiltro,
   ConfiguracionSf,
   Criterio,
   Flujo,
@@ -19,14 +23,16 @@ import {
   PruebaPlantilla,
   VersionPlantilla,
 } from './casos.api';
-import { ETIQUETA_FLUJO, claseRespuesta, lineas } from './casos.domain';
+import { ETIQUETA_FLUJO, claseRespuesta, limpiarCondiciones } from './casos.domain';
+import { FiltroCondicionesComponent } from './filtro-condiciones.component';
+import { puedeConfigurarConexion } from './monitor-ia.api';
 import { fecha } from './monitor-ia.domain';
 
 const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 
 @Component({
   selector: 'alma-casos-configuracion',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent],
+  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, FiltroCondicionesComponent],
   template: `
     <div class="space-y-4">
       <!-- Conexión con Salesforce -->
@@ -51,6 +57,10 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 
         @if (!config()) {
           <div class="flex justify-center py-8"><alma-loader [size]="48" label="Cargando…" /></div>
+        } @else if (!puedeConexion()) {
+          <p class="rounded-xl border border-border/70 bg-[var(--surface-sunken)] px-4 py-3 text-xs text-muted-foreground">
+            Solo un administrador de Nova o de Monitor-IA puede ver y cambiar la conexión con Salesforce.
+          </p>
         } @else {
           <details class="rounded-xl border border-border/70 bg-[var(--surface-sunken)] px-4 py-2 text-xs text-foreground">
             <summary class="cursor-pointer font-medium">Cómo crear la Connected App en Salesforce</summary>
@@ -71,7 +81,9 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
             </label>
             <label class="space-y-1 text-xs font-medium text-foreground">
               Client ID (Consumer Key)
-              <input class="alma-input" name="clientId" autocomplete="off" [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" />
+              <input class="alma-input" type="password" name="clientId" autocomplete="new-password"
+                     [placeholder]="config()?.tiene_client_id ? 'Guardado · escribe uno nuevo para cambiarlo' : 'Pega el Consumer Key'"
+                     [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" />
             </label>
             <label class="space-y-1 text-xs font-medium text-foreground">
               Client Secret
@@ -98,7 +110,7 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
               </label>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:col-span-2">
-              <button type="submit" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm" [disabled]="guardandoConexion() || !instancia().trim()">
+              <button type="submit" class="alma-btn alma-btn-primary h-9 rounded-xl px-4 text-sm" [disabled]="guardandoConexion() || !puedeGuardarConexion()">
                 <lucide-icon [name]="guardandoConexion() ? 'loader-2' : 'save'" [size]="15" [class.animate-spin]="guardandoConexion()" /> Guardar
               </button>
               <button type="button" class="alma-btn alma-btn-outline h-9 rounded-xl text-sm" [disabled]="probandoConexion() || !config()?.configurada" (click)="probarConexion()">
@@ -136,25 +148,25 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
             @if (cambiada()) { <span class="ml-1 font-semibold text-amber-700 dark:text-amber-400">· cambios sin guardar</span> }
           </p>
 
-          <div class="grid gap-3 sm:grid-cols-3">
-            <label class="space-y-1 text-xs font-medium text-foreground">
-              Orígenes del caso (uno por línea)
-              <textarea class="alma-input min-h-20 py-2" name="origenes" [ngModel]="origenes()" (ngModelChange)="origenes.set($event)"></textarea>
-              <span class="block text-[11px] font-normal text-muted-foreground">Valores exactos del campo Origen en Salesforce.</span>
-            </label>
-            <label class="space-y-1 text-xs font-medium text-foreground">
-              «Responder a» que NO entran
-              <textarea class="alma-input min-h-20 py-2" name="excluir" [ngModel]="excluir()" (ngModelChange)="excluir.set($event)"></textarea>
-              <span class="block text-[11px] font-normal text-muted-foreground">Vacío = entran todos.</span>
-            </label>
-            <label class="space-y-1 text-xs font-medium text-foreground">
-              Modelo
-              <select class="alma-input" name="modelo" [ngModel]="modelo()" (ngModelChange)="modelo.set($event)">
-                @for (m of modelos(); track m) { <option [value]="m">{{ m }}</option> }
-              </select>
-              <span class="block text-[11px] font-normal text-muted-foreground">Siempre cerrados y con fecha de cierre en el período de la campaña.</span>
-            </label>
+          <div class="grid gap-4 lg:grid-cols-2">
+            <alma-filtro-condiciones id="origen" titulo="Origen del caso" campo="Origen" ejemplo="Valor en Salesforce, p. ej. Email"
+                                     vacio="Agrega al menos una condición: sin ella no entra ningún caso."
+                                     [(condiciones)]="origenes" />
+            <alma-filtro-condiciones id="responder" titulo="Responder a" campo="Responder a" ejemplo="Valor en Salesforce, p. ej. Proceso interno"
+                                     vacio="Sin condiciones: entran todos, sea cual sea el «Responder a»."
+                                     [(condiciones)]="responderA" />
           </div>
+          <p class="text-[11px] text-muted-foreground">
+            En cada filtro basta cumplir <strong>una</strong> de las condiciones «es igual a», «contiene», «empieza con» o «termina con», y
+            deben cumplirse <strong>todas</strong> las de exclusión («es distinto de», «no contiene»). Un campo vacío en Salesforce pasa las
+            exclusiones. Salesforce no distingue mayúsculas de minúsculas. Siempre entran casos cerrados y con fecha de cierre en el período de la campaña.
+          </p>
+          <label class="block max-w-sm space-y-1 text-xs font-medium text-foreground">
+            Modelo
+            <select class="alma-input" name="modelo" [ngModel]="modelo()" (ngModelChange)="modelo.set($event)">
+              @for (m of modelos(); track m) { <option [value]="m">{{ m }}</option> }
+            </select>
+          </label>
 
           <!-- Criterios -->
           <div class="space-y-2">
@@ -260,8 +272,11 @@ const CLAVE = /^[A-Za-z][A-Za-z0-9_]{0,59}$/;
 export class CasosConfiguracionComponent {
   private readonly api = inject(MonitorIaCasosApi);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
 
   protected readonly fecha = fecha;
+  /** Solo un administrador de Nova o de la App ve y cambia la conexión (el backend también lo exige). */
+  protected readonly puedeConexion = computed(() => puedeConfigurarConexion(this.auth));
   protected readonly flujos: Flujo[] = ['CORREO', 'CHAT'];
   protected readonly etiquetaFlujo = ETIQUETA_FLUJO;
   protected readonly claseRespuesta = claseRespuesta;
@@ -285,8 +300,8 @@ export class CasosConfiguracionComponent {
   protected readonly vigente = signal<Plantilla | null>(null);
   protected readonly versiones = signal<VersionPlantilla[]>([]);
   protected readonly modelos = signal<string[]>([]);
-  protected readonly origenes = signal('');
-  protected readonly excluir = signal('');
+  protected readonly origenes = signal<CondicionFiltro[]>([]);
+  protected readonly responderA = signal<CondicionFiltro[]>([]);
   protected readonly modelo = signal('');
   protected readonly criterios = signal<Criterio[]>([]);
   protected readonly sistema = signal('');
@@ -296,8 +311,8 @@ export class CasosConfiguracionComponent {
   protected readonly prueba = signal<PruebaPlantilla | null>(null);
 
   protected readonly datos = computed<PlantillaIn>(() => ({
-    origenes: lineas(this.origenes()),
-    responder_a_excluir: lineas(this.excluir()),
+    origenes: limpiarCondiciones(this.origenes()),
+    responder_a: limpiarCondiciones(this.responderA()),
     prompt_sistema: this.sistema().trim(),
     prompt_usuario: this.usuario().trim(),
     criterios: this.criterios().map((c) => ({ clave: c.clave.trim(), nombre: c.nombre.trim() })),
@@ -311,7 +326,7 @@ export class CasosConfiguracionComponent {
 
   protected readonly errorPlantilla = computed(() => {
     const d = this.datos();
-    if (!d.origenes.length) return 'Indica al menos un origen.';
+    if (!d.origenes.length) return 'Agrega al menos una condición de origen.';
     if (!d.criterios.length) return 'La plantilla necesita al menos un criterio.';
     if (d.criterios.some((c) => !CLAVE.test(c.clave))) return 'Hay claves de criterio no válidas.';
     if (new Set(d.criterios.map((c) => c.clave)).size !== d.criterios.length) return 'Hay criterios con la misma clave.';
@@ -323,10 +338,17 @@ export class CasosConfiguracionComponent {
   protected readonly cambiada = computed(() => {
     const v = this.vigente();
     if (!v) return false;
-    const { origenes, responder_a_excluir, prompt_sistema, prompt_usuario, criterios, modelo } = v;
+    const { prompt_sistema, prompt_usuario, criterios, modelo } = v;
     return (
       JSON.stringify(this.datos()) !==
-      JSON.stringify({ origenes, responder_a_excluir, prompt_sistema, prompt_usuario, criterios, modelo })
+      JSON.stringify({
+        origenes: limpiarCondiciones(v.origenes),
+        responder_a: limpiarCondiciones(v.responder_a),
+        prompt_sistema,
+        prompt_usuario,
+        criterios,
+        modelo,
+      })
     );
   });
 
@@ -340,7 +362,7 @@ export class CasosConfiguracionComponent {
   private aplicarConexion(c: ConfiguracionSf): void {
     this.config.set(c);
     this.instancia.set(c.instancia ?? '');
-    this.clientId.set(c.client_id ?? '');
+    this.clientId.set('');   // la llave nunca vuelve: el campo queda vacío y vacío = conservar
     this.secreto.set('');
     this.apiVersion.set(c.api_version);
     this.maxLote.set(c.max_por_lote);
@@ -356,7 +378,18 @@ export class CasosConfiguracionComponent {
     }
   }
 
+  /** La instancia es obligatoria; el Client ID y el secreto, la primera vez (después, vacío = conservar). */
+  protected readonly puedeGuardarConexion = computed(() => {
+    const c = this.config();
+    return (
+      !!this.instancia().trim() &&
+      (!!this.clientId().trim() || !!c?.tiene_client_id) &&
+      (!!this.secreto().trim() || !!c?.tiene_secreto)
+    );
+  });
+
   protected async guardarConexion(): Promise<void> {
+    if (!this.puedeGuardarConexion()) return;
     this.guardandoConexion.set(true);
     try {
       this.aplicarConexion(
@@ -400,8 +433,8 @@ export class CasosConfiguracionComponent {
   }
 
   protected cargarEnFormulario(p: PlantillaIn): void {
-    this.origenes.set(p.origenes.join('\n'));
-    this.excluir.set(p.responder_a_excluir.join('\n'));
+    this.origenes.set(p.origenes.map((c) => ({ ...c })));
+    this.responderA.set(p.responder_a.map((c) => ({ ...c })));
     this.modelo.set(p.modelo);
     this.criterios.set(p.criterios.map((c) => ({ ...c })));
     this.sistema.set(p.prompt_sistema);
