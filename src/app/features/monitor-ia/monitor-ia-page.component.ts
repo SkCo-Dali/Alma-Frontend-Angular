@@ -1,8 +1,9 @@
 // App «Monitor-IA» (Servicio de Atención al Cliente): campañas de autoevaluación
 // automática de llamadas en Genesys Cloud. Reemplaza al script de escritorio de SAC.
 //
-//   · Analista:      ve campañas, resultados y enlaces a Genesys.
-//   · Coordinador:   además crea campañas, descarta llamadas del sorteo y las ejecuta.
+//   · Analista:      crea SUS campañas, las ejecuta y ve sus resultados y enlaces a
+//                    Genesys; no ve las campañas de otros (lo filtra el backend).
+//   · Coordinador:   ve y gestiona todas las campañas.
 //   · Administrador: además configura Genesys, los topes y los formularios.
 
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
@@ -16,7 +17,7 @@ import { CampanaDetalleComponent } from './campana-detalle.component';
 import { CampanaNuevaComponent } from './campana-nueva.component';
 import { CasosPageComponent } from './casos-page.component';
 import { ConfiguracionComponent } from './configuracion.component';
-import { CampanaListada, Conexion, MonitorIaApi, PERM_CAMPANAS, PERM_CONFIG, PERM_VIEW } from './monitor-ia.api';
+import { CampanaListada, Conexion, MonitorIaApi, PERM_CONFIG, PERM_VIEW, puedeGestionarCampanas } from './monitor-ia.api';
 import { estadoCampana, fecha } from './monitor-ia.domain';
 
 type Vista = 'campanas' | 'nueva' | 'config';
@@ -182,7 +183,7 @@ export class MonitorIaPageComponent {
   protected readonly fecha = fecha;
 
   protected readonly puedeVer = computed(() => this.auth.hasPermission(PERM_VIEW));
-  protected readonly puedeGestionar = computed(() => this.auth.hasPermission(PERM_CAMPANAS));
+  protected readonly puedeGestionar = computed(() => puedeGestionarCampanas(this.auth));
   protected readonly puedeConfigurar = computed(() => this.auth.hasPermission(PERM_CONFIG));
 
   protected readonly fuente = signal<'llamadas' | 'casos'>('llamadas');
