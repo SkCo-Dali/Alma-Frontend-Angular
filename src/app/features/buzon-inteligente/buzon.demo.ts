@@ -800,8 +800,10 @@ function basesBase(): Base[] {
 // ── Exportación (059) ────────────────────────────────────────────────────────
 
 function plantillasBase(): Plantilla[] {
+  // 074: las plantillas de ejemplo no usan fila de lote ni hoja «Observaciones».
+  const base = (p: Omit<Plantilla, 'lote' | 'encabezados' | 'observaciones'>): Plantilla => ({ lote: [], encabezados: true, observaciones: false, ...p });
   const col = (encabezado: string, origen: OrigenColumna, formato: ColumnaPlantilla['formato'] = 'texto'): ColumnaPlantilla => ({ encabezado, origen, formato });
-  return [
+  const lista: Omit<Plantilla, 'lote' | 'encabezados' | 'observaciones'>[] = [
     {
       id: 'demo-tpl-cargue-pac',
       buzon_id: B_RECAUDOS,
@@ -829,6 +831,7 @@ function plantillasBase(): Plantilla[] {
       updated_by: 'paula.mendez@ejemplo.com.co',
     },
   ];
+  return lista.map(base);
 }
 
 function salidasBase(): Salida[] {

@@ -5,7 +5,8 @@
 //      propone qué dato va en cada columna (✦). También: desde el JSON, en blanco
 //      o con una plantilla de ejemplo.
 //   ② Qué va en cada columna: dato del JSON, texto fijo, columna de una base,
-//      fórmula (FILA() = número de fila) o información del correo; formato y orden.
+//      fórmula (FILA() = número de fila), cálculo de Nova o información del correo;
+//      formato y orden. Opcional: fila de lote antes del detalle (074, «Cargue PAC»).
 //   ③ Revisar: nombre, hoja, nombre del archivo con {campo}, título, detalle y
 //      vista previa con datos ficticios.
 // Edita en sitio el `TplForm` que recibe (como S.tb.t del prototipo) y avisa con
@@ -15,7 +16,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
-import { Base, COMPARACIONES, Comparacion, DATOS_CORREO, DatoCorreo, FORMATOS_COLUMNA, FormatoColumna } from './buzon.api';
+import { Base, COMPARACIONES, Comparacion, DATOS_CORREO, DatoCorreo, FORMATOS_COLUMNA, FormatoColumna, OrigenColumna } from './buzon.api';
 import {
   CampoExp,
   ColForm,
@@ -202,6 +203,23 @@ export class HojaVistaComponent {
             <button type="button" class="btn outline sm" (click)="agregar()"><lucide-icon name="plus" [size]="13" /> Columna</button>
           </div>
         </div>
+        <!-- 074: fila de lote (una sola, antes del detalle), como el encabezado del «Cargue PAC». -->
+        <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px">
+          <div class="row between">
+            <p class="xs"><b>Fila de lote</b> <span class="muted">· opcional: una fila antes del detalle con datos del correo y cálculos (p. ej. 5754 · código PC · NIT · fecha · registros · total)</span></p>
+            <button type="button" class="btn outline sm" (click)="agregarLote()"><lucide-icon name="plus" [size]="13" /> Celda de lote</button>
+          </div>
+          @if (t.lote.length) {
+            <div class="row" style="gap:6px">
+              @for (x of t.lote; track $index; let j = $index) {
+                <button type="button" class="colhead" [class.on]="t.zona === 'lote' && t.selLote === j" (click)="elegirLote(j)">
+                  <b>{{ x.encabezado || '…' }}</b>
+                  <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
+                </button>
+              }
+            </div>
+          }
+        </div>
         @if (t.columnas.length) {
           <div class="sheet-wrap">
             <div class="grid-scroll">
@@ -210,7 +228,7 @@ export class HojaVistaComponent {
                   <th class="rh"></th>
                   @for (x of t.columnas; track $index; let j = $index) {
                     <th>
-                      <button type="button" class="colhead" [class.on]="t.sel === j" (click)="t.sel = j">
+                      <button type="button" class="colhead" [class.on]="t.zona !== 'lote' && t.sel === j" (click)="elegirCol(j)">
                         <b>{{ x.encabezado || '…' }}</b>
                         <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
                       </button>
@@ -232,11 +250,11 @@ export class HojaVistaComponent {
           <p class="note b-amber"><lucide-icon name="info" [size]="13" /> <span>Aún no hay columnas. Vuelve al paso 1 o agrega una.</span></p>
         }
 
-        @if (t.columnas[t.sel]; as c) {
+        @if (seleccionada(t); as c) {
           <div class="sunk r-xl stack" style="padding:12px 14px;gap:10px">
             <div class="row between">
               <p class="sm b">
-                Columna {{ letra(t.sel) }} · {{ c.encabezado || '…' }}
+                {{ t.zona === 'lote' ? 'Fila de lote · celda ' + (t.selLote + 1) : 'Columna ' + letra(t.sel) }} · {{ c.encabezado || '…' }}
                 @if (c.sug) {
                   <span class="badge b-violet">✦ Propuesta de Nova</span>
                 }
@@ -290,6 +308,51 @@ export class HojaVistaComponent {
                         <option [value]="f[0]" [selected]="c.origen.campo === f[0]">{{ f[0] }}</option>
                       }
                     </select>
+                    <!-- 074: si el correo no trae el dato, se busca en una base (p. ej. el código PC por NIT). -->
+                    <label class="row xs" style="gap:6px"><input type="checkbox" [checked]="!!c.origen.si_vacio" (change)="respaldo(c, chk($event))" /> Si viene vacío, buscarlo en una base</label>
+                    @if (c.origen.si_vacio; as r) {
+                      <div class="g2">
+                        <select class="input sm" aria-label="Columna de la base si viene vacío" (change)="baseRespaldo(r, val($event))">
+                          <option value="">{{ basesBuzon().length ? 'Base y columna con el valor…' : 'Este buzón no tiene bases' }}</option>
+                          @for (b of basesBuzon(); track b.id) {
+                            <optgroup [label]="b.nombre">
+                              @for (col of b.columnas; track col) {
+                                <option [value]="b.id + '|' + col" [selected]="r.base_id === b.id && r.columna_resultado === col">{{ col }}</option>
+                              }
+                            </optgroup>
+                          }
+                        </select>
+                        <select class="input sm" aria-label="Dato del correo con el que se busca" (change)="r.campo = val($event) || null; cambio()">
+                          <option value="">Se busca con el dato…</option>
+                          @for (f of camposSimples(); track f[0]) {
+                            <option [value]="f[0]" [selected]="r.campo === f[0]">{{ f[0] }}</option>
+                          }
+                        </select>
+                        <select class="input sm" aria-label="Columna donde se busca" (change)="r.columna_busqueda = val($event) || null; cambio()">
+                          <option value="">…en la columna</option>
+                          @for (col of columnasBase(r.base_id); track col) {
+                            <option [value]="col" [selected]="r.columna_busqueda === col">{{ col }}</option>
+                          }
+                        </select>
+                        <select class="input sm" aria-label="Comparación" (change)="r.comparacion = $any(val($event)); cambio()">
+                          @for (k of comparaciones; track k.id) {
+                            <option [value]="k.id" [selected]="(r.comparacion ?? 'doc') === k.id">{{ k.nombre }}</option>
+                          }
+                        </select>
+                      </div>
+                    }
+                  }
+                  @case ('calculo') {
+                    <input class="input sm mono" aria-label="Cálculo" placeholder="SUMA(afiliados.valor_aporte)" [value]="c.origen.expresion ?? ''" (input)="c.origen.expresion = val($event); c.sug = false; cambio()" />
+                    <span class="xxs muted">CONTAR(lista) · SUMA(lista.campo) · REDONDEAR(valor;decimales) · + − * / con datos del JSON. Ej.: REDONDEAR(valor_aporte*pct_retencion/100;0)</span>
+                    <label class="row xs" style="gap:6px">Comparar con lo que declara el correo
+                      <select class="input sm" style="width:auto" aria-label="Dato del correo para comparar" (change)="c.origen.contra = val($event) || null; cambio()">
+                        <option value="">No comparar</option>
+                        @for (f of camposSimples(); track f[0]) {
+                          <option [value]="f[0]" [selected]="c.origen.contra === f[0]">{{ f[0] }}</option>
+                        }
+                      </select>
+                    </label>
                   }
                   @case ('correo') {
                     <select class="input sm" aria-label="Información del correo" (change)="dato(c, val($event))">
@@ -421,6 +484,14 @@ export class HojaVistaComponent {
           <label class="optcard" [for]="ids + 'tit'" style="cursor:pointer">
             <span class="row sm b"><input type="checkbox" [id]="ids + 'tit'" [checked]="t.titulo.length > 0" (change)="alternarTitulo()" /> Título</span>
             <span class="xs muted">Una fila arriba con el nombre de la plantilla.</span>
+          </label>
+          <label class="optcard" [for]="ids + 'enc'" style="cursor:pointer">
+            <span class="row sm b"><input type="checkbox" [id]="ids + 'enc'" [checked]="t.encabezados" (change)="t.encabezados = chk($event); cambio()" /> Fila de encabezados</span>
+            <span class="xs muted">Los nombres de las columnas sobre el detalle. Apágala si el sistema de cargue no la espera.</span>
+          </label>
+          <label class="optcard" [for]="ids + 'obs'" style="cursor:pointer">
+            <span class="row sm b"><input type="checkbox" [id]="ids + 'obs'" [checked]="t.observaciones && t.formato === 'xlsx'" [disabled]="t.formato === 'csv'" (change)="t.observaciones = chk($event); cambio()" /> Hoja «Observaciones»</span>
+            <span class="xs muted">{{ t.formato === 'csv' ? 'Solo en .xlsx: un .csv tiene una sola hoja.' : 'Por qué quedó en Validar, totales contra lo declarado, opciones de la base y celdas vacías.' }}</span>
           </label>
         </div>
         <div class="row">
@@ -616,7 +687,7 @@ export class PlantillaBuilderComponent {
   }
 
   protected vaciar(): void {
-    Object.assign(this.tpl(), { columnas: [], titulo: [], paso: 1, vista: null, modelo: null, muestra: [], msg: '', sel: 0 });
+    Object.assign(this.tpl(), { columnas: [], titulo: [], lote: [], paso: 1, vista: null, modelo: null, muestra: [], msg: '', sel: 0, zona: 'col', selLote: 0 });
     this.cambio();
   }
 
@@ -640,9 +711,55 @@ export class PlantillaBuilderComponent {
         return '= ' + (o.formula ?? '').replace(/^=/, '');
       case 'fila':
         return '= FILA()';
+      case 'calculo':
+        return '= ' + (o.expresion ?? '');
       default:
-        return (o.campo ?? '').split('.').pop() || '…';
+        return ((o.campo ?? '').split('.').pop() || '…') + (o.si_vacio ? ' · o base' : '');
     }
+  }
+
+  // ── 074: fila de lote y selección por zona ──
+  protected seleccionada(t: TplForm): ColForm | undefined {
+    return t.zona === 'lote' ? t.lote[t.selLote] : t.columnas[t.sel];
+  }
+
+  protected elegirCol(j: number): void {
+    const t = this.tpl();
+    t.zona = 'col';
+    t.sel = j;
+    this.version.update((v) => v + 1);
+  }
+
+  protected elegirLote(j: number): void {
+    const t = this.tpl();
+    t.zona = 'lote';
+    t.selLote = j;
+    this.version.update((v) => v + 1);
+  }
+
+  protected agregarLote(): void {
+    const t = this.tpl();
+    t.lote.push({ encabezado: `Lote ${t.lote.length + 1}`, origen: { tipo: 'vacio' }, formato: 'texto' });
+    t.zona = 'lote';
+    t.selLote = t.lote.length - 1;
+    this.cambio();
+  }
+
+  protected camposSimples(): CampoExp[] {
+    return this.campos().filter((c) => !c[1]);
+  }
+
+  protected respaldo(c: ColForm, on: boolean): void {
+    c.origen.si_vacio = on ? { tipo: 'base', base_id: null, campo: null, columna_busqueda: null, columna_resultado: null, comparacion: 'doc' } : null;
+    this.cambio();
+  }
+
+  protected baseRespaldo(r: OrigenColumna, v: string): void {
+    const i = v.indexOf('|');
+    r.base_id = i > 0 ? v.slice(0, i) : null;
+    r.columna_resultado = i > 0 ? v.slice(i + 1) : null;
+    if (r.columna_busqueda && !this.columnasBase(r.base_id).includes(r.columna_busqueda)) r.columna_busqueda = null;
+    this.cambio();
   }
 
   protected etiquetaValor(c: ColForm): string {
@@ -681,18 +798,26 @@ export class PlantillaBuilderComponent {
 
   protected quitar(): void {
     const t = this.tpl();
-    t.columnas.splice(t.sel, 1);
-    t.sel = Math.max(0, t.sel - 1);
+    if (t.zona === 'lote') {
+      t.lote.splice(t.selLote, 1);
+      t.selLote = Math.max(0, t.selLote - 1);
+      if (!t.lote.length) t.zona = 'col';
+    } else {
+      t.columnas.splice(t.sel, 1);
+      t.sel = Math.max(0, t.sel - 1);
+    }
     this.cambio();
   }
 
   protected mover(d: number): void {
     const t = this.tpl();
-    const a = t.sel;
+    const lista = t.zona === 'lote' ? t.lote : t.columnas;
+    const a = t.zona === 'lote' ? t.selLote : t.sel;
     const b = a + d;
-    if (b < 0 || b >= t.columnas.length) return;
-    [t.columnas[a], t.columnas[b]] = [t.columnas[b], t.columnas[a]];
-    t.sel = b;
+    if (b < 0 || b >= lista.length) return;
+    [lista[a], lista[b]] = [lista[b], lista[a]];
+    if (t.zona === 'lote') t.selLote = b;
+    else t.sel = b;
     this.cambio();
   }
 
@@ -707,6 +832,8 @@ export class PlantillaBuilderComponent {
             ? { tipo: 'base', base_id: null, campo: null, columna_busqueda: null, columna_resultado: null, comparacion: 'exacta' }
             : id === 'formula'
               ? { tipo: 'formula', formula: '' }
+              : id === 'calculo'
+                ? { tipo: 'calculo', expresion: '', contra: null }
               : id === 'fijo'
                 ? { tipo: 'fijo', valor: '' }
                 : { tipo: 'campo', campo: '' };
