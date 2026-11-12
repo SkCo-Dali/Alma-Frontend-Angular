@@ -1,6 +1,6 @@
 // Etiquetas y colores de los casos de Salesforce en Monitor-IA.
 
-import { EstadoCampanaCasos, EstadoCaso, Flujo } from './casos.api';
+import { CondicionFiltro, EstadoCampanaCasos, EstadoCaso, Flujo, Operador } from './casos.api';
 import { EtiquetaEstado } from './monitor-ia.domain';
 
 const MUTED = 'bg-muted text-muted-foreground';
@@ -48,9 +48,40 @@ export function claseRespuesta(valor: string | undefined): string {
   return valor === 'Si' ? GREEN : valor === 'No' ? RED : MUTED;
 }
 
-/** Una lista de valores escrita uno por línea (o separados por coma) → arreglo limpio. */
-export function lineas(texto: string): string[] {
-  return [...new Set(texto.split(/[\n,]/).map((v) => v.trim()).filter(Boolean))];
+export const OPERADORES: ReadonlyArray<{ valor: Operador; texto: string; negativo: boolean }> = [
+  { valor: 'igual', texto: 'es igual a', negativo: false },
+  { valor: 'contiene', texto: 'contiene', negativo: false },
+  { valor: 'empieza_con', texto: 'empieza con', negativo: false },
+  { valor: 'termina_con', texto: 'termina con', negativo: false },
+  { valor: 'no_igual', texto: 'es distinto de', negativo: true },
+  { valor: 'no_contiene', texto: 'no contiene', negativo: true },
+];
+
+const INFO_OPERADOR = new Map(OPERADORES.map((o) => [o.valor, o]));
+
+/** Condiciones sin vacíos ni repetidas, con las claves en el orden en que las devuelve el backend. */
+export function limpiarCondiciones(lista: ReadonlyArray<CondicionFiltro>): CondicionFiltro[] {
+  const vistas = new Set<string>();
+  const salida: CondicionFiltro[] = [];
+  for (const c of lista) {
+    const valor = c.valor.trim();
+    const clave = `${c.operador}|${valor}`;
+    if (!valor || vistas.has(clave)) continue;
+    vistas.add(clave);
+    salida.push({ operador: c.operador, valor });
+  }
+  return salida;
+}
+
+/** Frase que explica el filtro, p. ej. «Origen es igual a «Email» o contiene «Mail», y no contiene «Spam»». */
+export function describirFiltro(campo: string, lista: ReadonlyArray<CondicionFiltro>): string {
+  const frase = (c: CondicionFiltro) => `${INFO_OPERADOR.get(c.operador)?.texto ?? c.operador} «${c.valor}»`;
+  const positivas = lista.filter((c) => !INFO_OPERADOR.get(c.operador)?.negativo).map(frase);
+  const negativas = lista.filter((c) => INFO_OPERADOR.get(c.operador)?.negativo).map(frase);
+  const partes: string[] = [];
+  if (positivas.length) partes.push(`${campo} ${positivas.join(' o ')}`);
+  if (negativas.length) partes.push(positivas.length ? negativas.join(' y ') : `${campo} ${negativas.join(' y ')}`);
+  return partes.join(', y ');
 }
 
 export function descargar(blob: Blob, nombre: string): void {
