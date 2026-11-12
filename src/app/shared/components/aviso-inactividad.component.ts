@@ -1,5 +1,5 @@
-// Aviso previo al cierre de sesión por inactividad. Aparece solo en el último
-// minuto: cerrar de golpe le haría perder al analista un formulario a medio
+// Aviso previo al cierre de sesión por inactividad. Aparece solo en los
+// últimos AVISO_SEGUNDOS (2 min): cerrar de golpe le haría perder al analista un formulario a medio
 // llenar, que es justo el trabajo del módulo de suscripción.
 
 import { Component, computed, inject } from '@angular/core';
@@ -32,8 +32,8 @@ import { InactividadService } from '../../core/auth/inactividad.service';
           </h2>
           <p class="mt-2 text-sm text-muted-foreground">
             Por seguridad cerraremos tu sesión en
-            <span class="font-semibold tabular-nums text-foreground">{{ s }}</span>
-            {{ s === 1 ? 'segundo' : 'segundos' }} por inactividad.
+            <span class="font-semibold tabular-nums text-foreground">{{ cifra() }}</span>
+            {{ unidad() }} por inactividad.
           </p>
 
           <button
@@ -53,6 +53,19 @@ export class AvisoInactividadComponent {
   private readonly inactividad = inject(InactividadService);
 
   protected readonly segundos = computed(() => this.inactividad.avisoSegundos());
+
+  /** Desde un minuto se muestra m:ss ("1:45 minutos"), no "105 segundos". */
+  protected readonly cifra = computed(() => {
+    const s = this.segundos() ?? 0;
+    if (s < 60) return String(s);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  });
+
+  protected readonly unidad = computed(() => {
+    const s = this.segundos() ?? 0;
+    if (s >= 60) return s === 60 ? 'minuto' : 'minutos';
+    return s === 1 ? 'segundo' : 'segundos';
+  });
 
   protected continuar(): void {
     this.inactividad.continuar();
