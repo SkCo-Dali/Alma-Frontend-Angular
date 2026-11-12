@@ -106,29 +106,34 @@ const MAX_TUS_APPS = 5;
   selector: 'alma-home',
   imports: [RouterLink, FormsModule, LucideAngularModule, AlmaHousingComponent, AppIconArtComponent],
   template: `
+    <!-- pb-24: reserva el alto del Dock, que en el Inicio queda SIEMPRE visible
+         (flotante, abajo). Sin esto las tarjetas de «Tus aplicaciones» quedaban
+         debajo del Dock y ni con scroll se alcanzaban a ver completas. En
+         pantallas bajas (variante «compacto») el saludo y la tarjeta de Nova se
+         aprietan para que las Apps quepan encima del Dock sin scroll. -->
     <div
-      class="mx-auto flex min-h-[72vh] w-full max-w-[1480px] flex-col items-center justify-center"
+      class="mx-auto flex min-h-[72vh] w-full max-w-[1480px] flex-col items-center justify-center pb-24"
     >
       <!-- Saludo -->
-      <div class="text-on-wallpaper flex w-full flex-col items-center pt-4 text-center">
+      <div class="text-on-wallpaper flex w-full flex-col items-center pt-4 text-center compacto:pt-0">
         @if (avisoTransicion) {
           <span
-            class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-card/70 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-md"
+            class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-card/70 compacto:mb-2 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-md"
           >
             <lucide-icon name="sparkles" [size]="13" class="text-primary" />
             Alma ahora es Nova
           </span>
         }
-        <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
+        <h1 class="text-3xl font-bold tracking-tight text-foreground sm:text-5xl compacto:text-4xl">
           {{ greeting() }}
         </h1>
-        <p class="mt-2 text-base font-medium text-foreground/80 sm:text-lg">Sigamos adelante.</p>
-        <span aria-hidden="true" class="mt-3 h-1 w-12 rounded-full bg-primary"></span>
+        <p class="mt-2 text-base font-medium text-foreground/80 sm:text-lg compacto:mt-1">Sigamos adelante.</p>
+        <span aria-hidden="true" class="mt-3 h-1 w-12 rounded-full bg-primary compacto:mt-2"></span>
       </div>
 
       <!-- Tarjeta principal: pedirle algo a Nova (deshabilitada mientras el Agente no esté listo) -->
       <section
-        class="spk-card mt-8 flex w-full max-w-5xl flex-col items-center gap-2 p-5 sm:p-7 md:flex-row md:gap-6"
+        class="spk-card mt-8 flex w-full max-w-5xl flex-col items-center gap-2 p-5 sm:p-7 md:flex-row md:gap-6 compacto:mt-4 compacto:p-5"
       >
         <div class="order-2 w-full min-w-0 flex-1 md:order-1">
           <h2 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -193,15 +198,16 @@ const MAX_TUS_APPS = 5;
             </span>
           }
           <!-- En móvil la esfera va más pequeña para no empujar la barra fuera de la vista. -->
-          <alma-housing [size]="190" [interactive]="true" class="-my-2 hidden md:block" />
+          <alma-housing [size]="190" [interactive]="true" class="-my-2 hidden md:block compacto:hidden" />
+          <alma-housing [size]="140" [interactive]="true" class="-my-2 hidden compacto:block" />
           <alma-housing [size]="120" [interactive]="true" class="-my-1 md:hidden" />
         </div>
       </section>
 
       <!-- Tus aplicaciones: las del usuario según sus permisos (recientes primero) -->
       @if (tusApps().length) {
-        <section class="mt-8 w-full max-w-6xl">
-          <header class="text-on-wallpaper mb-3 flex items-baseline justify-between px-1">
+        <section class="mt-8 w-full max-w-6xl compacto:mt-4">
+          <header class="text-on-wallpaper mb-3 flex items-baseline justify-between px-1 compacto:mb-2">
             <h2 class="text-lg font-semibold text-foreground">Tus aplicaciones</h2>
             <button
               type="button"
