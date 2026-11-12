@@ -263,9 +263,18 @@ export interface TplForm {
   columnas: ColForm[];
   detalle: string | null;
   modelo: string | null;
+  /** 074: fila de lote antes del detalle. */
+  lote: ColForm[];
+  /** 074: fila con los nombres de las columnas. */
+  encabezados: boolean;
+  /** 074: hoja «Observaciones» (.xlsx). */
+  observaciones: boolean;
   paso: PasoTpl;
   /** Columna seleccionada en el paso ②. */
   sel: number;
+  /** 074: la selección está en la fila de lote (selLote) o en las columnas del detalle (sel). */
+  zona: 'col' | 'lote';
+  selLote: number;
   vista: ModeloVista | null;
   /** Filas del modelo debajo de los encabezados (ejemplo para las columnas sin asignar). */
   muestra: string[][];
@@ -291,11 +300,12 @@ export interface SalidaUI {
 export type VistaCeldas = 'val' | 'form';
 
 /** Orígenes en el lenguaje del prototipo (chips de «¿De dónde sale el valor?»). */
-export const ORIGENES_TPL: { id: 'campo' | 'fijo' | 'base' | 'formula' | 'correo'; nombre: string; icon: string; campo: string }[] = [
+export const ORIGENES_TPL: { id: 'campo' | 'fijo' | 'base' | 'formula' | 'calculo' | 'correo'; nombre: string; icon: string; campo: string }[] = [
   { id: 'campo', nombre: 'Dato del correo (JSON)', icon: 'braces', campo: 'Dato del JSON' },
   { id: 'fijo', nombre: 'Texto fijo', icon: 'type', campo: 'Texto fijo' },
   { id: 'base', nombre: 'Columna de una base', icon: 'sheet', campo: 'Columna de la base' },
   { id: 'formula', nombre: 'Fórmula', icon: 'sigma', campo: 'Fórmula' },
+  { id: 'calculo', nombre: 'Cálculo de Nova', icon: 'calculator', campo: 'Cálculo' },
   { id: 'correo', nombre: 'Información del correo', icon: 'mail', campo: 'Información del correo' },
 ];
 
@@ -363,8 +373,13 @@ export function tplVacia(nombre: string, listas: string[]): TplForm {
     columnas: [],
     detalle: listas[0] ?? null,
     modelo: null,
+    lote: [],
+    encabezados: true,
+    observaciones: false,
     paso: 1,
     sel: 0,
+    zona: 'col',
+    selLote: 0,
     vista: null,
     muestra: [],
     msg: '',
@@ -400,11 +415,16 @@ export function tplDePlantilla(p: Plantilla): TplForm {
     hoja: p.hoja,
     nombre_archivo: p.nombre_archivo,
     titulo: p.titulo.map((r) => [...r]),
-    columnas: p.columnas.map((c) => ({ ...c, origen: { ...c.origen } })),
+    columnas: p.columnas.map((c) => ({ ...c, origen: { ...c.origen, si_vacio: c.origen.si_vacio ? { ...c.origen.si_vacio } : null } })),
     detalle: p.detalle,
     modelo: p.modelo,
+    lote: (p.lote ?? []).map((c) => ({ ...c, origen: { ...c.origen, si_vacio: c.origen.si_vacio ? { ...c.origen.si_vacio } : null } })),
+    encabezados: p.encabezados !== false,
+    observaciones: !!p.observaciones,
     paso: p.columnas.length ? 2 : 1,
     sel: 0,
+    zona: 'col',
+    selLote: 0,
     vista: null,
     muestra: [],
     msg: '',
@@ -426,6 +446,8 @@ export function colFalta(c: ColumnaPlantilla): 'origen' | 'valor' | null {
       return (o.formula ?? '').replace(/^=/, '').trim() ? null : 'valor';
     case 'base':
       return o.base_id && o.campo && o.columna_busqueda && o.columna_resultado ? null : 'valor';
+    case 'calculo':
+      return o.expresion?.trim() ? null : 'valor';
     default:
       return null;
   }
@@ -441,6 +463,12 @@ export function tplIncompleto(t: TplForm | null): string[] {
     if (!c.encabezado.trim()) out.push(`La columna ${i + 1} no tiene nombre.`);
     else if (f === 'origen') out.push(`«${c.encabezado}»: elige de dónde sale el valor.`);
     else if (f) out.push(`«${c.encabezado}»: falta el valor.`);
+  });
+  (t.lote ?? []).forEach((c, i) => {
+    const f = colFalta(c);
+    if (!c.encabezado.trim()) out.push(`La celda ${i + 1} de la fila de lote no tiene nombre.`);
+    else if (f === 'origen') out.push(`Fila de lote · «${c.encabezado}»: elige de dónde sale el valor.`);
+    else if (f) out.push(`Fila de lote · «${c.encabezado}»: falta el valor.`);
   });
   if (!t.nombre_archivo.trim()) out.push('Define el nombre del archivo.');
   return out;
@@ -466,9 +494,20 @@ export function cuerpoTpl(t: TplForm): PlantillaIn {
         return { tipo: 'base', base_id: o.base_id, campo: o.campo, columna_busqueda: o.columna_busqueda, columna_resultado: o.columna_resultado, comparacion: o.comparacion ?? 'exacta' };
       case 'formula':
         return { tipo: 'formula', formula: '=' + (o.formula ?? '').trim().replace(/^=/, '') };
+      case 'calculo':
+        return { tipo: 'calculo', expresion: (o.expresion ?? '').trim().replace(/^=/, ''), contra: o.contra || null };
       default:
         return { tipo: o.tipo };
     }
+  };
+  // 074: «si viene vacío» solo se guarda completo (una base con sus dos columnas y el dato).
+  const conRespaldo = (c: ColForm): OrigenColumna => {
+    const o = limpio(c);
+    const r = c.origen.si_vacio;
+    if (o.tipo !== 'vacio' && r && !colFalta({ encabezado: '', formato: 'texto', origen: r })) {
+      return { ...o, si_vacio: limpio({ encabezado: '', formato: 'texto', origen: r }) };
+    }
+    return o;
   };
   return {
     nombre: t.nombre.trim(),
@@ -480,9 +519,12 @@ export function cuerpoTpl(t: TplForm): PlantillaIn {
       .filter((r) => r.some((c) => String(c).trim()))
       .slice(0, 10)
       .map((r) => r.map((c) => String(c))),
-    columnas: t.columnas.map((c, i) => ({ encabezado: c.encabezado.trim() || `Columna ${i + 1}`, formato: c.formato, origen: limpio(c) })),
+    columnas: t.columnas.map((c, i) => ({ encabezado: c.encabezado.trim() || `Columna ${i + 1}`, formato: c.formato, origen: conRespaldo(c) })),
     detalle: t.detalle || null,
     modelo: t.modelo,
+    lote: (t.lote ?? []).map((c, i) => ({ encabezado: c.encabezado.trim() || `Lote ${i + 1}`, formato: c.formato, origen: conRespaldo(c) })),
+    encabezados: t.encabezados !== false,
+    observaciones: t.formato === 'xlsx' && !!t.observaciones,
   };
 }
 
@@ -633,7 +675,11 @@ const META_EJ: Record<string, (i: number) => string> = {
 };
 
 function calculoEj(f: string, i: number): string {
-  return /FILA/i.test(f) ? String(i + 1) : /CONTAR/i.test(f) ? '2' : /SUMA|valor/i.test(f) ? '2500000' : '0';
+  if (/FILA/i.test(f)) return String(i + 1);
+  if (/CONTAR/i.test(f)) return '2';
+  if (/SUMA/i.test(f)) return '2750000';
+  if (/pct|retenc|%|\/\s*100/i.test(f)) return String(Math.round((1250000 + i * 250000) * 0.04));
+  return /valor/i.test(f) ? String(1250000 + i * 250000) : '0';
 }
 
 /** Valor ficticio de una columna en la fila i. */
@@ -650,6 +696,10 @@ export function valorColEj(c: ColumnaPlantilla, i: number, sv: VistaCeldas): str
       const f = (o.formula ?? '').replace(/^=/, '');
       return sv === 'form' ? '=' + f : calculoEj(f, i);
     }
+    case 'calculo': {
+      const f = (o.expresion ?? '').replace(/^=/, '');
+      return sv === 'form' ? '= ' + f : calculoEj(f, i);
+    }
     case 'fila':
       return sv === 'form' ? '=FILA()' : String(i + 1);
     case 'campo':
@@ -660,7 +710,7 @@ export function valorColEj(c: ColumnaPlantilla, i: number, sv: VistaCeldas): str
 }
 
 /** Texto de la celda según el formato (vista previa). */
-export function fmtV(v: string, f: FormatoColumna | 'fecha_dmy'): string {
+export function fmtV(v: string, f: FormatoColumna): string {
   if (!v) return '';
   const dig = v.replace(/[^\d.-]/g, '');
   const n = Number(dig);
@@ -670,7 +720,7 @@ export function fmtV(v: string, f: FormatoColumna | 'fecha_dmy'): string {
   if (f === 'entero' && num) return String(Math.round(n));
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
   if (f === 'fecha' && m) return `${m[3]}/${m[2]}/${m[1]}`;
-  if (f === 'fecha_dmy' && m) return `${Number(m[3])}/${Number(m[2])}/${m[1]}`;
+  if (f === 'fecha_mdy' && m) return `${Number(m[2])}/${Number(m[3])}/${m[1]}`;
   return v;
 }
 
@@ -699,24 +749,31 @@ export interface HojaVista {
 }
 
 export function previewTpl(t: TplForm, sv: VistaCeldas, proceso: string): HojaVista {
-  const nc = Math.max(t.columnas.length, 1);
+  const lote = t.lote ?? [];
+  const nc = Math.max(t.columnas.length, lote.length, 1);
   const filas: HojaVista['filas'] = [];
+  const celda = (c: ColForm, i: number) => {
+    const tipo = c.origen.tipo;
+    const v = fmtV(valorColEj(c, i, sv), c.formato);
+    return {
+      v: v || (tipo === 'vacio' ? '¿de dónde sale?' : ''),
+      cls: tipo === 'vacio' ? 'miss' : tipo === 'fijo' ? 'k' : (tipo === 'formula' || tipo === 'fila' || tipo === 'calculo') && sv === 'form' ? 'f' : '',
+    };
+  };
   t.titulo.forEach((r) => filas.push({ h: true, celdas: [{ v: r.filter((c) => String(c).trim()).join(' '), b: true, span: nc }] }));
-  filas.push({ h: true, celdas: t.columnas.map((c) => ({ v: c.encabezado || '…', th: true })) });
+  // 074: fila de lote (datos del lote y cálculos) antes del detalle.
+  if (lote.length) filas.push({ h: true, celdas: lote.map((c) => celda(c, 0)) });
+  if (t.encabezados !== false) filas.push({ h: true, celdas: t.columnas.map((c) => ({ v: c.encabezado || '…', th: true })) });
   for (let i = 0; i < (t.detalle ? 2 : 1); i++) {
-    filas.push({
-      h: false,
-      celdas: t.columnas.map((c) => {
-        const tipo = c.origen.tipo;
-        const v = fmtV(valorColEj(c, i, sv), c.formato);
-        return {
-          v: v || (tipo === 'vacio' ? '¿de dónde sale?' : ''),
-          cls: tipo === 'vacio' ? 'miss' : tipo === 'fijo' ? 'k' : (tipo === 'formula' || tipo === 'fila') && sv === 'form' ? 'f' : '',
-        };
-      }),
-    });
+    filas.push({ h: false, celdas: t.columnas.map((c) => celda(c, i)) });
   }
-  return { letras: t.columnas.map((_, j) => letra(j)), filas, hojas: [t.hoja || 'Datos'], archivo: `${nombreArchivoEj(t, proceso)}.${t.formato}`, detalle: t.detalle };
+  return {
+    letras: Array.from({ length: nc }, (_, j) => letra(j)),
+    filas,
+    hojas: [t.hoja || 'Datos', ...(t.observaciones && t.formato === 'xlsx' ? ['Observaciones'] : [])],
+    archivo: `${nombreArchivoEj(t, proceso)}.${t.formato}`,
+    detalle: t.detalle,
+  };
 }
 
 /** «Tabla según el JSON»: una columna por dato; con listas, una fila por elemento de la primera. */
@@ -727,12 +784,12 @@ export function tablaJson(campos: CampoExp[], listas: string[]): { cols: string[
 
 // Ejemplo de referencia «Cargue PAC» (solo lectura, datos ficticios): encabezado con
 // cálculos y detalle por afiliado, armado con las mismas reglas del prototipo.
-type ColRef = [string, 'constante' | 'campo' | 'calculo', string, 'texto' | 'numero' | 'fecha_dmy'];
+type ColRef = [string, 'constante' | 'campo' | 'calculo', string, 'texto' | 'numero' | 'fecha_mdy'];
 const REF_ENC: ColRef[] = [
   ['Tipo de registro', 'constante', '5754', 'texto'],
   ['Código PAC', 'campo', 'codigo_pac', 'texto'],
   ['NIT', 'campo', 'nit_empresa', 'numero'],
-  ['Fecha', 'campo', 'fecha_aporte', 'fecha_dmy'],
+  ['Fecha', 'campo', 'fecha_aporte', 'fecha_mdy'],
   ['Registros', 'calculo', 'CONTAR(afiliados)', 'numero'],
   ['Total', 'calculo', 'SUMA(afiliados.valor_aporte)', 'numero'],
 ];

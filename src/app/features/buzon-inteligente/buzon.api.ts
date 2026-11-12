@@ -831,9 +831,9 @@ export const PROMPT_LARGO_CHARS = 100_000;
 
 // ── Exportación (059) ────────────────────────────────────────────────────────
 
-export type TipoOrigen = 'campo' | 'fijo' | 'correo' | 'fila' | 'base' | 'formula' | 'vacio';
+export type TipoOrigen = 'campo' | 'fijo' | 'correo' | 'fila' | 'base' | 'formula' | 'calculo' | 'vacio';
 export type DatoCorreo = 'asunto' | 'remitente' | 'fecha' | 'radicado' | 'etiqueta';
-export type FormatoColumna = 'texto' | 'numero' | 'entero' | 'moneda' | 'fecha';
+export type FormatoColumna = 'texto' | 'numero' | 'entero' | 'moneda' | 'fecha' | 'fecha_mdy';
 export type ModoSalida = 'ninguno' | 'tabla' | 'plantilla';
 
 /** De dónde sale el valor de una columna de la plantilla. */
@@ -851,6 +851,12 @@ export interface OrigenColumna {
   comparacion?: Comparacion;
   /** 'formula': empieza con «=»; {fila} = número de la fila en Excel. */
   formula?: string | null;
+  /** 074 'calculo': CONTAR(lista) · SUMA(lista.campo) · REDONDEAR(x;n) · + - * / con datos. */
+  expresion?: string | null;
+  /** 074 'calculo': dato del correo con el que se compara (hoja «Observaciones»). */
+  contra?: string | null;
+  /** 074: si el valor viene vacío, de dónde se toma (p. ej. el código PC por NIT en una base). */
+  si_vacio?: OrigenColumna | null;
 }
 
 export interface ColumnaPlantilla {
@@ -874,6 +880,12 @@ export interface Plantilla {
   /** Campo lista del JSON: una fila por elemento. */
   detalle: string | null;
   modelo: string | null;
+  /** 074: fila de lote antes del detalle (5754 · PC · NIT · fecha · CONTAR · SUMA). */
+  lote: ColumnaPlantilla[];
+  /** 074: false = sin fila con los nombres de las columnas (cargue a Pipeline). */
+  encabezados: boolean;
+  /** 074: segunda hoja «Observaciones» en el .xlsx. */
+  observaciones: boolean;
   updated_at: string | null;
   updated_by: string | null;
 }
@@ -978,6 +990,7 @@ export const FORMATOS_COLUMNA: { id: FormatoColumna; nombre: string }[] = [
   { id: 'entero', nombre: 'Entero' },
   { id: 'moneda', nombre: 'Moneda' },
   { id: 'fecha', nombre: 'Fecha (DD/MM/AAAA)' },
+  { id: 'fecha_mdy', nombre: 'Fecha M/D/AAAA (cargue)' },
 ];
 
 // ── Catálogo de acciones (UI) ────────────────────────────────────────────────
