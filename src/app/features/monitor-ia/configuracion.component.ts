@@ -1,14 +1,16 @@
 // Configuración de Monitor-IA (Administrador): conexión con Genesys, topes y
-// formularios que el Coordinador puede usar. El secreto es de SOLO ESCRITURA: se
-// guarda cifrado y nunca vuelve a la pantalla; dejar el campo vacío lo conserva.
+// formularios que el Coordinador puede usar. Solo un administrador de Nova o de la App
+// ve y cambia la conexión. Ninguna llave vuelve a la pantalla (ni el Client ID ni el
+// secreto): solo se muestra que están guardadas; dejar un campo vacío la conserva.
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
-import { Configuracion, FormularioGenesys, MonitorIaApi } from './monitor-ia.api';
+import { Configuracion, FormularioGenesys, MonitorIaApi, puedeConfigurarConexion } from './monitor-ia.api';
 import { fecha } from './monitor-ia.domain';
 
 @Component({
@@ -20,6 +22,15 @@ import { fecha } from './monitor-ia.domain';
     } @else if (config(); as c) {
       <div class="space-y-4">
         <!-- Conexión -->
+        @if (!puedeConexion()) {
+          <section class="glass space-y-2 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="text-sm font-bold text-foreground">Conexión con Genesys Cloud</h2>
+              <span class="alma-badge" [class]="estadoConexion().clase">{{ estadoConexion().texto }}</span>
+            </div>
+            <p class="text-xs text-muted-foreground">Solo un administrador de Nova o de Monitor-IA puede ver y cambiar la conexión.</p>
+          </section>
+        } @else {
         <form class="glass space-y-4 rounded-3xl p-5 shadow-[var(--shadow-sm)]" (ngSubmit)="guardar()">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="text-sm font-bold text-foreground">Conexión con Genesys Cloud</h2>
@@ -35,7 +46,8 @@ import { fecha } from './monitor-ia.domain';
             </label>
             <label class="space-y-1 text-xs font-medium text-foreground">
               Client ID
-              <input class="alma-input" name="clientId" autocomplete="off" maxlength="100"
+              <input class="alma-input" type="password" name="clientId" autocomplete="new-password" maxlength="100"
+                     [placeholder]="c.tiene_client_id ? '•••••••••••• guardado — déjalo vacío para conservarlo' : 'Pega aquí el Client ID del cliente OAuth'"
                      [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" />
             </label>
             <label class="space-y-1 text-xs font-medium text-foreground sm:col-span-2">
@@ -44,7 +56,7 @@ import { fecha } from './monitor-ia.domain';
                      [placeholder]="c.tiene_secreto ? '•••••••••••• guardado — déjalo vacío para conservarlo' : 'Pega aquí el secreto del cliente OAuth'"
                      [ngModel]="clientSecret()" (ngModelChange)="clientSecret.set($event)" />
               <span class="block text-[11px] font-normal text-muted-foreground">
-                Se guarda cifrado y nunca se vuelve a mostrar. Usa un cliente OAuth propio de Nova con permisos mínimos:
+                El Client ID y el secreto se guardan y nunca se vuelven a mostrar. Usa un cliente OAuth propio de Nova con permisos mínimos:
                 leer colas, usuarios y analítica de conversaciones, y crear y consultar evaluaciones.
               </span>
             </label>
@@ -85,6 +97,7 @@ import { fecha } from './monitor-ia.domain';
             </div>
           </div>
         </form>
+        }
 
         <!-- Formularios -->
         <section class="glass space-y-3 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
@@ -132,8 +145,11 @@ import { fecha } from './monitor-ia.domain';
 export class ConfiguracionComponent {
   private readonly api = inject(MonitorIaApi);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
 
   protected readonly fecha = fecha;
+  /** Solo un administrador de Nova o de la App ve y cambia la conexión (el backend también lo exige). */
+  protected readonly puedeConexion = computed(() => puedeConfigurarConexion(this.auth));
 
   protected readonly cargando = signal(true);
   protected readonly config = signal<Configuracion | null>(null);
@@ -164,7 +180,8 @@ export class ConfiguracionComponent {
 
   protected readonly puedeGuardar = computed(() => {
     const c = this.config();
-    const hayCredenciales = !!this.clientId().trim() && (!!this.clientSecret().trim() || !!c?.tiene_secreto);
+    const hayCredenciales =
+      (!!this.clientId().trim() || !!c?.tiene_client_id) && (!!this.clientSecret().trim() || !!c?.tiene_secreto);
     return !!this.region().trim() && hayCredenciales && this.maxLote() >= 1 && this.maxDia() >= this.maxLote() && this.concurrencia() >= 1;
   });
 
@@ -175,7 +192,7 @@ export class ConfiguracionComponent {
   private aplicar(c: Configuracion): void {
     this.config.set(c);
     this.region.set(c.region);
-    this.clientId.set(c.client_id ?? '');
+    this.clientId.set('');   // la llave nunca vuelve: el campo queda vacío y vacío = conservar
     this.clientSecret.set('');
     this.maxLote.set(c.max_por_lote);
     this.maxDia.set(c.max_por_dia);
