@@ -9,7 +9,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaCheckboxComponent } from '../../shared/components/alma-checkbox.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
-import { CampanaDetalle, Llamada, LlamadaDetalle, MonitorIaApi, PERM_CAMPANAS } from './monitor-ia.api';
+import { CampanaDetalle, Llamada, LlamadaDetalle, MonitorIaApi, puedeGestionarCampanas } from './monitor-ia.api';
 import {
   ETIQUETA_COLA,
   ETIQUETA_CRITERIO,
@@ -251,7 +251,7 @@ export class CampanaDetalleComponent {
   protected readonly estadoLlamada = estadoLlamada;
   protected readonly estadoGenesys = estadoGenesys;
 
-  protected readonly puedeGestionar = computed(() => this.auth.hasPermission(PERM_CAMPANAS));
+  protected readonly puedeGestionar = computed(() => puedeGestionarCampanas(this.auth));
 
   protected readonly campana = signal<CampanaDetalle | null>(null);
   protected readonly cargando = signal(true);

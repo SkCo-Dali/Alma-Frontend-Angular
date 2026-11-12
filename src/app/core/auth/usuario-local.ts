@@ -35,6 +35,7 @@ export const USUARIO_LOCAL: User = {
     'app.masesstory-hl.view',
     'app.monitor-ia.view',
     'app.monitor-ia.campanas.manage',
+    'app.monitor-ia.campanas.propias',
     'app.monitor-ia.config',
     'app.solicitudes-prestaciones.diligenciar',
     'app.solicitudes-prestaciones.auditoria.view',
