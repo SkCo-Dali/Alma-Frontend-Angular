@@ -9,7 +9,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { AlmaCheckboxComponent } from '../../shared/components/alma-checkbox.component';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { CampanaCasosDetalle, Caso, MonitorIaCasosApi } from './casos.api';
-import { ETIQUETA_FLUJO, claseRespuesta, descargar, estadoCampanaCasos, estadoCaso } from './casos.domain';
+import { ETIQUETA_FLUJO, claseRespuesta, coberturaVigente, descargar, estadoCampanaCasos, estadoCaso } from './casos.domain';
 import { puedeGestionarCampanas } from './monitor-ia.api';
 import { fecha } from './monitor-ia.domain';
 
@@ -47,6 +47,9 @@ const REFRESCO_MS = 3000;
           <dl class="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
             <div><dt class="inline text-muted-foreground">Cerrados entre: </dt><dd class="inline text-foreground">{{ fecha(c.desde, true) }} → {{ fecha(c.hasta, true) }}</dd></div>
             <div><dt class="inline text-muted-foreground">Propietarios: </dt><dd class="inline text-foreground">{{ c.propietarios.length }} × {{ c.por_propietario }} casos</dd></div>
+            @if (c.min_por_producto) {
+              <div><dt class="inline text-muted-foreground">Por producto: </dt><dd class="inline text-foreground">al menos {{ c.min_por_producto }}</dd></div>
+            }
             @if (c.iniciado_por) {
               <div><dt class="inline text-muted-foreground">Iniciada por: </dt><dd class="inline text-foreground">{{ c.iniciado_por }} · {{ fecha(c.iniciado_en) }}</dd></div>
             }
@@ -107,6 +110,47 @@ const REFRESCO_MS = 3000;
               <div class="h-full rounded-full bg-primary transition-all" [style.width.%]="avance()"></div>
             </div>
           </div>
+        }
+
+        <!-- Cobertura por producto -->
+        @if (cobertura(); as cob) {
+          <section class="glass space-y-2 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-foreground">Cobertura por producto</h3>
+              <span class="alma-badge whitespace-nowrap" [class]="cob.cubiertos === cob.total ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'">
+                {{ cob.cubiertos }} de {{ cob.total }} productos en la muestra
+              </span>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              @if (cob.minimo) {
+                Se buscó al menos {{ cob.minimo }} {{ cob.minimo === 1 ? 'caso' : 'casos' }} de cada producto. Cada etiqueta muestra los casos en la muestra sobre los que había para sortear.
+              } @else {
+                Sorteo al azar por propietario, sin garantía por producto. Cada etiqueta muestra los casos en la muestra sobre los que había para sortear.
+              }
+            </p>
+            @if (faltantes().length) {
+              <p class="flex items-start gap-2 rounded-xl bg-amber-100 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">
+                <lucide-icon name="alert-triangle" [size]="14" class="mt-0.5 shrink-0" />
+                <span>
+                  Sin casos en la muestra: {{ faltantes().join(', ') }}.
+                  @if (c.estado === 'PREVISUALIZADO') { Si los descartaste, vuelve a incluirlos; si no alcanzó el cupo, crea la campaña con más propietarios o más casos por propietario. }
+                </span>
+              </p>
+            }
+            <div class="flex flex-wrap gap-1.5">
+              @for (p of cob.productos; track p.producto) {
+                <span class="alma-badge" [class]="p.cubierto ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'"
+                      [attr.title]="p.disponibles + ' casos para sortear'">
+                  {{ p.producto }} · {{ p.seleccionados }}/{{ p.disponibles }}
+                </span>
+              }
+              @if (cob.sin_producto.disponibles) {
+                <span class="alma-badge bg-muted text-muted-foreground" title="Casos sin producto en Salesforce: no entran en la garantía">
+                  Sin producto · {{ cob.sin_producto.seleccionados }}/{{ cob.sin_producto.disponibles }}
+                </span>
+              }
+            </div>
+          </section>
         }
 
         <!-- Cumplimiento por criterio -->
@@ -179,6 +223,7 @@ const REFRESCO_MS = 3000;
                       <td class="min-w-[14rem] px-3 py-2 text-xs">
                         <p class="text-foreground">{{ x.origen ?? '—' }}</p>
                         <p class="break-words text-muted-foreground">{{ x.tema ?? '' }}</p>
+                        @if (x.producto) { <p class="break-words text-muted-foreground">{{ x.producto }}</p> }
                       </td>
                       <td class="px-3 py-2">
                         <span class="alma-badge whitespace-nowrap" [class]="estadoCaso(x.estado).clase" [attr.title]="x.error">{{ estadoCaso(x.estado).texto }}</span>
@@ -257,6 +302,15 @@ export class CasosCampanaDetalleComponent {
   protected readonly abierto = signal<number | null>(null);
 
   protected readonly etiqueta = computed(() => estadoCampanaCasos(this.campana()?.estado ?? ''));
+
+  /** Cobertura con los casos seleccionados de ahora; null en campañas sin «mínimo por producto». */
+  protected readonly cobertura = computed(() => {
+    const c = this.campana();
+    return c?.cobertura ? coberturaVigente(c.cobertura, c.casos) : null;
+  });
+  protected readonly faltantes = computed(() =>
+    (this.cobertura()?.productos ?? []).filter((p) => !p.cubierto).map((p) => p.producto),
+  );
 
   protected readonly kpis = computed(() => {
     const casos = (this.campana()?.casos ?? []).filter((x) => x.seleccionada);

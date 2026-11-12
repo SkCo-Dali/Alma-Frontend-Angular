@@ -88,6 +88,17 @@ const MAX_POR_PROPIETARIO = 50;
             <input class="alma-input" type="number" name="porPropietario" min="1" [max]="maxPorPropietario" required
                    [ngModel]="porPropietario()" (ngModelChange)="porPropietario.set(+$event)" />
           </label>
+          <label class="block max-w-md space-y-1 text-xs font-medium text-foreground">
+            Casos de cada producto
+            <select class="alma-input" name="minPorProducto" [ngModel]="minPorProducto()" (ngModelChange)="minPorProducto.set(+$event)">
+              @for (o of opcionesMinimo; track o.valor) { <option [value]="o.valor">{{ o.texto }}</option> }
+            </select>
+            <span class="block text-[11px] font-normal text-muted-foreground">
+              Con garantía, el sorteo reparte entre los propietarios al menos esa cantidad de casos de cada producto
+              (por ejemplo, un caso de cada uno) y el resto lo completa al azar. El total de casos no cambia. Si hay más productos
+              que casos para sortear, se cubren los que alcancen y la revisión te dice cuáles quedaron sin cubrir.
+            </span>
+          </label>
           <p class="text-xs" [class]="excede() ? 'font-semibold text-destructive' : 'text-muted-foreground'">
             {{ seleccion().length }} propietarios × {{ porPropietario() || 0 }} casos =
             <span class="tabular-nums">{{ total() }}</span> calificaciones
@@ -128,6 +139,13 @@ export class CasosCampanaNuevaComponent {
   protected readonly propietarios = signal<Propietario[]>([]);
   protected readonly seleccion = signal<string[]>([]);
   protected readonly porPropietario = signal(3);
+  protected readonly minPorProducto = signal(1);
+  protected readonly opcionesMinimo = [
+    { valor: 1, texto: 'Al menos 1 de cada producto (recomendado)' },
+    { valor: 2, texto: 'Al menos 2 de cada producto' },
+    { valor: 3, texto: 'Al menos 3 de cada producto' },
+    { valor: 0, texto: 'Sin garantía: todo al azar por propietario' },
+  ];
 
   protected readonly buscando = signal(false);
   protected readonly buscados = signal(false);
@@ -214,6 +232,7 @@ export class CasosCampanaNuevaComponent {
         desde: bogotaAUtc(this.desde()),
         hasta: bogotaAUtc(this.hasta()),
         por_propietario: this.porPropietario(),
+        min_por_producto: this.minPorProducto(),
         propietarios: this.propietarios()
           .filter((p) => ids.has(p.id))
           .map((p) => ({ id: p.id, name: p.name })),
