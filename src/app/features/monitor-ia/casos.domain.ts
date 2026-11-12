@@ -1,6 +1,6 @@
 // Etiquetas y colores de los casos de Salesforce en Monitor-IA.
 
-import { CondicionFiltro, EstadoCampanaCasos, EstadoCaso, Flujo, Operador } from './casos.api';
+import { Caso, CondicionFiltro, Cobertura, EstadoCampanaCasos, EstadoCaso, Flujo, Operador } from './casos.api';
 import { EtiquetaEstado } from './monitor-ia.domain';
 
 const MUTED = 'bg-muted text-muted-foreground';
@@ -46,6 +46,34 @@ export function estadoCaso(estado: string): { texto: string; clase: string } {
 /** «Si» en verde, «No» en rojo. */
 export function claseRespuesta(valor: string | undefined): string {
   return valor === 'Si' ? GREEN : valor === 'No' ? RED : MUTED;
+}
+
+/** Productos de un caso: Lista_Productos__c puede traer varios separados por «;» (igual que el backend). */
+export function productosDe(valor: string | null): string[] {
+  return [...new Set((valor ?? '').split(';').map((v) => v.trim()).filter(Boolean))];
+}
+
+/** La cobertura con los casos seleccionados de AHORA (el Coordinador descarta casos sin recargar). */
+export function coberturaVigente(cobertura: Cobertura, casos: ReadonlyArray<Caso>): Cobertura {
+  const meta = Math.max(cobertura.minimo, 1);
+  const cuenta = new Map<string, number>();
+  let sinProducto = 0;
+  for (const x of casos) {
+    if (!x.seleccionada) continue;
+    const productos = productosDe(x.producto);
+    if (!productos.length) sinProducto++;
+    for (const p of productos) cuenta.set(p, (cuenta.get(p) ?? 0) + 1);
+  }
+  const productos = cobertura.productos.map((p) => {
+    const seleccionados = cuenta.get(p.producto) ?? 0;
+    return { ...p, seleccionados, cubierto: seleccionados >= meta };
+  });
+  return {
+    ...cobertura,
+    productos,
+    cubiertos: productos.filter((p) => p.cubierto).length,
+    sin_producto: { ...cobertura.sin_producto, seleccionados: sinProducto },
+  };
 }
 
 export const OPERADORES: ReadonlyArray<{ valor: Operador; texto: string; negativo: boolean }> = [

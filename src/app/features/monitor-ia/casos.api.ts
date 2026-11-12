@@ -117,6 +117,8 @@ export interface CampanaCasos {
   desde: string;
   hasta: string;
   por_propietario: number;
+  /** Casos de cada producto que el sorteo intentó garantizar (0 = al azar por propietario). */
+  min_por_producto: number;
   propietarios: ItemCatalogo[];
   estado: EstadoCampanaCasos;
   error: string | null;
@@ -169,8 +171,26 @@ export interface Caso {
   enlace_salesforce: string | null;
 }
 
+/** Un producto del sorteo: cuántos casos había y cuántos hay en la muestra. */
+export interface ProductoCobertura {
+  producto: string;
+  disponibles: number;
+  seleccionados: number;
+  cubierto: boolean;
+}
+
+/** Cobertura por producto; null en las campañas anteriores a «mínimo por producto». */
+export interface Cobertura {
+  minimo: number;
+  productos: ProductoCobertura[];
+  cubiertos: number;
+  total: number;
+  sin_producto: { disponibles: number; seleccionados: number };
+}
+
 export interface CampanaCasosDetalle extends CampanaCasos {
   casos: Caso[];
+  cobertura: Cobertura | null;
 }
 
 export interface NuevaCampanaCasos {
@@ -180,6 +200,8 @@ export interface NuevaCampanaCasos {
   desde: string;
   hasta: string;
   por_propietario: number;
+  /** 0 = al azar por propietario; 1 a 3 = casos de cada producto que se intentan garantizar. */
+  min_por_producto: number;
   propietarios: ItemCatalogo[];
 }
 
