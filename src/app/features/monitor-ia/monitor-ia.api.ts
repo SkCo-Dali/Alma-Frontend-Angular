@@ -11,6 +11,13 @@ export const PERM_CAMPANAS = 'app.monitor-ia.campanas.manage';
 /** Analista: crea campañas y gestiona solo las suyas (el backend solo le muestra las suyas). */
 export const PERM_CAMPANAS_PROPIAS = 'app.monitor-ia.campanas.propias';
 export const PERM_CONFIG = 'app.monitor-ia.config';
+/** Administrador de la App (el de Nova, `*`, también lo cumple): solo él guarda las conexiones. */
+export const PERM_ADMIN = 'app.monitor-ia.*';
+
+/** Puede crear, cambiar y probar las conexiones con Genesys y Salesforce. */
+export function puedeConfigurarConexion(auth: { hasPermission(p: string): boolean }): boolean {
+  return auth.hasPermission(PERM_ADMIN);
+}
 
 /** Puede crear y gestionar campañas: todas (Coordinador) o las propias (Analista).
  *  Una campaña ajena nunca le llega al Analista (el backend responde 404). */
@@ -46,9 +53,9 @@ export interface Conexion {
   concurrencia: number;
 }
 
-/** Lo que ve el Administrador: el secreto NUNCA viaja, solo si existe. */
+/** Lo que ve el Administrador: ninguna llave viaja (ni Client ID ni secreto), solo si existen. */
 export interface Configuracion extends Conexion {
-  client_id: string | null;
+  tiene_client_id: boolean;
   tiene_secreto: boolean;
   actualizado_por: string | null;
   actualizado_en: string | null;
@@ -56,6 +63,7 @@ export interface Configuracion extends Conexion {
 
 export interface ConfiguracionIn {
   region: string;
+  /** Vacío o null = conservar el Client ID guardado. */
   client_id: string | null;
   /** Vacío o null = conservar el secreto guardado. */
   client_secret: string | null;

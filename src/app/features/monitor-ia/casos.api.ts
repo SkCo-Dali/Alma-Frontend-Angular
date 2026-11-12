@@ -22,10 +22,10 @@ export interface ConexionSf {
   concurrencia: number;
 }
 
-/** Lo que ve el Administrador: el secreto NUNCA viaja, solo si existe. */
+/** Lo que ve el Administrador: ninguna llave viaja (ni Client ID ni secreto), solo si existen. */
 export interface ConfiguracionSf extends ConexionSf {
   instancia: string | null;
-  client_id: string | null;
+  tiene_client_id: boolean;
   tiene_secreto: boolean;
   api_version: string;
   actualizado_por: string | null;
@@ -34,6 +34,7 @@ export interface ConfiguracionSf extends ConexionSf {
 
 export interface ConfiguracionSfIn {
   instancia: string;
+  /** Vacío o null = conservar el Client ID guardado. */
   client_id: string | null;
   /** Vacío o null = conservar el secreto guardado. */
   client_secret: string | null;
@@ -48,9 +49,19 @@ export interface Criterio {
   nombre: string;
 }
 
+/** Cómo se compara un campo de Salesforce con el valor (SOQL: =, !=, LIKE). */
+export type Operador = 'igual' | 'no_igual' | 'contiene' | 'no_contiene' | 'empieza_con' | 'termina_con';
+
+export interface CondicionFiltro {
+  operador: Operador;
+  valor: string;
+}
+
 export interface PlantillaIn {
-  origenes: string[];
-  responder_a_excluir: string[];
+  /** Filtro de «Origen del caso»: basta UNA de las positivas y deben cumplirse TODAS las negativas. */
+  origenes: CondicionFiltro[];
+  /** Filtro de «Responder a»; se combina igual. Vacío = entran todos. */
+  responder_a: CondicionFiltro[];
   prompt_sistema: string;
   prompt_usuario: string;
   criterios: Criterio[];
