@@ -1,8 +1,9 @@
 // Casos de Salesforce dentro de Monitor-IA: campañas de calificación con IA de casos
 // cerrados (Correo y Chat). Reemplaza a las Logic Apps que escribían en
 // Calibracion_CasosEscritos.xlsx. Mismos roles que las llamadas:
-//   · Analista:      ve campañas y resultados.
-//   · Coordinador:   además crea campañas, descarta casos del sorteo, ejecuta y exporta.
+//   · Analista:      crea SUS campañas, las ejecuta, exporta y ve sus resultados;
+//                    no ve las campañas de otros (lo filtra el backend).
+//   · Coordinador:   ve y gestiona todas las campañas.
 //   · Administrador: además configura Salesforce y las plantillas de cada flujo.
 
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
@@ -15,7 +16,7 @@ import { CasosCampanaDetalleComponent } from './casos-campana-detalle.component'
 import { CasosCampanaNuevaComponent } from './casos-campana-nueva.component';
 import { CasosConfiguracionComponent } from './casos-configuracion.component';
 import { ETIQUETA_FLUJO, estadoCampanaCasos } from './casos.domain';
-import { PERM_CAMPANAS, PERM_CONFIG } from './monitor-ia.api';
+import { PERM_CONFIG, puedeGestionarCampanas } from './monitor-ia.api';
 import { fecha } from './monitor-ia.domain';
 
 type Vista = 'campanas' | 'nueva' | 'config';
@@ -138,7 +139,7 @@ export class CasosPageComponent {
   protected readonly fecha = fecha;
   protected readonly flujo = ETIQUETA_FLUJO;
 
-  protected readonly puedeGestionar = computed(() => this.auth.hasPermission(PERM_CAMPANAS));
+  protected readonly puedeGestionar = computed(() => puedeGestionarCampanas(this.auth));
   protected readonly puedeConfigurar = computed(() => this.auth.hasPermission(PERM_CONFIG));
 
   protected readonly vista = signal<Vista>('campanas');

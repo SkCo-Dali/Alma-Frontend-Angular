@@ -8,7 +8,15 @@ import { ApiService } from '../../core/services/api.service';
 
 export const PERM_VIEW = 'app.monitor-ia.view';
 export const PERM_CAMPANAS = 'app.monitor-ia.campanas.manage';
+/** Analista: crea campañas y gestiona solo las suyas (el backend solo le muestra las suyas). */
+export const PERM_CAMPANAS_PROPIAS = 'app.monitor-ia.campanas.propias';
 export const PERM_CONFIG = 'app.monitor-ia.config';
+
+/** Puede crear y gestionar campañas: todas (Coordinador) o las propias (Analista).
+ *  Una campaña ajena nunca le llega al Analista (el backend responde 404). */
+export function puedeGestionarCampanas(auth: { hasPermission(p: string): boolean }): boolean {
+  return auth.hasPermission(PERM_CAMPANAS) || auth.hasPermission(PERM_CAMPANAS_PROPIAS);
+}
 
 export type EstadoCampana =
   | 'PREVISUALIZANDO'

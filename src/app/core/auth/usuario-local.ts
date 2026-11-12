@@ -34,6 +34,7 @@ export const USUARIO_LOCAL: User = {
     'app.recaudos-aplicacion-pagos.view',
     'app.monitor-ia.view',
     'app.monitor-ia.campanas.manage',
+    'app.monitor-ia.campanas.propias',
     'app.monitor-ia.config',
     'app.solicitudes-prestaciones.diligenciar',
     'app.solicitudes-prestaciones.auditoria.view',
