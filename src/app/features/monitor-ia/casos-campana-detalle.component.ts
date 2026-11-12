@@ -10,7 +10,7 @@ import { AlmaCheckboxComponent } from '../../shared/components/alma-checkbox.com
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { CampanaCasosDetalle, Caso, MonitorIaCasosApi } from './casos.api';
 import { ETIQUETA_FLUJO, claseRespuesta, descargar, estadoCampanaCasos, estadoCaso } from './casos.domain';
-import { PERM_CAMPANAS } from './monitor-ia.api';
+import { puedeGestionarCampanas } from './monitor-ia.api';
 import { fecha } from './monitor-ia.domain';
 
 const REFRESCO_MS = 3000;
@@ -248,7 +248,7 @@ export class CasosCampanaDetalleComponent {
   protected readonly estadoCaso = estadoCaso;
   protected readonly claseRespuesta = claseRespuesta;
 
-  protected readonly puedeGestionar = computed(() => this.auth.hasPermission(PERM_CAMPANAS));
+  protected readonly puedeGestionar = computed(() => puedeGestionarCampanas(this.auth));
   protected readonly campana = signal<CampanaCasosDetalle | null>(null);
   protected readonly cargando = signal(false);
   protected readonly error = signal<string | null>(null);
