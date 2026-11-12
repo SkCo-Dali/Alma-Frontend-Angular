@@ -19,11 +19,13 @@ import { AuthService, authEnabled } from './auth.service';
 /**
  * Minutos sin actividad humana antes de cerrar la sesión.
  * Definido con negocio; cambiar aquí si se revisa la política.
+ * Era 20 (cierre del hallazgo de 7Way); subido a 45 en nov-2026 a pedido de
+ * negocio, a prueba. Por encima de ~60 el hallazgo vuelve a quedar abierto.
  */
-const LIMITE_MINUTOS = 20;
+const LIMITE_MINUTOS = 45;
 
 /** Segundos de aviso antes del cierre, para poder continuar la sesión. */
-const AVISO_SEGUNDOS = 60;
+const AVISO_SEGUNDOS = 120;
 
 /** Cada cuánto se revisa el reloj. No necesita más precisión que esta. */
 const INTERVALO_MS = 5_000;
