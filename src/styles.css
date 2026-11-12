@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
+/* Escritorio de poca altura (laptops, o 1080p con zoom de 125%): el Inicio se
+   compacta para que «Tus aplicaciones» quepa encima del Dock. */
+@custom-variant compacto (@media (min-width: 768px) and (max-height: 900px));
 
 /*
  * ALMA design system — lenguaje de diseño macOS.
