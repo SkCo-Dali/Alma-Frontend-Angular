@@ -466,9 +466,9 @@ export function tplIncompleto(t: TplForm | null): string[] {
   });
   (t.lote ?? []).forEach((c, i) => {
     const f = colFalta(c);
-    if (!c.encabezado.trim()) out.push(`La celda ${i + 1} de la fila de lote no tiene nombre.`);
-    else if (f === 'origen') out.push(`Fila de lote · «${c.encabezado}»: elige de dónde sale el valor.`);
-    else if (f) out.push(`Fila de lote · «${c.encabezado}»: falta el valor.`);
+    if (!c.encabezado.trim()) out.push(`La celda ${i + 1} de la fila de resumen no tiene nombre.`);
+    else if (f === 'origen') out.push(`Fila de resumen · «${c.encabezado}»: elige de dónde sale el valor.`);
+    else if (f) out.push(`Fila de resumen · «${c.encabezado}»: falta el valor.`);
   });
   if (!t.nombre_archivo.trim()) out.push('Define el nombre del archivo.');
   return out;

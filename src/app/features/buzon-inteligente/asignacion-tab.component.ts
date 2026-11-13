@@ -65,6 +65,7 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | '
           @if (sinGrupo().length) {
             <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>Etiquetas sin grupo: <b>{{ sinGrupo().join(', ') }}</b>. Sus correos quedarían sin asignar.</span></p>
           }
+          <p class="xs muted on-wall"><lucide-icon name="info" [size]="13" /> OTROS (lo que no es de ningún proceso) no va en grupos: se configura en Reglas → tarjeta «Otros».</p>
           <div class="g2">
             @for (g0 of grupos(); track g0.id) {
               @let g = vista(g0);
