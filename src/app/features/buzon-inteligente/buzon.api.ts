@@ -628,6 +628,8 @@ export interface Cruce {
   /** Columna de la base. */
   columna: string;
   comparacion: Comparacion;
+  /** Unión con el cruce anterior: «y» = deben coincidir juntos; «o» = alternativa (por defecto). */
+  union?: 'y' | 'o';
 }
 
 export interface ReglaAsignacion {
