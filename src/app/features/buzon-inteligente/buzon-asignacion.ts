@@ -232,21 +232,33 @@ export function simularAsignacion(
       paso('warn', `${nombreB} no disponible`, 'Sigue con la siguiente búsqueda');
       continue;
     }
-    for (const cz of regla.cruces) {
-      const titulo = `${nombreB} · ${cz.campo} ↔ ${cz.columna}`;
-      const valor = primerValor(datos[cz.campo]);
-      if (valor === null || valor === undefined || valor === '') {
-        paso('skip', titulo, `El correo no trae ${cz.campo}`);
+    for (const gcz of gruposDeCruces(regla.cruces)) {
+      // Cruces unidos con «Y»: todos deben coincidir en la misma fila. Entre grupos («O»), en orden.
+      const titulo = `${nombreB} · ${gcz.map((c) => `${c.campo} ↔ ${c.columna}`).join(' y ')}`;
+      let filas = base.filas;
+      const vals: string[] = [];
+      let falta: [PasoTraza['estado'], string, string] | null = null;
+      for (const cz of gcz) {
+        const valor = primerValor(datos[cz.campo]);
+        if (valor === null || valor === undefined || valor === '') {
+          falta = ['skip', titulo, `El correo no trae ${cz.campo}`];
+          break;
+        }
+        if (!base.columnas.includes(cz.columna)) {
+          falta = ['warn', `${nombreB} · la columna ${cz.columna} no existe`, 'Revisa el cruce'];
+          break;
+        }
+        const v = normaliza(valor, cz.comparacion);
+        vals.push(v || String(valor));
+        filas = filas.filter((f) => coincide(v, f[cz.columna], cz.comparacion));
+      }
+      if (falta) {
+        paso(...falta);
         continue;
       }
-      if (!base.columnas.includes(cz.columna)) {
-        paso('warn', `${nombreB} · la columna ${cz.columna} no existe`, 'Revisa el cruce');
-        continue;
-      }
-      const nv = normaliza(valor, cz.comparacion);
-      const filas = base.filas.filter((f) => coincide(nv, f[cz.columna], cz.comparacion));
+      const nv = vals.join(' + ');
       if (!filas.length) {
-        paso('skip', titulo, `${nv || String(valor)} no está en la base`);
+        paso('skip', titulo, gcz.length === 1 ? `${nv} no está en la base` : `Ninguna fila cumple todos los datos (${nv})`);
         continue;
       }
       const distintos = [...new Set(filas.map((f) => f[regla.col_responsable]).filter((x) => x))];
@@ -262,7 +274,7 @@ export function simularAsignacion(
         `${nombreB} · ${regla.col_responsable}`,
         base,
       );
-      if (p) return fin('asignado', p, null, `${nombreB} · ${cz.campo}`);
+      if (p) return fin('asignado', p, null, `${nombreB} · ${gcz.map((c) => c.campo).join(' + ')}`);
       break;
     }
   }
@@ -288,4 +300,24 @@ export function simularAsignacion(
   }
   paso('bad', `Round-robin ${grupo.nombre}`, 'Nadie activo en el grupo → cola «Sin asignar» y alerta al líder');
   return fin('sin_asignar', null, null, `${grupo.nombre}: nadie activo`);
+}
+
+/** Cruces unidos con «Y» forman un grupo (todos deben coincidir); cada «O» abre uno nuevo. */
+export function gruposDeCruces<T extends { union?: 'y' | 'o' }>(cruces: T[]): T[][] {
+  const out: T[][] = [];
+  cruces.forEach((c, i) => {
+    if (i && c.union === 'y' && out.length) out[out.length - 1].push(c);
+    else out.push([c]);
+  });
+  return out;
+}
+
+/** «(nit_empresa y codigo_pac) o razon_social»: la regla de los cruces en una línea. */
+export function resumenCruces(cruces: { campo: string; columna: string; union?: 'y' | 'o' }[]): string {
+  return gruposDeCruces(cruces)
+    .map((g) => {
+      const t = g.map((c) => `${c.campo} ↔ ${c.columna}`).join(' y ');
+      return g.length > 1 ? `(${t})` : t;
+    })
+    .join(' o ');
 }

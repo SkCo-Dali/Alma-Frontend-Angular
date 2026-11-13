@@ -11,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { Base, BuzonApi, COMPARACIONES, CampoProceso, Cruce, FilaBase, LecturaArchivo, Persona, ReglaAsignacion } from './buzon.api';
-import { comparacionPara, normaliza, nrm, reconocer } from './buzon-asignacion';
+import { comparacionPara, normaliza, nrm, reconocer, resumenCruces } from './buzon-asignacion';
 
 /** Estado de una búsqueda mientras se edita (prototipo W). */
 export interface BusquedaW {
@@ -147,10 +147,17 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
       </div>
 
       <div class="stack" style="gap:6px">
-        <p class="xs b">Cruces en cascada · si uno no encuentra el caso, prueba el siguiente</p>
+        <p class="xs b">Cruces · únelos con <span class="key">Y</span> (deben coincidir juntos en la misma fila) u <span class="key">O</span> (alternativa: si no encuentra el caso, prueba el siguiente)</p>
         @for (z of W.cruces; track $index; let i = $index) {
           <div class="row" style="flex-wrap:nowrap;gap:6px">
-            <span class="key">{{ i + 1 }}</span>
+            @if (i) {
+              <select class="input sm" style="width:auto;flex:none" aria-label="Unión con el cruce anterior" [title]="(z.union ?? 'o') === 'y' ? 'Y: debe coincidir junto con el anterior' : 'O: alternativa si el anterior no encuentra el caso'" [ngModel]="z.union ?? 'o'" (ngModelChange)="cruce(i, { union: $event })">
+                <option value="o">O</option>
+                <option value="y">Y</option>
+              </select>
+            } @else {
+              <span class="key" style="min-width:42px;text-align:center">1.º</span>
+            }
             <select class="input sm" aria-label="Dato del JSON" [ngModel]="z.campo" (ngModelChange)="cruce(i, { campo: $event })">
               @for (f of campos(); track f.clave) { <option [value]="f.clave">{{ f.clave }}</option> }
               @if (z.campo && !esCampo(z.campo)) { <option [value]="z.campo">{{ z.campo }}</option> }
@@ -166,6 +173,9 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
             <button type="button" class="mini" aria-label="Bajar" (click)="moverCruce(i, 1)">›</button>
             <button type="button" class="btn ghost danger" aria-label="Quitar cruce" (click)="quitarCruce(i)"><lucide-icon name="x" [size]="13" /></button>
           </div>
+        }
+        @if (W.cruces.length > 1) {
+          <p class="xxs muted">Encuentra la fila si coincide: <b>{{ resumen(W.cruces) }}</b></p>
         }
         @if (campos().length) {
           <button type="button" class="btn outline sm" style="justify-self:start" (click)="agregarCruce()"><lucide-icon name="plus" [size]="13" /> Agregar cruce</button>
@@ -216,19 +226,6 @@ const letra = (i: number) => (i < 26 ? LETRAS[i] : LETRAS[Math.floor(i / 26) - 1
         }
       }
 
-      @if (W.cruces.length) {
-        <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:8px">
-          <p class="xs b"><lucide-icon name="flask-conical" [size]="13" /> Probar con un caso</p>
-          <div class="row">
-            @for (c of camposPrueba(); track c) {
-              <label class="fld" style="min-width:150px"><span class="label mono">{{ c }}</span><input class="input sm" [value]="W.test[c] || ''" placeholder="valor del correo" (change)="probarCon(c, $any($event.target).value)" /></label>
-            }
-          </div>
-          @if (prueba(); as P) {
-            <p class="note" [class]="P[0] === 'ok' ? 'note b-emerald' : 'note b-amber'"><lucide-icon [name]="P[0] === 'ok' ? 'check' : 'shuffle'" [size]="13" /> <span>{{ P[1] }}</span></p>
-          }
-        </div>
-      }
     }
   `,
 })
@@ -304,27 +301,10 @@ export class ReglaEditorComponent {
     return { ok, vac, desc: [...desc], dup, total: rows.length };
   });
 
-  protected readonly camposPrueba = computed(() => [...new Set(this.w().cruces.map((z) => z.campo))]);
-
-  /** Prototipo wProbar: el primer cruce que encuentra el caso decide. */
-  protected readonly prueba = computed<['ok' | 'warn', string] | null>(() => {
-    const W = this.w();
-    if (!W.cruces.length) return null;
-    const rows = this.rows();
-    for (const [i, cz] of W.cruces.entries()) {
-      const v = W.test[cz.campo];
-      if (!v || !this.cols().includes(cz.columna)) continue;
-      const nv = normaliza(v, cz.comparacion);
-      const hit = rows.find((r) => nv && normaliza(r[cz.columna], cz.comparacion) === nv);
-      if (!hit) continue;
-      const resp = hit[W.resp] ?? '';
-      const p = resp ? reconocer(resp, this.equipo(), this.vinculos()) : null;
-      const fila = rows.indexOf(hit) + this.filaDatos();
-      const fin = resp ? (p ? ` = ${p.nombre} · está en el equipo` : ' · no se reconoce en el equipo, sigue la siguiente regla') : ' · sigue la siguiente regla';
-      return ['ok', `Cruce ${i + 1} (${cz.campo} ↔ ${cz.columna}) encontró la fila ${fila} → ${resp || 'responsable vacío'}${fin}`];
-    }
-    return ['warn', 'Ningún cruce encontró el caso → round-robin del grupo'];
-  });
+  /** «(nit_empresa ↔ NIT y codigo_pac ↔ PC) o razon_social ↔ EMPRESA». */
+  protected resumen(cruces: Cruce[]): string {
+    return resumenCruces(cruces);
+  }
 
   constructor() {
     // Lee las filas de la base elegida (una vez por base).
@@ -374,10 +354,6 @@ export class ReglaEditorComponent {
     const sig = this.campos().find((f) => !usados.includes(f.clave)) ?? this.campos()[0];
     if (!sig) return;
     this.poner({ cruces: [...this.w().cruces, { campo: sig.clave, columna: colPara(sig.clave, this.cols()), comparacion: comparacionPara(sig.clave) }] });
-  }
-
-  protected probarCon(campo: string, valor: string): void {
-    this.poner({ test: { ...this.w().test, [campo]: valor } });
   }
 
   protected limpiar(): void {

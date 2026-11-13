@@ -7,8 +7,8 @@
 import { Component, computed, effect, inject, input, model, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
-import { Base, Buzon, BuzonApi, Categoria, FilaBase, Grupo, Persona, Proceso, ReglaAsignacionIn } from './buzon.api';
-import { aGrupoIn } from './buzon-asignacion';
+import { Base, Buzon, BuzonApi, Categoria, Cruce, FilaBase, Grupo, Persona, Proceso, ReglaAsignacionIn, ResultadoAsignacion } from './buzon.api';
+import { aGrupoIn, resumenCruces } from './buzon-asignacion';
 import { camposDeGrupo, sinActivosTxt } from './asignacion-ui';
 import { BaseCardComponent, UsoBase } from './base-card.component';
 import { BusquedaW, ReglaEditorComponent, busquedaDe, columnasDe, conDefaults, materializar, nuevaBusqueda } from './regla-editor.component';
@@ -60,6 +60,7 @@ interface ModalQuitar {
                 <p class="xs muted">{{ crucesTxt(r.cruces) }} → {{ r.col_responsable }}@if (r.col_respaldo) { (respaldo: {{ r.col_respaldo }})}</p>
               </div>
               <div class="row" style="flex-wrap:nowrap;gap:4px">
+                <button type="button" class="btn ghost sm" [attr.aria-expanded]="pruebaAbierta() === g.id + '-' + i" (click)="abrirPrueba(g, i)" title="Probar con datos de un correo"><lucide-icon name="flask-conical" [size]="14" /> Probar</button>
                 @if (puede()) {
                   <button type="button" class="btn outline sm" (click)="editarRegla(g, i)">Editar búsqueda</button>
                   <button type="button" class="btn ghost" [attr.aria-label]="r.activa ? 'Desactivar' : 'Activar'" [title]="r.activa ? 'Desactivar' : 'Activar'" [disabled]="guardando()" (click)="alternarRegla(g, i)"><lucide-icon [name]="r.activa ? 'pause' : 'play'" [size]="16" /></button>
@@ -67,6 +68,28 @@ interface ModalQuitar {
                 }
               </div>
             </div>
+            @if (pruebaAbierta() === g.id + '-' + i) {
+              <div class="sunk r-xl stack" style="margin-left:40px;padding:10px 12px;gap:8px">
+                <p class="xs b"><lucide-icon name="flask-conical" [size]="13" /> Probar con datos de un correo <span class="muted">· escribe uno o varios; se evalúa toda la cadena del grupo</span></p>
+                <div class="row" style="align-items:flex-end">
+                  @for (c of camposCruce(r.cruces); track c.campo) {
+                    <label class="fld" style="min-width:170px"><span class="label mono">{{ c.campo }}</span>
+                      <input class="input sm" [placeholder]="'se busca en la columna ' + c.columna" (input)="pruebaDatos[c.campo] = $any($event.target).value" (keydown.enter)="probarCaso(g)" />
+                    </label>
+                  }
+                  <button type="button" class="btn primary sm" [disabled]="probandoCaso()" (click)="probarCaso(g)">{{ probandoCaso() ? 'Probando…' : 'Probar' }}</button>
+                </div>
+                @if (pruebaRes(); as R) {
+                  <p class="note" [class]="R.persona ? 'note b-emerald' : 'note b-amber'">
+                    <lucide-icon [name]="R.persona ? 'check' : 'shuffle'" [size]="13" />
+                    <span><b>{{ R.persona ? 'Asignado a ' + R.persona.nombre : R.estado === 'sin_asignar' ? 'Sin asignar' : R.carpeta ? 'Carpeta «' + R.carpeta + '»' : R.estado }}</b> · {{ R.via }}</span>
+                  </p>
+                  @for (p of R.traza; track $index) {
+                    <p class="xxs" [class.muted]="p.estado === 'skip'">{{ p.estado === 'ok' ? '✓' : p.estado === 'skip' ? '·' : '!' }} {{ p.titulo }}@if (p.detalle) { — {{ p.detalle }}}</p>
+                  }
+                }
+              </div>
+            }
             @if (base) {
               <div style="margin-left:40px">
                 <alma-base-card [base]="base" [equipo]="equipo()" [usos]="usosDe(base.id)" [grupoActual]="g" [puede]="puede()" (baseChange)="actualizarBase($event)" (actualizar)="abrirBase('actualizar', $event)" />
@@ -304,8 +327,39 @@ export class ReglasBasesTabComponent {
     return us.map((u) => u.grupo.nombre).join(', ');
   }
 
-  protected crucesTxt(cruces: { campo: string; columna: string }[]): string {
-    return cruces.map((c, j) => `${j ? 'luego ' : ''}${c.campo} ↔ ${c.columna}`).join(' · ');
+  protected crucesTxt(cruces: Cruce[]): string {
+    return resumenCruces(cruces);
+  }
+
+  // ── Probar la cadena con datos de un correo (botón junto a «Editar búsqueda») ──
+  protected readonly pruebaAbierta = signal<string | null>(null);
+  protected pruebaDatos: Record<string, string> = {};
+  protected readonly pruebaRes = signal<ResultadoAsignacion | null>(null);
+  protected readonly probandoCaso = signal(false);
+
+  protected abrirPrueba(g: Grupo, i: number): void {
+    const k = `${g.id}-${i}`;
+    this.pruebaAbierta.set(this.pruebaAbierta() === k ? null : k);
+    this.pruebaDatos = {};
+    this.pruebaRes.set(null);
+  }
+
+  protected camposCruce(cruces: Cruce[]): Cruce[] {
+    const vistos = new Set<string>();
+    return cruces.filter((c) => !vistos.has(c.campo) && !!vistos.add(c.campo));
+  }
+
+  protected async probarCaso(g: Grupo): Promise<void> {
+    const datos = Object.fromEntries(Object.entries(this.pruebaDatos).filter(([, v]) => v.trim()));
+    if (!Object.keys(datos).length || !g.etiquetas.length) return;
+    this.probandoCaso.set(true);
+    try {
+      this.pruebaRes.set(await this.api.probarAsignacion(this.buzon().id, g.etiquetas[0], datos));
+    } catch (e) {
+      this.toast.error('No se pudo probar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.probandoCaso.set(false);
+    }
   }
 
   protected sinActivos(g: Grupo): string {
