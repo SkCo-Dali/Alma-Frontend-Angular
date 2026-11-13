@@ -59,8 +59,8 @@ interface ModalQuitar {
                 <p class="sm b">Búsqueda en {{ base?.nombre ?? r.base_nombre ?? 'base quitada' }}@if (!r.activa) { <span class="badge b-slate">Desactivada</span> }</p>
                 <p class="xs muted">{{ crucesTxt(r.cruces) }} → {{ r.col_responsable }}@if (r.col_respaldo) { (respaldo: {{ r.col_respaldo }})}</p>
               </div>
-              <div class="row" style="flex-wrap:nowrap;gap:4px">
-                <button type="button" class="btn ghost sm" [attr.aria-expanded]="pruebaAbierta() === g.id + '-' + i" (click)="abrirPrueba(g, i)" title="Probar con datos de un correo"><lucide-icon name="flask-conical" [size]="14" /> Probar</button>
+              <div class="row" style="flex-wrap:nowrap;gap:8px">
+                <button type="button" class="btn outline sm" [attr.aria-expanded]="pruebaAbierta() === g.id + '-' + i" (click)="abrirPrueba(g, i)" title="Probar con datos de un correo"><lucide-icon name="flask-conical" [size]="14" /> Probar</button>
                 @if (puede()) {
                   <button type="button" class="btn outline sm" (click)="editarRegla(g, i)">Editar búsqueda</button>
                   <button type="button" class="btn ghost" [attr.aria-label]="r.activa ? 'Desactivar' : 'Activar'" [title]="r.activa ? 'Desactivar' : 'Activar'" [disabled]="guardando()" (click)="alternarRegla(g, i)"><lucide-icon [name]="r.activa ? 'pause' : 'play'" [size]="16" /></button>
@@ -74,10 +74,11 @@ interface ModalQuitar {
                 <div class="row" style="align-items:flex-end">
                   @for (c of camposCruce(r.cruces); track c.campo) {
                     <label class="fld" style="min-width:170px"><span class="label mono">{{ c.campo }}</span>
-                      <input class="input sm" [placeholder]="'se busca en la columna ' + c.columna" (input)="pruebaDatos[c.campo] = $any($event.target).value" (keydown.enter)="probarCaso(g)" />
+                      <input class="input sm" [placeholder]="'se busca en la columna ' + c.columna" [value]="pruebaDatos[c.campo] ?? ''" (input)="pruebaDatos[c.campo] = $any($event.target).value" (keydown.enter)="probarCaso(g)" />
                     </label>
                   }
                   <button type="button" class="btn primary sm" [disabled]="probandoCaso()" (click)="probarCaso(g)">{{ probandoCaso() ? 'Probando…' : 'Probar' }}</button>
+                  <button type="button" class="btn outline sm" [disabled]="probandoCaso()" (click)="limpiarPrueba()"><lucide-icon name="eraser" [size]="13" /> Limpiar</button>
                 </div>
                 @if (pruebaRes(); as R) {
                   <p class="note" [class]="R.persona ? 'note b-emerald' : 'note b-amber'">
@@ -340,6 +341,12 @@ export class ReglasBasesTabComponent {
   protected abrirPrueba(g: Grupo, i: number): void {
     const k = `${g.id}-${i}`;
     this.pruebaAbierta.set(this.pruebaAbierta() === k ? null : k);
+    this.pruebaDatos = {};
+    this.pruebaRes.set(null);
+  }
+
+  /** «Limpiar»: borra los datos escritos y el resultado (el panel sigue abierto). */
+  protected limpiarPrueba(): void {
     this.pruebaDatos = {};
     this.pruebaRes.set(null);
   }
