@@ -9,8 +9,8 @@
 //   terminar.
 // - Al entrar a la pantalla se recuperan las ejecuciones activas del backend,
 //   así el monitoreo sobrevive a un refresco de la página.
-// - El pipeline de ingesta (ADF) no expone estado, así que su avance se simula
-//   con temporizadores: disparado → esperando correo → revisa tu correo → listo.
+// - El pipeline de ingesta (ADF) no expone estado: solo se sabe que la petición
+//   salió. El fin lo confirma el correo de ADF, no esta pantalla.
 // - Cada tab de datos tiene sus propios filtros y su propia página; la búsqueda
 //   solo se aplica al pulsar "Filtrar" (o Enter), nunca al teclear.
 // - Es un servicio global (no de la pantalla): el monitoreo sigue al navegar a
@@ -18,6 +18,7 @@
 
 import { Injectable, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 import { IslaService } from '../../../core/services/isla.service';
+import { mensajeDeError } from '../api-error';
 import { ComisionesToast } from '../comisiones-toast.service';
 import {
   DEFAULT_MOTOR_PAGE_SIZE,
@@ -33,30 +34,15 @@ const POLL_MS = 10_000;
 const MAX_ERRORS = 3;
 const RUN_PHASE1_MS = 5 * 60 * 1000;
 const RUN_PHASE2_MS = 10 * 60 * 1000;
-const ADF_TRIGGERED_MS = 10_000;
-const ADF_WAITING_EMAIL_MS = 4 * 60 * 1000;
-const ADF_CHECK_EMAIL_MS = 30_000;
 
 /** Pantalla a la que lleva «Ver» desde la isla. */
 const RUTA_EJECUCION = '/apps/motor-comisiones/ejecucion-motor';
 
 const DETALLE_ADF: Partial<Record<AdfPhase, string>> = {
-  triggered: 'Pipeline disparado',
-  waiting_email: 'Procesando la ingesta',
-  check_email: 'Revisa tu correo',
+  triggered: 'Enviando la petición',
 };
 
 /** Lista de respaldo si el API de jobs no responde (mismos ids que Databricks). */
-const JOBS_FALLBACK: MotorJob[] = [
-  { job_id: 1119920686380224, orden: 1, nombre: 'Motor de Comisiones', descripcion: 'Calcula las comisiones base de todos los asesores del período' },
-  { job_id: 142205964357855, orden: 2, nombre: 'Ajuste de Comisiones', descripcion: 'Aplica ajustes manuales y correcciones al cálculo de comisiones' },
-  { job_id: 171026749578083, orden: 3, nombre: 'Mantenimiento y Exclusividad', descripcion: 'Actualiza y valida los indicadores de exclusividad por asesor' },
-  { job_id: 438073747969009, orden: 4, nombre: 'Volúmenes y Reportes', descripcion: 'Genera los volúmenes de ventas y vistas de reportería' },
-  { job_id: 343538865338068, orden: 5, nombre: 'Contabilidad', descripcion: 'Procesa las imputaciones contables de las comisiones calculadas' },
-  { job_id: 47437940367346, orden: 6, nombre: 'Generación de Covers', descripcion: 'Genera los archivos cover de comisiones para cada canal' },
-  { job_id: 946267918633956, orden: 7, nombre: 'Envío de Covers', descripcion: 'Distribuye y envía los covers generados a los destinatarios finales' },
-];
-
 export type JobPhase =
   | 'idle'
   | 'pending'
@@ -81,8 +67,6 @@ export interface JobState {
 export type AdfPhase =
   | 'idle'
   | 'triggered'
-  | 'waiting_email'
-  | 'check_email'
   | 'success'
   | 'error';
 
@@ -170,6 +154,8 @@ export class EjecucionMotorStore implements OnDestroy {
   readonly adfPhase = signal<AdfPhase>('idle');
   readonly adfError = signal<string | null>(null);
   readonly restoring = signal(false);
+  /** La lista de jobs no cargó: no hay qué ejecutar hasta reintentar. */
+  readonly jobsError = signal(false);
 
   readonly companias = signal<MotorCompania[]>([]);
   readonly roles = signal<string[]>([]);
@@ -197,7 +183,6 @@ export class EjecucionMotorStore implements OnDestroy {
 
   private readonly pollings: Record<number, ReturnType<typeof setInterval>> = {};
   private readonly cronometros: Record<number, ReturnType<typeof setInterval>> = {};
-  private adfTimers: ReturnType<typeof setTimeout>[] = [];
   private periodosCargados: Record<string, boolean> = {};
   private opcionesCargadas = false;
   private inicializado = false;
@@ -207,9 +192,7 @@ export class EjecucionMotorStore implements OnDestroy {
     const activos = valores.filter((s) =>
       ['pending', 'running', 'terminating'].includes(s.phase),
     ).length;
-    const adfActivo = ['triggered', 'waiting_email', 'check_email'].includes(this.adfPhase())
-      ? 1
-      : 0;
+    const adfActivo = this.adfPhase() === 'triggered' ? 1 : 0;
     return {
       idle: valores.filter((s) => s.phase === 'idle').length,
       running: activos + adfActivo,
@@ -264,11 +247,20 @@ export class EjecucionMotorStore implements OnDestroy {
     if (this.inicializado) return;
     this.inicializado = true;
 
-    let jobs = JOBS_FALLBACK;
+    await Promise.all([this.cargarJobs(), this.cargarOpcionesFiltros()]);
+  }
+
+  /** Trae los jobs del backend. Sin lista de respaldo: unos ids fijos en el
+   *  código podían quedar viejos y mostrar botones que no ejecutan nada. */
+  async cargarJobs(): Promise<void> {
+    this.jobsError.set(false);
+    let jobs: MotorJob[];
     try {
       jobs = await this.api.getJobs();
     } catch (e) {
-      console.warn('No se pudo consultar la lista de jobs; se usa la de respaldo.', e);
+      console.error('No se pudo consultar la lista de jobs.', e);
+      this.jobsError.set(true);
+      return;
     }
     this.jobs.set(jobs);
 
@@ -276,7 +268,7 @@ export class EjecucionMotorStore implements OnDestroy {
     for (const j of jobs) estados[j.job_id] = jobIdle();
     this.jobsState.set(estados);
 
-    await Promise.all([this.restaurarActivos(jobs), this.cargarOpcionesFiltros()]);
+    await this.restaurarActivos(jobs);
   }
 
   /** Retoma el monitoreo de las ejecuciones que ya venían corriendo. */
@@ -430,7 +422,7 @@ export class EjecucionMotorStore implements OnDestroy {
         POLL_MS,
       );
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.jobsState.update((prev) => ({
         ...prev,
         [jobId]: {
@@ -455,7 +447,7 @@ export class EjecucionMotorStore implements OnDestroy {
         [jobId]: { ...prev[jobId], phase: 'terminating' },
       }));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'No se pudo cancelar');
     }
   }
@@ -553,40 +545,21 @@ export class EjecucionMotorStore implements OnDestroy {
 
   // ── Pipeline de ingesta (ADF) ─────────────────────────────────────────────
 
-  private limpiarAdfTimers(): void {
-    for (const t of this.adfTimers) clearTimeout(t);
-    this.adfTimers = [];
-  }
-
   async ejecutarADF(): Promise<void> {
-    this.limpiarAdfTimers();
+    if (this.adfPhase() === 'triggered') return;
     this.adfPhase.set('triggered');
     this.adfError.set(null);
-    this.toast.ok('Pipeline iniciado', 'Ingesta SQL Server → Databricks en progreso');
 
     try {
       await this.api.ejecutarIngesta();
-      // ADF no expone estado por API: el avance se simula por tiempo.
-      this.adfTimers.push(
-        setTimeout(() => this.adfPhase.set('waiting_email'), ADF_TRIGGERED_MS),
-        setTimeout(() => {
-          this.adfPhase.set('check_email');
-          this.toast.ok('📧 Revisa tu correo', 'El correo de notificación debería haber llegado');
-        }, ADF_TRIGGERED_MS + ADF_WAITING_EMAIL_MS),
-        setTimeout(
-          () => {
-            this.adfPhase.set('success');
-            this.toast.ok(
-              'Ingesta completada',
-              'El pipeline ADF finalizó — ya puedes continuar con los jobs',
-            );
-          },
-          ADF_TRIGGERED_MS + ADF_WAITING_EMAIL_MS + ADF_CHECK_EMAIL_MS,
-        ),
+      // ADF no expone estado por API: solo se sabe que la petición salió.
+      this.adfPhase.set('success');
+      this.toast.ok(
+        'Petición enviada',
+        'Espera el correo de confirmación para continuar con el proceso',
       );
     } catch (e) {
-      this.limpiarAdfTimers();
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.adfPhase.set('error');
       this.adfError.set(msg);
       this.toast.errorGenericoConMensaje(msg, 'Error al iniciar pipeline');
@@ -635,7 +608,7 @@ export class EjecucionMotorStore implements OnDestroy {
       }));
     } catch (e) {
       this.tableData.update((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: false } }));
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'Error al cargar tabla');
     }
   }
@@ -672,7 +645,7 @@ export class EjecucionMotorStore implements OnDestroy {
       }));
     } catch (e) {
       this.tableData.update((prev) => ({ ...prev, [tab]: { ...prev[tab], loading: false } }));
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'Error al cargar tabla');
     }
   }
@@ -719,7 +692,7 @@ export class EjecucionMotorStore implements OnDestroy {
         );
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'Error al descargar CSV');
     }
   }
@@ -747,7 +720,7 @@ export class EjecucionMotorStore implements OnDestroy {
       void this.cargarTabla('correos', this.tableData().correos.page);
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'Error al guardar');
       return false;
     }
@@ -764,7 +737,7 @@ export class EjecucionMotorStore implements OnDestroy {
       void this.cargarTabla('correos', this.tableData().correos.page);
       return true;
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      const msg = mensajeDeError(e);
       this.toast.errorGenericoConMensaje(msg, 'Error al excluir');
       return false;
     }
@@ -828,6 +801,5 @@ export class EjecucionMotorStore implements OnDestroy {
   ngOnDestroy(): void {
     for (const id of Object.keys(this.pollings)) this.detenerTemporizadores(Number(id));
     for (const id of Object.keys(this.cronometros)) this.detenerTemporizadores(Number(id));
-    this.limpiarAdfTimers();
   }
 }

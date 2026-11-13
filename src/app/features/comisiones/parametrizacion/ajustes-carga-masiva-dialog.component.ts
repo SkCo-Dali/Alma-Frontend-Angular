@@ -733,6 +733,11 @@ export class AjustesCargaMasivaDialogComponent implements OnInit {
       );
       return;
     }
+    // El archivo se lee completo en el navegador: uno enorme congela la pestaña.
+    if (file.size > MAX_BYTES_ARCHIVO) {
+      this.errorExtension.set('El archivo supera el máximo de 5 MB.');
+      return;
+    }
 
     this.subiendo.set(true);
     await esperar(600);
@@ -759,6 +764,8 @@ export class AjustesCargaMasivaDialogComponent implements OnInit {
     }
   }
 }
+
+const MAX_BYTES_ARCHIVO = 5 * 1024 * 1024;
 
 function esXlsx(file: File): boolean {
   return file.name.toLowerCase().endsWith('.xlsx');
