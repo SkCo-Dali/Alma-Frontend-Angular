@@ -49,11 +49,11 @@ interface ModalQuitar {
       @if (otros()) { <p class="xs muted on-wall">Sin cadena: {{ otros() }}</p> }
       <div class="glass r-2xl stack" style="padding:16px">
         <div class="row between"><h2 class="sm b">Cadena de reglas · {{ g.nombre }}</h2><span class="xs muted">Se evalúa en orden hasta que una asigna</span></div>
-        <div class="rule fixed"><span class="i">0</span><div><p class="sm b">Continuidad del hilo</p><p class="xs muted">Automática: las respuestas heredan la persona</p></div><span></span></div>
+        <div class="rule fija"><span class="i">0</span><div><p class="sm b">Continuidad del hilo</p><p class="xs muted">Automática: las respuestas heredan la persona</p></div><span></span></div>
         @for (r of g.reglas; track $index; let i = $index) {
           @let base = baseDe(r.base_id);
           <div class="stack" style="gap:6px">
-            <div class="rule" [class.fixed]="!r.activa">
+            <div class="rule" [class.fija]="!r.activa">
               <span class="i">{{ i + 1 }}</span>
               <div style="min-width:0">
                 <p class="sm b">Búsqueda en {{ base?.nombre ?? r.base_nombre ?? 'base quitada' }}@if (!r.activa) { <span class="badge b-slate">Desactivada</span> }</p>

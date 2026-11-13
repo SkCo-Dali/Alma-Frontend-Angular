@@ -1654,7 +1654,13 @@ export class DemoStore {
 
   // ── 2.0: grupos ──
   listarGrupos(buzonId: string): Grupo[] {
-    return clonar(this.grupos.filter((g) => g.buzon_id === buzonId).sort((a, b) => a.orden - b.orden));
+    // Como el backend: sin etiquetas inactivas ni OTROS (se configura en Reglas); un grupo
+    // que solo tenía esas etiquetas no se lista.
+    const activas = new Set(this.categorias.filter((c) => c.buzon_id === buzonId && c.activa && !c.es_fallback).map((c) => c.clave.toUpperCase()));
+    return clonar(this.grupos.filter((g) => g.buzon_id === buzonId).sort((a, b) => a.orden - b.orden))
+      .map((g) => ({ g, antes: g.etiquetas.length, etiquetas: g.etiquetas.filter((e) => activas.has(e.toUpperCase())) }))
+      .filter((x) => x.etiquetas.length || !x.antes)
+      .map((x) => ({ ...x.g, etiquetas: x.etiquetas }));
   }
 
   guardarGrupo(buzonId: string | null, body: GrupoIn, id?: string): Grupo {

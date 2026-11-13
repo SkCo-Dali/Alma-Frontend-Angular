@@ -236,7 +236,8 @@ table.sheet .prob { background: var(--amber-bg); }
 .grid-scroll { max-height: 420px; overflow: auto; }
 .rule { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
 .rule .i { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-weight: 800; font-size: 0.72rem; background: var(--sunken); color: var(--muted-foreground); }
-.rule.fixed { background: var(--sunken); }
+/* «fija» y no «fixed»: la utilidad global .fixed es position: fixed (la tarjeta flotaba). */
+.rule.fija { background: var(--sunken); }
 .rule.final .i { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary-ink); }
 .scrim.side { place-items: stretch end; padding: 0; }
 .panel { width: min(460px, 100vw); height: 100%; overflow-y: auto; padding: 20px; padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); box-shadow: var(--shadow-lg); display: grid; gap: 16px; align-content: start; }

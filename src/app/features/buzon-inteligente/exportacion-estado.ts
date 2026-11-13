@@ -79,7 +79,7 @@ export class ExportacionEstado {
             uid: ++this.uid,
             nombre: s.nombre,
             modo: s.modo,
-            etiquetas: s.etiquetas === null ? 'todas' : [...s.etiquetas],
+            etiquetas: s.etiquetas === null ? 'todas' : s.etiquetas.filter((e) => p.etiquetas.includes(e)),
             plantilla_id: s.plantilla_id,
             activa: s.activa,
             tpl: s.plantilla_id ? (tpls.get(s.plantilla_id) ?? null) : null,
@@ -176,6 +176,15 @@ export class ExportacionEstado {
       if (s.modo === 'plantilla' && !s.plantilla_id) return `«${s.nombre}»: la plantilla se guarda cuando tenga nombre y al menos una columna.`;
     }
     return '';
+  }
+
+  /** «Guardar plantilla»: guarda ya, sin esperar la pausa; true si quedó guardada. */
+  async guardarYa(pu: ProcesoUI): Promise<boolean> {
+    clearTimeout(this.esperas.get(pu.p.id));
+    this.esperas.delete(pu.p.id);
+    this.encolar(pu);
+    await this.colas.get(pu.p.id);
+    return pu.estado !== 'error';
   }
 
   private programar(pu: ProcesoUI, ms: number): void {

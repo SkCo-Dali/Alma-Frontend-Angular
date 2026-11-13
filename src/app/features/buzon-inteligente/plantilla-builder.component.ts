@@ -37,6 +37,7 @@ import {
   origenTpl,
   previewTpl,
   sugerirCol,
+  tplGuardable,
   tplIncompleto,
   tplNuevo,
   valorColEj,
@@ -203,23 +204,38 @@ export class HojaVistaComponent {
             <button type="button" class="btn outline sm" (click)="agregar()"><lucide-icon name="plus" [size]="13" /> Columna</button>
           </div>
         </div>
-        <!-- 074: fila de lote (una sola, antes del detalle), como el encabezado del «Cargue PAC». -->
-        <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px">
-          <div class="row between">
-            <p class="xs"><b>Fila de lote</b> <span class="muted">· opcional: una fila antes del detalle con datos del correo y cálculos (p. ej. 5754 · código PC · NIT · fecha · registros · total)</span></p>
-            <button type="button" class="btn outline sm" (click)="agregarLote()"><lucide-icon name="plus" [size]="13" /> Celda de lote</button>
-          </div>
-          @if (t.lote.length) {
-            <div class="row" style="gap:6px">
-              @for (x of t.lote; track $index; let j = $index) {
-                <button type="button" class="colhead" [class.on]="t.zona === 'lote' && t.selLote === j" (click)="elegirLote(j)">
-                  <b>{{ x.encabezado || '…' }}</b>
-                  <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
-                </button>
-              }
+        <!-- 074: «Fila de resumen» (una sola, antes del detalle), como el encabezado del «Cargue PAC».
+             Plegada: solo se despliega si la plantilla la usa o si el usuario la agrega. -->
+        @if (t.lote.length || verResumen()) {
+          <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px">
+            <div class="row between">
+              <p class="xs"><b>Fila de resumen (opcional)</b> <span class="muted">· una fila arriba del detalle con totales o datos de control (por ejemplo, cantidad de registros y valor total). Úsala solo si el sistema que recibe el archivo la pide.</span></p>
+              <button type="button" class="btn outline sm" (click)="agregarLote()"><lucide-icon name="plus" [size]="13" /> Celda</button>
             </div>
-          }
-        </div>
+            @if (t.lote.length) {
+              <!-- Misma grilla que las columnas del detalle: una celda por columna del resumen. -->
+              <div class="sheet-wrap">
+                <div class="grid-scroll">
+                  <table class="sheet mapgrid">
+                    <tr>
+                      <th class="rh">R</th>
+                      @for (x of t.lote; track $index; let j = $index) {
+                        <th>
+                          <button type="button" class="colhead" [class.on]="t.zona === 'lote' && t.selLote === j" (click)="elegirLote(j)">
+                            <b>{{ x.encabezado || '…' }}</b>
+                            <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
+                          </button>
+                        </th>
+                      }
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <button type="button" class="btn ghost sm" style="justify-self:start" (click)="verResumen.set(true); agregarLote()" title="Una fila arriba del detalle con totales o datos de control, si el sistema que recibe el archivo la pide"><lucide-icon name="plus" [size]="13" /> Agregar fila de resumen</button>
+        }
         @if (t.columnas.length) {
           <div class="sheet-wrap">
             <div class="grid-scroll">
@@ -254,7 +270,7 @@ export class HojaVistaComponent {
           <div class="sunk r-xl stack" style="padding:12px 14px;gap:10px">
             <div class="row between">
               <p class="sm b">
-                {{ t.zona === 'lote' ? 'Fila de lote · celda ' + (t.selLote + 1) : 'Columna ' + letra(t.sel) }} · {{ c.encabezado || '…' }}
+                {{ t.zona === 'lote' ? 'Fila de resumen · celda ' + (t.selLote + 1) : 'Columna ' + letra(t.sel) }} · {{ c.encabezado || '…' }}
                 @if (c.sug) {
                   <span class="badge b-violet">✦ Propuesta de Nova</span>
                 }
@@ -459,6 +475,12 @@ export class HojaVistaComponent {
 
       <!-- ③ Revisar -->
       @if (t.paso === 3) {
+        <!-- Acciones arriba: se ven sin bajar hasta la vista previa. La plantilla también se
+             guarda sola a los pocos segundos de cada cambio; «Guardar plantilla» lo hace ya. -->
+        <div class="row between">
+          <button type="button" class="btn outline sm" (click)="ir(2)">← Columnas</button>
+          <button type="button" class="btn primary sm" [disabled]="!guardable(t)" (click)="guardarTpl.emit()"><lucide-icon name="save" [size]="13" /> Guardar plantilla</button>
+        </div>
         <div class="g2">
           <div class="fld">
             <label class="label" [for]="ids + 'nombre'">Nombre de la plantilla</label>
@@ -533,9 +555,6 @@ export class HojaVistaComponent {
             <p class="note b-emerald"><lucide-icon name="check" [size]="13" /> <span>Plantilla lista.</span></p>
           }
         }
-        <div class="row" style="justify-content:flex-start">
-          <button type="button" class="btn outline sm" (click)="ir(2)">← Columnas</button>
-        </div>
       }
     </div>
 
@@ -573,6 +592,8 @@ export class PlantillaBuilderComponent {
   readonly cambiado = output<void>();
   /** «ver «Cargue PAC» (solo lectura)». */
   readonly verRef = output<void>();
+  /** «Guardar plantilla» (paso ③): quien la usa la guarda ya. */
+  readonly guardarTpl = output<void>();
 
   protected readonly ids = `tb${++siguienteId}-`;
   protected readonly origenes = ORIGENES_TPL;
@@ -583,12 +604,15 @@ export class PlantillaBuilderComponent {
   protected readonly letra = letra;
   protected readonly origenTpl = origenTpl;
   protected readonly faltan = tplIncompleto;
+  protected readonly guardable = tplGuardable;
 
   /** Sube con cada cambio: la plantilla es mutable. */
   protected readonly version = signal(0);
   /** Vista previa: valores o fórmulas. */
   protected readonly sv = signal<VistaCeldas>('val');
   protected readonly adv = signal(false);
+  /** «Agregar fila de resumen»: despliega el bloque aunque aún no tenga celdas. */
+  protected readonly verResumen = signal(false);
 
   protected readonly basesBuzon = computed(() => this.bases().filter((b) => b.columnas.length));
   protected readonly vista = computed(() => {
@@ -739,7 +763,7 @@ export class PlantillaBuilderComponent {
 
   protected agregarLote(): void {
     const t = this.tpl();
-    t.lote.push({ encabezado: `Lote ${t.lote.length + 1}`, origen: { tipo: 'vacio' }, formato: 'texto' });
+    t.lote.push({ encabezado: `Resumen ${t.lote.length + 1}`, origen: { tipo: 'vacio' }, formato: 'texto' });
     t.zona = 'lote';
     t.selLote = t.lote.length - 1;
     this.cambio();

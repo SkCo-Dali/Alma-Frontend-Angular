@@ -36,9 +36,10 @@ export const RE_CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const normTxt = (v: string) => v.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-/** Etiquetas activas en el orden de los procesos; las que no tienen proceso van a OTROS. */
+/** Etiquetas activas en el orden de los procesos; las que no tienen proceso van a OTROS.
+ *  La de respaldo (OTROS) no se asigna: se configura en Reglas → tarjeta Otros. */
 export function etiquetasDe(categorias: Categoria[], procesos: Proceso[]): EtiquetaProceso[] {
-  const activas = categorias.filter((c) => c.activa).sort((a, b) => a.orden - b.orden);
+  const activas = categorias.filter((c) => c.activa && !c.es_fallback).sort((a, b) => a.orden - b.orden);
   const procs = procesos.filter((p) => p.activo).sort((a, b) => a.orden - b.orden);
   const out: EtiquetaProceso[] = [];
   procs.forEach((p) => activas.filter((c) => c.proceso_id === p.id).forEach((c) => out.push([c.clave, p.clave])));
