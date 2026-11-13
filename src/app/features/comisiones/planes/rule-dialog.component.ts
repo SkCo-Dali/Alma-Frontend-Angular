@@ -684,10 +684,20 @@ export class RuleDialogComponent implements OnInit {
     if (fila.field && fila.condition && fila.value) void this.sincronizar(fila);
   }
 
-  /** POST la primera vez (id temporal) y PUT en adelante. */
+  /** Filas con un guardado en curso; el valor indica si cambió otra vez mientras tanto. */
+  private readonly sincronizando = new Map<string, boolean>();
+
+  /** POST la primera vez (id temporal) y PUT en adelante. Un guardado a la vez
+   *  por fila: dos POST seguidos de la misma fila creaban la condición dos veces. */
   private async sincronizar(fila: ConditionRow): Promise<void> {
     const ruleId = this.rule()?.id;
     if (!ruleId) return;
+    if (this.sincronizando.has(fila.id)) {
+      this.sincronizando.set(fila.id, true);
+      return;
+    }
+    this.sincronizando.set(fila.id, false);
+    let idActual = fila.id;
     try {
       if (fila.id.startsWith('temp-')) {
         const orden = this.condiciones().findIndex((c) => c.id === fila.id);
@@ -700,6 +710,7 @@ export class RuleDialogComponent implements OnInit {
           group_level: 0,
           condition_order: orden < 0 ? 0 : orden,
         });
+        idActual = creada.id;
         this.condiciones.update((prev) =>
           prev.map((c) => (c.id === fila.id ? { ...c, id: creada.id } : c)),
         );
@@ -720,6 +731,13 @@ export class RuleDialogComponent implements OnInit {
           : 'La condición se actualizó en pantalla pero no se pudo guardar en el servidor.',
         'Advertencia',
       );
+    } finally {
+      const cambioDespues = this.sincronizando.get(fila.id);
+      this.sincronizando.delete(fila.id);
+      if (cambioDespues) {
+        const ultima = this.condiciones().find((c) => c.id === idActual);
+        if (ultima?.field && ultima.condition && ultima.value) void this.sincronizar(ultima);
+      }
     }
   }
 
@@ -731,6 +749,7 @@ export class RuleDialogComponent implements OnInit {
       return;
     }
 
+    if (this.guardando()) return;
     this.guardando.set(true);
     try {
       const payload = {
@@ -738,21 +757,21 @@ export class RuleDialogComponent implements OnInit {
         description: this.descripcion,
         formula: this.formula,
         catalog: this.catalogo(),
-        is_active: true,
       };
 
       if (this.esEdicion()) {
         const ruleId = this.rule()?.id;
         if (!ruleId) return;
+        // Sin is_active: editar no reactiva una regla que estaba inactiva.
         await this.api.update(ruleId, payload);
         this.toast.ok('Regla actualizada', `La regla "${this.nombre}" se actualizó.`);
       } else {
-        const creada = await this.api.create(this.planId(), payload);
+        const creada = await this.api.create(this.planId(), { ...payload, is_active: true });
         // Las condiciones necesitan el id de la regla: van después, en tanda.
         const completas = this.condiciones().filter(
           (c) => c.field && c.condition && c.value,
         );
-        if (completas.length > 0) {
+        try {
           await Promise.all(
             completas.map((c, i) =>
               this.api.createCondition(creada.id, {
@@ -766,6 +785,10 @@ export class RuleDialogComponent implements OnInit {
               }),
             ),
           );
+        } catch (e) {
+          // Una regla sin todas sus condiciones pagaría de más: se deshace la creación.
+          await this.deshacerCreacion(creada.id);
+          throw e;
         }
         this.toast.ok(
           'Regla creada',
@@ -778,6 +801,20 @@ export class RuleDialogComponent implements OnInit {
       this.toast.errorMutacion(e, this.esEdicion() ? 'update' : 'create');
     } finally {
       this.guardando.set(false);
+    }
+  }
+
+  /** Borra la regla recién creada cuando fallaron sus condiciones. */
+  private async deshacerCreacion(ruleId: string): Promise<void> {
+    try {
+      await this.api.remove(ruleId);
+    } catch (e) {
+      console.error('No se pudo deshacer la regla creada:', e);
+      this.toast.errorGenericoConMensaje(
+        `La regla "${this.nombre}" quedó creada sin todas sus condiciones. Elimínala o complétala antes de enviar el plan a aprobación.`,
+        'Regla incompleta',
+      );
+      this.saved.emit();
     }
   }
 
