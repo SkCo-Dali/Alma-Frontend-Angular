@@ -79,7 +79,7 @@ export class ExportacionEstado {
             uid: ++this.uid,
             nombre: s.nombre,
             modo: s.modo,
-            etiquetas: s.etiquetas === null ? 'todas' : [...s.etiquetas],
+            etiquetas: s.etiquetas === null ? 'todas' : s.etiquetas.filter((e) => p.etiquetas.includes(e)),
             plantilla_id: s.plantilla_id,
             activa: s.activa,
             tpl: s.plantilla_id ? (tpls.get(s.plantilla_id) ?? null) : null,

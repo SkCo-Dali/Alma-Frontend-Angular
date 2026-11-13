@@ -210,13 +210,23 @@ export class HojaVistaComponent {
             <button type="button" class="btn outline sm" (click)="agregarLote()"><lucide-icon name="plus" [size]="13" /> Celda de lote</button>
           </div>
           @if (t.lote.length) {
-            <div class="row" style="gap:6px">
-              @for (x of t.lote; track $index; let j = $index) {
-                <button type="button" class="colhead" [class.on]="t.zona === 'lote' && t.selLote === j" (click)="elegirLote(j)">
-                  <b>{{ x.encabezado || '…' }}</b>
-                  <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
-                </button>
-              }
+            <!-- Misma grilla que las columnas del detalle: una celda por columna del lote. -->
+            <div class="sheet-wrap">
+              <div class="grid-scroll">
+                <table class="sheet mapgrid">
+                  <tr>
+                    <th class="rh">L</th>
+                    @for (x of t.lote; track $index; let j = $index) {
+                      <th>
+                        <button type="button" class="colhead" [class.on]="t.zona === 'lote' && t.selLote === j" (click)="elegirLote(j)">
+                          <b>{{ x.encabezado || '…' }}</b>
+                          <ng-container *ngTemplateOutlet="chip; context: { $implicit: x }" />
+                        </button>
+                      </th>
+                    }
+                  </tr>
+                </table>
+              </div>
             </div>
           }
         </div>
