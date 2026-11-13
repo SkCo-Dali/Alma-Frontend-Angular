@@ -37,6 +37,7 @@ import {
   origenTpl,
   previewTpl,
   sugerirCol,
+  tplGuardable,
   tplIncompleto,
   tplNuevo,
   valorColEj,
@@ -469,6 +470,12 @@ export class HojaVistaComponent {
 
       <!-- ③ Revisar -->
       @if (t.paso === 3) {
+        <!-- Acciones arriba: se ven sin bajar hasta la vista previa. La plantilla también se
+             guarda sola a los pocos segundos de cada cambio; «Guardar plantilla» lo hace ya. -->
+        <div class="row between">
+          <button type="button" class="btn outline sm" (click)="ir(2)">← Columnas</button>
+          <button type="button" class="btn primary sm" [disabled]="!guardable(t)" (click)="guardarTpl.emit()"><lucide-icon name="save" [size]="13" /> Guardar plantilla</button>
+        </div>
         <div class="g2">
           <div class="fld">
             <label class="label" [for]="ids + 'nombre'">Nombre de la plantilla</label>
@@ -543,9 +550,6 @@ export class HojaVistaComponent {
             <p class="note b-emerald"><lucide-icon name="check" [size]="13" /> <span>Plantilla lista.</span></p>
           }
         }
-        <div class="row" style="justify-content:flex-start">
-          <button type="button" class="btn outline sm" (click)="ir(2)">← Columnas</button>
-        </div>
       }
     </div>
 
@@ -583,6 +587,8 @@ export class PlantillaBuilderComponent {
   readonly cambiado = output<void>();
   /** «ver «Cargue PAC» (solo lectura)». */
   readonly verRef = output<void>();
+  /** «Guardar plantilla» (paso ③): quien la usa la guarda ya. */
+  readonly guardarTpl = output<void>();
 
   protected readonly ids = `tb${++siguienteId}-`;
   protected readonly origenes = ORIGENES_TPL;
@@ -593,6 +599,7 @@ export class PlantillaBuilderComponent {
   protected readonly letra = letra;
   protected readonly origenTpl = origenTpl;
   protected readonly faltan = tplIncompleto;
+  protected readonly guardable = tplGuardable;
 
   /** Sube con cada cambio: la plantilla es mutable. */
   protected readonly version = signal(0);

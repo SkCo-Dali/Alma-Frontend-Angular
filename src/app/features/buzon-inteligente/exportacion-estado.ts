@@ -178,6 +178,15 @@ export class ExportacionEstado {
     return '';
   }
 
+  /** «Guardar plantilla»: guarda ya, sin esperar la pausa; true si quedó guardada. */
+  async guardarYa(pu: ProcesoUI): Promise<boolean> {
+    clearTimeout(this.esperas.get(pu.p.id));
+    this.esperas.delete(pu.p.id);
+    this.encolar(pu);
+    await this.colas.get(pu.p.id);
+    return pu.estado !== 'error';
+  }
+
   private programar(pu: ProcesoUI, ms: number): void {
     clearTimeout(this.esperas.get(pu.p.id));
     this.esperas.set(

@@ -139,6 +139,7 @@ export function entregaDe(b: Buzon): EntregaExp {
             [proceso]="p.p.clave"
             (cambiado)="est.tocarTpl(p, s.tpl)"
             (verRef)="verRef.set(true)"
+            (guardarTpl)="guardarPlantilla(p)"
           />
         </div>
       } @else if (s) {
@@ -228,6 +229,12 @@ export class ExportacionTabComponent {
 
   protected tabla(p: ProcesoUI) {
     return tablaJson(p.campos, p.listas);
+  }
+
+  /** «Guardar plantilla»: guarda ya (sin esperar la pausa). */
+  protected async guardarPlantilla(pu: ProcesoUI): Promise<void> {
+    if (await this.est.guardarYa(pu)) this.toast.show('Plantilla guardada');
+    else this.toast.error('No se pudo guardar la plantilla', pu.motivo);
   }
 
   protected async guardarEntrega(cambio: BuzonUpdate): Promise<void> {

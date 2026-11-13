@@ -15,7 +15,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { Buzon, BuzonApi, BuzonUpdate, Categoria } from './buzon.api';
 import { extrae, referenciaPac, salidasFaltan, tplVacia } from './buzon-exportacion';
-import { ExportacionEstado } from './exportacion-estado';
+import { ExportacionEstado, ProcesoUI } from './exportacion-estado';
 import { entregaDe } from './exportacion-tab.component';
 import { HojaVistaComponent, PlantillaBuilderComponent } from './plantilla-builder.component';
 import { SalidasProcesoComponent } from './salidas-proceso.component';
@@ -52,6 +52,7 @@ export type SubvistaExportacion = 'tb' | 'ref' | null;
         [proceso]="x.pu.p.clave"
         (cambiado)="est.tocarTpl(x.pu, x.s.tpl!)"
         (verRef)="abrir('ref')"
+        (guardarTpl)="guardarPlantilla(x.pu, true)"
       />
     } @else if (subvista() === 'ref') {
       <div class="row between">
@@ -203,6 +204,16 @@ export class ExportacionWizardComponent {
 
   protected chk(e: Event): boolean {
     return (e.target as HTMLInputElement).checked;
+  }
+
+  /** «Guardar plantilla»: guarda ya y vuelve a la lista de salidas del asistente. */
+  protected async guardarPlantilla(pu: ProcesoUI, volver: boolean): Promise<void> {
+    if (await this.est.guardarYa(pu)) {
+      this.toast.show('Plantilla guardada');
+      if (volver) this.abrir(null);
+    } else {
+      this.toast.error('No se pudo guardar la plantilla', pu.motivo);
+    }
   }
 
   protected abrir(v: SubvistaExportacion): void {
