@@ -242,7 +242,8 @@ export class ParamFormDialogComponent implements OnInit {
   readonly guardar = output<ParamValues>();
   readonly closed = output<void>();
 
-  protected readonly guardando = signal(false);
+  /** Lo marca quien guarda, mientras espera al servidor: evita el doble envío. */
+  readonly guardando = input(false);
   protected readonly estado = signal<ParamValues>({});
   protected readonly busqueda = signal<Record<string, string>>({});
   /** Año/mes elegidos aunque el YYYYMM aún no esté completo. */
@@ -410,14 +411,9 @@ export class ParamFormDialogComponent implements OnInit {
 
   protected readonly hayErrores = computed(() => Object.keys(this.errores()).length > 0);
 
-  protected async enviar(): Promise<void> {
-    if (this.hayErrores()) return;
-    this.guardando.set(true);
-    try {
-      this.guardar.emit(this.estado());
-    } finally {
-      this.guardando.set(false);
-    }
+  protected enviar(): void {
+    if (this.hayErrores() || this.guardando()) return;
+    this.guardar.emit(this.estado());
   }
 
   protected cerrar(): void {

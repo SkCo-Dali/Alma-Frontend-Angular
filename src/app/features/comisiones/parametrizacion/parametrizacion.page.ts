@@ -252,6 +252,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
           [textoGuardar]="f.editando ? 'Guardar Cambios' : 'Crear Registro'"
           [derivar]="f.derivar"
           [validarExtra]="f.validar"
+          [guardando]="guardandoFormulario()"
           (guardar)="guardarFormulario($event)"
           (closed)="formulario.set(null)"
         />
@@ -316,6 +317,7 @@ export class ParametrizacionPageComponent implements OnInit {
   protected readonly paginas = signal<Record<string, number>>({});
   protected readonly tamanos = signal<Record<string, number>>({});
   protected readonly borrando = signal(false);
+  protected readonly guardandoFormulario = signal(false);
 
   protected desde = '';
   protected hasta = '';
@@ -536,15 +538,20 @@ export class ParametrizacionPageComponent implements OnInit {
 
   protected async guardarFormulario(valores: ParamValues): Promise<void> {
     const f = this.formulario();
-    if (!f) return;
+    if (!f || this.guardandoFormulario()) return;
     const spec = this.seccion(f.seccion);
     if (!spec.aRegistro) return;
     const datos = spec.aRegistro(valores, this.ctx(f.seccion));
 
-    const ok = f.editando
-      ? await this.store.actualizar(f.seccion, String(f.editando['id']), datos)
-      : await this.store.crear(f.seccion, datos);
-    if (ok) this.formulario.set(null);
+    this.guardandoFormulario.set(true);
+    try {
+      const ok = f.editando
+        ? await this.store.actualizar(f.seccion, String(f.editando['id']), datos)
+        : await this.store.crear(f.seccion, datos);
+      if (ok) this.formulario.set(null);
+    } finally {
+      this.guardandoFormulario.set(false);
+    }
   }
 
   protected async confirmarBorrado(seccion: SeccionId, row: ParamRow): Promise<void> {

@@ -1,9 +1,12 @@
 // HTTP base del módulo de comisiones:
 //  - El token de Entra se agrega aquí, de forma explícita (no hay interceptor
 //    global de fetch).
-//  - Conserva el retry con backoff exponencial ante 5xx/errores de red (salvo
-//    las descargas) y el ApiConflictError en 409, que la UI trata distinto.
-//  - En los 4xx el error lleva el motivo del backend (ver api-error.ts).
+//  - Solo las consultas (GET) se reintentan con backoff exponencial ante
+//    5xx/errores de red. Guardar, borrar y subir archivos se envían una sola
+//    vez: reintentar un POST que sí llegó al servidor duplicaba el registro.
+//  - El ApiConflictError en 409 lo trata distinto la UI.
+//  - En los 4xx el error lleva el motivo del backend (ver api-error.ts); en los
+//    5xx el cuerpo de la respuesta solo va a la consola.
 
 import { Injectable, inject } from '@angular/core';
 import { environment } from '@env/environment';
@@ -40,7 +43,7 @@ export class ComisionesHttp {
     return h;
   }
 
-  /** fetch con retry: reintenta 5xx y errores de red con backoff exponencial. */
+  /** fetch con retry (solo para GET): reintenta 5xx y errores de red con backoff exponencial. */
   private async fetchConRetry(url: string, init?: RequestInit): Promise<Response> {
     for (let i = 0; i < RETRIES; i++) {
       try {
@@ -72,7 +75,7 @@ export class ComisionesHttp {
     body?: unknown,
     fallbackMessage = 'La operación falló',
   ): Promise<T> {
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: await this.headers(),
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -119,7 +122,7 @@ export class ComisionesHttp {
     const token = await this.auth.getAccessToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await this.fetchConRetry(`${API_BASE}${path}`, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers,
       body: formData,
@@ -151,8 +154,11 @@ export class ComisionesHttp {
   }
 
   private errorFromText(res: Response, texto: string, fallbackMessage: string): Error {
-    const motivo = res.status >= 400 && res.status < 500 ? leerMotivo(texto) : null;
-    const detalle = motivo ?? texto;
+    const esCliente = res.status >= 400 && res.status < 500;
+    const motivo = esCliente ? leerMotivo(texto) : null;
+    // En los 5xx el cuerpo puede ser una traza o la página de error del proxy.
+    if (!esCliente && texto) console.error(`[Comisiones] ${res.status} en ${res.url}:`, texto);
+    const detalle = motivo ?? (esCliente ? texto : '');
     // El status queda en el mensaje: varios flujos lo inspeccionan (403/404/409).
     const mensaje = `${fallbackMessage}: ${res.status} ${res.statusText}${detalle ? ` - ${detalle}` : ''}`;
     if (res.status === HTTP_CONFLICT) {
