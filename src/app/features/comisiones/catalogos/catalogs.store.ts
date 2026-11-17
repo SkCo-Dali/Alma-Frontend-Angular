@@ -34,6 +34,7 @@ export class CatalogsStore {
   private readonly fieldValues = signal<Record<string, CatalogFieldValue[]>>({});
   readonly loadingFields = signal(false);
   private readonly enVuelo = new Set<string>();
+  private readonly camposEnVuelo = new Map<string, Promise<void>>();
 
   private cargado = false;
 
@@ -66,8 +67,17 @@ export class CatalogsStore {
 
   async cargarCampos(catalogId: string, forzar = false): Promise<void> {
     if (!catalogId) return;
-    if (!forzar && (this.fields()[catalogId] || this.enVuelo.has(catalogId))) return;
-    this.enVuelo.add(catalogId);
+    if (!forzar && this.fields()[catalogId]) return;
+    // Si ya se están pidiendo, se espera esa misma petición en vez de salir
+    // sin campos (el editor de reglas quedaba con el operador vacío).
+    const pendiente = this.camposEnVuelo.get(catalogId);
+    if (pendiente && !forzar) return pendiente;
+    const carga = this.pedirCampos(catalogId).finally(() => this.camposEnVuelo.delete(catalogId));
+    this.camposEnVuelo.set(catalogId, carga);
+    return carga;
+  }
+
+  private async pedirCampos(catalogId: string): Promise<void> {
     try {
       this.loadingFields.set(true);
       const res = await this.api.listFields(catalogId, {
@@ -82,7 +92,6 @@ export class CatalogsStore {
       this.toast.errorGenerico('fetch', msg);
     } finally {
       this.loadingFields.set(false);
-      this.enVuelo.delete(catalogId);
     }
   }
 
