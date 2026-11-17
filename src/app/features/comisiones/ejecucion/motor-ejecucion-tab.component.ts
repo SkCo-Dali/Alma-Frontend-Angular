@@ -39,19 +39,12 @@ const BADGE_ADF: Record<AdfPhase, { cls: string; text: string }> = {
   idle: { cls: 'bg-muted text-muted-foreground', text: 'Listo' },
   triggered: {
     cls: 'bg-sky-100 text-sky-800 animate-pulse dark:bg-sky-500/15 dark:text-sky-300',
-    text: 'Pipeline activo',
+    text: 'Enviando…',
   },
-  waiting_email: {
-    cls: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
-    text: 'Esperando correo',
-  },
-  check_email: {
-    cls: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300',
-    text: 'Revisa tu correo',
-  },
+  // ADF no informa cuándo termina: aquí solo consta que la petición salió.
   success: {
-    cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
-    text: 'Completo',
+    cls: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300',
+    text: 'Petición enviada',
   },
   error: {
     cls: 'bg-destructive/10 text-destructive cursor-pointer hover:bg-destructive/20',
@@ -61,10 +54,8 @@ const BADGE_ADF: Record<AdfPhase, { cls: string; text: string }> = {
 
 const TEXTO_ADF: Record<AdfPhase, string> = {
   idle: '',
-  triggered: 'Pipeline activo…',
-  waiting_email: 'Esperando correo…',
-  check_email: 'Revisa tu correo…',
-  success: 'Finalizado',
+  triggered: 'Enviando la petición…',
+  success: 'Espera el correo de confirmación para continuar con el proceso',
   error: 'Error al disparar pipeline',
 };
 
@@ -275,6 +266,20 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                 </td>
               </tr>
             }
+            @if (store.jobsError()) {
+              <tr>
+                <td colspan="4" class="px-4 py-4 text-center text-xs text-muted-foreground">
+                  No se pudo cargar la lista de jobs.
+                  <button
+                    type="button"
+                    class="alma-btn alma-btn-outline ml-2 h-7 px-3 text-xs"
+                    (click)="store.cargarJobs()"
+                  >
+                    Reintentar
+                  </button>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>
@@ -297,19 +302,15 @@ export class MotorEjecucionTabComponent {
     ];
   });
 
-  protected readonly adfCorriendo = computed(() =>
-    ['triggered', 'waiting_email', 'check_email'].includes(this.store.adfPhase()),
-  );
+  protected readonly adfCorriendo = computed(() => this.store.adfPhase() === 'triggered');
 
   protected readonly badgeAdf = computed(() => BADGE_ADF[this.store.adfPhase()]);
   protected readonly textoAdf = computed(() => TEXTO_ADF[this.store.adfPhase()]);
 
   protected readonly barraAdf = computed(() => {
     const p = this.store.adfPhase();
-    if (['triggered', 'waiting_email', 'check_email'].includes(p)) {
-      return 'w-full animate-pulse bg-gradient-to-r from-sky-500 to-sky-300';
-    }
-    if (p === 'success') return 'w-full bg-primary';
+    if (p === 'triggered') return 'w-full animate-pulse bg-gradient-to-r from-sky-500 to-sky-300';
+    if (p === 'success') return 'w-full bg-sky-400';
     if (p === 'error') return 'w-full bg-destructive';
     return 'w-0 bg-muted-foreground/30';
   });

@@ -118,6 +118,14 @@ export function leerMotivo(texto: string): string | null {
   return motivo.length > MAX_MOTIVO ? `${motivo.slice(0, MAX_MOTIVO - 1)}…` : motivo;
 }
 
+/** Texto para un aviso: el motivo del backend (4xx) o uno genérico; nunca el detalle técnico. */
+export function mensajeDeError(
+  error: unknown,
+  generico = 'Ocurrió un error. Intenta de nuevo.',
+): string {
+  return motivoDeError(error) ?? generico;
+}
+
 export const CONFLICT_TOAST_DESCRIPTION =
   'No se puede crear el registro porque ya existe ese registro.';
 
