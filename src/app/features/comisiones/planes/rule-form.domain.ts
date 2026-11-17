@@ -112,16 +112,30 @@ const API_A_SIMBOLO: Record<string, string> = {
   in: 'en',
 };
 
+/** Formas cortas guardadas por cargas antiguas (feb–sep 2026); el motor y el
+ *  back las aceptan. Se traducen a la forma larga antes de mostrarlas. */
+const ALIAS_API: Record<string, string> = {
+  eq: 'equal',
+  ne: 'not_equal',
+  gt: 'greater_than',
+  gte: 'greater_or_equal',
+  lt: 'less_than',
+  lte: 'less_or_equal',
+};
+
+const normalizar = (op: string): string => ALIAS_API[op] ?? op;
+
 export function mapUIOperatorToAPI(uiOperator: string): ConditionOperator {
   return UI_A_API[uiOperator] || 'equal';
 }
 
 export function mapApiOperatorToUI(apiOperator: string): string {
-  return API_A_UI[apiOperator] || 'Igual';
+  // Desconocido → vacío, no 'Igual': así nunca se guarda un operador equivocado.
+  return API_A_UI[normalizar(apiOperator)] ?? '';
 }
 
 export function mapApiOperatorToShort(apiOperator: string): string {
-  return API_A_SIMBOLO[apiOperator] || apiOperator;
+  return API_A_SIMBOLO[normalizar(apiOperator)] || apiOperator;
 }
 
 /** Las opciones de condición dependen del tipo del campo del catálogo. */
