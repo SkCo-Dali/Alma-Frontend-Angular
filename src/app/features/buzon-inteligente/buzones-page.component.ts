@@ -178,7 +178,7 @@ interface MiembroForm {
             </div>
             <p class="xs muted">
               @if (c.accion === 'desconectar') {
-                Nova deja de leer {{ c.buzon.direccion }} y borra la conexión. Reglas, equipo e historial se conservan; se reanuda conectándolo de nuevo.
+                Nova deja de leer {{ c.buzon.direccion }}. Antes de cortar procesa en paralelo los correos que tiene en cola y luego borra la conexión. Lo que llegue mientras esté desconectado no se procesa al reconectarlo (queda en Ignorados como omitido por desconexión). Reglas, equipo e historial se conservan.
               } @else {
                 Deja de verse y de leerse. Reglas, miembros e historial se conservan como auditoría: registrar de nuevo la misma dirección lo restaura.
               }
@@ -373,8 +373,13 @@ export class BuzonesPageComponent {
     this.trabajando.set(c.buzon.id);
     try {
       if (c.accion === 'desconectar') {
-        await this.api.desconectarBuzon(c.buzon.id);
-        this.toast.show('Buzón desconectado', `${c.buzon.nombre} quedó pausado: Nova ya no lo lee.`);
+        const r = await this.api.desconectarBuzon(c.buzon.id);
+        this.toast.show(
+          'Buzón desconectado',
+          r.en_cola
+            ? `${c.buzon.nombre}: procesando en paralelo ${r.en_cola} correo${r.en_cola === 1 ? '' : 's'} en cola; al terminar se cierra la conexión.`
+            : `${c.buzon.nombre} quedó pausado: Nova ya no lo lee.`,
+        );
       } else {
         await this.api.eliminarBuzon(c.buzon.id);
         this.toast.show('Buzón quitado de la App', `${c.buzon.nombre} · ${c.buzon.direccion}`);
