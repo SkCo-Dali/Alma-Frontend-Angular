@@ -39,22 +39,6 @@ export const APP_CATALOG: Application[] = [
     favorito: true,
   },
   {
-    id: 'app-recaudos-acreditacion-pac',
-    nombre: 'Acreditación PAC',
-    descripcion:
-      'Bandeja de pagos PAC recibidos por correo: cruce con suspense, cargue a Pipeline y respuesta a la empresa.',
-    resumen: 'Cruza los pagos PAC y los carga a Pipeline.',
-    categoria: 'Recaudos',
-    icono: 'coins',
-    color: '#0089B8',
-    url: '/apps/recaudos-acreditacion-pac',
-    internalRoute: '/apps/recaudos-acreditacion-pac',
-    integrationType: 'internal',
-    requiredPermission: 'app.recaudos-acreditacion-pac.view',
-    estado: 'beta',
-    favorito: false,
-  },
-  {
     id: 'app-recaudos-aplicacion-pagos',
     nombre: 'Aplicación de Pagos',
     descripcion:

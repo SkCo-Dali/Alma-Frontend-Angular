@@ -29,8 +29,6 @@ export const USUARIO_LOCAL: User = {
     'app.buzon-inteligente.view',
     'app.buzon-inteligente.review',
     'app.buzon-inteligente.manage',
-    'app.recaudos-acreditacion-pac.view',
-    'app.recaudos-acreditacion-pac.config',
     'app.recaudos-aplicacion-pagos.view',
     'app.masesstory-hl.view',
     'app.monitor-ia.view',
