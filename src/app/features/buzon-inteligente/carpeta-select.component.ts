@@ -12,9 +12,14 @@ export interface CarpetaPlana {
   total: number;
 }
 
-/** Árbol de Graph (dos niveles) → lista plana para un <select>. */
+/** Árbol de Graph (todas las subcarpetas) → lista plana para un <select>. */
 export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[] {
   return arbol.flatMap((c) => [{ nombre: c.nombre, nivel, total: c.total }, ...aplanarCarpetas(c.hijas ?? [], nivel + 1)]);
+}
+
+/** Sangría de un <option> según la profundidad: los espacios normales se colapsan. */
+export function sangria(nivel: number): string {
+  return nivel ? '   '.repeat(nivel - 1) + '— ' : '';
 }
 
 @Component({
@@ -34,7 +39,7 @@ export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[
     >
       <option value="">{{ vacia() }}</option>
       @for (c of carpetas(); track $index) {
-        <option [value]="c.nombre">{{ c.nivel ? '— ' : '' }}{{ c.nombre }}</option>
+        <option [value]="c.nombre">{{ sangria(c.nivel) }}{{ c.nombre }}</option>
       }
       @if (huerfana(); as h) {
         <option [value]="h">⚠ {{ h }} (no existe en el buzón)</option>
@@ -45,6 +50,7 @@ export function aplanarCarpetas(arbol: CarpetaGraph[], nivel = 0): CarpetaPlana[
   `,
 })
 export class CarpetaSelectComponent {
+  protected readonly sangria = sangria;
   readonly carpetas = input<CarpetaPlana[]>([]);
   readonly valor = model<string | null>(null);
   readonly vacia = input('Elige la carpeta…');

@@ -12,6 +12,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
 import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
+import { sangria } from './carpeta-select.component';
 import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, ModoConexion } from './buzon.api';
 
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
@@ -43,7 +44,7 @@ interface CarpetaPlana {
             <select class="input" id="aj-c" [ngModel]="b.carpeta_vigilada" (ngModelChange)="guardar({ carpeta_vigilada: $event })" [disabled]="!carpetas().length">
               @if (!carpetas().length) { <option [value]="b.carpeta_vigilada">{{ nombreCarpeta(b.carpeta_vigilada) }}</option> }
               @for (f of carpetas(); track f.nombre) {
-                <option [value]="f.nombre">{{ f.nivel ? '— ' : '' }}{{ f.nombre }} ({{ f.total.toLocaleString('es-CO') }})</option>
+                <option [value]="f.nombre">{{ sangria(f.nivel) }}{{ f.nombre }} ({{ f.total.toLocaleString('es-CO') }})</option>
               }
             </select>
             <span class="xxs muted">{{ carpetas().length ? 'Carpetas leídas de ' + b.direccion + ' con la conexión vigente.' : 'Conecta el buzón para leer sus carpetas.' }}</span>
@@ -170,6 +171,7 @@ export class AjustesTabComponent implements OnInit {
   /** Sin modo: reconectar como ya está; con modo (genéricas): cambiar de forma de conexión. */
   readonly reconectar = output<ModoConexion | undefined>();
 
+  protected readonly sangria = sangria;
   protected readonly carpetas = signal<CarpetaPlana[]>([]);
   protected readonly modelos = signal<string[]>([]);
   protected descripcion = '';
@@ -256,7 +258,7 @@ export class AjustesTabComponent implements OnInit {
 
 }
 
-/** Árbol de carpetas → lista con profundidad (raíz y un nivel, como lo lee Graph). */
+/** Árbol de carpetas → lista con profundidad (todas las subcarpetas). */
 export function aplanar(t: CarpetaGraph[], nivel = 0): CarpetaPlana[] {
   return t.flatMap((c) => [{ nombre: c.nombre, total: c.total, nivel }, ...aplanar(c.hijas ?? [], nivel + 1)]);
 }
