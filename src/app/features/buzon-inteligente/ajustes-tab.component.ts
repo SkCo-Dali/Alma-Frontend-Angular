@@ -12,7 +12,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
 import { AvisoCuentaBuzonComponent } from './aviso-cuenta-buzon.component';
-import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, ModoConexion, SombraDosPasos } from './buzon.api';
+import { Buzon, BuzonApi, BuzonUpdate, CarpetaGraph, ModoConexion } from './buzon.api';
 
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
 
@@ -136,36 +136,8 @@ interface CarpetaPlana {
               </div>
               <div class="fld"><span class="label">Salida</span><p class="sm">Estructurada estricta (esquema JSON por proceso)</p></div>
             </div>
-            <!-- 075: clasificación en dos pasos, con prueba en sombra antes de activarla. -->
-            <div class="sunk r-xl stack" style="padding:10px 12px;gap:8px">
-              <div class="row between" style="flex-wrap:nowrap">
-                <div style="min-width:0">
-                  <p class="sm b">Clasificar en dos pasos</p>
-                  <p class="xxs muted">Un modelo rápido (gpt-4.1-mini) decide el proceso con las descripciones cortas; luego el modelo del buzón aplica solo las reglas de ese proceso. Lo que no es de ningún proceso no llega al segundo paso. Si el primer paso duda, se clasifica como hoy.</p>
-                </div>
-                <alma-switch [checked]="!!b.dos_pasos" (checkedChange)="guardar({ dos_pasos: $event })" ariaLabel="Clasificar en dos pasos" />
-              </div>
-              <div class="row">
-                <button type="button" class="btn outline sm" [disabled]="probandoSombra()" (click)="probarSombra()"><lucide-icon name="flask-conical" [size]="13" /> {{ probandoSombra() ? 'Probando… (1 a 3 min)' : 'Probar en sombra' }}</button>
-                <span class="xxs muted">Clasifica en dos pasos los últimos 20 correos ya decididos y lo compara. No ejecuta nada.</span>
-              </div>
-              @if (sombra(); as S) {
-                @if (!S.total) {
-                  <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Aún no hay correos decididos con qué comparar en este buzón.</span></p>
-                } @else {
-                  <div class="g3">
-                    <div class="stat"><p class="l">Coincide con las analistas</p><p class="v">{{ pctSombra(S.por_referencia.humano) }}</p><p class="xxs muted">{{ S.por_referencia.humano.etiqueta_ok }}/{{ S.por_referencia.humano.total }} etiquetas</p></div>
-                    <div class="stat"><p class="l">Coincide con el método actual</p><p class="v">{{ pctSombra(S.por_referencia.actual) }}</p><p class="xxs muted">{{ S.por_referencia.actual.etiqueta_ok }}/{{ S.por_referencia.actual.total }} etiquetas</p></div>
-                    <div class="stat"><p class="l">Tokens por correo</p><p class="v">{{ S.tokens_prom_dos_pasos != null ? S.tokens_prom_dos_pasos.toLocaleString('es-CO') : '—' }}</p><p class="xxs muted">hoy {{ S.tokens_prom_actual != null ? S.tokens_prom_actual.toLocaleString('es-CO') : '—' }}</p></div>
-                  </div>
-                  <p class="xxs muted">Camino: {{ S.rutas.ninguno }} sin proceso (solo paso 1) · {{ S.rutas.proceso }} a un proceso · {{ S.rutas.completo }} con el prompt completo{{ S.rutas.regla ? ' · ' + S.rutas.regla + ' por regla fija' : '' }}{{ S.no_disponibles ? ' · ' + S.no_disponibles + ' ya no están en el buzón' : '' }}{{ S.errores ? ' · ' + S.errores + ' con error' : '' }}{{ S.omitidos ? ' · ' + S.omitidos + ' sin tiempo' : '' }}</p>
-                  @for (f of S.fallos; track f.correo_id) {
-                    <p class="xxs">✗ {{ f.asunto }} · esperaba <span class="key">{{ f.esperado }}</span> y salió <span class="key">{{ f.obtenido || '—' }}</span> ({{ f.referencia === 'humano' ? 'decisión de analista' : 'método actual' }})</p>
-                  }
-                  <p class="note" [class]="aptoSombra(S) ? 'note b-emerald' : 'note b-amber'"><lucide-icon [name]="aptoSombra(S) ? 'check' : 'alert-triangle'" [size]="13" /> <span>{{ aptoSombra(S) ? 'Coincide en 95 % o más: se puede activar en este buzón.' : 'Coincide en menos de 95 %: revisa los casos que no coinciden antes de activarlo.' }}</span></p>
-                }
-              }
-            </div>
+            <!-- Dos pasos: integración por defecto de la app (no es un ajuste del buzón). -->
+            <p class="xxs muted"><lucide-icon name="zap" [size]="12" /> Clasificación en dos pasos: un modelo rápido (gpt-4.1-mini) decide el proceso y el modelo del buzón aplica solo las reglas de ese proceso; lo que no es de ningún proceso no llega al segundo paso. Si el primer paso duda, se usa el prompt completo.</p>
           }
         </div>
 
@@ -200,9 +172,6 @@ export class AjustesTabComponent implements OnInit {
 
   protected readonly carpetas = signal<CarpetaPlana[]>([]);
   protected readonly modelos = signal<string[]>([]);
-  /** 075: prueba en sombra de los dos pasos. */
-  protected readonly sombra = signal<SombraDosPasos | null>(null);
-  protected readonly probandoSombra = signal(false);
   protected descripcion = '';
   protected agenteProyecto = '';
   protected agenteNombre = '';
@@ -242,28 +211,6 @@ export class AjustesTabComponent implements OnInit {
 
   protected nombreCarpeta(n: string): string {
     return n.toLowerCase() === 'inbox' ? 'Bandeja de entrada' : n;
-  }
-
-  protected async probarSombra(): Promise<void> {
-    this.probandoSombra.set(true);
-    try {
-      this.sombra.set(await this.api.sombraDosPasos(this.buzon().id, 20));
-    } catch (e) {
-      this.toast.error('No se pudo hacer la prueba en sombra', e instanceof Error ? e.message : String(e));
-    } finally {
-      this.probandoSombra.set(false);
-    }
-  }
-
-  protected pctSombra(g: { total: number; etiqueta_ok: number }): string {
-    return g.total ? Math.round((g.etiqueta_ok / g.total) * 100) + ' %' : '—';
-  }
-
-  /** Apta si, sumando ambas referencias, las etiquetas coinciden en 95 % o más. */
-  protected aptoSombra(S: SombraDosPasos): boolean {
-    const t = S.por_referencia.humano.total + S.por_referencia.actual.total;
-    const ok = S.por_referencia.humano.etiqueta_ok + S.por_referencia.actual.etiqueta_ok;
-    return t > 0 && ok / t >= 0.95;
   }
 
   protected alternarEtiquetaValidar(on: boolean): void {
