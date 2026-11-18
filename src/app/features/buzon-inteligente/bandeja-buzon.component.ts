@@ -105,10 +105,19 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             <input id="q" type="search" placeholder="Buscar por asunto, remitente o resumen…" [(ngModel)]="q" (keyup.enter)="aplicar()" (search)="aplicar()" />
           </label>
           @if (buzones().length > 1) {
-            <select id="f-buzon" class="input glass" style="width:200px" [(ngModel)]="buzonId" (ngModelChange)="aplicar()" aria-label="Buzón">
+            <select id="f-buzon" class="input glass" style="width:200px" [(ngModel)]="buzonId" (ngModelChange)="cambiarBuzon()" aria-label="Buzón">
               <option value="">Todos los buzones</option>
               @for (b of buzones(); track b.id) { <option [value]="b.id">{{ b.nombre }}</option> }
             </select>
+          }
+          @if (opcionesProceso(); as ops) {
+            @if (ops.length) {
+              <select id="f-proceso" class="input glass" style="width:220px" [(ngModel)]="procesoSel" (ngModelChange)="aplicar()" aria-label="Proceso">
+                <option value="">Todos los procesos</option>
+                @for (p of ops; track p.clave) { <option [value]="p.clave">{{ p.nombre }} · {{ p.clave }}</option> }
+                <option [value]="SIN_PROCESO">OTROS · sin proceso</option>
+              </select>
+            }
           }
           @if (api.modoDemo()) { <span class="demo"><lucide-icon name="flask-conical" [size]="12" /> Demostración</span> }
         </div>
@@ -638,6 +647,9 @@ export class BandejaBuzonComponent {
   // Filtros y lista
   protected q = '';
   protected buzonId = '';
+  /** Filtro por proceso: '' = todos, SIN_PROCESO = OTROS / sin proceso, o la clave. */
+  protected procesoSel = '';
+  protected readonly SIN_PROCESO = '__sin_proceso__';
   // Se entra en «Todos»; Validar y los demás filtros se eligen arriba o llegan por ?estado=.
   protected filtro: Filtro = 'todos';
   protected sinAsignar = false;
@@ -725,6 +737,7 @@ export class BandejaBuzonComponent {
     else if (estado === 'ejecutado' || estado === 'ignorado') this.filtro = estado;
     else if (estado === '') this.filtro = 'todos';
     if (qp.get('buzon')) this.buzonId = qp.get('buzon')!;
+    if (qp.get('proceso')) this.procesoSel = qp.get('proceso')!;
     if (qp.get('sin_asignar')) {
       this.sinAsignar = true;
       this.filtro = 'todos';
@@ -769,6 +782,25 @@ export class BandejaBuzonComponent {
     this.aplicar();
   }
 
+  /** Procesos del buzón elegido (o de todos, sin repetir clave) para el filtro. */
+  protected opcionesProceso(): { clave: string; nombre: string }[] {
+    const mapa = this.procesos();
+    const lista = this.buzonId ? (mapa[this.buzonId] ?? []) : Object.values(mapa).flat();
+    const vistos = new Map<string, { clave: string; nombre: string; orden: number }>();
+    for (const p of [...lista].sort((a, b) => a.orden - b.orden)) {
+      if (!vistos.has(p.clave)) vistos.set(p.clave, { clave: p.clave, nombre: p.nombre, orden: p.orden });
+    }
+    return [...vistos.values()];
+  }
+
+  protected cambiarBuzon(): void {
+    // Si el proceso elegido no existe en el buzón nuevo, se quita el filtro.
+    if (this.procesoSel && this.procesoSel !== this.SIN_PROCESO && !this.opcionesProceso().some((p) => p.clave === this.procesoSel)) {
+      this.procesoSel = '';
+    }
+    this.aplicar();
+  }
+
   protected aplicar(): void {
     this.offset = 0;
     this.seleccionado.set(null);
@@ -790,6 +822,8 @@ export class BandejaBuzonComponent {
         q: this.q.trim() || undefined,
         sin_asignar: this.sinAsignar || undefined,
         duplicado: this.filtro === 'duplicado' || undefined,
+        proceso: this.procesoSel && this.procesoSel !== this.SIN_PROCESO ? this.procesoSel : undefined,
+        sin_proceso: this.procesoSel === this.SIN_PROCESO || undefined,
         limit: this.limit,
         offset: this.offset,
       });

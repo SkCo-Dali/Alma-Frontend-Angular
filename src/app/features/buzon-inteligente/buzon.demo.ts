@@ -1999,6 +1999,8 @@ export class DemoStore {
     if (f.categoria_id) lista = lista.filter((c) => c.categoria_id === f.categoria_id);
     if (f.grupo_id) lista = lista.filter((c) => c.grupo_id === f.grupo_id);
     if (f.duplicado) lista = lista.filter((c) => c.duplicado_estado === 'posible');
+    if (f.proceso) lista = lista.filter((c) => c.proceso_clave === f.proceso && !this.categoriaDe(c.categoria_id)?.es_fallback);
+    else if (f.sin_proceso) lista = lista.filter((c) => !!this.categoriaDe(c.categoria_id)?.es_fallback || (!c.proceso_clave && !!c.categoria_id));
     if (f.sin_asignar) {
       lista = lista.filter(
         (c) => c.grupo_id && !c.asignado_a && (c.estado === 'revision' || c.estado === 'ejecutado') && this.grupos.find((g) => g.id === c.grupo_id)?.destino === 'personas',
