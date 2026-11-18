@@ -4,7 +4,7 @@
 // Exportación solo si su módulo está activo) y «Activar módulo». Solo el editor del
 // buzón o el administrador de la App (`puede_administrar`); el revisor no entra.
 
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
@@ -177,6 +177,20 @@ export class BuzonConfigComponent {
 
   constructor() {
     void this.cargar();
+    // Las etiquetas se crean, editan o desactivan en Reglas: al entrar a Asignación o
+    // Exportación se vuelven a leer para que los grupos y las plantillas vean las de ahora.
+    effect(() => {
+      const t = this.tabVisible();
+      if ((t === 'asig' || t === 'plant') && !untracked(this.cargando)) untracked(() => void this.refrescarCategorias());
+    });
+  }
+
+  private async refrescarCategorias(): Promise<void> {
+    try {
+      this.categorias.set((await this.api.listarCategorias(this.id)).sort((x, y) => x.orden - y.orden));
+    } catch {
+      // Se quedan las que había; el error real aparece al guardar.
+    }
   }
 
   private tabInicial(): Tab {
@@ -206,7 +220,7 @@ export class BuzonConfigComponent {
     try {
       const b = await this.api.actualizarBuzon(this.id, { [m]: true });
       this.buzon.set(b);
-      this.categorias.set((await this.api.listarCategorias(this.id)).sort((x, y) => x.orden - y.orden));
+      await this.refrescarCategorias();
       this.modulosAbierto.set(false);
       this.tab.set(m === 'mod_exportacion' ? 'plant' : 'asig');
       this.toast.show(
