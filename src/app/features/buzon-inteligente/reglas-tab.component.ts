@@ -419,7 +419,7 @@ interface FijaEd {
         @switch (modal()) {
           @case ('tpl') {
             <div class="modal solid" role="dialog" aria-modal="true" aria-label="Plantilla de prompt">
-              <div class="row between"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala en la IA corporativa (Copilot o Claude). La PARTE A le dice a la IA cómo ayudarte; la PARTE B es lo que Nova lee.</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              <div class="row between"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala completa en la IA corporativa (Copilot o Claude). La IA te hace las preguntas (PARTE A) y te entrega el prompt con la estructura que Nova lee (PARTE B). Si ya tienes un prompt, la IA lo convierte. Pégalo luego en «Pegar o subir prompt».</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
               <pre class="tpl">{{ plantilla }}</pre>
               <div class="row between">
                 <button type="button" class="btn outline sm" (click)="modal.set('ej')"><lucide-icon name="book-open" [size]="13" /> Ver ejemplo completo</button>
@@ -431,7 +431,7 @@ interface FijaEd {
             <div class="modal solid" role="dialog" aria-modal="true" aria-label="Ejemplo de prompt">
               <div class="row between"><button type="button" class="btn outline sm" (click)="modal.set('tpl')"><lucide-icon name="arrow-left" [size]="13" /> Volver</button><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
               <h2 class="sm b">Ejemplo completo · Atención a Proveedores (ficticio)</h2>
-              <p class="xs muted">Ejemplo inventado de un área ficticia, para ver cómo se llena la PARTE B. No corresponde a ningún buzón real.</p>
+              <p class="xs muted">Ejemplo inventado de un área ficticia: así se ve el prompt que entrega la IA con la estructura de la PARTE B. No corresponde a ningún buzón real.</p>
               <pre class="tpl">{{ ejemplo }}</pre>
               <div class="row" style="justify-content:flex-end"><button type="button" class="btn primary sm" (click)="usarEjemplo()"><lucide-icon name="clipboard-paste" [size]="13" /> Usar este ejemplo</button></div>
             </div>
@@ -457,7 +457,7 @@ interface FijaEd {
                       <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Nova te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}, y desde ahí guarda sus reglas completas.</p></div>
                     }
                   } @else {
-                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega la PARTE B de la plantilla o el prompt completo de tu agente, o sube el .txt / .md. Lo que Nova interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
+                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega el prompt que te entregó la IA con la plantilla, o el prompt completo de tu agente, o sube el .txt / .md. Lo que Nova interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
                   }
                   <button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
                 </div>
