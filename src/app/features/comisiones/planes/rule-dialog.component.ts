@@ -246,12 +246,23 @@ type Tab = 'information' | 'rule' | 'preview';
                 <button
                   type="button"
                   (click)="agregarCondicion()"
-                  class="alma-btn alma-btn-outline h-8 px-3"
+                  [disabled]="tieneO()"
+                  class="alma-btn alma-btn-outline h-8 px-3 disabled:pointer-events-none disabled:opacity-40"
                   aria-label="Agregar condición"
                 >
                   <lucide-icon name="plus" [size]="16" />
                 </button>
               </div>
+
+              @if (tieneO()) {
+                <p
+                  class="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                >
+                  Esta regla combina condiciones con «o». Para no cambiar su lógica no se
+                  pueden agregar ni quitar condiciones aquí; sí puedes cambiar operadores y
+                  valores.
+                </p>
+              }
 
               <div class="space-y-3">
                 @for (c of condiciones(); track c.id; let i = $index) {
@@ -260,13 +271,16 @@ type Tab = 'information' | 'rule' | 'preview';
                   >
                     <div
                       class="hidden text-center text-sm font-medium text-muted-foreground sm:col-span-1 sm:block"
+                      [class.text-amber-600]="union(i) === 'o'"
+                      [class.font-semibold]="union(i) === 'o'"
                     >
-                      {{ i === 0 ? 'Si' : 'y' }}
+                      {{ union(i) }}
                     </div>
                     <div
                       class="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:hidden"
+                      [class.text-amber-600]="union(i) === 'o'"
                     >
-                      {{ i === 0 ? 'Si' : 'y' }}
+                      {{ union(i) }}
                     </div>
 
                     <div class="w-full sm:col-span-3">
@@ -377,7 +391,8 @@ type Tab = 'information' | 'rule' | 'preview';
                       <button
                         type="button"
                         (click)="quitarCondicion(c.id)"
-                        class="flex h-8 w-8 items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive"
+                        [disabled]="tieneO()"
+                        class="flex h-8 w-8 items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
                         aria-label="Quitar condición"
                       >
                         <lucide-icon name="x" [size]="16" />
@@ -465,6 +480,17 @@ export class RuleDialogComponent implements OnInit {
   protected readonly valoresAbiertos = signal<string | null>(null);
 
   protected readonly condiciones = signal<ConditionRow[]>([]);
+
+  /** Reglas con «o» (p. ej. las Fpob por ramas): agregar o quitar una condición
+   *  cambiaría a qué rama aplica cada una, así que en el editor no se permite. */
+  protected readonly tieneO = computed(() => this.condiciones().some((c) => c.logical === 'OR'));
+
+  /** Etiqueta de la fila: el motor une cada condición con la siguiente usando
+   *  el operador lógico de la ANTERIOR. */
+  protected union(i: number): string {
+    if (i === 0) return 'Si';
+    return this.condiciones()[i - 1]?.logical === 'OR' ? 'o' : 'y';
+  }
   private secuencia = 0;
 
   protected readonly esEdicion = computed(() => this.mode() === 'edit');
@@ -535,6 +561,7 @@ export class RuleDialogComponent implements OnInit {
           condition: mapApiOperatorToUI(api.operator),
           valueType: api.value_type || 'text',
           value: api.field_value,
+          logical: api.logical_operator === 'OR' ? 'OR' : 'AND',
         };
       });
       this.condiciones.set(filas);
@@ -609,6 +636,7 @@ export class RuleDialogComponent implements OnInit {
   // ── Condiciones ───────────────────────────────────────────────────────────
 
   protected agregarCondicion(): void {
+    if (this.tieneO()) return;
     this.condiciones.update((prev) => [
       ...prev,
       {
@@ -622,6 +650,7 @@ export class RuleDialogComponent implements OnInit {
   }
 
   protected async quitarCondicion(id: string): Promise<void> {
+    if (this.tieneO()) return;
     const quitarLocal = () =>
       this.condiciones.update((prev) => prev.filter((c) => c.id !== id));
 

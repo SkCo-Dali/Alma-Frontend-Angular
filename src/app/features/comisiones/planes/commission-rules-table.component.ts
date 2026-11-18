@@ -295,14 +295,13 @@ export class CommissionRulesTableComponent {
     }
   }
 
-  /** "Campo == valor AND otro > 3" — el operador lógico va antes de la 2.ª en adelante. */
+  /** "Campo == valor AND otro > 3" — como el motor: el operador lógico de cada
+   *  condición va DESPUÉS de ella y la une con la siguiente. */
   private formatear(items: ApiConditionRule[]): string {
-    if (items.length === 0) return '';
     return items
       .map((c, i) => {
-        const partes: string[] = [];
-        if (i > 0) partes.push(c.logical_operator || 'AND');
-        partes.push(c.field_name, mapApiOperatorToShort(c.operator), c.field_value);
+        const partes = [c.field_name, mapApiOperatorToShort(c.operator), c.field_value];
+        if (i < items.length - 1) partes.push(c.logical_operator || 'AND');
         return partes.join(' ');
       })
       .join(' ');
