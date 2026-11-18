@@ -1145,9 +1145,10 @@ export class BuzonApi {
   }
 
   /** Borra la conexión y PAUSA el buzón: Alma deja de leerlo hasta reanudarlo. */
-  desconectarBuzon(id: string): Promise<Buzon> {
+  /** 076: pausa al instante y procesa la cola en segundo plano; `en_cola` = cuántos quedaban. */
+  desconectarBuzon(id: string): Promise<Buzon & { en_cola?: number }> {
     return this.conDemo(
-      () => this.api.fetch<Buzon>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
+      () => this.api.fetch<Buzon & { en_cola?: number }>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
       () => this.demo.desconectarBuzon(id),
     );
   }
