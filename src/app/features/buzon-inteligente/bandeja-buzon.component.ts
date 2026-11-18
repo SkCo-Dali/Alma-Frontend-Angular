@@ -480,15 +480,12 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                         </div>
                       }
                       @if (celdas(); as cel) {
-                        <div class="glass r-2xl stack sheet-box" [class.sheet-big]="ampliado()" style="padding:14px 16px;gap:10px">
+                        <div class="glass r-2xl stack sheet-box" style="padding:14px 16px;gap:10px">
                           <div class="row between">
                             <p class="cap"><lucide-icon name="table" [size]="13" /> Vista previa · hoja «{{ cel.hoja }}» · {{ cel.filas }} fila{{ cel.filas === 1 ? '' : 's' }}</p>
-                            <div class="row">
-                              <div class="pills">
-                                <button type="button" [attr.aria-selected]="vistaHoja() === 'val'" (click)="vistaHoja.set('val')">Valores</button>
-                                <button type="button" [attr.aria-selected]="vistaHoja() === 'form'" (click)="vistaHoja.set('form')">Fórmulas</button>
-                              </div>
-                              <button type="button" class="btn outline sm" (click)="ampliado.set(!ampliado())"><lucide-icon [name]="ampliado() ? 'minimize-2' : 'maximize-2'" [size]="13" /> {{ ampliado() ? 'Reducir' : 'Ampliar' }}</button>
+                            <div class="pills">
+                              <button type="button" [attr.aria-selected]="vistaHoja() === 'val'" (click)="vistaHoja.set('val')">Valores</button>
+                              <button type="button" [attr.aria-selected]="vistaHoja() === 'form'" (click)="vistaHoja.set('form')">Fórmulas</button>
                             </div>
                           </div>
                           <div class="sheet-wrap">
@@ -689,7 +686,6 @@ export class BandejaBuzonComponent {
   protected readonly celdas = signal<(CeldasArchivo & { filas: number }) | null>(null);
   private readonly celdasBorrador = signal<CeldasArchivo | null>(null);
   protected readonly vistaHoja = signal<'val' | 'form'>('val');
-  protected readonly ampliado = signal(false);
   protected readonly confirmarBorrador = signal(false);
   protected readonly vigente = computed(() => this.archivos()[0] ?? null);
   protected readonly borrador = computed(() => this.archivos().find((a) => a.borrador_en_hilo) ?? null);

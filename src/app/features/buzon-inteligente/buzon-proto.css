@@ -116,8 +116,12 @@ pre.json .ln { display: block; padding: 0 14px 0 10px; border-left: 3px solid tr
 pre.json .base { border-left-color: oklch(0.7 0.13 240 / 70%); background: oklch(0.7 0.13 240 / 9%); }
 pre.json .k { color: oklch(0.8 0.1 240); } pre.json .s { color: oklch(0.82 0.14 150); } pre.json .n { color: oklch(0.83 0.12 75); }
 .sheet-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
-.sheet-box .sheet-wrap { max-height: 380px; min-height: 120px; overflow: auto; }
-.sheet-big .sheet-wrap { max-height: calc(100dvh - 300px); overflow: auto; }
+/* Vista previa del archivo en la bandeja: filas altas y letra legible; con muchas
+   filas crece hasta casi toda la pantalla y desplaza dentro (encabezado fijo). */
+.sheet-box .sheet-wrap { max-height: min(72dvh, 720px); min-height: 160px; overflow: auto; }
+.sheet-box table.sheet { font-size: 0.82rem; }
+.sheet-box table.sheet th { padding: 9px 14px; }
+.sheet-box table.sheet td { padding: 10px 14px; line-height: 1.35; }
 table.sheet { border-collapse: collapse; font-family: var(--mono); font-size: 0.72rem; min-width: 600px; width: 100%; }
 table.sheet th { background: var(--sunken); color: var(--muted-foreground); font-weight: 550; padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
 table.sheet td { padding: 5px 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); white-space: nowrap; }
