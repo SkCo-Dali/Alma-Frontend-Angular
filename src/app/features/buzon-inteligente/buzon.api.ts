@@ -376,6 +376,10 @@ export interface FiltroCorreos {
   sin_asignar?: boolean;
   /** «Posibles duplicados» pendientes de decidir (060). */
   duplicado?: boolean;
+  /** Clave del proceso (sin lo que quedó en OTROS). */
+  proceso?: string;
+  /** Lo clasificado en OTROS o sin proceso. */
+  sin_proceso?: boolean;
 }
 
 export interface ResultadoPrueba {
