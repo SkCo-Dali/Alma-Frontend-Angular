@@ -42,7 +42,7 @@ const REFRESCO_MS = 60_000;
       .bz-tile .bz-cta { transition: gap 0.2s; }
       .bz-tile:hover .bz-cta { gap: 10px; }
       .bz-track {
-        position: absolute; left: 6%; right: 6%; top: 28px; height: 2px; z-index: 0;
+        position: absolute; left: 6%; right: 6%; top: 24px; height: 2px; z-index: 0;
         background: repeating-linear-gradient(90deg, color-mix(in oklch, var(--foreground) 18%, transparent) 0 6px, transparent 6px 12px);
       }
       .bz-track i {
@@ -70,13 +70,14 @@ const REFRESCO_MS = 60_000;
     @if (!puedeVer()) {
       <alma-access-denied />
     } @else {
-      <div class="mx-auto w-full max-w-6xl space-y-6 px-4 py-4 sm:px-6 sm:py-6">
-        <alma-volver-inicio />
+      <div class="relative mx-auto w-full max-w-6xl space-y-3 px-4 py-2 sm:px-6 sm:py-3">
+        <!-- En pantalla ancha «Inicio» va a la izquierda del título: así todo cabe sin scroll. -->
+        <div class="lg:absolute lg:left-6 lg:top-3 lg:z-10"><alma-volver-inicio /></div>
 
         <!-- Encabezado centrado -->
-        <header class="grid justify-items-center gap-2.5 pt-1 text-center">
-          <h1 class="text-on-wallpaper text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">Buzón Inteligente</h1>
-          <p class="text-on-wallpaper max-w-2xl text-sm text-foreground/80">
+        <header class="grid justify-items-center gap-1 text-center">
+          <h1 class="text-on-wallpaper text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Buzón Inteligente</h1>
+          <p class="text-on-wallpaper max-w-3xl text-[13px] leading-snug text-foreground/80">
             Cada área describe qué correos recibe, qué datos necesita de cada uno y a quién le corresponden. Nova los lee,
             incluidos los adjuntos, los clasifica y los asigna a la persona indicada.
           </p>
@@ -96,18 +97,18 @@ const REFRESCO_MS = 60_000;
         }
 
         <!-- Botones vivos -->
-        <div class="grid grid-cols-1 gap-3.5" [class]="puedeConfigurar() ? 'lg:grid-cols-3' : 'lg:grid-cols-2'">
+        <div class="grid grid-cols-1 gap-3" [class]="puedeConfigurar() ? 'lg:grid-cols-3' : 'lg:grid-cols-2'">
           <!-- Bandeja -->
           <button
             type="button"
-            class="bz-tile relative flex min-h-[340px] min-w-0 flex-col gap-3.5 overflow-hidden rounded-3xl p-[18px] text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            class="bz-tile relative flex min-h-[280px] min-w-0 flex-col gap-2 overflow-hidden rounded-3xl px-4 py-3.5 text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             [style.background]="g.bandeja"
             (click)="irBandeja()"
             (mouseenter)="lit.set(2)" (mouseleave)="lit.set(null)" (focus)="lit.set(2)" (blur)="lit.set(null)"
           >
             <span class="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_50%_-10%,rgba(255,255,255,.28),transparent_60%)]"></span>
             <span class="relative flex items-center justify-between gap-2">
-              <span class="flex h-[42px] w-[42px] items-center justify-center rounded-[13px] bg-white/25"><lucide-icon name="inbox" [size]="21" /></span>
+              <span class="flex h-[34px] w-[34px] items-center justify-center rounded-[11px] bg-white/25"><lucide-icon name="inbox" [size]="18" /></span>
               @if (validar() > 0 && flujo()?.validar_desde) {
                 <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#FFD60A] px-2 py-0.5 text-[11px] font-bold text-[#3a2a00]">
                   <lucide-icon name="clock-3" [size]="12" /> En espera desde {{ duracion(flujo()!.validar_desde!) }}
@@ -122,25 +123,25 @@ const REFRESCO_MS = 60_000;
               <span class="mt-0.5 block text-[13px] text-white/90">Correos clasificados: aprueba, corrige o reclasifica en un clic.</span>
             </span>
             <span class="relative flex items-baseline gap-2">
-              <span class="text-[2.4rem] font-extrabold leading-none tabular-nums tracking-tight">{{ validar() }}</span>
+              <span class="text-[2rem] font-extrabold leading-none tabular-nums tracking-tight">{{ validar() }}</span>
               <span class="text-[13px] text-white/90">{{ validar() === 1 ? 'correo en Validar' : 'correos en Validar' }}</span>
             </span>
-            <span class="relative grid min-w-0 gap-1.5">
+            <span class="relative grid min-w-0 gap-1">
               @for (c of pendientes(); track c.id) {
-                <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1.5 text-[13px]">
+                <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1 text-[12.5px]">
                   <span class="min-w-0 flex-1 truncate">{{ c.asunto }}</span>
                   @if (c.categoria_clave) { <span class="max-w-[40%] truncate rounded-full bg-white/25 px-2 py-px text-[11px] font-bold">{{ c.categoria_clave }}</span> }
                   @if (c.confianza !== null) { <span class="text-[11px] tabular-nums">{{ c.confianza * 100 | number: '1.0-0' }}%</span> }
                 </span>
               } @empty {
                 @if (actualizadoEn()) {
-                  <span class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1.5 text-[13px]">
+                  <span class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1 text-[12.5px]">
                     <lucide-icon name="check-circle-2" [size]="14" /> Nada pendiente: todo al día.
                   </span>
                 }
               }
             </span>
-            <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-[#1c1c1e]">
+            <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1 text-[13px] font-bold text-[#1c1c1e]">
               Revisar ahora <lucide-icon name="arrow-right" [size]="14" />
             </span>
           </button>
@@ -149,14 +150,14 @@ const REFRESCO_MS = 60_000;
           @if (puedeConfigurar()) {
             <button
               type="button"
-              class="bz-tile relative flex min-h-[340px] min-w-0 flex-col gap-3.5 overflow-hidden rounded-3xl p-[18px] text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              class="bz-tile relative flex min-h-[280px] min-w-0 flex-col gap-2 overflow-hidden rounded-3xl px-4 py-3.5 text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               [style.background]="g.buzones"
               (click)="irA('/apps/buzon-inteligente/buzones')"
               (mouseenter)="lit.set('todos')" (mouseleave)="lit.set(null)" (focus)="lit.set('todos')" (blur)="lit.set(null)"
             >
               <span class="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_50%_-10%,rgba(255,255,255,.28),transparent_60%)]"></span>
               <span class="relative flex items-center justify-between gap-2">
-                <span class="flex h-[42px] w-[42px] items-center justify-center rounded-[13px] bg-white/25"><lucide-icon name="sliders-horizontal" [size]="21" /></span>
+                <span class="flex h-[34px] w-[34px] items-center justify-center rounded-[11px] bg-white/25"><lucide-icon name="sliders-horizontal" [size]="18" /></span>
                 @if (alertas().length) {
                   <span class="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#C4183C]">{{ alertas().length }} por atender</span>
                 }
@@ -168,23 +169,23 @@ const REFRESCO_MS = 60_000;
                 <span class="block text-[17px] font-bold leading-snug">Buzones</span>
                 <span class="mt-0.5 block text-[13px] text-white/90">Configura los procesos, las reglas y la asignación (grupos, equipo y bases) de cada buzón.</span>
               </span>
-              <span class="relative grid min-w-0 gap-1.5">
+              <span class="relative grid min-w-0 gap-1">
                 @for (b of buzonesTile(); track b.id) {
-                  <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1.5 text-[13px]">
+                  <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1 text-[12.5px]">
                     <span class="h-2 w-2 shrink-0 rounded-full" [style.background]="b.estado_conexion === 'conectada' && b.activo ? '#30D158' : '#ffffff'" [attr.aria-label]="b.estado_conexion === 'conectada' ? 'Conectado' : 'Sin conexión'"></span>
                     <span class="min-w-0 flex-1 truncate font-semibold">{{ b.nombre }}</span>
                     <span class="shrink-0 text-[11px] text-white/90">{{ estadoLectura(b) }}</span>
                   </span>
                 }
-                @for (a of alertas().slice(0, 3); track $index) {
-                  <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1.5 text-[13px]">
+                @for (a of alertas().slice(0, 2); track $index) {
+                  <span class="flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2.5 py-1 text-[12.5px]">
                     <lucide-icon [name]="iconoAlerta(a.tipo)" [size]="14" class="shrink-0" />
                     <span class="min-w-0 flex-1 truncate">{{ a.texto }}</span>
                   </span>
                 }
-                @if (alertas().length > 3) { <span class="text-[11px] text-white/85">y {{ alertas().length - 3 }} más</span> }
+                @if (alertas().length > 2) { <span class="text-[11px] text-white/85">y {{ alertas().length - 2 }} más por atender</span> }
               </span>
-              <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-[#1c1c1e]">
+              <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1 text-[13px] font-bold text-[#1c1c1e]">
                 Configurar <lucide-icon name="arrow-right" [size]="14" />
               </span>
             </button>
@@ -193,14 +194,14 @@ const REFRESCO_MS = 60_000;
           <!-- Métricas -->
           <button
             type="button"
-            class="bz-tile relative flex min-h-[340px] min-w-0 flex-col gap-3.5 overflow-hidden rounded-3xl p-[18px] text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            class="bz-tile relative flex min-h-[280px] min-w-0 flex-col gap-2 overflow-hidden rounded-3xl px-4 py-3.5 text-left text-white shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             [style.background]="g.metricas"
             (click)="irA('/apps/buzon-inteligente/metricas')"
             (mouseenter)="lit.set(3)" (mouseleave)="lit.set(null)" (focus)="lit.set(3)" (blur)="lit.set(null)"
           >
             <span class="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_60%_at_50%_-10%,rgba(255,255,255,.28),transparent_60%)]"></span>
             <span class="relative flex items-center justify-between gap-2">
-              <span class="flex h-[42px] w-[42px] items-center justify-center rounded-[13px] bg-white/25"><lucide-icon name="bar-chart-3" [size]="21" /></span>
+              <span class="flex h-[34px] w-[34px] items-center justify-center rounded-[11px] bg-white/25"><lucide-icon name="bar-chart-3" [size]="18" /></span>
               @if (variacion(); as v) {
                 <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-bold">
                   <lucide-icon [name]="v >= 0 ? 'trending-up' : 'trending-down'" [size]="12" /> {{ v > 0 ? '+' : '' }}{{ v }}% vs ayer
@@ -220,20 +221,20 @@ const REFRESCO_MS = 60_000;
               <span class="grid"><b class="text-lg tabular-nums">{{ flujo()?.asignados ?? 0 }}</b><span class="text-[11px] text-white/85">asignados hoy</span></span>
             </span>
             <span class="relative block">
-              <svg class="block h-11 w-full" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true">
+              <svg class="block h-9 w-full" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true">
                 <path [attr.d]="spark().area" fill="#fff" fill-opacity=".18" />
                 <path [attr.d]="spark().linea" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
               </svg>
               <span class="text-[11px] text-white/85">Ejecutados por día · última semana</span>
             </span>
-            <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1.5 text-[13px] font-bold text-[#1c1c1e]">
+            <span class="bz-cta relative mt-auto inline-flex items-center gap-1.5 self-start rounded-full bg-white/95 px-3 py-1 text-[13px] font-bold text-[#1c1c1e]">
               Ver métricas <lucide-icon name="arrow-right" [size]="14" />
             </span>
           </button>
         </div>
 
         <!-- Cómo funciona · hoy -->
-        <section class="glass grid gap-2 rounded-3xl px-4 py-3.5 shadow-[var(--shadow-sm)] sm:px-5" aria-labelledby="bz-flujo">
+        <section class="glass grid gap-1 rounded-3xl px-4 py-2.5 shadow-[var(--shadow-sm)] sm:px-5" aria-labelledby="bz-flujo">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 id="bz-flujo" class="text-[15px] font-bold text-foreground">Cómo funciona · hoy</h2>
             @if (resumen()?.sin_asignar; as n) {
@@ -248,14 +249,14 @@ const REFRESCO_MS = 60_000;
             @for (p of pasos; track p.titulo; let i = $index) {
               <button
                 type="button"
-                class="bz-node relative z-[1] grid justify-items-center gap-1 rounded-[18px] px-1.5 py-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                class="bz-node relative z-[1] grid justify-items-center gap-0.5 rounded-[18px] px-1.5 py-1.5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 [class.bz-lit]="iluminado(i)"
                 [attr.aria-expanded]="abierto() === i"
                 [attr.aria-controls]="'bz-paso-detalle'"
                 (click)="abierto.set(abierto() === i ? null : i)"
               >
-                <span class="flex h-10 w-10 items-center justify-center rounded-[13px] text-white shadow-[var(--shadow-md)]" [style.background]="p.gradiente"><lucide-icon [name]="p.icon" [size]="19" /></span>
-                <span class="text-xl font-extrabold leading-tight tabular-nums text-foreground">{{ conteos()[i].n }}</span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-[12px] text-white shadow-[var(--shadow-md)]" [style.background]="p.gradiente"><lucide-icon [name]="p.icon" [size]="17" /></span>
+                <span class="text-lg font-extrabold leading-tight tabular-nums text-foreground">{{ conteos()[i].n }}</span>
                 <span class="text-xs font-semibold text-foreground">{{ p.titulo }}</span>
                 <span class="text-[11px] leading-tight" [class]="conteos()[i].alerta ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'">{{ conteos()[i].sub }}</span>
               </button>
