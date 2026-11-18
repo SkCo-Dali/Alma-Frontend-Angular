@@ -10,6 +10,8 @@ export const DATE_FIELD_OPTIONS = [
   'Fecha Creación',
 ];
 
+// Solo los operadores que entienden los motores (compile_where): starts_with,
+// ends_with y between se guardaban pero el motor los rechaza y la corrida falla.
 export const NUMERIC_CONDITION_OPTIONS = [
   'Igual',
   'No Igual',
@@ -19,7 +21,6 @@ export const NUMERIC_CONDITION_OPTIONS = [
   'Menor o Igual Que',
   'En (Dentro de)',
   'No en (Excepto en)',
-  'Entre',
 ];
 
 export const STRING_CONDITION_OPTIONS = [
@@ -27,8 +28,6 @@ export const STRING_CONDITION_OPTIONS = [
   'No Igual',
   'Contiene',
   'No Contiene',
-  'Comienza Con',
-  'Termina Con',
   'En (Dentro de)',
   'No en (Excepto en)',
 ];
@@ -161,4 +160,6 @@ export interface ConditionRow {
   condition: string;
   valueType: ValueType;
   value: string;
+  /** Une esta condición con la SIGUIENTE (así lo arma el motor). */
+  logical?: 'AND' | 'OR';
 }
