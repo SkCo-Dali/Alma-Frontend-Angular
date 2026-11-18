@@ -1081,8 +1081,9 @@ export class ReglasTabComponent implements OnInit {
     if (this.promptExcedido()) return;
     this.analizando.set(true);
     try {
-      const r = await this.api.analizarPrompt(this.buzon().id, this.textoPrompt);
       const o0 = this.objetivo();
+      // Editando un proceso: Nova devuelve ESE proceso (su clave y sus etiquetas), no uno nuevo.
+      const r = await this.api.analizarPrompt(this.buzon().id, this.textoPrompt, this.esWiz() ? null : o0?.id);
       // Texto de UN proceso: es todo suyo y ya viene editado; no se reparte ni se condensa.
       const soloSuyo = !!o0?.reglas;
       if (!soloSuyo) await this.transcribir(r);

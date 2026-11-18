@@ -1439,13 +1439,15 @@ export class BuzonApi {
     );
   }
 
-  /** La IA lee el prompt del área y PROPONE procesos (10–30 s). No guarda nada. */
-  analizarPrompt(buzonId: string, prompt: string): Promise<PropuestaProcesos> {
+  /** La IA lee el prompt del área y PROPONE procesos (10–30 s). No guarda nada.
+   *  Con `procesoId` (editar un proceso) la propuesta es ese proceso, con su clave y
+   *  sus etiquetas: se actualiza, no se crea otro. */
+  analizarPrompt(buzonId: string, prompt: string, procesoId?: string | null): Promise<PropuestaProcesos> {
     return this.conDemo(
       () =>
         this.api.fetch<PropuestaProcesos>(`${BASE}/buzones/${buzonId}/analizar-prompt`, {
           method: 'POST',
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify(procesoId ? { prompt, proceso_id: procesoId } : { prompt }),
         }, ESPERA_LARGA_MS),
       () => this.demo.analizarPrompt(prompt),
     );
