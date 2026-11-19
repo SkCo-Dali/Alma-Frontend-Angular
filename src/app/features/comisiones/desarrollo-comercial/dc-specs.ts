@@ -35,6 +35,7 @@ const CLASIFICACION_AGENTES: DcSeccionSpec = {
     { key: 'Activo', label: 'Activo', tipo: 'switch' },
     { key: 'EditadoManual', label: 'Editado Manual', tipo: 'siNo' },
     { key: 'UsuarioModifica', label: 'Usuario Modifica' },
+    { key: 'Motivo', label: 'Motivo' },
     { key: 'FechaModifica', label: 'Fecha Modifica', tipo: 'fecha', filtro: 'fecha' },
     { key: 'ClasificacionSociedad', label: 'Clasificación Sociedad' },
     { key: 'VigenteEnOrigen', label: 'Vigente en Origen', tipo: 'siNo' },
@@ -66,6 +67,7 @@ const CLASIFICACION_AGENTES: DcSeccionSpec = {
     r['ClasificacionAgente'],
     r['ClasificacionSociedad'],
     r['UsuarioModifica'],
+    r['Motivo'],
   ],
 };
 
