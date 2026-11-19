@@ -424,6 +424,10 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                     <div class="g2" style="align-items:start">
                       <div class="box line">
                         <p class="cap"><lucide-icon name="route" [size]="13" /> Recorrido de la asignación</p>
+                        @if (sinGrupoDe(c); as clave) {
+                          <p class="xxs muted" style="margin:2px 0 6px">La etiqueta {{ clave }} no tiene grupo de Asignación ·
+                            <a class="linkbtn xxs" [routerLink]="['/apps/buzon-inteligente/buzones', c.buzon_id]" [queryParams]="{ tab: 'asig' }">Configurar</a></p>
+                        }
                         @if (c.asignacion_traza.length) {
                           <ol class="tl">
                             @for (t of c.asignacion_traza; track $index) { <li [class]="t.estado"><p class="sm b">{{ t.titulo }}</p>@if (t.detalle) { <p class="w">{{ t.detalle }}</p> }</li> }
@@ -645,6 +649,28 @@ export class BandejaBuzonComponent {
   ];
 
   // Filtros y lista
+  /** Etiquetas sin grupo por buzón (solo quien configura recibe la revisión; al resto le falla y no ve nada). */
+  private readonly sinGrupoPorBuzon = signal<Record<string, string[]>>({});
+  private readonly pidiendoSinGrupo = new Set<string>();
+
+  protected sinGrupoDe(c: { buzon_id: string; categoria_clave: string | null }): string | null {
+    const clave = (c.categoria_clave ?? '').toUpperCase();
+    if (!clave) return null;
+    const mapa = this.sinGrupoPorBuzon();
+    if (!(c.buzon_id in mapa)) {
+      if (!this.pidiendoSinGrupo.has(c.buzon_id)) {
+        this.pidiendoSinGrupo.add(c.buzon_id);
+        void this.api
+          .revisionGrupos(c.buzon_id)
+          .then((r) => (r.aplica ? r.sin_grupo.map((x) => x.clave.toUpperCase()) : []))
+          .catch(() => [] as string[])
+          .then((lista) => this.sinGrupoPorBuzon.update((m) => ({ ...m, [c.buzon_id]: lista })));
+      }
+      return null;
+    }
+    return mapa[c.buzon_id].includes(clave) ? clave : null;
+  }
+
   protected q = '';
   protected buzonId = '';
   /** Filtro por proceso: '' = todos, SIN_PROCESO = OTROS / sin proceso, o la clave. */

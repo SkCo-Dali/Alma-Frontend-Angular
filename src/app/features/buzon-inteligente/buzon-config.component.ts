@@ -42,6 +42,10 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
     AjustesTabComponent,
   ],
   styleUrls: ['./buzon-proto.css'],
+  styles: [
+    `.punto-aviso { display: inline-block; width: 6px; height: 6px; border-radius: 9999px; margin-left: 4px;
+       vertical-align: super; background: var(--amber, #f59e0b); }`,
+  ],
   template: `
     @if (!puedeVer()) {
       <alma-access-denied />
@@ -86,8 +90,12 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
         <div class="row between">
           <div class="tabsbar glass" role="tablist" aria-label="Configuración del buzón">
             @for (t of tabs(); track t.id) {
-              <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" (click)="tab.set(t.id)">
+              <button type="button" role="tab" [attr.aria-selected]="tab() === t.id" (click)="tab.set(t.id)"
+                [attr.title]="t.id === 'asig' && sinGrupo().length ? 'Sin grupo: ' + sinGrupo().join(', ') : null">
                 <lucide-icon [name]="t.icon" [size]="13" /> {{ t.nombre }}
+                @if (t.id === 'asig' && sinGrupo().length) {
+                  <span class="punto-aviso" [attr.aria-label]="sinGrupo().length + ' etiqueta(s) sin grupo'"></span>
+                }
               </button>
             }
           </div>
@@ -144,6 +152,8 @@ export class BuzonConfigComponent {
   protected readonly errorCarga = signal<string | null>(null);
   protected readonly buzon = signal<Buzon | null>(null);
   protected readonly categorias = signal<Categoria[]>([]);
+  /** Etiquetas activas sin grupo de Asignación: solo un punto en la pestaña. */
+  protected readonly sinGrupo = signal<string[]>([]);
   protected readonly modulosAbierto = signal(false);
   protected readonly tab = signal<Tab>(this.tabInicial());
 
@@ -182,10 +192,22 @@ export class BuzonConfigComponent {
     effect(() => {
       const t = this.tabVisible();
       if ((t === 'asig' || t === 'plant') && !untracked(this.cargando)) untracked(() => void this.refrescarCategorias());
+      // El punto de «Asignación» se revisa al cambiar de pestaña (p. ej. al salir de Reglas).
+      else if (!untracked(this.cargando)) untracked(() => void this.refrescarSinGrupo());
     });
   }
 
+  private async refrescarSinGrupo(): Promise<void> {
+    try {
+      const r = await this.api.revisionGrupos(this.id);
+      this.sinGrupo.set(r.aplica ? r.sin_grupo.map((x) => x.clave) : []);
+    } catch {
+      this.sinGrupo.set([]);
+    }
+  }
+
   private async refrescarCategorias(): Promise<void> {
+    void this.refrescarSinGrupo();
     try {
       this.categorias.set((await this.api.listarCategorias(this.id)).sort((x, y) => x.orden - y.orden));
     } catch {
@@ -204,6 +226,7 @@ export class BuzonConfigComponent {
       const [b, cats] = await Promise.all([this.api.obtenerBuzon(this.id), this.api.listarCategorias(this.id)]);
       this.buzon.set(b);
       this.categorias.set([...cats].sort((x, y) => x.orden - y.orden));
+      void this.refrescarSinGrupo();
     } catch (e) {
       this.errorCarga.set(e instanceof Error ? e.message : String(e));
     } finally {

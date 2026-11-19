@@ -1879,10 +1879,10 @@ export class BuzonApi {
 
   /** Etiquetas activas sin grupo de Asignación (revisión antes de publicar). */
   revisionGrupos(buzonId: string): Promise<RevisionGrupos> {
-    return this.conDemo(
-      () => this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/revision`),
-      () => ({ aplica: false, sin_grupo: [] }),
-    );
+    // Sin respaldo a demo: a quien no configura el buzón le responde 403/404 y eso no
+    // debe pasar toda la pantalla a datos de demostración.
+    if (this.modoDemo()) return Promise.resolve({ aplica: false, sin_grupo: [] });
+    return this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/revision`);
   }
 
   /** Agrega una etiqueta a un grupo (hereda su destino). Devuelve la revisión al día. */
