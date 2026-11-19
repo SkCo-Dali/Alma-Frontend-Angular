@@ -57,37 +57,21 @@ export class DesarrolloComercialStore {
     }
   }
 
-  private async mutar(
-    accion: () => Promise<unknown>,
-    recargar: () => Promise<void>,
-    okTitulo: string,
-    okDescripcion: string,
-    tipo: 'create' | 'update' | 'delete' | 'toggle',
-  ): Promise<boolean> {
+  /** POST override (con motivo) al confirmar el cambio de clasificación. */
+  async overrideClasificacion(datos: Partial<CalificacionAgenteRecord>): Promise<boolean> {
     try {
-      await accion();
-      this.toast.ok(okTitulo, okDescripcion);
-      await recargar();
+      const res = await this.api.createCalificacionAgenteOverride(datos);
+      if (res?.aplicado === false) {
+        this.toast.ok('Cambio guardado', 'Se aplicará en la próxima ingesta.');
+      } else {
+        this.toast.ok('Clasificación actualizada', 'La clasificación del agente se actualizó.');
+      }
+      await this.cargarClasificacionAgentes();
       return true;
     } catch (e) {
-      if (tipo === 'create' || tipo === 'update') {
-        this.toast.errorMutacion(e, tipo);
-      } else {
-        this.toast.errorGenerico(tipo, e);
-      }
+      this.toast.errorMutacion(e, 'update');
       return false;
     }
-  }
-
-  /** POST override al cambiar la clasificación desde el dropdown de la tabla. */
-  overrideClasificacion(datos: Partial<CalificacionAgenteRecord>): Promise<boolean> {
-    return this.mutar(
-      () => this.api.createCalificacionAgenteOverride(datos),
-      () => this.cargarClasificacionAgentes(),
-      'Clasificación actualizada',
-      'La clasificación del agente se actualizó correctamente.',
-      'update',
-    );
   }
 
   datos(seccion: DcSeccionId): Record<string, unknown>[] {

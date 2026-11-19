@@ -59,8 +59,8 @@ export class DesarrolloComercialApi {
 
   createCalificacionAgenteOverride(
     data: Partial<CalificacionAgenteRecord>,
-  ): Promise<ApiCalificacionAgente> {
-    return this.http.send<ApiCalificacionAgente>(
+  ): Promise<ResultadoOverride> {
+    return this.http.send<ResultadoOverride>(
       '/api/calificacion-agente/override',
       'POST',
       toCalificacionAgenteRequest(data),
@@ -70,6 +70,13 @@ export class DesarrolloComercialApi {
 }
 
 // ── Formas del API y mapeos ─────────────────────────────────────────────────
+
+/** Respuesta al guardar. `aplicado` = false: quedó guardado pero se verá en la
+ *  tabla cuando corra la próxima ingesta. */
+export interface ResultadoOverride {
+  afectados: number;
+  aplicado?: boolean;
+}
 
 interface ApiCalificacionAgente {
   id?: string;
@@ -85,6 +92,7 @@ interface ApiCalificacionAgente {
   EditadoManual?: boolean;
   UsuarioModifica?: string | null;
   FechaModifica?: string | null;
+  Motivo?: string | null;
   ClasificacionSociedad?: string | null;
   VigenteEnOrigen?: boolean;
   FechaUltimaVezEnOrigen?: string | null;
@@ -119,6 +127,7 @@ function mapCalificacionAgente(api: ApiCalificacionAgente): CalificacionAgenteRe
     EditadoManual: Boolean(api.EditadoManual),
     UsuarioModifica: api.UsuarioModifica ?? null,
     FechaModifica: api.FechaModifica ?? null,
+    Motivo: api.Motivo ?? null,
     ClasificacionSociedad: texto(api.ClasificacionSociedad),
     VigenteEnOrigen: Boolean(api.VigenteEnOrigen),
     FechaUltimaVezEnOrigen: api.FechaUltimaVezEnOrigen ?? null,
@@ -134,5 +143,6 @@ function toCalificacionAgenteRequest(r: Partial<CalificacionAgenteRecord>) {
     PeriodoDesde: Number(r.Periodo) || 0,
     ClasificacionAgente: r.ClasificacionAgente ?? '',
     Activo: r.Activo ?? true,
+    Motivo: (r.Motivo ?? '').trim(),
   };
 }
