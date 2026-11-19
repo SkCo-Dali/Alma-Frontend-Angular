@@ -1,5 +1,6 @@
 // Desarrollo Comercial del Motor de Comisiones: pestañas con búsqueda y tabla.
-// La clasificación se actualiza con un dropdown por fila (POST override).
+// La clasificación se cambia con un dropdown por fila: se confirma con un
+// motivo y entonces se guarda (POST override).
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -143,6 +144,60 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
           </div>
         }
       </div>
+
+      @if (cambio(); as c) {
+        <div
+          class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
+          (click)="cancelarCambio()"
+        >
+          <div
+            class="surface-solid w-full max-w-[520px] rounded-2xl border border-border p-6 shadow-2xl"
+            (click)="$event.stopPropagation()"
+          >
+            <h2 class="text-lg font-bold">Cambiar clasificación</h2>
+            <p class="text-sm text-muted-foreground">
+              Agente {{ c.fila.IdAgte }} – {{ c.fila.NombreAgte }} · Sociedad
+              {{ c.fila.IdSociedad }} – {{ c.fila.NombreSoc }}
+            </p>
+            <p class="mt-3 text-sm">
+              De <strong>{{ c.de || 'sin clasificación' }}</strong> a
+              <strong>{{ c.a }}</strong>, desde el periodo <strong>{{ c.fila.Periodo }}</strong>
+              en adelante.
+            </p>
+            <div class="mt-4 space-y-2">
+              <label class="text-sm font-medium" for="dc-motivo">
+                Motivo <span class="text-destructive">*</span>
+              </label>
+              <textarea
+                id="dc-motivo"
+                class="alma-input"
+                rows="3"
+                maxlength="500"
+                [(ngModel)]="motivo"
+              ></textarea>
+              <p class="text-xs text-muted-foreground">Mínimo 5 caracteres.</p>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                class="alma-btn alma-btn-outline"
+                [disabled]="guardando()"
+                (click)="cancelarCambio()"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                class="alma-btn alma-btn-primary"
+                [disabled]="guardando() || motivo.trim().length < 5"
+                (click)="confirmarCambio()"
+              >
+                {{ guardando() ? 'Guardando…' : 'Guardar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `,
 })
@@ -156,6 +211,15 @@ export class DesarrolloComercialPageComponent implements OnInit {
   protected readonly busqueda = signal<Record<string, string>>({});
   protected readonly paginas = signal<Record<string, number>>({});
   protected readonly tamanos = signal<Record<string, number>>({});
+
+  /** Cambio de clasificación pendiente de confirmar con motivo. */
+  protected readonly cambio = signal<{
+    fila: Partial<CalificacionAgenteRecord>;
+    de: string;
+    a: string;
+  } | null>(null);
+  protected motivo = '';
+  protected readonly guardando = signal(false);
 
   protected readonly tieneAcceso = computed(() =>
     this.auth.hasPermission(MOTOR_COMISIONES_PERMS.desarrolloComercial),
@@ -215,7 +279,7 @@ export class DesarrolloComercialPageComponent implements OnInit {
     );
   }
 
-  /** Dropdown de clasificación → POST override con los campos del contrato. */
+  /** Dropdown de clasificación → diálogo de motivo; se guarda al confirmar. */
   protected onSeleccion(
     id: DcSeccionId,
     ev: { row: ParamRow; key: string; value: string },
@@ -226,9 +290,32 @@ export class DesarrolloComercialPageComponent implements OnInit {
       IdSociedad: Number(ev.row['IdSociedad']) || 0,
       CanalId: Number(ev.row['CanalId']) || 0,
       Periodo: Number(ev.row['Periodo']) || 0,
+      NombreAgte: String(ev.row['NombreAgte'] ?? ''),
+      NombreSoc: String(ev.row['NombreSoc'] ?? ''),
       ClasificacionAgente: ev.value,
       Activo: Boolean(ev.row['Activo']),
     };
-    void this.store.overrideClasificacion(fila);
+    this.motivo = '';
+    this.cambio.set({ fila, de: String(ev.row['ClasificacionAgente'] ?? ''), a: ev.value });
+  }
+
+  protected async confirmarCambio(): Promise<void> {
+    const c = this.cambio();
+    const motivo = this.motivo.trim();
+    if (!c || motivo.length < 5 || this.guardando()) return;
+    this.guardando.set(true);
+    try {
+      const ok = await this.store.overrideClasificacion({ ...c.fila, Motivo: motivo });
+      if (ok) this.cambio.set(null);
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  /** Cancelar recarga la tabla para que el dropdown vuelva al valor guardado. */
+  protected cancelarCambio(): void {
+    if (this.guardando()) return;
+    this.cambio.set(null);
+    void this.store.cargarClasificacionAgentes();
   }
 }
