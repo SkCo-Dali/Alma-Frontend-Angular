@@ -39,6 +39,8 @@ type Critico = '0' | '1' | 'alt';
 
 interface EtiquetaEd {
   clave: string;
+  /** Clave guardada: si se cambia, es un renombre (los grupos la siguen). */
+  original?: string;
   criterio: string;
   tipo: CriterioEtiqueta;
   origen: OrigenRegla;
@@ -332,7 +334,7 @@ export class ProcesoEditorComponent implements OnInit {
     if (p && this.duplicar()) {
       b.nombre += ' (copia)';
       b.clave += '_COPIA';
-      b.etiquetas = b.etiquetas.map((e) => ({ ...e, clave: e.clave + '_COPIA' }));
+      b.etiquetas = b.etiquetas.map((e) => ({ ...e, clave: e.clave + '_COPIA', original: undefined }));
     }
     this.snap = structuredClone(b);
     this.ed.set(b);
@@ -359,7 +361,7 @@ export class ProcesoEditorComponent implements OnInit {
       nombre: p.nombre, clave: p.clave, senales: p.descripcion ?? '',
       excl: (p.exclusiones ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
       etiquetas: cats.map((c) => ({
-        clave: c.clave, criterio: c.descripcion, tipo: c.criterio ?? 'ia', origen: c.origen ?? 'ia',
+        clave: c.clave, original: c.clave, criterio: c.descripcion, tipo: c.criterio ?? 'ia', origen: c.origen ?? 'ia',
         campo: c.condicion?.campo ?? campos[0]?.clave ?? '', op: c.condicion?.op ?? '=', valor: c.condicion?.valor ?? '',
       })),
       extrae: campos.length > 0, campos,
@@ -508,6 +510,7 @@ export class ProcesoEditorComponent implements OnInit {
         },
         etiquetas: ets.map((e) => ({
           clave: e.clave,
+          original: e.original ?? null,
           descripcion: e.tipo === 'datos' ? `${e.campo} ${e.op} ${e.valor}` : e.criterio.trim(),
           criterio: e.tipo, condicion: e.tipo === 'datos' ? { campo: e.campo, op: e.op, valor: e.valor } : null, origen: e.origen,
         })),

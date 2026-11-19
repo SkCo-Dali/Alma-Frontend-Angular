@@ -685,6 +685,20 @@ export interface Grupo {
   reglas: ReglaAsignacion[];
 }
 
+/** Antes de publicar: etiquetas activas sin grupo de Asignación (y el grupo que
+ *  podrían heredar de la etiqueta que reemplazan). */
+export interface RevisionGrupos {
+  aplica: boolean;
+  sin_grupo: { clave: string; proceso: string | null; sugerido: { id: string; nombre: string; reemplaza: string[] } | null }[];
+}
+
+/** Grupos que perdieron etiquetas desactivadas o eliminadas al publicar. */
+export interface GrupoLimpiado {
+  nombre: string;
+  quitadas: string[];
+  vacio: boolean;
+}
+
 export interface GrupoIn {
   nombre: string;
   etiquetas: string[];
@@ -1863,10 +1877,26 @@ export class BuzonApi {
     );
   }
 
-  /** Publica el borrador como vN+1 (y activa el buzón si estaba en configuración). */
-  publicarReglas(buzonId: string): Promise<{ version: number; cambios: CambioRegla[] }> {
+  /** Etiquetas activas sin grupo de Asignación (revisión antes de publicar). */
+  revisionGrupos(buzonId: string): Promise<RevisionGrupos> {
     return this.conDemo(
-      () => this.api.fetch<{ version: number; cambios: CambioRegla[] }>(`${BASE}/buzones/${buzonId}/versiones`, { method: 'POST' }),
+      () => this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/revision`),
+      () => ({ aplica: false, sin_grupo: [] }),
+    );
+  }
+
+  /** Agrega una etiqueta a un grupo (hereda su destino). Devuelve la revisión al día. */
+  agregarEtiquetaAGrupo(buzonId: string, grupoId: string, clave: string): Promise<RevisionGrupos> {
+    return this.conDemo(
+      () => this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/${grupoId}/etiquetas`, { method: 'POST', body: JSON.stringify({ clave }) }),
+      () => ({ aplica: false, sin_grupo: [] }),
+    );
+  }
+
+  /** Publica el borrador como vN+1 (y activa el buzón si estaba en configuración). */
+  publicarReglas(buzonId: string): Promise<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }>(`${BASE}/buzones/${buzonId}/versiones`, { method: 'POST' }),
       () => this.demo.publicarReglas(buzonId, this.auth.user().correo),
     );
   }

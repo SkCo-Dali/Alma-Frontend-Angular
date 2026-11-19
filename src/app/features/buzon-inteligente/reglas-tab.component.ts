@@ -19,6 +19,7 @@ import {
   BuzonApi,
   Categoria,
   EstadoReglas,
+  Grupo,
   CategoriaIn,
   Proceso,
   ProcesoPropuesto,
@@ -27,6 +28,7 @@ import {
   PromptBuzon,
   PropuestaProcesos,
   ReglaFija,
+  RevisionGrupos,
   resumenEtiqueta,
 } from './buzon.api';
 import { CategoriaEditorComponent } from './categoria-editor.component';
@@ -348,6 +350,27 @@ interface FijaEd {
               @if (!est()?.borrador) {
                 <p class="xxs muted">Edita un proceso, acepta una propuesta o carga un prompt para crear un borrador.</p>
               }
+              @if (revGrupos(); as rg) {
+                @if (rg.aplica && rg.sin_grupo.length) {
+                  <!-- Discreto: no bloquea ni insiste; solo muestra qué etiquetas no llegan a ningún grupo. -->
+                  <div class="stack" style="gap:4px;border-top:1px solid var(--border);padding-top:8px">
+                    <p class="xxs muted"><lucide-icon name="layers" [size]="12" /> Sin grupo de Asignación: sus correos solo se etiquetan.</p>
+                    @for (x of rg.sin_grupo; track x.clave) {
+                      <div class="row xs" style="gap:6px;flex-wrap:wrap">
+                        <span class="key">{{ x.clave }}</span>
+                        @if (x.sugerido; as s) {
+                          <button type="button" class="linkbtn xs" [disabled]="agregandoGrupo() === x.clave" (click)="agregarAGrupo(x.clave, s.id, s.nombre)" [title]="'Reemplaza a ' + s.reemplaza.join(', ') + ': hereda su destino'">Agregar a {{ s.nombre }}</button>
+                        } @else if (gruposAsig().length) {
+                          <select class="input sm" style="width:auto;height:24px" [attr.aria-label]="'Grupo para ' + x.clave" [disabled]="agregandoGrupo() === x.clave" (change)="agregarAGrupo(x.clave, $any($event.target).value)">
+                            <option value="">Agregar a un grupo…</option>
+                            @for (g of gruposAsig(); track g.id) { <option [value]="g.id">{{ g.nombre }}</option> }
+                          </select>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
               @if (est()?.versiones?.length) {
                 <p class="xxs muted">Historial: @for (v of est()!.versiones.slice(0, 5); track v.version; let last = $last) { v{{ v.version }} · {{ v.publicada_por }} · {{ fecha(v.publicada_en) }}{{ last ? '' : ' — ' }} }</p>
               }
@@ -662,6 +685,9 @@ export class ReglasTabComponent implements OnInit {
   /** «Cambios en el prompt» desplegado (plegado por defecto). */
   protected readonly verCambios = signal(false);
   protected readonly publicando = signal(false);
+  protected readonly revGrupos = signal<RevisionGrupos | null>(null);
+  protected readonly gruposAsig = signal<Grupo[]>([]);
+  protected readonly agregandoGrupo = signal<string | null>(null);
   protected readonly errorPrompt = signal('');
   /** 069: progreso de la transcripción por proceso ('' = no está transcribiendo). */
   protected readonly transcribiendo = signal('');
@@ -867,6 +893,35 @@ export class ReglasTabComponent implements OnInit {
   private async recargar(): Promise<void> {
     await this.cargar();
     await this.refrescarBuzon();
+    void this.cargarRevisionGrupos();
+  }
+
+  /** Etiquetas sin grupo de Asignación: se muestran discretas junto a «Publicar». */
+  private async cargarRevisionGrupos(): Promise<void> {
+    if (this.esWiz() || !this.buzon().mod_asignacion) {
+      this.revGrupos.set(null);
+      return;
+    }
+    try {
+      const [rev, grupos] = await Promise.all([this.api.revisionGrupos(this.buzon().id), this.api.listarGrupos(this.buzon().id)]);
+      this.revGrupos.set(rev);
+      this.gruposAsig.set(grupos);
+    } catch {
+      this.revGrupos.set(null);
+    }
+  }
+
+  protected async agregarAGrupo(clave: string, grupoId: string, nombre?: string): Promise<void> {
+    if (!grupoId) return;
+    this.agregandoGrupo.set(clave);
+    try {
+      this.revGrupos.set(await this.api.agregarEtiquetaAGrupo(this.buzon().id, grupoId, clave));
+      this.toast.show(`${clave} quedó en ${nombre ?? this.gruposAsig().find((g) => g.id === grupoId)?.nombre ?? 'el grupo'}`, 'Sus correos van al destino de ese grupo.');
+    } catch (e) {
+      this.toast.error('No se pudo agregar al grupo', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.agregandoGrupo.set(null);
+    }
   }
 
   /** 070: activar o desactivar OTROS (en vivo; no se borra). */
@@ -1396,7 +1451,10 @@ export class ReglasTabComponent implements OnInit {
     try {
       const r = await this.api.publicarReglas(this.buzon().id);
       await this.recargar();
-      this.toast.show(`Reglas v${r.version} publicadas`);
+      const limpios = (r.grupos ?? []).filter((g) => g.quitadas.length);
+      this.toast.show(`Reglas v${r.version} publicadas`, limpios.length
+        ? 'Grupos al día: ' + limpios.map((g) => `${g.nombre} sin ${g.quitadas.join(', ')}${g.vacio ? ' (quedó sin etiquetas)' : ''}`).join(' · ')
+        : undefined);
     } catch (e) {
       this.toast.error('No se pudieron publicar las reglas', e instanceof Error ? e.message : String(e));
     } finally {
