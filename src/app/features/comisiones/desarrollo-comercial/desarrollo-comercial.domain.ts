@@ -14,6 +14,7 @@ export interface CalificacionAgenteRecord {
   EditadoManual: boolean;
   UsuarioModifica: string | null;
   FechaModifica: string | null;
+  Motivo: string | null;
   ClasificacionSociedad: string;
   VigenteEnOrigen: boolean;
   FechaUltimaVezEnOrigen: string | null;
