@@ -10,6 +10,7 @@
 // prompt armado con las reglas actuales se descarga o se edita como base.
 
 import { Component, computed, effect, inject, input, OnInit, output, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
@@ -80,7 +81,7 @@ interface FijaEd {
 
 @Component({
   selector: 'alma-reglas-tab',
-  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent, ProcesoEditorComponent, CategoriaEditorComponent],
+  imports: [FormsModule, NgTemplateOutlet, LucideAngularModule, AlmaSwitchComponent, ProcesoEditorComponent, CategoriaEditorComponent],
   styleUrls: ['./buzon-proto.css'],
   template: `
     @let b = buzon();
@@ -159,15 +160,20 @@ interface FijaEd {
                 (guardado)="alGuardar($event, true)" (cancelado)="editando.set(null)" (editarEtiqueta)="etiquetaEd.set($event)" />
             </article>
           }
-          @for (p of propuestas(); track p.clave) {
+          <ng-template #tplPropuesta let-p>
             @let t = objetivoDe(p);
             @let cmp = comparar(p);
             <article class="glass r-2xl stack" style="padding:14px;gap:8px;border-color:var(--violet)">
               <div class="row between" style="flex-wrap:nowrap;align-items:flex-start">
                 <div style="min-width:0">
-                  <p class="sm bb">{{ p.nombre }} <span class="key">{{ p.clave }}</span> <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta</span>
-                    @if (!p.campos.length) { <span class="badge b-sky">Solo categorización</span> }</p>
-                  <p class="xs muted">{{ p.descripcion }}</p>
+                  @if (t) {
+                    <!-- Actualiza un proceso que ya existe: va pegada a su tarjeta, no como otro proceso. -->
+                    <p class="sm bb"><lucide-icon name="git-compare" [size]="13" /> Cambios propuestos para {{ t.nombre }} <span class="key">{{ t.clave }}</span> <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta de Nova</span></p>
+                  } @else {
+                    <p class="sm bb">{{ p.nombre }} <span class="key">{{ p.clave }}</span> <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta</span>
+                      @if (!p.campos.length) { <span class="badge b-sky">Solo categorización</span> }</p>
+                    <p class="xs muted">{{ p.descripcion }}</p>
+                  }
                   <p class="xxs" style="color:var(--violet)">{{ notaPropuesta(p) }}</p>
                 </div>
                 <div class="row" style="flex-wrap:nowrap">
@@ -220,8 +226,14 @@ interface FijaEd {
                 </div>
               }
             </article>
+          </ng-template>
+          @for (p of propuestasNuevas(); track p.clave) {
+            <ng-container *ngTemplateOutlet="tplPropuesta; context: { $implicit: p }" />
           }
           @for (p of procesos(); track p.id; let i = $index, primero = $first, ultimo = $last) {
+            @for (pp of propuestasPara(p); track pp.clave) {
+              <ng-container *ngTemplateOutlet="tplPropuesta; context: { $implicit: pp }" />
+            }
             @let abierto = editando()?.id === p.id;
             <article class="glass r-2xl stack" style="padding:14px;gap:8px" [style.opacity]="p.activo ? 1 : 0.6" [style.box-shadow]="abierto ? '0 0 0 2px var(--ring)' : null">
               <div class="row" style="flex-wrap:nowrap;gap:10px;align-items:flex-start">
@@ -1211,6 +1223,14 @@ export class ReglasTabComponent implements OnInit {
 
   protected mismaClave(p: ProcesoPropuesto): boolean {
     return this.procesos().some((x) => x.clave === p.clave);
+  }
+
+  /** Propuestas que crean un proceso nuevo (arriba de la lista). */
+  protected readonly propuestasNuevas = computed(() => this.propuestas().filter((p) => !this.objetivoDe(p)));
+
+  /** Propuestas que actualizan `proc`: se muestran pegadas a su tarjeta. */
+  protected propuestasPara(proc: Proceso): ProcesoPropuesto[] {
+    return this.propuestas().filter((p) => this.objetivoDe(p)?.id === proc.id);
   }
 
   /** Proceso que la propuesta actualiza: el de su misma clave o el que eligió el editor. */
