@@ -242,25 +242,25 @@ export interface SpecialCaseRecord {
   UltimaActualizacion: string;
 }
 
-/** Misma codificación que los insumos (TipoExclusionContrato); 1 levanta la exclusión. */
+/** Misma codificación que los insumos (TipoExclusionContrato). El 1 (Sin
+ *  exclusión) no se elige: lo registra el toggle al desactivar. */
 export const TIPO_EXCLUSION_OPTIONS = [
-  { label: 'Sin exclusión (levanta la exclusión)', value: '1' },
   { label: 'Solo front', value: '2' },
   { label: 'Solo mantenimiento obligatorio', value: '3' },
   { label: 'No pagar', value: '4' },
 ];
 
-/** Una vigencia de la exclusión: Producto + Contrato + PeriodoDesde. */
+/** Un contrato excluido (su vigencia más reciente). Inactivo = Sin exclusión;
+ *  TipoExclusion es el último tipo 2-4, el que se restaura al reactivar. */
 export interface ExcludedContractRecord {
   id: string;
   Producto: string;
   Contrato: string;
   ContratoLargo: string;
   NombreCliente: string;
-  PeriodoDesde: string;
-  PeriodoHasta: string;
   TipoExclusion: string;
   TipoExclusionNombre: string;
+  Activo: boolean;
   Motivo: string;
   UsuarioModifica: string;
   UltimaActualizacion: string;

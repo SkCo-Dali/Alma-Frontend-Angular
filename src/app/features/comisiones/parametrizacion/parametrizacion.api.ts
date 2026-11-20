@@ -540,14 +540,15 @@ export class ParametrizacionApi {
     );
   }
 
-  updateExcludedContract(
+  /** Cambio desde la tabla: el tipo (lista) o el estado (toggle), uno a la vez. */
+  changeExcludedContract(
     id: string,
-    data: Partial<ExcludedContractRecord>,
+    cambio: { exclusion_type: number } | { active: boolean },
   ): Promise<ApiExcludedContract> {
     return this.http.send<ApiExcludedContract>(
       `/api/commission-excluded-contract/${id}`,
       'PUT',
-      toExcludedContractRequest(data),
+      cambio,
       'Error actualizando la exclusión de contrato',
     );
   }
@@ -926,9 +927,9 @@ interface ApiExcludedContract {
   contract: number;
   long_contract: string | null;
   period_from: number;
-  period_to: number | null;
-  exclusion_type: number;
+  exclusion_type: number | null;
   exclusion_type_name: string | null;
+  active: boolean;
   reason: string | null;
   updated_by: string | null;
   updated_at: string | null;
@@ -942,10 +943,9 @@ function mapExcludedContract(api: ApiExcludedContract): ExcludedContractRecord {
     Contrato: String(api.contract ?? ''),
     ContratoLargo: api.long_contract ?? '',
     NombreCliente: api.client_name ?? '',
-    PeriodoDesde: String(api.period_from ?? ''),
-    PeriodoHasta: api.period_to ? String(api.period_to) : 'Vigente',
     TipoExclusion: String(api.exclusion_type ?? ''),
     TipoExclusionNombre: api.exclusion_type_name ?? '',
+    Activo: Boolean(api.active),
     Motivo: api.reason ?? '',
     UsuarioModifica: api.updated_by ?? '',
     UltimaActualizacion: api.updated_at ?? '',
@@ -956,8 +956,6 @@ function toExcludedContractRequest(r: Partial<ExcludedContractRecord>) {
   return {
     product: (r.Producto ?? '').trim().toUpperCase(),
     long_contract: String(r.ContratoLargo ?? ''),
-    period_from: Number(r.PeriodoDesde),
     exclusion_type: Number(r.TipoExclusion),
-    reason: (r.Motivo ?? '').trim(),
   };
 }
