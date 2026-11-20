@@ -259,3 +259,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 .ph { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .ph .l { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .ph h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; margin: 0; }
+
+/* Descripciones de etiquetas y datos: varias líneas, crece con el texto (sin texto de corrido en una línea). */
+textarea.input.texto-largo { height: auto; min-height: 34px; resize: vertical; line-height: 1.4; white-space: pre-wrap; field-sizing: content; max-height: 240px; }
