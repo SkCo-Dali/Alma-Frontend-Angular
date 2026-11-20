@@ -40,6 +40,10 @@ p { margin: 0; }
 .r-2xl { border-radius: 16px; }
 .sunk { background: var(--sunken); }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* Encabezado de modal: el texto se ajusta y la X queda arriba a la derecha (nunca baja de línea). */
+.row.mhead { flex-wrap: nowrap; align-items: flex-start; gap: 12px; }
+.row.mhead > :first-child { min-width: 0; flex: 1; }
+.row.mhead > .btn { flex-shrink: 0; }
 .between { justify-content: space-between; }
 .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
 .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
