@@ -263,8 +263,6 @@ export class ParametrizacionStore {
           return this.api.updateCommissionAdjustment(id, datos as unknown as CommissionConfigRecord);
         case 'casosEspeciales':
           return this.api.updateSpecialCase(id, datos as Partial<SpecialCaseRecord>);
-        case 'exclusionContratos':
-          return this.api.updateExcludedContract(id, datos as Partial<ExcludedContractRecord>);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -327,6 +325,8 @@ export class ParametrizacionStore {
           return this.api.toggleCommissionAdjustment(id, activo);
         case 'casosEspeciales':
           return this.api.toggleSpecialCase(id, activo);
+        case 'exclusionContratos':
+          return this.api.changeExcludedContract(id, { active: activo });
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -337,6 +337,17 @@ export class ParametrizacionStore {
       activo ? 'Registro activado' : 'Registro desactivado',
       `El registro quedó ${activo ? 'activo' : 'inactivo'}.`,
       'toggle',
+    );
+  }
+
+  /** Cambio del tipo de exclusión desde la lista de la tabla (aplica desde el mes actual). */
+  cambiarTipoExclusion(id: string, tipo: number): Promise<boolean> {
+    return this.mutar(
+      () => this.api.changeExcludedContract(id, { exclusion_type: tipo }),
+      () => this.cargarExclusionContratos(),
+      'Tipo de exclusión actualizado',
+      'El cambio aplica desde el mes actual.',
+      'update',
     );
   }
 

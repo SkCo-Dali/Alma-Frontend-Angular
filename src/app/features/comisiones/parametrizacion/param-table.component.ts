@@ -134,7 +134,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                       </alma-sortable-th>
                     </th>
                   }
-                  @if (conAcciones()) {
+                  @if (conAcciones() && conMenu()) {
                     <th
                       class="sticky right-0 z-30 h-[48px] w-[100px] border-b border-border bg-[var(--table-header)] px-3 py-1 text-center text-xs font-semibold uppercase tracking-wider text-foreground/65"
                     >
@@ -241,7 +241,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                         }
                       </td>
                     }
-                    @if (conAcciones()) {
+                    @if (conAcciones() && conMenu()) {
                       <td
                         class="sticky right-0 z-10 border-b border-border bg-[var(--table-surface)] px-3 py-2 text-center group-hover:[background-color:color-mix(in_srgb,var(--primary)_5%,var(--table-surface))]"
                       >
@@ -269,16 +269,14 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                                 <lucide-icon name="pencil" [size]="16" class="text-primary" />
                                 Editar
                               </button>
-                              @if (conEliminar()) {
-                                <button
-                                  type="button"
-                                  (click)="eliminar.emit(row); menu.set(null)"
-                                  class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-                                >
-                                  <lucide-icon name="trash-2" [size]="16" />
-                                  Eliminar
-                                </button>
-                              }
+                              <button
+                                type="button"
+                                (click)="eliminar.emit(row); menu.set(null)"
+                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                              >
+                                <lucide-icon name="trash-2" [size]="16" />
+                                Eliminar
+                              </button>
                             </div>
                           }
                         </div>
@@ -314,7 +312,8 @@ export class ParamTableComponent {
   readonly page = input(1);
   readonly itemsPerPage = input(20);
   readonly conAcciones = input(true);
-  readonly conEliminar = input(true);
+  /** Sin la columna Acciones (Editar/Eliminar); el switch sigue activo. */
+  readonly conMenu = input(true);
   readonly mensajeVacio = input('No se encontraron registros.');
   readonly anchoMinimo = input('900px');
   /** IDs de filas a resaltar temporalmente (p. ej. tras carga masiva). */

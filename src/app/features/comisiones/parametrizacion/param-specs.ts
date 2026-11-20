@@ -40,8 +40,8 @@ export interface SeccionSpec {
   /** Diferidos consulta al backend por rango de fechas. */
   conRangoFechas?: boolean;
   botonCrear?: string;
-  /** Sin la acción Eliminar (exclusión de contratos: se levanta con una vigencia nueva). */
-  sinEliminar?: boolean;
+  /** Sin la columna Acciones: se edita en la tabla (exclusión de contratos). */
+  sinMenu?: boolean;
   /** Abre el modal de carga masiva (ajustes de comisiones). */
   botonCargaMasiva?: string;
   formColumnas?: 2 | 3;
@@ -51,7 +51,7 @@ export interface SeccionSpec {
   tituloEditar?: string;
   descEditar?: (row: ParamRow) => string;
   buscarEn: (row: ParamRow) => unknown[];
-  campos?: (ctx: FormCtx, editando?: boolean) => ParamField[];
+  campos?: (ctx: FormCtx) => ParamField[];
   aFormulario?: (row: ParamRow | null, ctx: FormCtx) => ParamValues;
   aRegistro?: (v: ParamValues, ctx: FormCtx) => Record<string, unknown>;
   derivar?: (key: string, v: ParamValues, ctx: FormCtx) => ParamValues;
@@ -818,33 +818,26 @@ const CASOS_ESPECIALES: SeccionSpec = {
 
 // ── 9. Exclusión de contratos ───────────────────────────────────────────────
 
-// Vigencias por Producto + Contrato + PeriodoDesde, como Desarrollo Comercial: no
-// se borran ni se desactivan; para levantar una exclusión se registra el tipo 1
-// desde un periodo. Al editar solo cambian el tipo y el motivo.
+// Un contrato por fila, como Clasificación de agentes (Desarrollo Comercial): el
+// tipo se cambia en la lista y el estado con el toggle (Inactivo = Sin
+// exclusión). Cada cambio aplica desde el mes actual; no hay Editar ni Eliminar.
 const EXCLUSION_CONTRATOS: SeccionSpec = {
   id: 'exclusionContratos',
   titulo: 'Exclusión de Contratos',
-  subtitulo:
-    'Cada registro aplica desde su periodo hasta el siguiente registro del mismo contrato. Para levantar una exclusión, registra "Sin exclusión" desde el periodo en que vuelve a pagar.',
-  placeholderBusqueda: 'Buscar por producto, contrato, cliente o motivo...',
+  placeholderBusqueda: 'Buscar por producto, contrato, cliente o tipo...',
   botonCrear: 'Crear Registro',
-  sinEliminar: true,
-  anchoMinimo: '1300px',
+  sinMenu: true,
+  anchoMinimo: '1500px',
   formColumnas: 2,
   formAncho: '640px',
   tituloCrear: 'Crear Exclusión de Contrato',
-  descCrear: 'Registra desde qué periodo y qué pagos se excluyen del contrato.',
-  tituloEditar: 'Editar Exclusión de Contrato',
-  descEditar: (r) =>
-    `Corrige el tipo o el motivo de la exclusión del contrato ${r['ContratoLargo']} desde ${r['PeriodoDesde']}.`,
+  descCrear: 'Agrega el contrato a la exclusión desde el mes actual.',
   columnas: [
     { key: 'Producto', label: 'Producto', tipo: 'chipPrimario' },
     { key: 'ContratoLargo', label: 'Contrato Largo', tipo: 'mono' },
     { key: 'Contrato', label: 'Contrato', tipo: 'mono' },
     { key: 'NombreCliente', label: 'Cliente' },
-    { key: 'TipoExclusionNombre', label: 'Tipo de Exclusión', tipo: 'chipMuted' },
-    { key: 'PeriodoDesde', label: 'Desde', tipo: 'mono' },
-    { key: 'PeriodoHasta', label: 'Hasta', tipo: 'mono' },
+    { key: 'Activo', label: 'Activo', tipo: 'switch' },
     { key: 'Motivo', label: 'Motivo' },
     { key: 'UsuarioModifica', label: 'Modificado por' },
     {
@@ -853,6 +846,13 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
       tipo: 'fecha',
       filtro: 'fecha',
     },
+    {
+      key: 'TipoExclusion',
+      label: 'Tipo de Exclusión',
+      tipo: 'select',
+      fija: 'right',
+      opciones: TIPO_EXCLUSION_OPTIONS,
+    },
   ],
   buscarEn: (r) => [
     r['Producto'],
@@ -860,9 +860,9 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
     r['Contrato'],
     r['NombreCliente'],
     r['TipoExclusionNombre'],
-    r['Motivo'],
+    r['UsuarioModifica'],
   ],
-  campos: (_ctx, editando) => [
+  campos: () => [
     {
       key: 'Producto',
       label: 'Producto',
@@ -870,7 +870,6 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
       requerido: true,
       maxLength: 20,
       placeholder: 'Ej. FPOB, FCES',
-      deshabilitado: editando,
     },
     {
       key: 'ContratoLargo',
@@ -878,14 +877,6 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
       tipo: 'numero',
       requerido: true,
       maxLength: 18,
-      deshabilitado: editando,
-    },
-    {
-      key: 'PeriodoDesde',
-      label: 'Aplica desde',
-      tipo: 'periodo',
-      requerido: true,
-      deshabilitado: editando,
     },
     {
       key: 'TipoExclusion',
@@ -894,29 +885,16 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
       requerido: true,
       opciones: TIPO_EXCLUSION_OPTIONS,
     },
-    {
-      key: 'Motivo',
-      label: 'Motivo',
-      tipo: 'texto',
-      requerido: true,
-      maxLength: 500,
-      ancho: 'full',
-      ayuda: 'Queda en la auditoría de la exclusión (mínimo 5 caracteres).',
-    },
   ],
-  aFormulario: (r) => ({
-    Producto: txt(r?.['Producto'] as string),
-    ContratoLargo: txt(r?.['ContratoLargo'] as string),
-    PeriodoDesde: r ? periodoYYYYMM(r['PeriodoDesde']) : '',
-    TipoExclusion: r ? txt(r['TipoExclusion'] as string) : '4',
-    Motivo: '',
+  aFormulario: () => ({
+    Producto: '',
+    ContratoLargo: '',
+    TipoExclusion: '4',
   }),
   aRegistro: (v) => ({
     Producto: txt(v['Producto']).trim().toUpperCase(),
     ContratoLargo: txt(v['ContratoLargo']),
-    PeriodoDesde: txt(v['PeriodoDesde']),
     TipoExclusion: txt(v['TipoExclusion']),
-    Motivo: txt(v['Motivo']).trim(),
   }),
   validar: (v) => {
     const errs: Record<string, string> = {};
@@ -927,8 +905,6 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
     if (producto === 'FCES' && txt(v['ContratoLargo']) && !/^\d{12}$/.test(txt(v['ContratoLargo']))) {
       errs['ContratoLargo'] = 'El contrato largo de FCES debe tener 12 dígitos';
     }
-    const motivo = txt(v['Motivo']).trim();
-    if (motivo && motivo.length < 5) errs['Motivo'] = 'Mínimo 5 caracteres';
     return errs;
   },
 };

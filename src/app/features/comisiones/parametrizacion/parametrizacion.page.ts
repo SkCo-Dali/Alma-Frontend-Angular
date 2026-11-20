@@ -227,7 +227,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                 [page]="pagina(id)"
                 [itemsPerPage]="porPagina(id)"
                 [conAcciones]="!spec.soloLectura"
-                [conEliminar]="!spec.sinEliminar"
+                [conMenu]="!spec.sinMenu"
                 [anchoMinimo]="spec.anchoMinimo"
                 [idsResaltados]="id === 'ajustesComisiones' ? idsAjustesResaltados() : []"
                 (pageChange)="setPagina(id, $event)"
@@ -235,6 +235,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                 (editar)="abrirEditar(id, $event)"
                 (eliminar)="porBorrar.set({ seccion: id, row: $event })"
                 (alternar)="alternar(id, $event.row, $event.activo)"
+                (seleccion)="onSeleccion(id, $event)"
               />
             }
           </div>
@@ -528,7 +529,7 @@ export class ParametrizacionPageComponent implements OnInit {
       editando: row,
       titulo: spec.tituloEditar ?? 'Editar registro',
       descripcion: spec.descEditar ? spec.descEditar(row) : '',
-      campos: spec.campos(ctx, true),
+      campos: spec.campos(ctx),
       valores: spec.aFormulario(row, ctx),
       columnas: spec.formColumnas ?? 2,
       ancho: spec.formAncho ?? '640px',
@@ -564,7 +565,19 @@ export class ParametrizacionPageComponent implements OnInit {
     }
   }
 
-  protected alternar(seccion: SeccionId, row: ParamRow, activo: boolean): void {
-    void this.store.alternar(seccion, String(row['id']), activo);
+  protected async alternar(seccion: SeccionId, row: ParamRow, activo: boolean): Promise<void> {
+    const ok = await this.store.alternar(seccion, String(row['id']), activo);
+    if (!ok && seccion === 'exclusionContratos') void this.store.cargarExclusionContratos();
+  }
+
+  /** Lista de tipo en la tabla (exclusión de contratos): se guarda al cambiar.
+   *  Si falla, se recarga para que la lista vuelva al valor guardado. */
+  protected async onSeleccion(
+    seccion: SeccionId,
+    ev: { row: ParamRow; key: string; value: string },
+  ): Promise<void> {
+    if (seccion !== 'exclusionContratos' || ev.key !== 'TipoExclusion') return;
+    const ok = await this.store.cambiarTipoExclusion(String(ev.row['id']), Number(ev.value));
+    if (!ok) void this.store.cargarExclusionContratos();
   }
 }
