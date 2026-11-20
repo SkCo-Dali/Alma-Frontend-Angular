@@ -227,6 +227,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                 [page]="pagina(id)"
                 [itemsPerPage]="porPagina(id)"
                 [conAcciones]="!spec.soloLectura"
+                [conEliminar]="!spec.sinEliminar"
                 [anchoMinimo]="spec.anchoMinimo"
                 [idsResaltados]="id === 'ajustesComisiones' ? idsAjustesResaltados() : []"
                 (pageChange)="setPagina(id, $event)"
@@ -527,7 +528,7 @@ export class ParametrizacionPageComponent implements OnInit {
       editando: row,
       titulo: spec.tituloEditar ?? 'Editar registro',
       descripcion: spec.descEditar ? spec.descEditar(row) : '',
-      campos: spec.campos(ctx),
+      campos: spec.campos(ctx, true),
       valores: spec.aFormulario(row, ctx),
       columnas: spec.formColumnas ?? 2,
       ancho: spec.formAncho ?? '640px',

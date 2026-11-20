@@ -158,6 +158,7 @@ const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
                         class="alma-input cursor-pointer"
                         [ngModel]="anioDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, $event, mesDe(f.key))"
+                        [disabled]="!!f.deshabilitado"
                       >
                         <option value="">Año</option>
                         @for (a of anios; track a) {
@@ -168,6 +169,7 @@ const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
                         class="alma-input cursor-pointer"
                         [ngModel]="mesDe(f.key)"
                         (ngModelChange)="setPeriodo(f.key, anioDe(f.key), $event)"
+                        [disabled]="!!f.deshabilitado"
                       >
                         <option value="">Mes</option>
                         @for (m of meses; track m.value) {
