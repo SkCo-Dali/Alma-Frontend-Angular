@@ -6,13 +6,12 @@
 //  · Equipo: personas, disponibilidad y membresía por grupo (equipo-tab).
 //  · Reglas y bases: cadena de búsquedas en bases por grupo (reglas-bases-tab). Sin el
 //    módulo de búsqueda en bases (mod_bases) se ve en gris, «Desactivado», con «Activar».
-//  · Probar: recorrido de la asignación de un correo con unos datos de prueba.
 
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
-import { Base, Buzon, BuzonApi, Categoria, DestinoGrupo, Grupo, PasoTraza, Persona, Proceso, SinActivosModo } from './buzon.api';
+import { Base, Buzon, BuzonApi, Categoria, DestinoGrupo, Grupo, Persona, Proceso, SinActivosModo } from './buzon.api';
 import { aGrupoIn, destinoEnvioTxt } from './buzon-asignacion';
 import { EstadoGrupos, activosEn, borradorDe, etiquetasDe, sincronizarGrupos, sinActivosTxt } from './asignacion-ui';
 import { CarpetaPlana, CarpetaSelectComponent, aplanarCarpetas } from './carpeta-select.component';
@@ -20,9 +19,8 @@ import { EquipoTabComponent } from './equipo-tab.component';
 import { GruposFormComponent } from './grupos-form.component';
 import { ModuloEstadoComponent } from './modulo-estado.component';
 import { ReglasBasesTabComponent } from './reglas-bases-tab.component';
-import { TrazaAsignacionComponent } from './traza-asignacion.component';
 
-type Sub = 'grupos' | 'equipo' | 'reglas' | 'probar';
+type Sub = 'grupos' | 'equipo' | 'reglas';
 
 const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a personas', carpeta: 'Enviar a carpeta', categorizar: 'Solo categorizar', reenviar: 'Reenviar', responder: 'Responder al remitente' };
 const DESTINO_BADGE: Record<DestinoGrupo, string> = { personas: 'b-emerald', carpeta: 'b-sky', categorizar: 'b-slate', reenviar: 'b-violet', responder: 'b-amber' };
@@ -32,7 +30,7 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | '
 
 @Component({
   selector: 'alma-asignacion-tab',
-  imports: [LucideAngularModule, AlmaLoaderComponent, CarpetaSelectComponent, EquipoTabComponent, GruposFormComponent, ModuloEstadoComponent, ReglasBasesTabComponent, TrazaAsignacionComponent],
+  imports: [LucideAngularModule, AlmaLoaderComponent, CarpetaSelectComponent, EquipoTabComponent, GruposFormComponent, ModuloEstadoComponent, ReglasBasesTabComponent],
   styleUrls: ['./buzon-proto.css'],
   styles: [`:host { display: grid; gap: 16px; min-width: 0; }`],
   template: `
@@ -183,36 +181,6 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | '
           }
         }
 
-        @case ('probar') {
-          @if (!grupos().length) {
-            <div class="glass r-2xl" style="padding:16px"><p class="sm muted">Configura los grupos primero.</p></div>
-          } @else if (grupoProbar(); as g) {
-            <div class="pills glass r-xl" style="padding:4px;justify-self:start" role="tablist">
-              @for (x of grupos(); track x.id) { <button type="button" role="tab" [attr.aria-selected]="x.id === g.id" (click)="gSel.set(x.id)">{{ x.nombre }}</button> }
-            </div>
-            <div class="g2" style="align-items:start">
-              <div class="glass r-2xl stack" style="padding:16px">
-                <h2 class="sm b">Datos del correo de prueba</h2>
-                @if (camposProbar().length) {
-                  <div class="g2">
-                    @for (c of camposProbar(); track c) {
-                      <div class="fld"><label class="label mono" [attr.for]="'tv-' + c">{{ c }}</label><input class="input" [id]="'tv-' + c" [value]="tv()[c] || ''" (change)="ponerTv(c, $any($event.target).value)" /></div>
-                    }
-                  </div>
-                } @else {
-                  <p class="xs muted">Este grupo no usa datos para asignar.</p>
-                }
-                <label class="row xs" for="tv-hilo"><input type="checkbox" id="tv-hilo" [checked]="tvHilo()" (change)="tvHilo.set($any($event.target).checked)" /> Es una respuesta en un hilo existente</label>
-                <p class="xxs muted">Cambia una membresía en Equipo o desactiva una regla y vuelve a probar.</p>
-              </div>
-              <div class="glass r-2xl stack" style="padding:16px">
-                <h2 class="sm b">Recorrido</h2>
-                @if (errorProbar(); as e) { <p class="err">{{ e }}</p> }
-                <alma-traza-asignacion [traza]="recorrido()" [vacio]="probando() ? 'Probando…' : 'Sin recorrido de asignación.'" />
-              </div>
-            </div>
-          }
-        }
       }
     }
 
@@ -254,7 +222,6 @@ export class AsignacionTabComponent {
     ['grupos', 'layers', 'Grupos y destino'],
     ['equipo', 'users', 'Equipo'],
     ['reglas', 'database', 'Reglas y bases'],
-    ['probar', 'flask-conical', 'Probar'],
   ];
   /** El equipo solo recibe correos si algún grupo activo asigna a personas. */
   protected readonly usaPersonas = computed(() => this.grupos().some((g) => g.activo && this.vista(g).destino === 'personas'));
@@ -270,7 +237,7 @@ export class AsignacionTabComponent {
   /** Grupo que se está guardando (o 'todos' al guardar el formulario de grupos). */
   protected readonly guardando = signal<string | null>(null);
   private readonly pendientes = signal<Record<string, Pendiente>>({});
-  /** Grupo elegido en «Reglas y bases» y «Probar». */
+  /** Grupo elegido en «Reglas y bases». */
   protected readonly gSel = signal<string | null>(null);
 
   protected readonly puede = computed(() => this.buzon().puede_administrar);
@@ -281,55 +248,8 @@ export class AsignacionTabComponent {
   protected readonly stGrupos = signal<EstadoGrupos | null>(null);
   protected readonly errGrupos = signal<string | null>(null);
 
-  // Probar
-  protected readonly tv = signal<Record<string, string>>({});
-  protected readonly tvHilo = signal(false);
-  protected readonly probando = signal(false);
-  protected readonly errorProbar = signal<string | null>(null);
-  private readonly trazaApi = signal<PasoTraza[]>([]);
-  protected readonly grupoProbar = computed(() => this.grupos().find((g) => g.id === this.gSel()) ?? this.grupos()[0] ?? null);
-  protected readonly camposProbar = computed(() => {
-    const out: string[] = [];
-    this.grupoProbar()?.reglas.forEach((r) => r.activa && r.cruces.forEach((c) => !out.includes(c.campo) && out.push(c.campo)));
-    return out;
-  });
-  /** Prototipo simularG: carpeta, solo categorizar y respuestas en hilo se resuelven sin buscar. */
-  private readonly recorridoLocal = computed<PasoTraza[] | null>(() => {
-    const g = this.grupoProbar();
-    if (!g) return null;
-    if (g.destino === 'carpeta') return [{ estado: 'ok', titulo: `Destino: carpeta «${g.carpeta || '—'}»`, detalle: 'Se etiqueta y se mueve, sin asignar a personas' }];
-    if (g.destino === 'categorizar') return [{ estado: 'ok', titulo: 'Destino: solo categorizar', detalle: 'Se etiqueta y se queda en la carpeta vigilada' }];
-    if (g.destino === 'reenviar' || g.destino === 'responder')
-      return [{ estado: 'ok', titulo: destinoEnvioTxt(g), detalle: 'Se envía al ejecutarse (o al aprobarlo en Validar) y se queda en la carpeta vigilada' }];
-    if (this.tvHilo()) return [{ estado: 'ok', titulo: 'Continuidad del hilo', detalle: 'Respuesta vinculada a un caso existente → hereda la persona, sin reasignar' }];
-    if (!g.etiquetas.length) return [{ estado: 'bad', titulo: 'Sin etiquetas', detalle: 'El grupo no tiene etiquetas: ningún correo llega a él' }];
-    return null;
-  });
-  protected readonly recorrido = computed(() => this.recorridoLocal() ?? this.trazaApi());
-
   constructor() {
     queueMicrotask(() => void this.cargar());
-    // «Probar»: vuelve a correr la asignación al cambiar el grupo, los datos, el equipo o las reglas.
-    let turno = 0;
-    effect(() => {
-      if (this.sub() !== 'probar' || this.recorridoLocal()) return;
-      const g = this.grupoProbar();
-      const datos = Object.fromEntries(Object.entries(this.tv()).filter(([k, v]) => v.trim() && this.camposProbar().includes(k)));
-      this.equipo();
-      if (!g) return;
-      const t = ++turno;
-      this.probando.set(true);
-      this.errorProbar.set(null);
-      void this.api
-        .probarAsignacion(this.buzon().id, g.etiquetas[0], datos)
-        .then((r) => {
-          if (t !== turno) return;
-          const hilo = r.traza.some((p) => /hilo/i.test(p.titulo));
-          this.trazaApi.set(hilo ? r.traza : [{ estado: 'skip', titulo: 'Continuidad del hilo', detalle: 'Correo inicial: no aplica' }, ...r.traza]);
-        })
-        .catch((e) => t === turno && this.errorProbar.set(e instanceof Error ? e.message : String(e)))
-        .finally(() => t === turno && this.probando.set(false));
-    });
   }
 
   async cargar(): Promise<void> {
@@ -480,10 +400,5 @@ export class AsignacionTabComponent {
     } finally {
       this.guardando.set(null);
     }
-  }
-
-  // ── Probar ──
-  protected ponerTv(campo: string, valor: string): void {
-    this.tv.update((t) => ({ ...t, [campo]: valor }));
   }
 }
