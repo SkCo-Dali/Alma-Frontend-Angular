@@ -25,6 +25,7 @@ export function aGrupoIn(g: Grupo, cambios: Partial<GrupoIn> = {}): GrupoIn {
     sin_activos_modo: g.sin_activos_modo,
     sin_activos_carpeta: g.sin_activos_carpeta,
     sin_activos_persona_id: g.sin_activos_persona_id,
+    sin_coincidencia: g.sin_coincidencia ?? 'reparto',
     orden: g.orden,
     activo: g.activo,
     reglas: g.reglas.map((r) => ({
@@ -279,6 +280,11 @@ export function simularAsignacion(
     }
   }
 
+  // 078: ninguna búsqueda encontró el caso y el grupo no reparte.
+  if (grupo.sin_coincidencia === 'sin_asignar' && grupo.reglas.length) {
+    paso('warn', 'Ninguna búsqueda encontró el caso', 'El grupo no reparte: queda en «Sin asignar» para que una persona lo revise');
+    return fin('sin_asignar', null, null, `${grupo.nombre}: sin coincidencia en las bases`);
+  }
   const activos = equipo.filter((p) => activo(p, gid));
   if (activos.length) {
     const elegido = [...activos].sort((a, b) => (cargaHoy[a.id] ?? 0) - (cargaHoy[b.id] ?? 0) || a.orden - b.orden)[0];

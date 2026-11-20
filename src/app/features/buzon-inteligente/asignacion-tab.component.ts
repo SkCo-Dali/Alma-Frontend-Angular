@@ -26,7 +26,7 @@ const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a persona
 const DESTINO_BADGE: Record<DestinoGrupo, string> = { personas: 'b-emerald', carpeta: 'b-sky', categorizar: 'b-slate', reenviar: 'b-violet', responder: 'b-amber' };
 
 /** Cambios de un grupo que aún no se pueden guardar (p. ej. «a carpeta» sin carpeta). */
-type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id'>>;
+type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id' | 'sin_coincidencia'>>;
 
 @Component({
   selector: 'alma-asignacion-tab',
@@ -129,6 +129,20 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | '
                         </select>
                       </div>
                     } @else { <span></span> }
+                  </div>
+                  <div class="g2">
+                    <div class="fld">
+                      <label class="label" [attr.for]="'gsc-' + g.id">Si ninguna búsqueda en las bases encuentra el caso</label>
+                      <select class="input sm" [id]="'gsc-' + g.id" [disabled]="!puede() || guardando() === g.id" (change)="cambiar(g0, { sin_coincidencia: $any($event.target).value })">
+                        <option value="reparto" [selected]="(g.sin_coincidencia ?? 'reparto') === 'reparto'">Repartir entre el equipo (el de menos correos hoy)</option>
+                        <option value="sin_asignar" [selected]="g.sin_coincidencia === 'sin_asignar'">Dejar en «Sin asignar» para revisión</option>
+                      </select>
+                    </div>
+                    <p class="xs muted" style="align-self:end">
+                      @if (!busquedas(g)) { Aplica cuando el grupo tenga búsquedas en «Reglas y bases». }
+                      @else if (g.sin_coincidencia === 'sin_asignar') { El correo se etiqueta y se queda en la carpeta vigilada hasta que alguien lo asigne. }
+                      @else { La continuidad del hilo y las bases van primero; el reparto es el último paso. }
+                    </p>
                   </div>
                 }
                 @if (g.destino === 'reenviar' || g.destino === 'responder') {
@@ -323,6 +337,8 @@ export class AsignacionTabComponent {
             ? `${g.nombre}: mensaje del envío ${v.mensaje ? 'guardado' : 'quitado'}`
             : 'carpeta' in cambios
           ? `${g.nombre}: ${v.carpeta ? `se envía a la carpeta «${v.carpeta}»` : 'elige una carpeta'}`
+          : 'sin_coincidencia' in cambios
+          ? `${g.nombre}: si ninguna búsqueda encuentra el caso, ${v.sin_coincidencia === 'sin_asignar' ? 'queda en «Sin asignar»' : 'se reparte entre el equipo'}`
           : `${g.nombre}: si no hay nadie activo, ${sinActivosTxt(v, this.equipo())}`;
     const pend: Pendiente = {
       destino: v.destino,
@@ -332,6 +348,7 @@ export class AsignacionTabComponent {
       sin_activos_modo: v.sin_activos_modo,
       sin_activos_carpeta: v.sin_activos_carpeta,
       sin_activos_persona_id: v.sin_activos_persona_id,
+      sin_coincidencia: v.sin_coincidencia ?? 'reparto',
     };
     if (!completo) {
       this.pendientes.update((m) => ({ ...m, [g.id]: pend }));

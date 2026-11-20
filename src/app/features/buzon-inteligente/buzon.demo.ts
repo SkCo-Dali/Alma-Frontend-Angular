@@ -1684,6 +1684,7 @@ export class DemoStore {
       sin_activos_modo: body.sin_activos_modo,
       sin_activos_carpeta: body.sin_activos_carpeta ?? null,
       sin_activos_persona_id: body.sin_activos_persona_id ?? null,
+      sin_coincidencia: body.sin_coincidencia ?? 'reparto',
       orden: body.orden ?? previo?.orden ?? this.grupos.filter((g) => g.buzon_id === bid).length + 1,
       activo: body.activo,
       reglas: body.reglas.map((r, i) => ({

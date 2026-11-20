@@ -641,6 +641,8 @@ export type Comparacion = 'exacta' | 'digitos' | 'doc' | 'pc' | 'aprox';
 /** 067: «reenviar» a direcciones fijas y «responder» al remitente, en el hilo. */
 export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar' | 'reenviar' | 'responder';
 export type SinActivosModo = 'cola' | 'carpeta' | 'persona';
+/** 078: si ninguna búsqueda en las bases encuentra el caso: repartir (round-robin) o dejarlo en «Sin asignar». */
+export type SinCoincidencia = 'reparto' | 'sin_asignar';
 
 export interface Cruce {
   /** Dato del JSON del proceso. */
@@ -680,6 +682,7 @@ export interface Grupo {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta: string | null;
   sin_activos_persona_id: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden: number;
   activo: boolean;
   reglas: ReglaAsignacion[];
@@ -709,6 +712,7 @@ export interface GrupoIn {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta?: string | null;
   sin_activos_persona_id?: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden?: number | null;
   activo: boolean;
   /** Reemplaza las búsquedas del grupo (en este orden). */
