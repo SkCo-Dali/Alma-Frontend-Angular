@@ -242,13 +242,27 @@ export interface SpecialCaseRecord {
   UltimaActualizacion: string;
 }
 
+/** Misma codificación que los insumos (TipoExclusionContrato); 1 levanta la exclusión. */
+export const TIPO_EXCLUSION_OPTIONS = [
+  { label: 'Sin exclusión (levanta la exclusión)', value: '1' },
+  { label: 'Solo front', value: '2' },
+  { label: 'Solo mantenimiento obligatorio', value: '3' },
+  { label: 'No pagar', value: '4' },
+];
+
+/** Una vigencia de la exclusión: Producto + Contrato + PeriodoDesde. */
 export interface ExcludedContractRecord {
   id: string;
-  NombreCompania: string;
-  CodigoCompania: string;
   Producto: string;
+  Contrato: string;
   ContratoLargo: string;
-  Activo: boolean;
+  NombreCliente: string;
+  PeriodoDesde: string;
+  PeriodoHasta: string;
+  TipoExclusion: string;
+  TipoExclusionNombre: string;
+  Motivo: string;
+  UsuarioModifica: string;
   UltimaActualizacion: string;
 }
 

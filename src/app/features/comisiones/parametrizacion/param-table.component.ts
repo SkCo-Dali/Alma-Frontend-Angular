@@ -269,14 +269,16 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                                 <lucide-icon name="pencil" [size]="16" class="text-primary" />
                                 Editar
                               </button>
-                              <button
-                                type="button"
-                                (click)="eliminar.emit(row); menu.set(null)"
-                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-                              >
-                                <lucide-icon name="trash-2" [size]="16" />
-                                Eliminar
-                              </button>
+                              @if (conEliminar()) {
+                                <button
+                                  type="button"
+                                  (click)="eliminar.emit(row); menu.set(null)"
+                                  class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                                >
+                                  <lucide-icon name="trash-2" [size]="16" />
+                                  Eliminar
+                                </button>
+                              }
                             </div>
                           }
                         </div>
@@ -312,6 +314,7 @@ export class ParamTableComponent {
   readonly page = input(1);
   readonly itemsPerPage = input(20);
   readonly conAcciones = input(true);
+  readonly conEliminar = input(true);
   readonly mensajeVacio = input('No se encontraron registros.');
   readonly anchoMinimo = input('900px');
   /** IDs de filas a resaltar temporalmente (p. ej. tras carga masiva). */

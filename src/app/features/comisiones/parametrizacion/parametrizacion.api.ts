@@ -551,24 +551,6 @@ export class ParametrizacionApi {
       'Error actualizando la exclusión de contrato',
     );
   }
-
-  deleteExcludedContract(id: string): Promise<void> {
-    return this.http.send<void>(
-      `/api/commission-excluded-contract/${id}`,
-      'DELETE',
-      undefined,
-      'Error eliminando la exclusión de contrato',
-    );
-  }
-
-  toggleExcludedContract(id: string, isActive: boolean): Promise<unknown> {
-    return this.http.send(
-      `/api/commission-excluded-contract/${id}/toggle-active`,
-      'POST',
-      { is_active: isActive },
-      'Error cambiando el estado de la exclusión de contrato',
-    );
-  }
 }
 
 // ── Formas del API y mapeos ─────────────────────────────────────────────────
@@ -939,37 +921,43 @@ function toSpecialCaseRequest(r: Partial<SpecialCaseRecord>) {
 }
 
 interface ApiExcludedContract {
-  id?: string;
-  excluded_contract_id?: string;
-  company_code: string | number;
-  company_name: string;
+  id: string;
   product: string;
-  long_contract: string | number;
-  is_active: boolean;
-  updated_at?: string;
+  contract: number;
+  long_contract: string | null;
+  period_from: number;
+  period_to: number | null;
+  exclusion_type: number;
+  exclusion_type_name: string | null;
+  reason: string | null;
+  updated_by: string | null;
+  updated_at: string | null;
+  client_name: string | null;
 }
 
 function mapExcludedContract(api: ApiExcludedContract): ExcludedContractRecord {
   return {
-    id:
-      api.excluded_contract_id ??
-      api.id ??
-      `${api.company_code}-${api.product}-${api.long_contract}`,
-    NombreCompania: api.company_name,
-    CodigoCompania: String(api.company_code ?? ''),
+    id: api.id,
     Producto: api.product ?? '',
-    ContratoLargo: String(api.long_contract ?? ''),
-    Activo: Boolean(api.is_active),
+    Contrato: String(api.contract ?? ''),
+    ContratoLargo: api.long_contract ?? '',
+    NombreCliente: api.client_name ?? '',
+    PeriodoDesde: String(api.period_from ?? ''),
+    PeriodoHasta: api.period_to ? String(api.period_to) : 'Vigente',
+    TipoExclusion: String(api.exclusion_type ?? ''),
+    TipoExclusionNombre: api.exclusion_type_name ?? '',
+    Motivo: api.reason ?? '',
+    UsuarioModifica: api.updated_by ?? '',
     UltimaActualizacion: api.updated_at ?? '',
   };
 }
 
 function toExcludedContractRequest(r: Partial<ExcludedContractRecord>) {
   return {
-    company_code: String(r.CodigoCompania ?? ''),
-    company_name: r.NombreCompania ?? '',
-    product: r.Producto ?? '',
+    product: (r.Producto ?? '').trim().toUpperCase(),
     long_contract: String(r.ContratoLargo ?? ''),
-    is_active: r.Activo ?? true,
+    period_from: Number(r.PeriodoDesde),
+    exclusion_type: Number(r.TipoExclusion),
+    reason: (r.Motivo ?? '').trim(),
   };
 }

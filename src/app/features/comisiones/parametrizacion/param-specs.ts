@@ -10,10 +10,10 @@ import {
   AccountingCategory,
   CANAL_OPTIONS,
   CATEGORY_TO_COMPANY_CODE,
-  COMPANY_CODE_TO_NAME,
   COMPANY_OPTIONS,
   DOCUMENT_TYPE_OPTIONS,
   STATUS_OPTIONS,
+  TIPO_EXCLUSION_OPTIONS,
   deriveNombreContabilidad,
   documentoValido,
   extractAbreviacionFromCommissionName,
@@ -40,6 +40,8 @@ export interface SeccionSpec {
   /** Diferidos consulta al backend por rango de fechas. */
   conRangoFechas?: boolean;
   botonCrear?: string;
+  /** Sin la acción Eliminar (exclusión de contratos: se levanta con una vigencia nueva). */
+  sinEliminar?: boolean;
   /** Abre el modal de carga masiva (ajustes de comisiones). */
   botonCargaMasiva?: string;
   formColumnas?: 2 | 3;
@@ -49,7 +51,7 @@ export interface SeccionSpec {
   tituloEditar?: string;
   descEditar?: (row: ParamRow) => string;
   buscarEn: (row: ParamRow) => unknown[];
-  campos?: (ctx: FormCtx) => ParamField[];
+  campos?: (ctx: FormCtx, editando?: boolean) => ParamField[];
   aFormulario?: (row: ParamRow | null, ctx: FormCtx) => ParamValues;
   aRegistro?: (v: ParamValues, ctx: FormCtx) => Record<string, unknown>;
   derivar?: (key: string, v: ParamValues, ctx: FormCtx) => ParamValues;
@@ -71,9 +73,6 @@ const codigoCanal = (canal: string): number =>
 
 const codigoCompania = (nombre: string): number =>
   COMPANY_OPTIONS.find((c) => c.value === nombre)?.code ?? 0;
-
-const nombreCompania = (codigo: string | number | undefined): string =>
-  COMPANY_CODE_TO_NAME[Number(codigo)] ?? '';
 
 /** Porcentajes: el registro guarda fracción y el formulario muestra 0-100. */
 const aPorcentajeForm = (v: unknown): string => {
@@ -819,24 +818,35 @@ const CASOS_ESPECIALES: SeccionSpec = {
 
 // ── 9. Exclusión de contratos ───────────────────────────────────────────────
 
+// Vigencias por Producto + Contrato + PeriodoDesde, como Desarrollo Comercial: no
+// se borran ni se desactivan; para levantar una exclusión se registra el tipo 1
+// desde un periodo. Al editar solo cambian el tipo y el motivo.
 const EXCLUSION_CONTRATOS: SeccionSpec = {
   id: 'exclusionContratos',
   titulo: 'Exclusión de Contratos',
-  placeholderBusqueda: 'Buscar por compañía, producto o contrato...',
+  subtitulo:
+    'Cada registro aplica desde su periodo hasta el siguiente registro del mismo contrato. Para levantar una exclusión, registra "Sin exclusión" desde el periodo en que vuelve a pagar.',
+  placeholderBusqueda: 'Buscar por producto, contrato, cliente o motivo...',
   botonCrear: 'Crear Registro',
-  anchoMinimo: '1100px',
+  sinEliminar: true,
+  anchoMinimo: '1300px',
   formColumnas: 2,
-  formAncho: '620px',
+  formAncho: '640px',
   tituloCrear: 'Crear Exclusión de Contrato',
-  descCrear: 'Ingresa los detalles para registrar una nueva exclusión de contrato.',
+  descCrear: 'Registra desde qué periodo y qué pagos se excluyen del contrato.',
   tituloEditar: 'Editar Exclusión de Contrato',
-  descEditar: () => 'Modifica los detalles de la exclusión de contrato seleccionada.',
+  descEditar: (r) =>
+    `Corrige el tipo o el motivo de la exclusión del contrato ${r['ContratoLargo']} desde ${r['PeriodoDesde']}.`,
   columnas: [
-    { key: 'NombreCompania', label: 'Nombre Compañía' },
-    { key: 'CodigoCompania', label: 'Código Compañía', tipo: 'mono' },
     { key: 'Producto', label: 'Producto', tipo: 'chipPrimario' },
     { key: 'ContratoLargo', label: 'Contrato Largo', tipo: 'mono' },
-    { key: 'Activo', label: 'Activo', tipo: 'switch' },
+    { key: 'Contrato', label: 'Contrato', tipo: 'mono' },
+    { key: 'NombreCliente', label: 'Cliente' },
+    { key: 'TipoExclusionNombre', label: 'Tipo de Exclusión', tipo: 'chipMuted' },
+    { key: 'PeriodoDesde', label: 'Desde', tipo: 'mono' },
+    { key: 'PeriodoHasta', label: 'Hasta', tipo: 'mono' },
+    { key: 'Motivo', label: 'Motivo' },
+    { key: 'UsuarioModifica', label: 'Modificado por' },
     {
       key: 'UltimaActualizacion',
       label: 'Última Actualización',
@@ -844,57 +854,82 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
       filtro: 'fecha',
     },
   ],
-  buscarEn: (r) => [r['NombreCompania'], r['Producto'], r['ContratoLargo'], r['CodigoCompania']],
-  campos: () => [
+  buscarEn: (r) => [
+    r['Producto'],
+    r['ContratoLargo'],
+    r['Contrato'],
+    r['NombreCliente'],
+    r['TipoExclusionNombre'],
+    r['Motivo'],
+  ],
+  campos: (_ctx, editando) => [
     {
-      key: 'NombreCompania',
-      label: 'Nombre Compañía',
-      tipo: 'select',
+      key: 'Producto',
+      label: 'Producto',
+      tipo: 'texto',
       requerido: true,
-      opciones: companyOptions,
-      ancho: 'full',
+      maxLength: 20,
+      placeholder: 'Ej. FPOB, FCES',
+      deshabilitado: editando,
     },
-    {
-      key: 'CodigoCompania',
-      label: 'Código Compañía',
-      tipo: 'numero',
-      requerido: true,
-      deshabilitado: true,
-      maxLength: 50,
-    },
-    { key: 'Producto', label: 'Producto', tipo: 'texto', requerido: true, maxLength: 255 },
     {
       key: 'ContratoLargo',
       label: 'Contrato Largo',
       tipo: 'numero',
       requerido: true,
       maxLength: 18,
+      deshabilitado: editando,
     },
-    { key: 'Activo', label: 'Estado Activo', tipo: 'switch', ayuda: 'Estado del registro' },
+    {
+      key: 'PeriodoDesde',
+      label: 'Aplica desde',
+      tipo: 'periodo',
+      requerido: true,
+      deshabilitado: editando,
+    },
+    {
+      key: 'TipoExclusion',
+      label: 'Tipo de Exclusión',
+      tipo: 'select',
+      requerido: true,
+      opciones: TIPO_EXCLUSION_OPTIONS,
+    },
+    {
+      key: 'Motivo',
+      label: 'Motivo',
+      tipo: 'texto',
+      requerido: true,
+      maxLength: 500,
+      ancho: 'full',
+      ayuda: 'Queda en la auditoría de la exclusión (mínimo 5 caracteres).',
+    },
   ],
-  aFormulario: (r) => {
-    const codigo = r ? String(r['CodigoCompania'] ?? '') : '';
-    return {
-      NombreCompania: r
-        ? nombreCompania(codigo) || txt(r['NombreCompania'] as string)
-        : '',
-      CodigoCompania: codigo,
-      Producto: txt(r?.['Producto'] as string),
-      ContratoLargo: txt(r?.['ContratoLargo'] as string),
-      Activo: r ? Boolean(r['Activo']) : true,
-    };
-  },
-  aRegistro: (v) => ({
-    NombreCompania: txt(v['NombreCompania']),
-    CodigoCompania: txt(v['CodigoCompania']) || String(codigoCompania(txt(v['NombreCompania']))),
-    Producto: txt(v['Producto']),
-    ContratoLargo: txt(v['ContratoLargo']),
-    Activo: Boolean(v['Activo']),
+  aFormulario: (r) => ({
+    Producto: txt(r?.['Producto'] as string),
+    ContratoLargo: txt(r?.['ContratoLargo'] as string),
+    PeriodoDesde: r ? periodoYYYYMM(r['PeriodoDesde']) : '',
+    TipoExclusion: r ? txt(r['TipoExclusion'] as string) : '4',
+    Motivo: '',
   }),
-  derivar: (key, v) => {
-    if (key !== 'NombreCompania') return v;
-    const codigo = codigoCompania(txt(v['NombreCompania']));
-    return { ...v, CodigoCompania: codigo ? String(codigo) : '' };
+  aRegistro: (v) => ({
+    Producto: txt(v['Producto']).trim().toUpperCase(),
+    ContratoLargo: txt(v['ContratoLargo']),
+    PeriodoDesde: txt(v['PeriodoDesde']),
+    TipoExclusion: txt(v['TipoExclusion']),
+    Motivo: txt(v['Motivo']).trim(),
+  }),
+  validar: (v) => {
+    const errs: Record<string, string> = {};
+    const producto = txt(v['Producto']).trim().toUpperCase();
+    if (producto && !/^[A-Z0-9]{2,20}$/.test(producto)) {
+      errs['Producto'] = 'Solo letras y números (2 a 20)';
+    }
+    if (producto === 'FCES' && txt(v['ContratoLargo']) && !/^\d{12}$/.test(txt(v['ContratoLargo']))) {
+      errs['ContratoLargo'] = 'El contrato largo de FCES debe tener 12 dígitos';
+    }
+    const motivo = txt(v['Motivo']).trim();
+    if (motivo && motivo.length < 5) errs['Motivo'] = 'Mínimo 5 caracteres';
+    return errs;
   },
 };
 

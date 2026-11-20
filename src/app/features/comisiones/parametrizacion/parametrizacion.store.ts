@@ -296,8 +296,6 @@ export class ParametrizacionStore {
           return this.api.deleteCommissionAdjustment(id);
         case 'casosEspeciales':
           return this.api.deleteSpecialCase(id);
-        case 'exclusionContratos':
-          return this.api.deleteExcludedContract(id);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
@@ -329,8 +327,6 @@ export class ParametrizacionStore {
           return this.api.toggleCommissionAdjustment(id, activo);
         case 'casosEspeciales':
           return this.api.toggleSpecialCase(id, activo);
-        case 'exclusionContratos':
-          return this.api.toggleExcludedContract(id, activo);
         default:
           return Promise.reject(new Error('Esta sección es de solo lectura'));
       }
