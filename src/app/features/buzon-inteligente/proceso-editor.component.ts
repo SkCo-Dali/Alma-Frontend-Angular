@@ -136,7 +136,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
                   <input class="input sm" [(ngModel)]="e.valor" placeholder="valor" aria-label="Valor" />
                 </div>
               } @else {
-                <input class="input sm" [(ngModel)]="e.criterio" placeholder="Cuándo aplica, en lenguaje natural" aria-label="Criterio" />
+                <textarea class="input sm texto-largo" rows="2" [(ngModel)]="e.criterio" placeholder="Cuándo aplica, en lenguaje natural" aria-label="Criterio"></textarea>
               }
             </div>
           }
@@ -182,7 +182,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
                                 @for (t of tipos; track t.id) { <option [value]="t.id">{{ t.nombre }}</option> }
                               </select>
                             </td>
-                            <td style="padding:4px"><input class="input sm" style="min-width:260px" [(ngModel)]="f.descripcion" aria-label="Descripción" /></td>
+                            <td style="padding:4px"><textarea class="input sm texto-largo" rows="1" style="min-width:260px" [(ngModel)]="f.descripcion" aria-label="Descripción"></textarea></td>
                             <td style="padding:4px">
                               <select class="input sm" style="min-width:115px" [(ngModel)]="f.critico" aria-label="Crítico">
                                 <option value="0">No</option><option value="1">Sí</option><option value="alt">Alterno</option>
