@@ -85,8 +85,14 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       .dtabs .dotb { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
       .dbody { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
       .dbody > * { flex-shrink: 0; }
-      .ia-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
-      @media (max-width: 1100px) { .ia-grid { grid-template-columns: minmax(0, 1fr); } }
+      /* Resumen y acciones lado a lado; los datos estructurados abajo, a todo el ancho. */
+      .ia-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+      .ia-grid > .stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+      .ia-grid dl.kv dd .chipo { white-space: normal; overflow-wrap: anywhere; margin-bottom: 4px; }
+      .ia-grid table.t td { white-space: nowrap; }
+      /* Nada se sale del recuadro: lo ancho se desplaza dentro y el JSON parte las líneas largas. */
+      .ia-grid .box { grid-template-columns: minmax(0, 1fr); }
+      .ia-grid pre.json .ln { white-space: pre-wrap; overflow-wrap: anywhere; }
       .eml { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 320px; display: flex; flex-direction: column; }
     `,
   ],
@@ -1288,14 +1294,28 @@ export class BandejaBuzonComponent {
     return Object.values(this.tiposCampos(c)).some((f) => f.critico);
   }
 
-  private esTabla(v: unknown): boolean {
-    return Array.isArray(v) && v.length > 0 && v.every((x) => x !== null && typeof x === 'object' && !Array.isArray(x));
+  /** Un elemento de lista como fila: objeto, o texto «clave=valor, clave=valor» (así llega a veces de Nova). */
+  private filaDe(x: unknown): Record<string, unknown> | null {
+    if (x !== null && typeof x === 'object' && !Array.isArray(x)) return x as Record<string, unknown>;
+    if (typeof x !== 'string' || !/^\s*[\wáéíóúñ]+\s*=/i.test(x)) return null;
+    const fila: Record<string, string> = {};
+    for (const par of x.split(/,\s*(?=[\wáéíóúñ]+\s*=)/i)) {
+      const i = par.indexOf('=');
+      if (i < 1) return null;
+      fila[par.slice(0, i).trim()] = par.slice(i + 1).trim();
+    }
+    return fila;
+  }
+
+  /** `textos`: también acepta filas «clave=valor» (solo para ver; al corregir se editan tal como están guardadas). */
+  private esTabla(v: unknown, textos = false): boolean {
+    return Array.isArray(v) && v.length > 0 && v.every((x) => (textos ? this.filaDe(x) !== null : x !== null && typeof x === 'object' && !Array.isArray(x)));
   }
 
   protected simples(c: Correo): { clave: string; valor: string; critico: boolean; vacio: boolean; lista: string[] | null; bool: boolean | null }[] {
     const tipos = this.tiposCampos(c);
     return Object.entries(c.datos_extraidos ?? {})
-      .filter(([, v]) => !this.esTabla(v))
+      .filter(([, v]) => !this.esTabla(v, true))
       .map(([clave, v]) => ({
         clave,
         valor: v === null || v === undefined ? '' : String(v),
@@ -1308,9 +1328,9 @@ export class BandejaBuzonComponent {
 
   protected tablas(c: Correo): { clave: string; columnas: string[]; filas: Record<string, string>[] }[] {
     return Object.entries(c.datos_extraidos ?? {})
-      .filter(([, v]) => this.esTabla(v))
+      .filter(([, v]) => this.esTabla(v, true))
       .map(([clave, v]) => {
-        const filas = (v as Record<string, unknown>[]).map((x) => Object.fromEntries(Object.entries(x).map(([k, val]) => [k, val === null || val === undefined ? '' : String(val)])));
+        const filas = (v as unknown[]).map((y) => this.filaDe(y) ?? {}).map((x) => Object.fromEntries(Object.entries(x).map(([k, val]) => [k, val === null || val === undefined ? '' : String(val)])));
         return { clave, columnas: [...new Set(filas.flatMap((f) => Object.keys(f)))], filas };
       });
   }
