@@ -442,7 +442,7 @@ interface FijaEd {
         @switch (modal()) {
           @case ('tpl') {
             <div class="modal solid" role="dialog" aria-modal="true" aria-label="Plantilla de prompt">
-              <div class="row between"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala completa en la IA corporativa (Copilot o Claude). La IA te hace las preguntas (PARTE A) y te entrega el prompt con la estructura que Nova lee (PARTE B). Si ya tienes un prompt, la IA lo convierte. Pégalo luego en «Pegar o subir prompt».</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              <div class="row between mhead"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala completa en la IA corporativa (Copilot o Claude). La IA te hace las preguntas (PARTE A) y te entrega el prompt con la estructura que Nova lee (PARTE B). Si ya tienes un prompt, la IA lo convierte. Pégalo luego en «Pegar o subir prompt».</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
               <pre class="tpl">{{ plantilla }}</pre>
               <div class="row between">
                 <button type="button" class="btn outline sm" (click)="modal.set('ej')"><lucide-icon name="book-open" [size]="13" /> Ver ejemplo completo</button>
@@ -470,7 +470,7 @@ interface FijaEd {
               </div>
             } @else {
               <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
-                <div class="row between">
+                <div class="row between mhead">
                   @if (objetivo(); as o) {
                     @if (pestana() === 'general') {
                       <div><h2 class="sm b">Reglas generales del área</h2><p class="xs muted">Aplican a todos los procesos de {{ buzon().nombre }}. Se guardan en el borrador y entran al publicar.</p></div>
