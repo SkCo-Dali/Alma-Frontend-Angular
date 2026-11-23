@@ -1,11 +1,12 @@
 // Estado de Parametrización: entidades con carga perezosa por pestaña. Como en
 // el original, cada entidad se trae COMPLETA (todas las páginas) y el filtrado, orden y
 // paginación son en cliente; tras cualquier mutación se recarga la entidad entera en vez
-// de parchear el arreglo local.
+// de parchear el arreglo local. Exclusión de contratos es la excepción: guarda solo
+// la página visible y la consulta (página, tamaño, búsqueda, orden) va al backend.
 
 import { Injectable, inject, signal } from '@angular/core';
 import { ComisionesToast } from '../comisiones-toast.service';
-import { ParametrizacionApi } from './parametrizacion.api';
+import { ExcludedContractQuery, ParametrizacionApi } from './parametrizacion.api';
 import {
   AccountingRecord,
   AutonomousPatrimonyRecord,
@@ -43,6 +44,10 @@ export class ParametrizacionStore {
   readonly commissionAdjustments = signal<CommissionConfigRecord[]>([]);
   readonly specialCases = signal<SpecialCaseRecord[]>([]);
   readonly excludedContracts = signal<ExcludedContractRecord[]>([]);
+  readonly excludedTotal = signal(0);
+  readonly consultaExclusion = signal<ExcludedContractQuery>({ page: 1, pageSize: 20 });
+  /** Solo se aplica la respuesta de la última consulta (búsquedas seguidas). */
+  private turnoExclusion = 0;
 
   readonly loading = signal<Record<SeccionId, boolean>>({
     contabilidad: false,
@@ -73,14 +78,10 @@ export class ParametrizacionStore {
     try {
       destino.set(await traer());
       if (seccion === 'casosEspeciales') this.errorCasosEspeciales.set(null);
-      if (seccion === 'exclusionContratos') this.errorExclusionContratos.set(null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (seccion === 'casosEspeciales') {
         this.errorCasosEspeciales.set(msg);
-      }
-      if (seccion === 'exclusionContratos') {
-        this.errorExclusionContratos.set(msg);
       }
       this.toast.errorGenerico('fetch', msg);
     } finally {
@@ -144,12 +145,25 @@ export class ParametrizacionStore {
     );
   }
 
-  cargarExclusionContratos(): Promise<void> {
-    return this.cargar(
-      'exclusionContratos',
-      () => this.api.listExcludedContracts(),
-      this.excludedContracts,
-    );
+  /** Trae la página de la consulta actual, con los cambios que se pasen. */
+  async cargarExclusionContratos(cambio: Partial<ExcludedContractQuery> = {}): Promise<void> {
+    this.consultaExclusion.update((prev) => ({ ...prev, ...cambio }));
+    const turno = ++this.turnoExclusion;
+    this.marcar('exclusionContratos', true);
+    try {
+      const { items, total } = await this.api.listExcludedContracts(this.consultaExclusion());
+      if (turno !== this.turnoExclusion) return;
+      this.excludedContracts.set(items);
+      this.excludedTotal.set(total);
+      this.errorExclusionContratos.set(null);
+    } catch (e) {
+      if (turno !== this.turnoExclusion) return;
+      const msg = e instanceof Error ? e.message : String(e);
+      this.errorExclusionContratos.set(msg);
+      this.toast.errorGenerico('fetch', msg);
+    } finally {
+      if (turno === this.turnoExclusion) this.marcar('exclusionContratos', false);
+    }
   }
 
   /** Lo que se recarga al entrar a cada pestaña (igual que el original). */
