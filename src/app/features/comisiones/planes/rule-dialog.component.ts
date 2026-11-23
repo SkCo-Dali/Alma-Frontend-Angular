@@ -30,7 +30,7 @@ import { motivoDeError } from '../api-error';
 import { CatalogsStore } from '../catalogos/catalogs.store';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionRule } from './commission-plans.api';
-import { CommissionRulesApi } from './commission-rules.api';
+import { CommissionRulesApi, RulePreviewResponse } from './commission-rules.api';
 import {
   ConditionRow,
   FORMULA_FUNCTIONS,
@@ -414,12 +414,88 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Vista previa -->
         @if (tab() === 'preview') {
-          <div class="mt-4 py-8 text-center">
-            <p class="mb-2 text-sm text-muted-foreground">
-              Las siguientes 10 comisiones principales mostradas son solo una vista previa
-              del total que tu regla podría generar.
-            </p>
-            <p class="font-medium">Vista previa no disponible.</p>
+          <div class="mt-4 space-y-3">
+            <div
+              class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+            >
+              <strong>Vista previa fuera del flujo de comisiones.</strong>
+              Se calcula aplicando la fórmula y las condiciones directamente sobre el insumo
+              del catálogo, sin los filtros, ajustes ni modificaciones que se hacen durante el
+              flujo. El resultado del motor puede ser distinto si algún proceso de negocio
+              altera estos registros.
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-sm text-muted-foreground">
+                @if (vistaPrevia(); as vp) {
+                  Insumo de {{ vp.catalogo }}, periodo {{ vp.periodo }} (el último cargado,
+                  generalmente el mes en curso).
+                } @else {
+                  Usa el último insumo cargado del catálogo (generalmente el mes en curso) y
+                  la regla como está en pantalla, aunque no esté guardada.
+                }
+              </p>
+              <button
+                type="button"
+                (click)="generarVistaPrevia()"
+                [disabled]="cargandoPrevia() || !puedeCalcular()"
+                class="alma-btn alma-btn-outline w-full shrink-0 sm:w-auto"
+              >
+                {{ cargandoPrevia() ? 'Generando…' : 'Generar vista previa' }}
+              </button>
+            </div>
+
+            @if (!puedeCalcular()) {
+              <p class="text-sm text-muted-foreground">
+                Selecciona el catálogo y escribe la fórmula para generar la vista previa.
+              </p>
+            } @else if (errorPrevia(); as error) {
+              <p class="text-sm text-destructive">{{ error }}</p>
+            } @else if (vistaPrevia(); as vp) {
+              @if (vp.total === 0) {
+                <p class="py-6 text-center font-medium">
+                  Ningún registro del insumo {{ vp.periodo }} cumple las condiciones de la regla.
+                </p>
+              } @else {
+                <p class="text-sm">
+                  {{ formatearNumero(vp.total) }} registros cumplen las condiciones. Se muestran
+                  los {{ vp.filas.length }} de mayor comisión.
+                </p>
+                <div class="overflow-x-auto rounded-lg border border-border">
+                  <table class="alma-table min-w-full">
+                    <thead class="bg-[var(--table-header)]">
+                      <tr>
+                        @for (col of vp.columnas; track col) {
+                          <th class="whitespace-nowrap px-3 py-2 text-left text-[11px] uppercase tracking-wide">
+                            {{ col === 'ValorComision' ? 'Comisión' : col }}
+                          </th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (fila of vp.filas; track $index) {
+                        <tr>
+                          @for (col of vp.columnas; track col) {
+                            <td
+                              class="whitespace-nowrap px-3 py-2 text-xs"
+                              [class.text-right]="col === 'ValorComision'"
+                              [class.font-semibold]="col === 'ValorComision'"
+                            >
+                              {{ celda(fila[col], col) }}
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            } @else if (!cargandoPrevia()) {
+              <p class="py-6 text-center text-sm text-muted-foreground">
+                Las 10 comisiones principales que se muestren son solo una muestra del total que
+                la regla podría generar.
+              </p>
+            }
           </div>
         }
 
@@ -469,6 +545,10 @@ export class RuleDialogComponent implements OnInit {
   protected readonly tab = signal<Tab>('information');
   protected readonly guardando = signal(false);
 
+  protected readonly vistaPrevia = signal<RulePreviewResponse | null>(null);
+  protected readonly cargandoPrevia = signal(false);
+  protected readonly errorPrevia = signal<string | null>(null);
+
   protected nombre = '';
   protected descripcion = '';
   protected formula = '';
@@ -509,11 +589,59 @@ export class RuleDialogComponent implements OnInit {
   });
 
   protected puedeGuardar(): boolean {
-    return (
-      this.nombre.trim().length > 0 &&
-      this.formula.trim().length > 0 &&
-      !!this.catalogo()
-    );
+    return this.nombre.trim().length > 0 && this.puedeCalcular();
+  }
+
+  /** Lo mínimo para calcular la regla: catálogo y fórmula. */
+  protected puedeCalcular(): boolean {
+    return this.formula.trim().length > 0 && !!this.catalogo();
+  }
+
+  // ── Vista previa ──────────────────────────────────────────────────────────
+
+  /** Corre la regla como está en pantalla (guardada o no) sobre el último insumo. */
+  protected async generarVistaPrevia(): Promise<void> {
+    if (!this.puedeCalcular()) return;
+    this.cargandoPrevia.set(true);
+    this.errorPrevia.set(null);
+    this.vistaPrevia.set(null);
+    try {
+      const completas = this.condiciones().filter((c) => c.field && c.condition && c.value);
+      const res = await this.api.preview({
+        rule_name: this.nombre.trim(),
+        catalog_id: this.catalogo(),
+        formula: this.formula,
+        conditions: completas.map((c) => ({
+          field_name: c.field,
+          operator: mapUIOperatorToAPI(c.condition),
+          field_value: c.value,
+          value_type: c.valueType,
+          logical_operator: c.logical ?? 'AND',
+        })),
+      });
+      this.vistaPrevia.set(res);
+    } catch (e) {
+      console.error('Error generando la vista previa:', e);
+      this.errorPrevia.set(motivoDeError(e) || 'No se pudo generar la vista previa.');
+    } finally {
+      this.cargandoPrevia.set(false);
+    }
+  }
+
+  protected formatearNumero(n: number): string {
+    return n.toLocaleString('es-CO');
+  }
+
+  protected celda(valor: string | number | boolean | null | undefined, col: string): string {
+    if (valor === null || valor === undefined || valor === '') return '—';
+    if (col === 'ValorComision' && typeof valor === 'number') {
+      return valor.toLocaleString('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 2,
+      });
+    }
+    return String(valor);
   }
 
   constructor() {

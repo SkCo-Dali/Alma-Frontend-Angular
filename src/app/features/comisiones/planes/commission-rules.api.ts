@@ -140,6 +140,30 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
   return s ? `?${s}` : '';
 }
 
+/** Vista previa: la regla tal como está en pantalla, sin guardar. */
+export interface RulePreviewRequest {
+  rule_name: string;
+  catalog_id: string;
+  formula: string;
+  conditions: {
+    field_name: string;
+    operator: ConditionOperator;
+    field_value: string;
+    value_type: ValueType;
+    logical_operator: LogicalOperator;
+  }[];
+}
+
+/** Hasta 10 filas: solo la regla, las columnas de las condiciones y ValorComision. */
+export interface RulePreviewResponse {
+  periodo: string;
+  catalogo: string;
+  regla: string;
+  total: number;
+  columnas: string[];
+  filas: Record<string, string | number | boolean | null>[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CommissionRulesApi {
   private readonly http = inject(ComisionesHttp);
@@ -195,6 +219,15 @@ export class CommissionRulesApi {
       'DELETE',
       undefined,
       'Error eliminando la regla',
+    );
+  }
+
+  preview(data: RulePreviewRequest): Promise<RulePreviewResponse> {
+    return this.http.send<RulePreviewResponse>(
+      '/api/commission-rules/preview',
+      'POST',
+      data,
+      'Error generando la vista previa',
     );
   }
 
