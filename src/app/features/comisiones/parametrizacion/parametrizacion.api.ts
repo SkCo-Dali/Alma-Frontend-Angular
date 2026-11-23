@@ -5,6 +5,7 @@
 //   diferidos) y la UI necesita todos los registros, así que se traen todas las
 //   páginas: la 1 primero (da el total) y el resto en paralelo. Diferidos va
 //   secuencial con 200 ms entre páginas porque el servicio responde 429.
+//   Exclusión de contratos (~30 mil filas) es la excepción: pagina en el backend.
 // - Los porcentajes viajan como fracción (0.25) y se muestran como 25%: se
 //   divide entre 100 al escribir y la vista multiplica al mostrar.
 // - Diferidos y casos especiales no siempre traen id: se arma uno compuesto.
@@ -503,32 +504,21 @@ export class ParametrizacionApi {
 
   // ── 9. Exclusión de contratos ─────────────────────────────────────────────
 
-  /** El listado puede llegar como arreglo plano o como {items}. */
-  async listExcludedContracts(): Promise<ExcludedContractRecord[]> {
-    const primera = await this.http.get<
-      ApiExcludedContract[] | ListResponse<ApiExcludedContract>
-    >(`/api/commission-excluded-contract${qs({ page: 1, page_size: PAGE_SIZE })}`);
-    const normalizar = (
-      res: ApiExcludedContract[] | ListResponse<ApiExcludedContract>,
-    ): { items: ApiExcludedContract[]; total: number } =>
-      Array.isArray(res)
-        ? { items: res, total: res.length }
-        : { items: res.items ?? [], total: res.total ?? res.items?.length ?? 0 };
-
-    const { items, total } = normalizar(primera);
-    let todos = [...items];
-    const paginas = Math.ceil(total / PAGE_SIZE);
-    if (paginas > 1) {
-      const restantes = await Promise.all(
-        Array.from({ length: paginas - 1 }, (_, i) =>
-          this.http.get<ApiExcludedContract[] | ListResponse<ApiExcludedContract>>(
-            `/api/commission-excluded-contract${qs({ page: i + 2, page_size: PAGE_SIZE })}`,
-          ),
-        ),
-      );
-      for (const r of restantes) todos = [...todos, ...normalizar(r).items];
-    }
-    return todos.map(mapExcludedContract);
+  /** Solo la página pedida: búsqueda, orden y paginación los hace el backend. */
+  async listExcludedContracts(
+    q: ExcludedContractQuery,
+  ): Promise<{ items: ExcludedContractRecord[]; total: number }> {
+    const sort = q.sort ? ORDEN_EXCLUSION[q.sort] : undefined;
+    const res = await this.http.get<ListResponse<ApiExcludedContract>>(
+      `/api/commission-excluded-contract${qs({
+        page: q.page,
+        page_size: q.pageSize,
+        search: q.search?.trim(),
+        sort,
+        order: sort ? q.order : undefined,
+      })}`,
+    );
+    return { items: (res.items ?? []).map(mapExcludedContract), total: res.total ?? 0 };
   }
 
   createExcludedContract(data: Partial<ExcludedContractRecord>): Promise<ApiExcludedContract> {
@@ -920,6 +910,28 @@ function toSpecialCaseRequest(r: Partial<SpecialCaseRecord>) {
     is_active: r.Activo ?? true,
   };
 }
+
+export interface ExcludedContractQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+  /** Columna de la tabla (key de la UI). */
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+/** Columna de la tabla → nombre que acepta el backend en `sort`. */
+const ORDEN_EXCLUSION: Record<string, string> = {
+  Producto: 'product',
+  Contrato: 'contract',
+  ContratoLargo: 'long_contract',
+  NombreCliente: 'client_name',
+  Activo: 'active',
+  Motivo: 'reason',
+  UsuarioModifica: 'updated_by',
+  UltimaActualizacion: 'updated_at',
+  TipoExclusion: 'exclusion_type',
+};
 
 interface ApiExcludedContract {
   id: string;

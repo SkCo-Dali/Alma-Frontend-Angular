@@ -42,6 +42,8 @@ export interface SeccionSpec {
   botonCrear?: string;
   /** Sin la columna Acciones: se edita en la tabla (exclusión de contratos). */
   sinMenu?: boolean;
+  /** Búsqueda, orden y paginación en el backend (exclusión de contratos). */
+  paginadoServidor?: boolean;
   /** Abre el modal de carga masiva (ajustes de comisiones). */
   botonCargaMasiva?: string;
   formColumnas?: 2 | 3;
@@ -827,6 +829,7 @@ const EXCLUSION_CONTRATOS: SeccionSpec = {
   placeholderBusqueda: 'Buscar por producto, contrato, cliente o tipo...',
   botonCrear: 'Crear Registro',
   sinMenu: true,
+  paginadoServidor: true,
   anchoMinimo: '1500px',
   formColumnas: 2,
   formAncho: '640px',

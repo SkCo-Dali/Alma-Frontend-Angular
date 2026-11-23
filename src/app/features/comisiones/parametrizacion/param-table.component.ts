@@ -112,7 +112,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
                         [direction]="sort().direction"
                         (sorted)="ordenar($event)"
                       >
-                        @if (col.filtro !== 'ninguno') {
+                        @if (col.filtro !== 'ninguno' && !paginadoServidor()) {
                           @if (col.filtro === 'fecha') {
                             <alma-date-column-filter
                               [column]="col.key"
@@ -293,7 +293,7 @@ export const PARAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 300, 400, 500] as 
           <alma-grid-pagination
             [currentPage]="pageActual()"
             [totalPages]="totalPaginas()"
-            [total]="filtradas().length"
+            [total]="paginadoServidor() ? totalServidor() : filtradas().length"
             [itemsPerPage]="itemsPerPage()"
             [pageSizeOptions]="tamanos"
             surfaceClass=""
@@ -318,8 +318,13 @@ export class ParamTableComponent {
   readonly anchoMinimo = input('900px');
   /** IDs de filas a resaltar temporalmente (p. ej. tras carga masiva). */
   readonly idsResaltados = input<ReadonlySet<string> | string[]>([]);
+  /** `rows` ya es la página del backend: sin filtros por columna, el orden se
+   *  emite en `ordenChange` y el total llega en `totalServidor`. */
+  readonly paginadoServidor = input(false);
+  readonly totalServidor = input(0);
 
   readonly pageChange = output<number>();
+  readonly ordenChange = output<{ key: string; direction: SortDirection }>();
   readonly itemsPerPageChange = output<number>();
   readonly editar = output<ParamRow>();
   readonly eliminar = output<ParamRow>();
@@ -454,9 +459,11 @@ export class ParamTableComponent {
       else if (prev.key === key && prev.direction === 'desc') direction = null;
       return { key, direction };
     });
+    if (this.paginadoServidor()) this.ordenChange.emit(this.sort());
   }
 
   protected readonly filtradas = computed(() => {
+    if (this.paginadoServidor()) return this.rows();
     const filtros = Object.entries(this.columnFilters());
     const cols = this.columns();
     const filas = this.rows().filter((row) =>
@@ -485,7 +492,13 @@ export class ParamTableComponent {
   });
 
   protected readonly totalPaginas = computed(() =>
-    Math.max(1, Math.ceil(this.filtradas().length / this.itemsPerPage())),
+    Math.max(
+      1,
+      Math.ceil(
+        (this.paginadoServidor() ? this.totalServidor() : this.filtradas().length) /
+          this.itemsPerPage(),
+      ),
+    ),
   );
 
   /** La página se acota por si el filtro dejó menos páginas que la actual. */
@@ -494,6 +507,7 @@ export class ParamTableComponent {
   );
 
   protected readonly pagina = computed(() => {
+    if (this.paginadoServidor()) return this.rows();
     const desde = (this.pageActual() - 1) * this.itemsPerPage();
     return this.filtradas().slice(desde, desde + this.itemsPerPage());
   });

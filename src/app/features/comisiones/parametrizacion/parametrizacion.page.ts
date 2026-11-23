@@ -200,7 +200,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
               </div>
             }
 
-            @if (store.loading()[id]) {
+            @if (store.loading()[id] && !(spec.paginadoServidor && store.datos(id).length)) {
               <div class="flex items-center justify-center py-16">
                 <alma-loader [size]="72" label="Cargando registros…" />
               </div>
@@ -230,7 +230,11 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                 [conMenu]="!spec.sinMenu"
                 [anchoMinimo]="spec.anchoMinimo"
                 [idsResaltados]="id === 'ajustesComisiones' ? idsAjustesResaltados() : []"
+                [paginadoServidor]="!!spec.paginadoServidor"
+                [totalServidor]="store.excludedTotal()"
+                [class.opacity-60]="store.loading()[id]"
                 (pageChange)="setPagina(id, $event)"
+                (ordenChange)="ordenarEnServidor($event.key, $event.direction)"
                 (itemsPerPageChange)="setPorPagina(id, $event)"
                 (editar)="abrirEditar(id, $event)"
                 (eliminar)="porBorrar.set({ seccion: id, row: $event })"
@@ -329,6 +333,7 @@ export class ParametrizacionPageComponent implements OnInit {
   /** IDs de ajustes recién cargados masivamente (resalte temporal). */
   protected readonly idsAjustesResaltados = signal<ReadonlySet<string>>(new Set());
   private timerResalteAjustes: ReturnType<typeof setTimeout> | null = null;
+  private timerBusqueda: ReturnType<typeof setTimeout> | null = null;
   protected readonly formulario = signal<{
     seccion: SeccionId;
     editando: ParamRow | null;
@@ -402,12 +407,33 @@ export class ParametrizacionPageComponent implements OnInit {
 
   protected setBusqueda(id: SeccionId, texto: string): void {
     this.busqueda.update((prev) => ({ ...prev, [id]: texto }));
+    if (this.seccion(id).paginadoServidor) {
+      if (this.timerBusqueda) clearTimeout(this.timerBusqueda);
+      this.timerBusqueda = setTimeout(
+        () => void this.store.cargarExclusionContratos({ search: texto, page: 1 }),
+        400,
+      );
+      return;
+    }
     this.setPagina(id, 1);
   }
 
   protected limpiar(id: SeccionId): void {
     this.busqueda.update((prev) => ({ ...prev, [id]: '' }));
+    if (this.seccion(id).paginadoServidor) {
+      if (this.timerBusqueda) clearTimeout(this.timerBusqueda);
+      void this.store.cargarExclusionContratos({ search: '', page: 1 });
+      return;
+    }
     this.setPagina(id, 1);
+  }
+
+  protected ordenarEnServidor(key: string, direction: 'asc' | 'desc' | null): void {
+    void this.store.cargarExclusionContratos({
+      sort: direction ? key : undefined,
+      order: direction ?? undefined,
+      page: 1,
+    });
   }
 
   private claveEstado(id: SeccionId): string {
@@ -416,18 +442,28 @@ export class ParametrizacionPageComponent implements OnInit {
   }
 
   protected pagina(id: SeccionId): number {
+    if (this.seccion(id).paginadoServidor) return this.store.consultaExclusion().page;
     return this.paginas()[this.claveEstado(id)] ?? 1;
   }
 
   protected setPagina(id: SeccionId, p: number): void {
+    if (this.seccion(id).paginadoServidor) {
+      void this.store.cargarExclusionContratos({ page: p });
+      return;
+    }
     this.paginas.update((prev) => ({ ...prev, [this.claveEstado(id)]: p }));
   }
 
   protected porPagina(id: SeccionId): number {
+    if (this.seccion(id).paginadoServidor) return this.store.consultaExclusion().pageSize;
     return this.tamanos()[this.claveEstado(id)] ?? 20;
   }
 
   protected setPorPagina(id: SeccionId, n: number): void {
+    if (this.seccion(id).paginadoServidor) {
+      void this.store.cargarExclusionContratos({ pageSize: n, page: 1 });
+      return;
+    }
     this.tamanos.update((prev) => ({ ...prev, [this.claveEstado(id)]: n }));
     this.setPagina(id, 1);
   }
@@ -436,6 +472,7 @@ export class ParametrizacionPageComponent implements OnInit {
   protected filas(id: SeccionId): ParamRow[] {
     const spec = this.seccion(id);
     let filas = this.store.datos(id) as ParamRow[];
+    if (spec.paginadoServidor) return filas;
     if (spec.porCategoria) {
       const c = this.categoria(id);
       filas = filas.filter((r) => r['category'] === c);
