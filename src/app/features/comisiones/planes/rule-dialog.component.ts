@@ -428,10 +428,16 @@ type Tab = 'information' | 'rule' | 'preview';
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p class="text-sm text-muted-foreground">
                 @if (vistaPrevia(); as vp) {
-                  Insumo de {{ vp.catalogo }}, periodo {{ vp.periodo }} (el último cargado,
-                  generalmente el mes en curso).
+                  @if (vp.resultado_motor) {
+                    Resultado del motor de {{ vp.catalogo }}, periodo {{ vp.periodo }} (último mes
+                    cerrado; este catálogo depende del cálculo del motor).
+                  } @else {
+                    Insumo de {{ vp.catalogo }}, periodo {{ vp.periodo }} (el último cargado,
+                    generalmente el mes en curso).
+                  }
                 } @else {
-                  Usa el último insumo cargado del catálogo (generalmente el mes en curso) y
+                  Usa el último insumo cargado del catálogo (el último mes cerrado si el catálogo
+                  sale del motor) y
                   la regla como está en pantalla, aunque no esté guardada.
                 }
               </p>
