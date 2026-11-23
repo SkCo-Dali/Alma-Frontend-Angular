@@ -158,6 +158,8 @@ export interface RulePreviewRequest {
 export interface RulePreviewResponse {
   periodo: string;
   catalogo: string;
+  /** El catálogo lee la salida del motor: se usa el último mes cerrado. */
+  resultado_motor?: boolean;
   regla: string;
   total: number;
   columnas: string[];
