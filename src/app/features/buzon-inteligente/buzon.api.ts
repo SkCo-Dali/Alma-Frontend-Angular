@@ -595,19 +595,6 @@ export interface PropuestaProcesos {
   secciones?: number;
 }
 
-/** 075: resultado de la prueba en sombra de la clasificación en dos pasos. */
-export interface SombraDosPasos {
-  total: number;
-  por_referencia: Record<'humano' | 'actual', { total: number; proceso_ok: number; etiqueta_ok: number }>;
-  rutas: { ninguno: number; proceso: number; completo: number; regla: number };
-  tokens_prom_dos_pasos: number | null;
-  tokens_prom_actual: number | null;
-  no_disponibles: number;
-  errores: number;
-  omitidos: number;
-  fallos: { correo_id: string; asunto: string; referencia: string; esperado: string; obtenido: string | null; ruta: string | null; confianza: number | null }[];
-}
-
 /** 069: resultado de condensar un texto (si falla o es corto, vuelve el original). */
 export interface Condensado {
   texto: string;
@@ -1207,28 +1194,10 @@ export class BuzonApi {
     );
   }
 
-  crearCategoria(buzonId: string, body: CategoriaIn): Promise<Categoria> {
-    return this.conDemo(
-      () =>
-        this.api.fetch<Categoria>(`${BASE}/buzones/${buzonId}/categorias`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }),
-      () => this.demo.crearCategoria(buzonId, body),
-    );
-  }
-
   actualizarCategoria(id: string, body: CategoriaIn): Promise<Categoria> {
     return this.conDemo(
       () => this.api.fetch<Categoria>(`${BASE}/categorias/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       () => this.demo.actualizarCategoria(id, body),
-    );
-  }
-
-  eliminarCategoria(id: string): Promise<void> {
-    return this.conDemo(
-      () => this.api.fetch<void>(`${BASE}/categorias/${id}`, { method: 'DELETE' }),
-      () => this.demo.eliminarCategoria(id),
     );
   }
 
@@ -1750,30 +1719,6 @@ export class BuzonApi {
     return this.conDemo(
       () => this.api.fetch<EstadoReglas>(`${BASE}/buzones/${buzonId}/versiones`),
       () => this.demo.estadoReglas(buzonId),
-    );
-  }
-
-  /** Clasifica con el borrador los últimos correos ya decididos (30–90 s). */
-  /** 075: prueba en sombra de los dos pasos (no ejecuta ni guarda). */
-  sombraDosPasos(buzonId: string, limite = 20): Promise<SombraDosPasos> {
-    return this.conDemo(
-      () => this.api.fetch<SombraDosPasos>(`${BASE}/buzones/${buzonId}/sombra-dos-pasos`, { method: 'POST', body: JSON.stringify({ limite }) }, ESPERA_LARGA_MS),
-      () => ({
-        total: 18,
-        por_referencia: { humano: { total: 8, proceso_ok: 8, etiqueta_ok: 7 }, actual: { total: 10, proceso_ok: 10, etiqueta_ok: 10 } },
-        rutas: { ninguno: 9, proceso: 8, completo: 1, regla: 0 },
-        tokens_prom_dos_pasos: 9800,
-        tokens_prom_actual: 48200,
-        no_disponibles: 2, errores: 0, omitidos: 0,
-        fallos: [{ correo_id: 'demo', asunto: 'Planilla aportes octubre (ejemplo)', referencia: 'humano', esperado: 'PAC_BENEFLEX', obtenido: 'PAC_AHORRO_MUTUO', ruta: 'proceso:PAC', confianza: 0.88 }],
-      }),
-    );
-  }
-
-  probarBorrador(buzonId: string): Promise<PruebaBorrador> {
-    return this.conDemo(
-      () => this.api.fetch<PruebaBorrador>(`${BASE}/buzones/${buzonId}/versiones/probar`, { method: 'POST', body: '{}' }, ESPERA_LARGA_MS),
-      () => this.demo.probarBorrador(buzonId),
     );
   }
 
