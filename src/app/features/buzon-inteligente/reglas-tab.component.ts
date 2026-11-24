@@ -20,6 +20,7 @@ import {
   BuzonApi,
   Categoria,
   EstadoReglas,
+  VersionReglas,
   Grupo,
   CategoriaIn,
   Proceso,
@@ -375,7 +376,25 @@ interface FijaEd {
                 }
               }
               @if (est()?.versiones?.length) {
-                <p class="xxs muted">Historial: @for (v of est()!.versiones.slice(0, 5); track v.version; let last = $last) { v{{ v.version }} · {{ v.publicada_por }} · {{ fecha(v.publicada_en) }}{{ last ? '' : ' — ' }} }</p>
+                <!-- Si una publicación sale mal, quien configura vuelve a la que funcionaba con
+                     un clic, sin deshacer cambios a mano (el borrador se conserva). -->
+                <div class="stack" style="gap:4px;border-top:1px solid var(--border);padding-top:8px">
+                  <p class="xxs muted b">Versiones publicadas</p>
+                  @for (v of est()!.versiones.slice(0, 5); track v.version) {
+                    <div class="row xs" style="gap:6px;flex-wrap:wrap">
+                      <span class="b">v{{ v.version }}</span>
+                      <span class="muted">· {{ fecha(v.publicada_en) }} · {{ v.publicada_por }}</span>
+                      @if (vuelveA(v); as origen) { <span class="muted">· {{ origen }}</span> }
+                      @if (v.version === est()!.version) {
+                        <span class="badge b-emerald">Vigente</span>
+                      } @else {
+                        <button type="button" class="linkbtn xs" [disabled]="restaurando() !== null || publicando()" (click)="volverAVersion(v.version)">
+                          {{ restaurando() === v.version ? 'Volviendo…' : 'Volver a esta versión' }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
               }
             </div>
             @if (est()?.borrador && est()!.cambios.length) {
@@ -684,6 +703,8 @@ export class ReglasTabComponent implements OnInit {
   /** «Cambios en el prompt» desplegado (plegado por defecto). */
   protected readonly verCambios = signal(false);
   protected readonly publicando = signal(false);
+  /** Versión a la que se está volviendo («Volver a esta versión»). */
+  protected readonly restaurando = signal<number | null>(null);
   protected readonly revGrupos = signal<RevisionGrupos | null>(null);
   protected readonly gruposAsig = signal<Grupo[]>([]);
   protected readonly agregandoGrupo = signal<string | null>(null);
@@ -1464,6 +1485,27 @@ export class ReglasTabComponent implements OnInit {
       this.toast.error('No se pudieron publicar las reglas', e instanceof Error ? e.message : String(e));
     } finally {
       this.publicando.set(false);
+    }
+  }
+
+  /** «Vuelve a v17» cuando esa versión se publicó con «Volver a esta versión». */
+  protected vuelveA(v: VersionReglas): string {
+    const primero = v.cambios?.[0]?.[0] ?? '';
+    return primero.startsWith('Vuelve a v') ? primero : '';
+  }
+
+  protected async volverAVersion(version: number): Promise<void> {
+    if (!confirm(`¿Volver a la v${version}?\n\nDesde ya Nova clasifica los correos nuevos como lo hacía en la v${version}. `
+      + `Queda guardada como v${this.siguiente()} y lo que tengas en el borrador no se pierde.`)) return;
+    this.restaurando.set(version);
+    try {
+      const r = await this.api.restaurarVersion(this.buzon().id, version);
+      await this.recargar();
+      this.toast.show(`Nova volvió a la v${r.restaurada}`, `Quedó publicada como v${r.version}. Lo del borrador sigue sin publicar.`);
+    } catch (e) {
+      this.toast.error('No se pudo volver a esa versión', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.restaurando.set(null);
     }
   }
 

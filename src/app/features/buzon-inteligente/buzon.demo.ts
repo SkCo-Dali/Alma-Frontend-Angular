@@ -1514,6 +1514,20 @@ export class DemoStore {
     return { version, cambios };
   }
 
+  /** Como el backend: la versión elegida se publica como una nueva; el borrador sigue igual. */
+  restaurarVersion(buzonId: string, version: number, por: string): { version: number; restaurada: number; cambios: CambioRegla[] } {
+    const b = this.buzones.find((x) => x.id === buzonId)!;
+    if (version === b.version_reglas) throw new Error(`La v${version} ya es la versión vigente.`);
+    this.estadoReglas(buzonId);
+    const previas = this.versiones.get(buzonId) ?? [];
+    if (!previas.some((v) => v.version === version)) throw new Error(`No existe la versión v${version}.`);
+    const nueva = Math.max(...previas.map((v) => v.version)) + 1;
+    const cambios: CambioRegla[] = [[`Vuelve a v${version}`, `v${b.version_reglas}`, `v${version}`]];
+    this.versiones.set(buzonId, [{ version: nueva, cambios, publicada_en: new Date().toISOString(), publicada_por: por }, ...previas]);
+    this.actualizarBuzon(buzonId, { version_reglas: nueva } as Partial<Buzon>);
+    return { version: nueva, restaurada: version, cambios };
+  }
+
   verPrompt(buzonId: string): PromptBuzon {
     const b = this.buzones.find((x) => x.id === buzonId)!;
     const procesos = this.listarProcesos(buzonId);
