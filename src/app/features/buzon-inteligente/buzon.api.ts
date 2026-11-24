@@ -23,7 +23,6 @@ export type TipoAccion =
   | 'categorizar'
   | 'mover'
   | 'reenviar'
-  | 'asignar_analista'
   | 'notificar_teams'
   | 'marcar_leido';
 
@@ -949,7 +948,6 @@ export const TIPOS_ACCION: { tipo: TipoAccion; nombre: string; icono: string; ay
   { tipo: 'categorizar', nombre: 'Etiquetar en Outlook', icono: 'tag', ayuda: 'Asigna una categoría de Outlook al correo.' },
   { tipo: 'mover', nombre: 'Mover a carpeta', icono: 'folder-input', ayuda: 'Mueve el correo a una carpeta del buzón (la crea si no existe).' },
   { tipo: 'reenviar', nombre: 'Reenviar a', icono: 'forward', ayuda: 'Reenvía el correo a una o varias personas con un comentario.' },
-  { tipo: 'asignar_analista', nombre: 'Asignar analista', icono: 'user-check', ayuda: 'Reparte el correo entre analistas (el que menos tenga hoy) y lo mueve a su carpeta.' },
   { tipo: 'notificar_teams', nombre: 'Avisar en Teams', icono: 'bell', ayuda: 'Publica un aviso en un canal o chat de Teams.' },
   { tipo: 'marcar_leido', nombre: 'Marcar como leído', icono: 'mail-check', ayuda: 'Marca el correo como leído.' },
 ];
@@ -986,10 +984,6 @@ export function resumenAccion(a: { tipo: string; parametros: Record<string, unkn
     case 'reenviar': {
       const d = (p['destinatarios'] as string[] | undefined) ?? [];
       return `Reenviar a ${d.length ? d.join(', ') : '…'}`;
-    }
-    case 'asignar_analista': {
-      const an = (p['analistas'] as string[] | undefined) ?? [];
-      return `Asignar analista (${an.length} en turno)`;
     }
     case 'notificar_teams':
       return 'Avisar en Teams';

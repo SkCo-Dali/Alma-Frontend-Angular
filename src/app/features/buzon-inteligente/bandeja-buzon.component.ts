@@ -1368,12 +1368,12 @@ export class BandejaBuzonComponent {
   }
 
   private iconoEjecucion(tipo: string): string {
-    return { categorizar: 'tag', mover: 'folder-input', reenviar: 'forward', asignar_analista: 'user-check', asignar: 'user-check', notificar_teams: 'bell', marcar_leido: 'mail-check', archivo: 'file-spreadsheet' }[tipo] ?? 'zap';
+    return { categorizar: 'tag', mover: 'folder-input', reenviar: 'forward', asignar: 'user-check', notificar_teams: 'bell', marcar_leido: 'mail-check', archivo: 'file-spreadsheet' }[tipo] ?? 'zap';
   }
 
   protected nombreEjecucion(tipo: string): string {
     return (
-      { categorizar: 'Etiqueta en Outlook', mover: 'Movido a carpeta', reenviar: 'Reenviado', asignar_analista: 'Asignado (v1)', asignar: 'Asignación', notificar_teams: 'Aviso en Teams', marcar_leido: 'Marcado como leído', archivo: 'Archivo', decision: 'Decisión del revisor', datos: 'Datos corregidos', duplicado: 'Duplicado' } as Record<string, string>
+      { categorizar: 'Etiqueta en Outlook', mover: 'Movido a carpeta', reenviar: 'Reenviado', asignar: 'Asignación', notificar_teams: 'Aviso en Teams', marcar_leido: 'Marcado como leído', archivo: 'Archivo', decision: 'Decisión del revisor', datos: 'Datos corregidos', duplicado: 'Duplicado' } as Record<string, string>
     )[tipo] ?? tipo;
   }
 

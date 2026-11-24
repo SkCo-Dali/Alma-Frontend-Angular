@@ -18,8 +18,6 @@ interface AccionForm {
   carpeta: string;
   destinatarios: string;
   comentario: string;
-  analistas: string;
-  mover_a_carpeta_del_analista: boolean;
   webhook_url: string;
 }
 
@@ -31,8 +29,6 @@ function accionVacia(tipo: TipoAccion, clave = ''): AccionForm {
     carpeta: '',
     destinatarios: '',
     comentario: '',
-    analistas: '',
-    mover_a_carpeta_del_analista: true,
     webhook_url: '',
   };
 }
@@ -46,8 +42,6 @@ function aForm(a: Accion): AccionForm {
     carpeta: String(p['carpeta'] ?? ''),
     destinatarios: ((p['destinatarios'] as string[] | undefined) ?? []).join(', '),
     comentario: String(p['comentario'] ?? ''),
-    analistas: ((p['analistas'] as string[] | undefined) ?? []).join(', '),
-    mover_a_carpeta_del_analista: p['mover_a_carpeta_del_analista'] !== false,
     webhook_url: String(p['webhook_url'] ?? ''),
   };
 }
@@ -64,9 +58,6 @@ function aAccion(f: AccionForm, orden: number): Accion {
       break;
     case 'reenviar':
       parametros = { destinatarios: lista(f.destinatarios), comentario: f.comentario.trim() };
-      break;
-    case 'asignar_analista':
-      parametros = { estrategia: 'round_robin', analistas: lista(f.analistas), mover_a_carpeta_del_analista: f.mover_a_carpeta_del_analista };
       break;
     case 'notificar_teams':
       parametros = f.webhook_url.trim() ? { webhook_url: f.webhook_url.trim() } : {};
@@ -203,10 +194,6 @@ function aAccion(f: AccionForm, orden: number): Accion {
                         @case ('reenviar') {
                           <div class="flex flex-col gap-1"><label class="alma-label">Destinatarios (coma)</label><input class="alma-input" [(ngModel)]="a.destinatarios" placeholder="litigios@skandia.com.co" /></div>
                           <div class="flex flex-col gap-1"><label class="alma-label">Comentario</label><input class="alma-input" [(ngModel)]="a.comentario" placeholder="Se adjunta resumen de la IA" /></div>
-                        }
-                        @case ('asignar_analista') {
-                          <div class="flex flex-col gap-1 sm:col-span-2"><label class="alma-label">Analistas en turno (coma). Se asigna al que menos tenga hoy.</label><input class="alma-input" [(ngModel)]="a.analistas" placeholder="Laura Gómez, Andrés Pérez" /></div>
-                          <label class="flex items-center gap-2 text-xs text-muted-foreground"><alma-switch [checked]="a.mover_a_carpeta_del_analista" (checkedChange)="a.mover_a_carpeta_del_analista = $event" /> Mover a la carpeta con el nombre del analista</label>
                         }
                         @case ('notificar_teams') {
                           <div class="flex flex-col gap-1 sm:col-span-2"><label class="alma-label">Webhook del canal (opcional)</label><input class="alma-input" [(ngModel)]="a.webhook_url" placeholder="https://…webhook.office.com/…" /></div>
