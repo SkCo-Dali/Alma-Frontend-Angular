@@ -111,21 +111,9 @@ interface CarpetaPlana {
           </div>
           @if (b.modo_clasificacion === 'agente') {
             <div class="g2">
-              <div class="fld"><label class="label" for="ag-proy">Proyecto</label><input class="input" id="ag-proy" [(ngModel)]="agenteProyecto" (change)="guardar({ agente_proyecto: agenteProyecto.trim() || null })" /></div>
               <div class="fld"><label class="label" for="ag-nom">Agente</label><input class="input" id="ag-nom" [(ngModel)]="agenteNombre" (change)="guardar({ agente_nombre: agenteNombre.trim() || null })" placeholder="Nombre del agente en Foundry" /></div>
             </div>
-            <div class="fld">
-              <span class="label">Versión</span>
-              <label class="row sm" for="vr-u"><input type="radio" name="vr" id="vr-u" [checked]="!b.agente_version_fija" (change)="guardar({ agente_version_fija: null })" /> Usar siempre la última publicada</label>
-              <label class="row sm" for="vr-f"><input type="radio" name="vr" id="vr-f" [checked]="!!b.agente_version_fija" (change)="fijarVersion()" /> Fijar en
-                <input class="input sm" style="width:90px" [(ngModel)]="versionFija" (change)="fijarVersion()" placeholder="v1" aria-label="Versión fija" />: una versión nueva se adopta solo después de probarla</label>
-            </div>
-            <div class="fld">
-              <span class="label">¿Dónde se editan las reglas?</span>
-              <label class="row sm" for="ra-f"><input type="radio" name="ra" id="ra-f" [checked]="b.reglas_admin === 'foundry'" (change)="guardar({ reglas_admin: 'foundry' })" /> En Foundry (en Nova son de solo lectura)</label>
-              <label class="row sm" for="ra-a"><input type="radio" name="ra" id="ra-a" [checked]="b.reglas_admin === 'alma'" (change)="guardar({ reglas_admin: 'alma' })" /> En Nova, que publica nuevas versiones al agente</label>
-            </div>
-            <p class="note b-amber"><lucide-icon name="shield-alert" [size]="13" /> <span>Leer la versión publicada del agente y publicarle reglas desde Nova requiere que TI habilite el acceso de Nova al proyecto de Foundry. Mientras tanto Nova invoca el agente por su nombre.</span></p>
+            <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Nova invoca el agente por su nombre. Las reglas se editan en Nova.</span></p>
           } @else {
             <div class="g2">
               <div class="fld">
@@ -147,10 +135,6 @@ interface CarpetaPlana {
           <div class="g2">
             <div class="fld"><label class="label" for="aj-v">Ventana para reconocer hilos por asunto (días)</label>
               <input class="input" id="aj-v" type="number" min="1" max="90" [(ngModel)]="ventana" (change)="guardarVentana()" /></div>
-            <div class="fld"><label class="label" for="aj-r">Respuesta sin información nueva</label>
-              <select class="input" id="aj-r" [ngModel]="b.respuesta_sin_novedad" (ngModelChange)="guardar({ respuesta_sin_novedad: $event })">
-                <option value="vincular">Vincular sin reasignar</option><option value="validar">Llevar a Validar</option>
-              </select></div>
           </div>
           <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Un correo ya registrado nunca se vuelve a procesar: se identifica por <span class="mono">internet_message_id</span>.</span></p>
         </div>
@@ -175,9 +159,7 @@ export class AjustesTabComponent implements OnInit {
   protected readonly carpetas = signal<CarpetaPlana[]>([]);
   protected readonly modelos = signal<string[]>([]);
   protected descripcion = '';
-  protected agenteProyecto = '';
   protected agenteNombre = '';
-  protected versionFija = '';
   protected ventana = 15;
   protected etiquetaValidar = 'Nova · Validar';
 
@@ -200,9 +182,7 @@ export class AjustesTabComponent implements OnInit {
   ngOnInit(): void {
     const b = this.buzon();
     this.descripcion = b.descripcion ?? '';
-    this.agenteProyecto = b.agente_proyecto ?? '';
     this.agenteNombre = b.agente_nombre ?? '';
-    this.versionFija = b.agente_version_fija ?? '';
     this.ventana = b.ventana_hilos_dias;
     this.etiquetaValidar = b.etiqueta_validar || 'Nova · Validar';
     void this.api.opciones().then((o) => this.modelos.set(o.modelos)).catch(() => undefined);
@@ -243,11 +223,6 @@ export class AjustesTabComponent implements OnInit {
     await this.guardar(m === 'mod_asignacion' && !activo ? { mod_asignacion: false, mod_bases: false } : { [m]: activo });
     const nombre = { mod_asignacion: 'asignación', mod_bases: 'búsqueda en bases', mod_exportacion: 'exportación' }[m];
     this.toast.show(activo ? `Activado: ${nombre}` : `Desactivado (se conserva la configuración): ${nombre}`);
-  }
-
-  protected fijarVersion(): void {
-    const v = this.versionFija.trim();
-    if (v) void this.guardar({ agente_version_fija: v });
   }
 
   protected guardarVentana(): void {
