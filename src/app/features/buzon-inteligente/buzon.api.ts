@@ -10,7 +10,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { environment } from '@env/environment';
 import { ApiService, ESPERA_LARGA_MS } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { DEMO, demoCorreoDetalle, demoLeerArchivo, demoMetricas, demoProbar } from './buzon.demo';
+import { DEMO, demoCorreoDetalle, demoLeerArchivo, demoMetricas } from './buzon.demo';
 
 // ── Tipos del contrato ───────────────────────────────────────────────────────
 
@@ -380,17 +380,6 @@ export interface FiltroCorreos {
   proceso?: string;
   /** Lo clasificado en OTROS o sin proceso. */
   sin_proceso?: boolean;
-}
-
-export interface ResultadoPrueba {
-  categoria_clave: string | null;
-  categoria_nombre: string | null;
-  confianza: number;
-  resumen: string;
-  justificacion: string;
-  datos_extraidos: Record<string, unknown>;
-  acciones_previstas: { tipo: TipoAccion; parametros: Record<string, unknown> }[];
-  cumple_umbral: boolean;
 }
 
 export interface ResumenSync {
@@ -952,34 +941,6 @@ export interface Exportacion {
   plantillas: Plantilla[];
 }
 
-export interface ColumnaModelo extends ColumnaPlantilla {
-  /** ✦ Alma propuso el origen por el nombre del encabezado. */
-  sugerido: boolean;
-  ejemplo: string;
-}
-
-/** Lo que Alma lee del modelo que sube el área. */
-export interface ModeloLeido {
-  hojas: string[];
-  hoja: string | null;
-  fila_encabezado: number;
-  titulo: string[][];
-  columnas: ColumnaModelo[];
-  formato: 'xlsx' | 'csv';
-  modelo: string;
-  /** Datos que extraen los procesos del buzón. */
-  campos: string[];
-}
-
-export interface VistaPrevia {
-  nombre_archivo: string;
-  titulo: string[][];
-  encabezados: string[];
-  filas: string[][];
-  total_filas: number;
-  con_datos_reales: boolean;
-}
-
 export interface ArchivoCorreo {
   id: string;
   correo_id: string;
@@ -1002,15 +963,6 @@ export interface ArchivoGenerado {
   version: number;
   filas: number;
 }
-
-export const ORIGENES: { id: TipoOrigen; nombre: string; icon: string }[] = [
-  { id: 'campo', nombre: 'Dato del correo', icon: 'scan-text' },
-  { id: 'fijo', nombre: 'Texto fijo', icon: 'type' },
-  { id: 'base', nombre: 'Columna de una base', icon: 'file-spreadsheet' },
-  { id: 'formula', nombre: 'Fórmula', icon: 'sigma' },
-  { id: 'correo', nombre: 'Información del correo', icon: 'mail' },
-  { id: 'fila', nombre: 'Número de fila', icon: 'list-ordered' },
-];
 
 export const DATOS_CORREO: { id: DatoCorreo; nombre: string }[] = [
   { id: 'asunto', nombre: 'Asunto' },
@@ -1039,14 +991,6 @@ export const TIPOS_ACCION: { tipo: TipoAccion; nombre: string; icono: string; ay
   { tipo: 'notificar_teams', nombre: 'Avisar en Teams', icono: 'bell', ayuda: 'Publica un aviso en un canal o chat de Teams.' },
   { tipo: 'marcar_leido', nombre: 'Marcar como leído', icono: 'mail-check', ayuda: 'Marca el correo como leído.' },
 ];
-
-export const ESTADO_CORREO: Record<EstadoCorreo, { nombre: string; clase: string }> = {
-  pendiente: { nombre: 'Pendiente', clase: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
-  revision: { nombre: 'Por revisar', clase: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
-  ejecutado: { nombre: 'Ejecutado', clase: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
-  ignorado: { nombre: 'Ignorado', clase: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
-  error: { nombre: 'Error', clase: 'bg-rose-500/15 text-rose-700 dark:text-rose-300' },
-};
 
 /** Filas de Ejecuciones que no son acciones configurables. */
 const OTRAS_EJECUCIONES: Record<string, { nombre: string; icono: string }> = {
@@ -1122,7 +1066,8 @@ export class BuzonApi {
     try {
       return await real();
     } catch (e) {
-      if (!this.esCaidaDeModulo(e)) throw e;
+      // En stg y prd nunca se muestran datos inventados: el error se ve como error.
+      if (!environment.buzonDemo || !this.esCaidaDeModulo(e)) throw e;
       console.warn('[buzon-inteligente] backend no disponible, usando datos de demostración:', e);
       this.modoDemo.set(true);
       return demo();
@@ -1306,13 +1251,6 @@ export class BuzonApi {
     );
   }
 
-  actualizarRegla(id: string, body: ReglaIn): Promise<ReglaFija> {
-    return this.conDemo(
-      () => this.api.fetch<ReglaFija>(`${BASE}/reglas/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-      () => this.demo.actualizarRegla(id, body),
-    );
-  }
-
   eliminarRegla(id: string): Promise<void> {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/reglas/${id}`, { method: 'DELETE' }),
@@ -1377,17 +1315,6 @@ export class BuzonApi {
     );
   }
 
-  probar(buzonId: string, body: { asunto: string; remitente: string; cuerpo: string; texto_adjuntos?: string }): Promise<ResultadoPrueba> {
-    return this.conDemo(
-      () =>
-        this.api.fetch<ResultadoPrueba>(`${BASE}/buzones/${buzonId}/probar`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }, ESPERA_LARGA_MS),
-      () => demoProbar(this.demo, buzonId, body),
-    );
-  }
-
   metricas(buzonId?: string, dias = 30): Promise<Metricas> {
     const qs = new URLSearchParams({ dias: String(dias) });
     if (buzonId) qs.set('buzon_id', buzonId);
@@ -1433,13 +1360,6 @@ export class BuzonApi {
     return this.conDemo(
       async () => (await this.api.fetch<{ items: Proceso[] }>(`${BASE}/buzones/${buzonId}/procesos`)).items,
       () => this.demo.listarProcesos(buzonId),
-    );
-  }
-
-  crearProceso(buzonId: string, body: ProcesoIn): Promise<Proceso> {
-    return this.conDemo(
-      () => this.api.fetch<Proceso>(`${BASE}/buzones/${buzonId}/procesos`, { method: 'POST', body: JSON.stringify(body) }),
-      () => this.demo.guardarProceso(buzonId, body),
     );
   }
 
@@ -1703,26 +1623,6 @@ export class BuzonApi {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/plantillas/${id}`, { method: 'DELETE' }),
       () => this.demo.eliminarPlantilla(id),
-    );
-  }
-
-  /** Lee el modelo del área: columnas con el origen que Alma propone (✦). No guarda nada. */
-  leerModelo(buzonId: string, archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<ModeloLeido> {
-    return this.conDemo(
-      () => this.api.upload<ModeloLeido>(`${BASE}/buzones/${buzonId}/plantillas/leer-modelo`, this.formArchivo(archivo, hoja, filaEncabezado)),
-      () => this.demo.leerModelo(buzonId, archivo, hoja, filaEncabezado),
-    );
-  }
-
-  /** Cómo quedaría el archivo: con `datos` o con el último correo real del proceso. */
-  vistaPrevia(plantillaId: string, body: { datos?: Record<string, unknown>; proceso_clave?: string }): Promise<VistaPrevia> {
-    return this.conDemo(
-      () =>
-        this.api.fetch<VistaPrevia>(`${BASE}/plantillas/${plantillaId}/vista-previa`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }),
-      () => this.demo.vistaPrevia(plantillaId, body),
     );
   }
 

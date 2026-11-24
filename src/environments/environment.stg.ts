@@ -2,6 +2,8 @@
 export const environment = {
   production: false,
   name: 'stg',
+  /** Buzón Inteligente: datos de demostración si el backend no responde (solo local y dev). */
+  buzonDemo: false,
   apiUrl: 'https://apisstg.skandia.com.co/SkCo.Alma.API',
   azure: {
     clientId: '2e8727a9-d58a-40fd-959f-f7f7e3f4b03a',
