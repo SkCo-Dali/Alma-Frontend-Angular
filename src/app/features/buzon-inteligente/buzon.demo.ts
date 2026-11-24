@@ -1510,20 +1510,6 @@ export class DemoStore {
     };
   }
 
-  async probarBorrador(buzonId: string): Promise<PruebaBorrador> {
-    await espera(1500);
-    const decididos = this.correos.filter((c) => c.buzon_id === buzonId && c.decidido_por).slice(0, 30);
-    const total = decididos.length;
-    const fallo = decididos.find((c) => c.categoria_clave);
-    const prueba: PruebaBorrador = {
-      firma: 'demo', fecha: new Date().toISOString(), total, no_disponibles: 0,
-      proceso_ok: total, etiqueta_ok: Math.max(0, total - (fallo ? 1 : 0)),
-      fallos: fallo ? [{ correo_id: fallo.id, asunto: fallo.asunto, esperado: fallo.categoria_clave!, obtenido: 'OTROS', confianza: 0.42 }] : [],
-    };
-    this.pruebas.set(buzonId, prueba);
-    return prueba;
-  }
-
   publicarReglas(buzonId: string, por: string): { version: number; cambios: CambioRegla[] } {
     const b = this.buzones.find((x) => x.id === buzonId)!;
     if (!this.listarProcesos(buzonId).some((p) => p.activo)) throw new Error('No hay procesos activos que publicar.');
@@ -1887,10 +1873,6 @@ export class DemoStore {
     };
     this.categorias = [...this.categorias];
     return this.categorias[i];
-  }
-
-  eliminarCategoria(id: string): void {
-    this.categorias = this.categorias.filter((x) => x.id !== id);
   }
 
   crearRegla(buzonId: string, r: ReglaIn): ReglaFija {
