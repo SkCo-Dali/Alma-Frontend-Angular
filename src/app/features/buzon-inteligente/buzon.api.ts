@@ -1721,6 +1721,14 @@ export class BuzonApi {
     );
   }
 
+  /** «Volver a esta versión»: publica como vN+1 la foto de una versión anterior (el borrador no cambia). */
+  restaurarVersion(buzonId: string, version: number): Promise<{ version: number; restaurada: number; cambios: CambioRegla[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ version: number; restaurada: number; cambios: CambioRegla[] }>(`${BASE}/buzones/${buzonId}/versiones/${version}/restaurar`, { method: 'POST' }),
+      () => this.demo.restaurarVersion(buzonId, version, this.auth.user().correo),
+    );
+  }
+
   verPrompt(buzonId: string, cual: 'borrador' | 'vigente' = 'borrador'): Promise<PromptBuzon> {
     return this.conDemo(
       () => this.api.fetch<PromptBuzon>(`${BASE}/buzones/${buzonId}/prompt?cual=${cual}`, undefined, ESPERA_LARGA_MS),
