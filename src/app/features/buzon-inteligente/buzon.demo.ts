@@ -123,17 +123,6 @@ function procesoDeEtiqueta(clave: string): string | null {
   return null;
 }
 
-const asignar = (carpeta = true): Categoria['acciones'][number] => ({
-  tipo: 'asignar_analista',
-  parametros: {
-    estrategia: 'round_robin',
-    analistas: ['Laura Gómez', 'Andrés Pérez', 'Carolina Ruiz'],
-    mover_a_carpeta_del_analista: carpeta,
-  },
-  orden: 3,
-  activa: true,
-});
-
 function categoriasBase(): Categoria[] {
   const c4 = (clave: string, nombre: string, desc: string, color: string, carpeta: string, n: number) =>
     cat(
@@ -145,7 +134,6 @@ function categoriasBase(): Categoria[] {
       [
         { tipo: 'categorizar', parametros: { categoria: clave }, orden: 1, activa: true },
         { tipo: 'mover', parametros: { carpeta, crear_si_no_existe: true }, orden: 2, activa: true },
-        asignar(),
       ],
       {
         campos_extraer: CAMPOS_4X1000,
@@ -203,10 +191,7 @@ function categoriasBase(): Categoria[] {
       'PAC',
       'Correos del proceso PAC: contratos que empiezan por PC o referencias a planes colectivos. Se asignan al analista dueño de la empresa según la base de administración.',
       '#0A84FF',
-      [
-        { tipo: 'categorizar', parametros: { categoria: 'PAC' }, orden: 1, activa: true },
-        asignar(true),
-      ],
+      [{ tipo: 'categorizar', parametros: { categoria: 'PAC' }, orden: 1, activa: true }],
       { correos_30d: 22 },
     ),
     cat(
@@ -1911,7 +1896,7 @@ export class DemoStore {
       tipo: a.tipo,
       parametros: a.parametros,
       resultado: a.tipo === 'notificar_teams' ? 'simulado' : 'ok',
-      detalle: a.tipo === 'asignar_analista' ? `Asignado a ${correo.asignado_a ?? 'Laura Gómez'}` : null,
+      detalle: null,
       ejecutado_por: por,
       ejecutado_en: new Date().toISOString(),
     }));
@@ -1935,7 +1920,6 @@ export class DemoStore {
     // Otra etiqueta puede ser otro grupo: se reasigna antes de ejecutar.
     if (cambio || !c.grupo_id) c = this.asignarCorreo(c);
     if (ejecutar) {
-      if (!c.grupo_id && cat?.acciones.some((a) => a.tipo === 'asignar_analista')) c.asignado_a = c.asignado_a ?? 'Laura Gómez';
       c.estado = 'ejecutado';
       this.registrarEjecuciones(c, por);
     } else {
@@ -2006,7 +1990,7 @@ export function demoCorreoDetalle(store: DemoStore, id: string): CorreoDetalle {
       tipo: a.tipo,
       parametros: a.parametros,
       resultado: a.tipo === 'notificar_teams' ? 'simulado' : 'ok',
-      detalle: a.tipo === 'asignar_analista' ? `Asignado a ${c.asignado_a}` : a.tipo === 'mover' ? `Movido a “${a.parametros['carpeta']}”` : null,
+      detalle: a.tipo === 'mover' ? `Movido a “${a.parametros['carpeta']}”` : null,
       ejecutado_por: c.decidido_por ?? 'sistema',
       ejecutado_en: c.decidido_en ?? c.recibido_en,
     }));
