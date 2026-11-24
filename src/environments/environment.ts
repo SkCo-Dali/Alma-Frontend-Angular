@@ -5,6 +5,8 @@ import { USUARIO_LOCAL } from '../app/core/auth/usuario-local';
 export const environment = {
   production: false,
   name: 'local',
+  /** Buzón Inteligente: datos de demostración si el backend no responde (solo local y dev). */
+  buzonDemo: true,
   apiUrl: 'http://localhost:8000',
   azure: {
     clientId: '',
