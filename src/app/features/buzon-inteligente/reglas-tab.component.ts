@@ -736,10 +736,9 @@ export class ReglasTabComponent implements OnInit {
     ['Entrada', 'Prompt, correos o manual'],
     ['Revisión', 'Aceptar o parametrizar'],
     ['Discriminación', 'Qué diferencia los procesos'],
-    ['Probar', 'Banco de casos'],
     ['Publicar', this.buzon().modo_clasificacion === 'agente' ? 'Al agente' : 'En Nova'],
   ]);
-  protected readonly paso = computed(() => (this.est()?.prueba ? 5 : this.est()?.borrador ? 3 : this.procesos().length ? 2 : 1));
+  protected readonly paso = computed(() => (this.est()?.borrador ? 3 : this.procesos().length ? 2 : 1));
   protected readonly puedePublicar = computed(() => {
     const e = this.est();
     return !!e && e.borrador;

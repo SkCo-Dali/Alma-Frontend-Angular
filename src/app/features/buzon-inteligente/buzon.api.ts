@@ -491,20 +491,9 @@ export interface ProcesoCompletoIn {
 /** [qué cambió, antes, después] del borrador frente a la versión vigente. */
 export type CambioRegla = [string, string, string];
 
-export interface PruebaBorrador {
-  firma: string;
-  fecha: string;
-  total: number;
-  proceso_ok: number;
-  etiqueta_ok: number;
-  no_disponibles: number;
-  fallos: { correo_id: string; asunto: string; esperado: string; obtenido: string | null; confianza: number }[];
-}
-
 export interface VersionReglas {
   version: number;
   cambios: CambioRegla[];
-  prueba: PruebaBorrador | null;
   publicada_en: string;
   publicada_por: string;
 }
@@ -516,8 +505,6 @@ export interface EstadoReglas {
   /** Hay cambios sin publicar. */
   borrador: boolean;
   cambios: CambioRegla[];
-  /** Prueba del borrador ACTUAL (null si no se ha probado o cambió después). */
-  prueba: PruebaBorrador | null;
   procesos: number;
   pares_discriminacion: number;
   versiones: VersionReglas[];

@@ -54,7 +54,6 @@ import {
   NombreBuzon,
   ProcesoCompletoIn,
   PromptBuzon,
-  PruebaBorrador,
   PruebaSeco,
   TipoCuenta,
   VersionReglas,
@@ -1425,14 +1424,12 @@ export class DemoStore {
     return { ...b, procesos_count: this.procesos.filter((p) => p.buzon_id === b.id && p.activo).length };
   }
 
-  /** Cambios del borrador frente a la vigente y prueba del borrador, por buzón. */
+  /** Cambios del borrador frente a la vigente, por buzón. */
   private cambiosBorrador = new Map<string, CambioRegla[]>();
-  private pruebas = new Map<string, PruebaBorrador>();
   private versiones = new Map<string, VersionReglas[]>();
 
   private marcarCambio(buzonId: string, c: CambioRegla): void {
     this.cambiosBorrador.set(buzonId, [...(this.cambiosBorrador.get(buzonId) ?? []), c]);
-    this.pruebas.delete(buzonId);
   }
 
   nombreBuzon(direccion: string, tipo: TipoCuenta): NombreBuzon {
@@ -1490,7 +1487,7 @@ export class DemoStore {
     const cambios = this.cambiosBorrador.get(buzonId) ?? [];
     if (!this.versiones.has(buzonId) && b.version_reglas) {
       this.versiones.set(buzonId, Array.from({ length: b.version_reglas }, (_, i) => ({
-        version: b.version_reglas! - i, cambios: [], prueba: null, publicada_en: hace(i * 9 + 2, 0), publicada_por: 'admin.demo@ejemplo.com.co',
+        version: b.version_reglas! - i, cambios: [], publicada_en: hace(i * 9 + 2, 0), publicada_por: 'admin.demo@ejemplo.com.co',
       })));
     }
     return {
@@ -1498,7 +1495,6 @@ export class DemoStore {
       siguiente: (b.version_reglas ?? 0) + 1,
       borrador: b.version_reglas ? cambios.length > 0 : this.listarProcesos(buzonId).length > 0,
       cambios: b.version_reglas ? cambios : [],
-      prueba: this.pruebas.get(buzonId) ?? null,
       procesos: this.listarProcesos(buzonId).length,
       pares_discriminacion: b.discriminacion.length,
       versiones: clonar(this.versiones.get(buzonId) ?? []),
@@ -1512,10 +1508,9 @@ export class DemoStore {
     if (b.version_reglas && !cambios.length) throw new Error('El borrador no tiene cambios frente a la versión vigente.');
     this.estadoReglas(buzonId);
     const version = (b.version_reglas ?? 0) + 1;
-    this.versiones.set(buzonId, [{ version, cambios, prueba: this.pruebas.get(buzonId) ?? null, publicada_en: new Date().toISOString(), publicada_por: por }, ...(this.versiones.get(buzonId) ?? [])]);
+    this.versiones.set(buzonId, [{ version, cambios, publicada_en: new Date().toISOString(), publicada_por: por }, ...(this.versiones.get(buzonId) ?? [])]);
     this.actualizarBuzon(buzonId, { ...({ version_reglas: version, en_configuracion: false } as Partial<Buzon>), activo: b.en_configuracion ? true : b.activo });
     this.cambiosBorrador.delete(buzonId);
-    this.pruebas.delete(buzonId);
     return { version, cambios };
   }
 
