@@ -126,9 +126,6 @@ interface FijaEd {
               <button type="button" class="btn outline sm" (click)="abrirPrompt()"><lucide-icon name="eye" [size]="13" /> Ver prompt de este buzón</button>
             </div>
           </div>
-          @if (!editable()) {
-            <p class="note b-sky"><lucide-icon name="lock" [size]="13" /> <span>Las reglas de este buzón se administran en Foundry: aquí son de solo lectura. Cámbialo en Ajustes → Clasificador para editarlas desde Nova.</span></p>
-          }
           <div class="flowsteps">
             @for (s of pasos(); track s[0]; let i = $index) {
               <div [class.done]="i + 1 < paso()" [class.on]="i + 1 === paso()"><b>{{ i + 1 }}. {{ s[0] }}</b><span>{{ s[1] }}</span></div>
@@ -137,7 +134,6 @@ interface FijaEd {
         </div>
       }
 
-      @if (editable()) {
         <div class="glass r-2xl stack" style="padding:14px 16px;gap:10px">
           <p class="cap"><lucide-icon name="log-in" [size]="13" /> Entrada de reglas · se pueden combinar</p>
           <div class="row">
@@ -148,7 +144,6 @@ interface FijaEd {
           </div>
           <p class="xxs muted">✦ propuesta de Nova · ✎ ajustado por ti. Todo se puede aceptar tal cual o parametrizar.</p>
         </div>
-      }
 
       <div [class]="editando() || esWiz() ? 'stack' : 'g2'" style="align-items:start">
         <div class="stack">
@@ -256,7 +251,6 @@ interface FijaEd {
                   }
                 </div>
                 <div class="row" style="gap:4px;flex-wrap:nowrap">
-                  @if (editable()) {
                     <button type="button" class="btn outline sm" (click)="abierto ? editando.set(null) : editar(p)">
                       <lucide-icon [name]="abierto ? 'chevron-up' : 'pencil'" [size]="13" /> {{ abierto ? 'Cerrar' : esWiz() ? 'Abrir' : 'Editar' }}
                     </button>
@@ -274,7 +268,6 @@ interface FijaEd {
                       <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave" [title]="p.activo ? 'Desactivar' : 'Activar'"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="pedirEliminar(p)" [attr.aria-label]="'Eliminar ' + p.clave" title="Eliminar"><lucide-icon name="trash-2" [size]="16" /></button>
                     }
-                  }
                   @if (!abierto && !esWiz()) {
                     <button type="button" class="btn ghost" (click)="alternarJson(p.clave)" [attr.aria-label]="'Ver formato JSON de ' + p.clave"><lucide-icon [name]="jsonAbierto() === p.clave ? 'chevron-up' : 'braces'" [size]="16" /></button>
                   }
@@ -313,9 +306,7 @@ interface FijaEd {
                   <p class="sm bb">{{ r.nombre }} <span class="key">{{ r.clave }}</span>@if (!r.activa) { <span class="badge b-slate">Desactivada</span> }</p>
                   <p class="xs muted">Respaldo: lo que no es de ningún proceso. No se elimina: actívala o desactívala.</p>
                 </div>
-                @if (editable()) {
                   <alma-switch [checked]="r.activa" (checkedChange)="alternarRespaldo(r, $event)" [ariaLabel]="(r.activa ? 'Desactivar ' : 'Activar ') + r.clave" />
-                }
               </div>
               @if (r.activa) {
                 <p class="xxs muted">{{ accionesActivas(r)
@@ -426,9 +417,7 @@ interface FijaEd {
               @if (verAvanzado()) {
                 <div class="row between sunk r-xl" style="padding:8px 12px;flex-wrap:nowrap;align-items:flex-start">
                   <div style="min-width:0"><p class="xs b">Reglas fijas (sin IA)</p><p class="xxs muted">{{ textoFijas() }}</p></div>
-                  @if (editable()) {
                     <button type="button" class="btn ghost" (click)="editarGlobal('fijas')" aria-label="Editar reglas fijas"><lucide-icon name="pencil" [size]="16" /></button>
-                  }
                 </div>
               }
             </div>
@@ -566,9 +555,7 @@ interface FijaEd {
                   <p class="xxs muted">Úsalo como prompt base: descárgalo, edítalo y vuelve a subirlo con «Pegar o subir prompt».</p>
                   <div class="row">
                     <button type="button" class="btn outline sm" (click)="descargarPrompt(pr)"><lucide-icon name="download" [size]="13" /> Descargar .md</button>
-                    @if (editable()) {
                       <button type="button" class="btn primary sm" (click)="editarComoBase(pr.prompt)"><lucide-icon name="file-pen" [size]="13" /> Editar como base</button>
-                    }
                   </div>
                 </div>
               }
@@ -738,7 +725,6 @@ export class ReglasTabComponent implements OnInit {
   protected readonly esWiz = computed(() => this.modo() === 'wiz');
   protected readonly siguiente = computed(() => this.est()?.siguiente ?? (this.buzon().version_reglas ?? 0) + 1);
   /** Con agente de Foundry y reglas administradas en Foundry, aquí son de solo lectura. */
-  protected readonly editable = computed(() => this.buzon().modo_clasificacion !== 'agente' || this.buzon().reglas_admin === 'alma');
   /** 070: OTROS siempre se ve (activa o no): no se borra, se activa o desactiva. */
   protected readonly respaldo = computed(() => this.categorias().find((c) => c.es_fallback && !this.procesos().some((p) => p.id === c.proceso_id)) ?? null);
   protected readonly etiquetasActivas = computed(() => this.categorias().filter((c) => c.activa));

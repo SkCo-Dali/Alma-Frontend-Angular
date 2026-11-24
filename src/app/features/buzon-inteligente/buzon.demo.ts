@@ -403,8 +403,8 @@ function buzonesBase(): Buzon[] {
 function camposV2(p: Partial<Buzon>): Pick<
   Buzon,
   | 'tipo_cuenta' | 'descripcion' | 'en_configuracion' | 'mod_asignacion' | 'mod_bases' | 'mod_exportacion'
-  | 'reglas_admin' | 'agente_proyecto' | 'agente_version_fija' | 'modelo' | 'exclusiones_globales' | 'discriminacion'
-  | 'ventana_hilos_dias' | 'respuesta_sin_novedad' | 'tabla_formato' | 'tabla_separador' | 'descarga_en_alma' | 'version_reglas'
+  | 'modelo' | 'exclusiones_globales' | 'discriminacion'
+  | 'ventana_hilos_dias' | 'tabla_formato' | 'tabla_separador' | 'version_reglas'
 > {
   return {
     tipo_cuenta: 'gen',
@@ -413,17 +413,12 @@ function camposV2(p: Partial<Buzon>): Pick<
     mod_asignacion: false,
     mod_bases: false,
     mod_exportacion: false,
-    reglas_admin: 'alma',
-    agente_proyecto: null,
-    agente_version_fija: null,
     modelo: null,
     exclusiones_globales: null,
     discriminacion: [],
     ventana_hilos_dias: 15,
-    respuesta_sin_novedad: 'vincular',
     tabla_formato: 'xlsx',
     tabla_separador: ';',
-    descarga_en_alma: true,
     version_reglas: null,
     ...p,
   };

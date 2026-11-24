@@ -165,7 +165,6 @@ interface FilaResumen {
               </div>
               @if (buzon()!.modo_clasificacion === 'agente') {
                 <div class="g2">
-                  <div class="fld"><label class="label" for="nb-ag-p">Proyecto</label><input class="input" id="nb-ag-p" [(ngModel)]="agenteProyecto" (change)="guardarAgente()" /></div>
                   <div class="fld"><label class="label" for="nb-ag-n">Agente</label><input class="input" id="nb-ag-n" [(ngModel)]="agenteNombre" (change)="guardarAgente()" placeholder="Nombre del agente en Foundry" /></div>
                 </div>
                 <p class="note b-amber"><lucide-icon name="plug" [size]="13" /> <span>Leer las instrucciones del agente desde Foundry requiere que TI habilite el acceso de Nova al proyecto. Mientras tanto, pega su prompt con «Pegar o subir prompt» y Nova lo convierte en reglas.</span></p>
@@ -270,7 +269,6 @@ export class NuevoBuzonComponent implements OnInit {
   private readonly salidas = signal<Salida[]>([]);
   private readonly personas = signal(0);
   protected descripcion = '';
-  protected agenteProyecto = '';
   protected agenteNombre = '';
   private consulta = 0;
 
@@ -358,7 +356,6 @@ export class NuevoBuzonComponent implements OnInit {
       this.correo.set(b.direccion);
       this.descripcion = b.descripcion ?? '';
       this.carpeta.set(b.carpeta_vigilada || 'Inbox');
-      this.agenteProyecto = b.agente_proyecto ?? '';
       this.agenteNombre = b.agente_nombre ?? '';
       if (b.estado_conexion === 'conectada') await this.leerCarpetas();
     } catch (e) {
@@ -480,7 +477,7 @@ export class NuevoBuzonComponent implements OnInit {
 
   protected async guardarAgente(): Promise<void> {
     this.buzon.set(await this.api.actualizarBuzon(this.buzon()!.id, {
-      agente_proyecto: this.agenteProyecto.trim() || null, agente_nombre: this.agenteNombre.trim() || null,
+      agente_nombre: this.agenteNombre.trim() || null,
     }));
   }
 

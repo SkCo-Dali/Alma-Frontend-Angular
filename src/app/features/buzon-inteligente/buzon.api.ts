@@ -103,25 +103,18 @@ export interface Buzon {
   mod_asignacion: boolean;
   mod_bases: boolean;
   mod_exportacion: boolean;
-  reglas_admin: ReglasAdmin;
-  agente_proyecto: string | null;
-  /** NULL = usa siempre la última versión publicada del agente. */
-  agente_version_fija: string | null;
   modelo: string | null;
   exclusiones_globales: string | null;
   discriminacion: ParDiscriminacion[];
   ventana_hilos_dias: number;
-  respuesta_sin_novedad: 'vincular' | 'validar';
   /** 061: «tabla según el JSON» (extensión y separador) y entrega del archivo. */
   tabla_formato: 'xlsx' | 'csv' | 'txt';
   tabla_separador: ';' | ',' | '|';
-  descarga_en_alma: boolean;
   /** Versión publicada de las reglas (vN); null = sin versión publicada. */
   version_reglas: number | null;
 }
 
 export type TipoCuenta = 'gen' | 'per';
-export type ReglasAdmin = 'alma' | 'foundry';
 
 /** Qué diferencia a dos procesos que se pueden confundir y qué señal manda. */
 export interface ParDiscriminacion {
@@ -168,17 +161,12 @@ export type BuzonUpdate = Partial<
     | 'mod_asignacion'
     | 'mod_bases'
     | 'mod_exportacion'
-    | 'reglas_admin'
-    | 'agente_proyecto'
-    | 'agente_version_fija'
     | 'modelo'
     | 'exclusiones_globales'
     | 'discriminacion'
     | 'ventana_hilos_dias'
-    | 'respuesta_sin_novedad'
     | 'tabla_formato'
     | 'tabla_separador'
-    | 'descarga_en_alma'
   >
 >;
 
