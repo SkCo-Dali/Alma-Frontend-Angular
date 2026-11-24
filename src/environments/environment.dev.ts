@@ -2,6 +2,8 @@
 export const environment = {
   production: false,
   name: 'dev',
+  /** Buzón Inteligente: datos de demostración si el backend no responde (solo local y dev). */
+  buzonDemo: true,
   apiUrl: 'https://skcoalmadev-bmdza3angyh0dab9.eastus2-01.azurewebsites.net',
   azure: {
     clientId: 'd43d6a91-ee68-4e97-ada0-069a106a142a',

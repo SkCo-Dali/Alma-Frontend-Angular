@@ -13,12 +13,6 @@ export function salidaPara<T extends Pick<Salida, 'activa' | 'etiquetas'>>(salid
   return salidas.find((s) => s.activa && (s.etiquetas === null || s.etiquetas.some((e) => e.toUpperCase() === clave))) ?? null;
 }
 
-/** Salidas (con archivo) que cubren una etiqueta, en orden. */
-export function salidasDe<T extends Pick<Salida, 'activa' | 'etiquetas' | 'modo'>>(salidas: T[], etiqueta: string): T[] {
-  const clave = etiqueta.toUpperCase();
-  return salidas.filter((s) => s.activa && s.modo !== 'ninguno' && (s.etiquetas === null || s.etiquetas.some((e) => e.toUpperCase() === clave)));
-}
-
 const simple = (v: unknown) => v === null || (typeof v !== 'object' && typeof v !== 'function');
 
 /** Cargue_{codigo_pac}_{fecha} → Cargue_PC0342_2026-10-27.xlsx */
@@ -201,28 +195,6 @@ export function sugerirColumna(encabezado: string, campos: string[]): OrigenColu
     }
   }
   return null;
-}
-
-/** Una columna está lista cuando su origen tiene todo lo que necesita. */
-export function faltaEnColumna(c: ColumnaPlantilla): string | null {
-  const o = c.origen;
-  if (!c.encabezado.trim()) return 'no tiene nombre';
-  switch (o.tipo) {
-    case 'vacio':
-      return 'elige de dónde sale el valor';
-    case 'campo':
-      return o.campo ? null : 'elige el dato del correo';
-    case 'fijo':
-      return o.valor?.trim() ? null : 'escribe el texto fijo';
-    case 'correo':
-      return o.dato ? null : 'elige la información del correo';
-    case 'base':
-      return o.base_id && o.campo && o.columna_busqueda && o.columna_resultado ? null : 'completa la base, el dato y las dos columnas';
-    case 'formula':
-      return (o.formula ?? '').startsWith('=') ? null : 'la fórmula debe empezar con «=»';
-    default:
-      return null;
-  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -12,13 +12,11 @@ import {
   ArchivoGenerado,
   ColumnaPlantilla,
   Exportacion,
-  ModeloLeido,
   OrigenColumna,
   Plantilla,
   PlantillaIn,
   Salida,
   SalidaIn,
-  VistaPrevia,
   Base,
   BaseIn,
   BaseUpdate,
@@ -48,7 +46,6 @@ import {
   ResultadoAplicar,
   ResultadoAsignacion,
   ResultadoCarga,
-  ResultadoPrueba,
   ResumenInicio,
   ResumenSync,
   RolMiembro,
@@ -1112,62 +1109,6 @@ export class DemoStore {
     this.plantillas = this.plantillas.filter((t) => t.id !== id);
   }
 
-  async leerModelo(buzonId: string, archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<ModeloLeido> {
-    const XLSX = await import('xlsx');
-    const csv = /\.csv$/i.test(archivo.name);
-    if (!csv && !/\.(xlsx|xlsm)$/i.test(archivo.name)) throw new Error('El archivo debe ser un Excel (.xlsx) o un .csv.');
-    const wb = csv ? XLSX.read(await archivo.text(), { type: 'string' }) : XLSX.read(new Uint8Array(await archivo.arrayBuffer()), { type: 'array' });
-    const elegida = hoja && wb.SheetNames.includes(hoja) ? hoja : wb.SheetNames[0];
-    const filas = XLSX.utils
-      .sheet_to_json<unknown[]>(wb.Sheets[elegida], { header: 1, blankrows: true, defval: '', raw: false })
-      .map((r) => r.map((c) => String(c ?? '').trim()));
-    let idx = filaEncabezado ? filaEncabezado - 1 : 0;
-    if (!filaEncabezado) {
-      let mejor = 0;
-      filas.slice(0, 20).forEach((f, i) => {
-        const n = f.filter((c) => c && isNaN(Number(c.replace(',', '.')))).length;
-        if (n > mejor) [mejor, idx] = [n, i];
-      });
-      if (mejor < 2) throw new Error('No encontré una fila de encabezados (al menos dos columnas con nombre).');
-    }
-    if (idx < 0 || idx >= filas.length) throw new Error('La fila de encabezados está fuera del archivo.');
-    const ancho = filas[idx].reduce((n, c, i) => (c ? i + 1 : n), 0);
-    const ejemplo = filas[idx + 1] ?? [];
-    const campos = this.camposBuzon(buzonId);
-    const columnas = filas[idx].slice(0, ancho).map((enc, i) => {
-      const muestra = ejemplo[i] ?? '';
-      const sugerido = sugerirColumna(enc, campos);
-      return {
-        encabezado: enc || `Columna ${i + 1}`,
-        origen: sugerido ?? { tipo: 'vacio' as const },
-        sugerido: !!sugerido,
-        formato: (/^\d{4}-\d{2}-\d{2}|^\d{2}\/\d{2}\/\d{4}/.test(muestra) ? 'fecha' : muestra && /^[\d.,$\s-]+$/.test(muestra) && muestra.length < 15 ? 'numero' : 'texto') as ColumnaPlantilla['formato'],
-        ejemplo: muestra,
-      };
-    });
-    return {
-      hojas: csv ? [] : wb.SheetNames,
-      hoja: csv ? null : elegida,
-      fila_encabezado: idx + 1,
-      titulo: filas.slice(0, idx).filter((f) => f.some(Boolean)).map((f) => f.slice(0, ancho)),
-      columnas,
-      formato: csv ? 'csv' : 'xlsx',
-      modelo: archivo.name,
-      campos,
-    };
-  }
-
-  /** Datos que extraen los procesos del buzón (los de las listas como «lista.campo»). */
-  private camposBuzon(buzonId: string): string[] {
-    const out = this.procesos.filter((p) => p.buzon_id === buzonId).flatMap((p) => p.campos_extraer.map((c) => c.clave));
-    const listas = this.correos
-      .filter((c) => c.buzon_id === buzonId)
-      .flatMap((c) => Object.entries(c.datos_extraidos ?? {}))
-      .filter(([, v]) => Array.isArray(v) && v.length && typeof v[0] === 'object')
-      .flatMap(([k, v]) => Object.keys((v as Record<string, unknown>[])[0]).map((x) => `${k}.${x}`));
-    return [...new Set([...out, ...listas])];
-  }
-
   private meta(c: Pick<Correo, 'asunto' | 'remitente' | 'recibido_en' | 'id'> | null, etiqueta: string, proceso: string): Record<string, string> {
     return {
       asunto: c?.asunto ?? 'Asunto del correo',
@@ -1177,26 +1118,6 @@ export class DemoStore {
       etiqueta,
       proceso,
       hoy: new Date().toISOString().slice(0, 10),
-    };
-  }
-
-  vistaPrevia(plantillaId: string, body: { datos?: Record<string, unknown>; proceso_clave?: string }): VistaPrevia {
-    const t = this.plantillas.find((x) => x.id === plantillaId);
-    if (!t) throw new Error('Plantilla no encontrada.');
-    let datos = body.datos ?? null;
-    if (!datos && body.proceso_clave) {
-      datos = [...this.correos].filter((c) => c.proceso_clave === body.proceso_clave!.toUpperCase() && c.datos_extraidos).sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.datos_extraidos ?? null;
-    }
-    const meta = this.meta(null, body.proceso_clave ?? '', body.proceso_clave ?? '');
-    meta['fecha'] = '';
-    const m = matriz(t, datos ?? {}, meta, this.basesConFilas());
-    return {
-      nombre_archivo: nombreArchivo(t.nombre_archivo, datos ?? {}, meta, t.formato),
-      titulo: m.titulo,
-      encabezados: m.encabezados,
-      filas: m.filas.slice(0, 30),
-      total_filas: m.filas.length,
-      con_datos_reales: !body.datos && !!datos,
     };
   }
 
@@ -1979,15 +1900,6 @@ export class DemoStore {
     return nueva;
   }
 
-  actualizarRegla(id: string, r: ReglaIn): ReglaFija {
-    const i = this.reglas.findIndex((x) => x.id === id);
-    if (i < 0) throw new Error('Regla no encontrada.');
-    const cat = this.categorias.find((c) => c.id === r.categoria_id);
-    this.reglas[i] = { ...this.reglas[i], ...r, categoria_clave: cat?.clave ?? null };
-    this.reglas = [...this.reglas];
-    return this.reglas[i];
-  }
-
   eliminarRegla(id: string): void {
     this.reglas = this.reglas.filter((x) => x.id !== id);
   }
@@ -2137,41 +2049,6 @@ export function demoCorreoDetalle(store: DemoStore, id: string): CorreoDetalle {
     ...c,
     ejecuciones,
     acciones_previstas: (cat?.acciones ?? []).filter((a) => a.activa).map((a) => ({ tipo: a.tipo, parametros: a.parametros })),
-  };
-}
-
-export function demoProbar(
-  store: DemoStore,
-  buzonId: string,
-  body: { asunto: string; remitente: string; cuerpo: string; texto_adjuntos?: string },
-): ResultadoPrueba {
-  const texto = `${body.asunto} ${body.cuerpo} ${body.texto_adjuntos ?? ''}`.toLowerCase();
-  const cats = store.categorias.filter((c) => c.buzon_id === buzonId && c.activa);
-  const buzon = store.buzones.find((b) => b.id === buzonId);
-  // Heurística SOLO para la demo (el backend real usa el modelo de IA): las
-  // palabras del nombre/clave pesan más que las de la descripción, sin repetir.
-  const tokens = (t: string) => new Set(t.toLowerCase().split(/[^a-záéíóúñ0-9]+/).filter((w) => w.length > 4));
-  const puntuar = (c: Categoria) => {
-    let n = 0;
-    tokens(`${c.nombre} ${c.clave.replace(/_/g, ' ')}`).forEach((w) => (n += texto.includes(w) ? 3 : 0));
-    tokens(`${c.palabras_clave ?? ''} ${c.descripcion}`).forEach((w) => (n += texto.includes(w) ? 1 : 0));
-    return n;
-  };
-  const ordenadas = cats.filter((c) => !c.es_fallback).map((c) => ({ c, p: puntuar(c) })).sort((a, b) => b.p - a.p);
-  const mejor = ordenadas[0]?.p ? ordenadas[0].c : cats.find((c) => c.es_fallback) ?? cats[0];
-  const confianza = mejor?.es_fallback ? 0.55 : Math.min(0.98, 0.7 + (ordenadas[0]?.p ?? 0) * 0.06);
-  const umbral = mejor?.umbral_confianza ?? buzon?.umbral_confianza ?? 0.8;
-  return {
-    categoria_clave: mejor?.clave ?? null,
-    categoria_nombre: mejor?.nombre ?? null,
-    confianza,
-    resumen: `${body.remitente || 'El remitente'} escribe sobre “${body.asunto || 'sin asunto'}”. ${body.cuerpo.slice(0, 140)}${body.cuerpo.length > 140 ? '…' : ''}`,
-    justificacion: mejor?.es_fallback
-      ? 'No se reconocen términos ni documentos de las categorías configuradas.'
-      : `Coincide con la descripción de “${mejor?.nombre}” (términos: ${mejor?.palabras_clave ?? mejor?.nombre}).`,
-    datos_extraidos: Object.fromEntries((mejor?.campos_extraer ?? []).slice(0, 4).map((k) => [k.clave, ''])),
-    acciones_previstas: (mejor?.acciones ?? []).filter((a) => a.activa).map((a) => ({ tipo: a.tipo, parametros: a.parametros })),
-    cumple_umbral: confianza >= umbral,
   };
 }
 
