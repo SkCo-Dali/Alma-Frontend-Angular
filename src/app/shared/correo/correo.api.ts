@@ -52,11 +52,13 @@ export class CorreoApi {
     return this.api.fetch('/api/correo/buzones');
   }
 
-  conectarBuzon(buzonId: string, code: string, redirectUri: string):
+  /** `compartida` (genéricas del Buzón Inteligente): true = con la cuenta de un
+   *  administrador, false = con la cuenta del buzón; sin indicar, decide el backend. */
+  conectarBuzon(buzonId: string, code: string, redirectUri: string, compartida?: boolean):
     Promise<{ conectada: boolean; email: string }> {
     return this.api.fetch(`/api/correo/buzones/${buzonId}/conectar`, {
       method: 'POST',
-      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      body: JSON.stringify({ code, redirect_uri: redirectUri, ...(compartida === undefined ? {} : { compartida }) }),
     });
   }
 

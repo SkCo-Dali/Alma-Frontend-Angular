@@ -1,0 +1,1531 @@
+// Pestaña «Reglas» del buzón — réplica de `tabReglas` del prototipo validado
+// (contexto-recaudos-pac/buzon-inteligente-v2.html): entrada de reglas (pegar o subir
+// el prompt, plantilla, proponer desde correos reales, proceso manual), procesos con su
+// editor en línea, pendientes, secciones globales, orden de evaluación, discriminación y
+// «Probar y publicar». Lo que se edita es el BORRADOR; publicar crea la versión vN que
+// usa el worker (061). Con `modo="wiz"` es el paso 2 del asistente «Nuevo buzón»: cada
+// proceso se acepta, no hay secciones globales ni publicación (la hace «Activar buzón»).
+// Un proceso existente se actualiza con un prompt nuevo («Actualizar con prompt» o una
+// propuesta con su clave): antes de aceptar se ve qué cambia y qué etiquetas salen. El
+// prompt armado con las reglas actuales se descarga o se edita como base.
+
+import { Component, computed, effect, inject, input, OnInit, output, signal, untracked } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
+import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
+import { ToastService } from '../../core/services/toast.service';
+import {
+  Buzon,
+  BuzonApi,
+  Categoria,
+  EstadoReglas,
+  VersionReglas,
+  Grupo,
+  CategoriaIn,
+  Proceso,
+  ProcesoPropuesto,
+  PROMPT_LARGO_CHARS,
+  PROMPT_MAX_CHARS,
+  PromptBuzon,
+  PropuestaProcesos,
+  ReglaFija,
+  RevisionGrupos,
+  resumenEtiqueta,
+} from './buzon.api';
+import { CategoriaEditorComponent } from './categoria-editor.component';
+import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
+import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
+
+type Modal = 'tpl' | 'ej' | 'pegar' | 'prompt' | 'global' | 'eliminar' | null;
+type Global = 'contexto' | 'generales' | 'fijas' | 'exclusiones';
+/** 069: desde cuántos caracteres se condensa una parte (lo corto queda literal). */
+const TRANSCRIBIR_DESDE = 4000;
+/** Estado de un proceso dentro del asistente (el borrador ya lo tiene guardado). */
+type EstadoWiz = 'ok' | 'propuesta' | 'revisar';
+
+interface Pendiente {
+  icono: string;
+  texto: string;
+  bloquea: boolean;
+}
+
+/** Qué cambia al aplicar una propuesta sobre un proceso que ya existe. */
+interface Comparacion {
+  clave: string;
+  /** [qué, antes, después] de nombre, alcance y exclusiones. */
+  textos: [string, string, string][];
+  nuevas: string[];
+  actualizadas: string[];
+  /** Etiquetas activas del proceso que el prompt ya no menciona. */
+  salen: Categoria[];
+  camposMas: string[];
+  camposMenos: string[];
+  /** Tiene etiquetas o datos ajustados a mano (✎) que se reemplazarán. */
+  manuales: boolean;
+}
+
+/** Impacto de eliminar un proceso (salidas: null mientras se consulta). */
+interface Eliminacion {
+  p: Proceso;
+  etiquetas: Categoria[];
+  salidas: number | null;
+  grupos: string[];
+}
+
+interface FijaEd {
+  nombre: string;
+  campo: 'remitente_contiene' | 'asunto_contiene' | 'cuerpo_contiene';
+  valor: string;
+  categoria_id: string;
+}
+
+@Component({
+  selector: 'alma-reglas-tab',
+  imports: [FormsModule, NgTemplateOutlet, LucideAngularModule, AlmaSwitchComponent, ProcesoEditorComponent, CategoriaEditorComponent],
+  styleUrls: ['./buzon-proto.css'],
+  template: `
+    @let b = buzon();
+    @if (cargando()) {
+      <p class="xs muted">Cargando reglas…</p>
+    } @else if (!esWiz() && !procesos().length && !b.version_reglas && !eligioClasificador()) {
+      <!-- Buzón sin reglas: primero se elige quién clasifica. -->
+      <div class="glass r-3xl stack" style="padding:24px">
+        <div class="row" style="gap:12px">
+          <div class="appicon" style="background:linear-gradient(150deg,#FF9F0A,#FF375F)"><lucide-icon name="scroll-text" [size]="20" /></div>
+          <div>
+            <h2 class="bb" style="font-size:1.1rem">Configura las reglas para empezar</h2>
+            <p class="xs muted">El buzón no procesa correos hasta que publiques las reglas. Los demás módulos se activan después.</p>
+          </div>
+        </div>
+        <p class="sm">¿Quién va a clasificar los correos de este buzón?</p>
+        <div class="g2">
+          <button type="button" class="optcard" (click)="elegirClasificador('prompt')">
+            <span class="row sm b"><lucide-icon name="scroll-text" [size]="13" /> Prompt generado por Nova</span>
+            <span class="xs muted">Describes los procesos y Nova arma el prompt. Las reglas se editan aquí.</span>
+          </button>
+          <button type="button" class="optcard" (click)="elegirClasificador('agente')">
+            <span class="row sm b"><lucide-icon name="bot" [size]="13" /> Agente propio en Foundry</span>
+            <span class="xs muted">Conectas un agente que tu área ya creó. Nova lo invoca y valida sus respuestas.</span>
+          </button>
+        </div>
+      </div>
+    } @else {
+      @if (!esWiz()) {
+        <div class="glass r-2xl stack" style="padding:16px">
+          <div class="row between">
+            <div>
+              <p class="sm b">
+                Reglas
+                @if (est()?.borrador && b.version_reglas) { <span class="badge b-violet">Borrador v{{ siguiente() }}</span> sobre }
+                @if (b.version_reglas) { <span class="badge b-emerald">Vigente v{{ b.version_reglas }}</span> }
+                @else { <span class="badge b-slate">Sin versión publicada</span> }
+              </p>
+              <p class="xs muted" style="margin-top:4px">{{ infoClasificador() }} · {{ procesos().length }} procesos · {{ b.discriminacion.length }} pares de discriminación</p>
+            </div>
+            <div class="row">
+              <button type="button" class="btn outline sm" (click)="abrirPrompt()"><lucide-icon name="eye" [size]="13" /> Ver prompt de este buzón</button>
+            </div>
+          </div>
+          <div class="flowsteps">
+            @for (s of pasos(); track s[0]; let i = $index) {
+              <div [class.done]="i + 1 < paso()" [class.on]="i + 1 === paso()"><b>{{ i + 1 }}. {{ s[0] }}</b><span>{{ s[1] }}</span></div>
+            }
+          </div>
+        </div>
+      }
+
+        <div class="glass r-2xl stack" style="padding:14px 16px;gap:10px">
+          <p class="cap"><lucide-icon name="log-in" [size]="13" /> Entrada de reglas · se pueden combinar</p>
+          <div class="row">
+            <button type="button" class="btn sm" [class.primary]="!esWiz()" [class.outline]="esWiz()" (click)="abrirPegar()"><lucide-icon name="clipboard-paste" [size]="13" /> Pegar o subir prompt</button>
+            <button type="button" class="btn outline sm" (click)="modal.set('tpl')"><lucide-icon name="file-text" [size]="13" /> Plantilla de prompt</button>
+            <button type="button" class="btn outline sm" [disabled]="proponiendo()" (click)="proponer()"><lucide-icon name="sparkles" [size]="13" /> {{ proponiendo() ? 'Leyendo correos…' : 'Proponer desde correos reales' }}</button>
+            <button type="button" class="btn outline sm" (click)="editar(null)"><lucide-icon name="plus" [size]="13" /> Proceso manual</button>
+          </div>
+          <p class="xxs muted">✦ propuesta de Nova · ✎ ajustado por ti. Todo se puede aceptar tal cual o parametrizar.</p>
+        </div>
+
+      <div [class]="editando() || esWiz() ? 'stack' : 'g2'" style="align-items:start">
+        <div class="stack">
+          @if (!esWiz()) { <h2 class="sm b on-wall">Procesos</h2> }
+          @if (editando()?.nuevo) {
+            <article class="glass r-2xl stack" style="padding:14px;box-shadow:0 0 0 2px var(--ring)">
+              <p class="sm bb">Nuevo proceso</p>
+              <alma-proceso-editor [buzon]="b" [procesos]="procesos()" [categorias]="categorias()" [modo]="esWiz() ? 'wiz' : 'buzon'" [siguiente]="siguiente()"
+                (guardado)="alGuardar($event, true)" (cancelado)="editando.set(null)" (editarEtiqueta)="etiquetaEd.set($event)" />
+            </article>
+          }
+          <ng-template #tplPropuesta let-p>
+            @let t = objetivoDe(p);
+            @let cmp = comparar(p);
+            <article class="glass r-2xl stack" style="padding:14px;gap:8px;border-color:var(--violet)">
+              <div class="row between" style="flex-wrap:nowrap;align-items:flex-start">
+                <div style="min-width:0">
+                  @if (t) {
+                    <!-- Actualiza un proceso que ya existe: va pegada a su tarjeta, no como otro proceso. -->
+                    <p class="sm bb"><lucide-icon name="git-compare" [size]="13" /> Cambios propuestos para {{ t.nombre }} <span class="key">{{ t.clave }}</span> <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta de Nova</span></p>
+                  } @else {
+                    <p class="sm bb">{{ p.nombre }} <span class="key">{{ p.clave }}</span> <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta</span>
+                      @if (!p.campos.length) { <span class="badge b-sky">Solo categorización</span> }</p>
+                    <p class="xs muted">{{ p.descripcion }}</p>
+                  }
+                  <p class="xxs" style="color:var(--violet)">{{ notaPropuesta(p) }}</p>
+                </div>
+                <div class="row" style="flex-wrap:nowrap">
+                  <button type="button" class="btn primary sm" [disabled]="aceptando()" (click)="aceptarPropuesta(p)">{{ t ? 'Actualizar ' + t.clave : 'Aceptar' }}</button>
+                  <button type="button" class="btn ghost danger" (click)="descartarPropuesta(p)" aria-label="Descartar"><lucide-icon name="x" [size]="13" /></button>
+                </div>
+              </div>
+              @if (!mismaClave(p) && procesos().length) {
+                <label class="row xs" style="gap:6px">
+                  <span class="muted">Aplicar sobre</span>
+                  <select class="input sm" style="width:auto" [attr.aria-label]="'Aplicar ' + p.clave + ' sobre'" (change)="elegirObjetivo(p, $any($event.target).value)">
+                    <option value="" [selected]="!t">Crear como proceso nuevo</option>
+                    @for (x of procesos(); track x.id) { <option [value]="x.id" [selected]="t?.id === x.id">Actualizar {{ x.clave }} · {{ x.nombre }}</option> }
+                  </select>
+                </label>
+              }
+              @if (cmp) {
+                <div class="stack" style="gap:6px">
+                  <p class="xs b"><lucide-icon name="git-compare" [size]="13" /> Qué cambia en {{ cmp.clave }}</p>
+                  @for (x of cmp.textos; track x[0]) {
+                    <div class="diff">
+                      <p class="xs b">{{ x[0] }}</p>
+                      @if (x[1]) { <p class="del">− {{ x[1] }}</p> }
+                      <p class="add">+ {{ x[2] || '(vacío)' }}</p>
+                    </div>
+                  }
+                  <div class="row" style="gap:6px">
+                    @for (e of cmp.nuevas; track e) { <span class="badge b-emerald">+ {{ e }}</span> }
+                    @for (e of cmp.actualizadas; track e) { <span class="badge b-sky">✎ {{ e }}</span> }
+                    @for (e of cmp.salen; track e.id) { <span class="badge b-rose">− {{ e.clave }}</span> }
+                  </div>
+                  @if (cmp.camposMas.length || cmp.camposMenos.length) {
+                    <p class="xxs muted"><lucide-icon name="braces" [size]="13" /> Datos:
+                      @if (cmp.camposMas.length) { agrega {{ cmp.camposMas.join(', ') }} }
+                      @if (cmp.camposMas.length && cmp.camposMenos.length) { · }
+                      @if (cmp.camposMenos.length) { quita {{ cmp.camposMenos.join(', ') }} }
+                    </p>
+                  }
+                  @if (!cmp.textos.length && !cmp.nuevas.length && !cmp.salen.length && !cmp.camposMas.length && !cmp.camposMenos.length) {
+                    <p class="xxs muted">Sin cambios de alcance, exclusiones, etiquetas ni datos: solo se actualizan los textos de las etiquetas.</p>
+                  }
+                  @if (cmp.salen.length) {
+                    <label class="row xs" style="gap:6px"><input type="checkbox" [checked]="desactivaSalen(p)" (change)="alternarSalen(p)" />
+                      Desactivar {{ cmp.salen.length === 1 ? 'la etiqueta que ya no está' : 'las ' + cmp.salen.length + ' etiquetas que ya no están' }} en el prompt</label>
+                  }
+                  @if (cmp.manuales) {
+                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>{{ cmp.clave }} tiene ajustes hechos a mano en Nova (✎): al actualizar se reemplazan por lo que dice el prompt.</span></p>
+                  }
+                  <p class="xxs muted">Queda en el borrador v{{ siguiente() }}: la versión vigente sigue clasificando hasta que publiques.</p>
+                </div>
+              }
+            </article>
+          </ng-template>
+          @for (p of propuestasNuevas(); track p.clave) {
+            <ng-container *ngTemplateOutlet="tplPropuesta; context: { $implicit: p }" />
+          }
+          @for (p of procesos(); track p.id; let i = $index, primero = $first, ultimo = $last) {
+            @for (pp of propuestasPara(p); track pp.clave) {
+              <ng-container *ngTemplateOutlet="tplPropuesta; context: { $implicit: pp }" />
+            }
+            @let abierto = editando()?.id === p.id;
+            <article class="glass r-2xl stack" style="padding:14px;gap:8px" [style.opacity]="p.activo ? 1 : 0.6" [style.box-shadow]="abierto ? '0 0 0 2px var(--ring)' : null">
+              <div class="row" style="flex-wrap:nowrap;gap:10px;align-items:flex-start">
+                <span style="width:5px;height:30px;border-radius:999px;flex:none" [style.background]="p.color || '#5E81AC'"></span>
+                <div style="flex:1;min-width:0">
+                  <p class="sm bb">{{ p.nombre }} <span class="key">{{ p.clave }}</span>
+                    @if (esWiz()) {
+                      @switch (estadoWiz(p)) {
+                        @case ('ok') { <span class="badge b-emerald"><lucide-icon name="check" [size]="13" /> Revisado</span> }
+                        @case ('propuesta') { <span class="badge b-violet"><lucide-icon name="sparkles" [size]="13" /> Propuesta desde correos</span> }
+                        @default { <span class="badge b-amber">Por revisar</span> }
+                      }
+                    }
+                    @if (!p.campos_extraer.length) { <span class="badge b-sky">Solo categorización</span> }
+                    @if (!p.activo) { <span class="badge b-slate">Desactivado</span> }
+                  </p>
+                  <p class="xs muted" [class.clamp3]="!verMas()[p.clave]">{{ p.descripcion }}</p>
+                  @if ((p.descripcion || '').length > 220) {
+                    <button type="button" class="linkbtn xs" style="justify-self:start" (click)="alternarVerMas(p.clave)">{{ verMas()[p.clave] ? 'Ver menos' : 'Ver más' }}</button>
+                  }
+                </div>
+                <div class="row" style="gap:4px;flex-wrap:nowrap">
+                    <button type="button" class="btn outline sm" (click)="abierto ? editando.set(null) : editar(p)">
+                      <lucide-icon [name]="abierto ? 'chevron-up' : 'pencil'" [size]="13" /> {{ abierto ? 'Cerrar' : esWiz() ? 'Abrir' : 'Editar' }}
+                    </button>
+                    @if (esWiz()) {
+                      @if (estadoWiz(p) !== 'ok') { <button type="button" class="btn primary sm" (click)="aceptarWiz(p)">Aceptar</button> }
+                      <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
+                    } @else {
+                      <button type="button" class="btn ghost" (click)="abrirPegar(p)" [attr.aria-label]="(p.reglas ? 'Reglas de ' : 'Actualizar con prompt ') + p.clave" [title]="p.reglas ? 'Reglas del proceso' : 'Actualizar con prompt'"><lucide-icon name="file-pen" [size]="16" /></button>
+                      @if (procesos().length > 1) {
+                        <!-- Orden de evaluación: OTROS siempre va de último. -->
+                        <button type="button" class="btn ghost" [disabled]="primero" (click)="mover(i, -1)" [attr.aria-label]="'Subir ' + p.clave" title="Evaluar antes"><lucide-icon name="arrow-up" [size]="16" /></button>
+                        <button type="button" class="btn ghost" [disabled]="ultimo" (click)="mover(i, 1)" [attr.aria-label]="'Bajar ' + p.clave" title="Evaluar después"><lucide-icon name="arrow-down" [size]="16" /></button>
+                      }
+                      <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave" title="Duplicar"><lucide-icon name="copy" [size]="16" /></button>
+                      <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave" [title]="p.activo ? 'Desactivar' : 'Activar'"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
+                      <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="pedirEliminar(p)" [attr.aria-label]="'Eliminar ' + p.clave" title="Eliminar"><lucide-icon name="trash-2" [size]="16" /></button>
+                    }
+                  @if (!abierto && !esWiz()) {
+                    <button type="button" class="btn ghost" (click)="alternarJson(p.clave)" [attr.aria-label]="'Ver formato JSON de ' + p.clave"><lucide-icon [name]="jsonAbierto() === p.clave ? 'chevron-up' : 'braces'" [size]="16" /></button>
+                  }
+                </div>
+              </div>
+              @if (abierto) {
+                <alma-proceso-editor [buzon]="b" [proceso]="p" [duplicar]="!!editando()?.duplicar" [procesos]="procesos()" [categorias]="categorias()"
+                  [modo]="esWiz() ? 'wiz' : 'buzon'" [siguiente]="siguiente()" (guardado)="alGuardar($event, !!editando()?.duplicar)" (cancelado)="editando.set(null)" (editarEtiqueta)="etiquetaEd.set($event)" />
+              } @else {
+                <div class="stack" style="gap:4px">
+                  @for (e of etiquetasDe(p); track e.id) {
+                    <div class="row xs" style="flex-wrap:nowrap;gap:6px">
+                      <span class="orig" [class.user]="e.origen === 'user'" [class.ia]="e.origen !== 'user'" [title]="e.origen === 'user' ? 'Ajustado por ti' : 'Propuesta de Nova'">{{ e.origen === 'user' ? '✎' : '✦' }}</span>
+                      <span class="chipo"><lucide-icon [name]="e.criterio === 'datos' ? 'filter' : 'sparkles'" [size]="13" /> {{ e.clave }}</span>
+                      <span class="muted trunc" style="flex:1" [title]="criterioTexto(e) + ' · ' + resumenEt(e)">{{ criterioTexto(e) }}</span>
+                      <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(e)" [title]="'Umbral, acciones en Outlook y más · ' + resumenEt(e)" [attr.aria-label]="'Configurar ' + e.clave"><lucide-icon name="pencil" [size]="13" /></button>
+                    </div>
+                  }
+                </div>
+                <p class="xxs muted"><lucide-icon name="braces" [size]="13" />
+                  @if (p.campos_extraer.length) {
+                    {{ p.campos_extraer.length }} datos · {{ resumenCampos(p) }}
+                  } @else { Sin extracción: la salida es solo la base fija }
+                </p>
+                @if (jsonAbierto() === p.clave) {
+                  <pre class="json"><span class="ln">{{ '{' }}</span><span class="ln base"><span class="c">  // base fija · la agrega Nova</span></span>@for (k of baseFields; track k; let i = $index) {<span class="ln base">  <span class="k">"{{ k }}"</span>: <span [class]="k === 'score_confianza' ? 'n' : 's'">{{ ejemploBase(k, p) }}</span>{{ i < baseFields.length - 1 || p.campos_extraer.length ? ',' : '' }}</span>}@if (p.campos_extraer.length) {<span class="ln"><span class="c">  // datos de interés</span></span>}@for (f of p.campos_extraer; track f.clave; let last = $last) {<span class="ln" [class.idf]="f.identificador">  <span class="k">"{{ f.clave }}"</span>: <span [class]="f.tipo === 'texto' || f.tipo === 'fecha' || !f.tipo ? 's' : 'n'">{{ ejemploCampo(f) }}</span>{{ last ? '' : ',' }}@if (f.critico) {<span class="c"> // crítico{{ f.alterno ? ' (basta uno del grupo)' : '' }}</span>}</span>}<span class="ln">{{ '}' }}</span></pre>
+                }
+              }
+            </article>
+          }
+          @if (respaldo(); as r) {
+            <article class="glass r-2xl stack" style="padding:14px;gap:8px">
+              <div class="row" style="flex-wrap:nowrap;gap:10px;align-items:flex-start">
+                <span style="width:5px;height:30px;border-radius:999px;flex:none" [style.background]="r.color || '#9E9E9E'"></span>
+                <div style="flex:1;min-width:0">
+                  <p class="sm bb">{{ r.nombre }} <span class="key">{{ r.clave }}</span>@if (!r.activa) { <span class="badge b-slate">Desactivada</span> }</p>
+                  <p class="xs muted">Respaldo: lo que no es de ningún proceso. No se elimina: actívala o desactívala.</p>
+                </div>
+                  <alma-switch [checked]="r.activa" (checkedChange)="alternarRespaldo(r, $event)" [ariaLabel]="(r.activa ? 'Desactivar ' : 'Activar ') + r.clave" />
+              </div>
+              @if (r.activa) {
+                <p class="xxs muted">{{ accionesActivas(r)
+                  ? 'No va a Validar: se le aplican solas las acciones de abajo (y su grupo de Asignación, si tiene).'
+                  : 'No va a Validar: sin acciones, queda sin tocar en Outlook y en Nova pasa a «Ignorados». Agrégale acciones con el lápiz si quieres etiquetarlo, moverlo o reenviarlo.' }}</p>
+                <div class="row xs" style="flex-wrap:nowrap;gap:6px"><span class="orig ia">✦</span><span class="chipo"><lucide-icon name="sparkles" [size]="13" /> {{ r.clave }}</span><span class="muted trunc" style="flex:1">Confianza mínima · {{ resumenEt(r) }}</span>
+                  <button type="button" class="btn ghost" style="padding:2px 6px" (click)="etiquetaEd.set(r)" [attr.aria-label]="'Configurar ' + r.clave"><lucide-icon name="pencil" [size]="13" /></button>
+                </div>
+              } @else {
+                <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>Desactivada: la IA solo elige entre procesos y lo que no encaje va a Validar.</span></p>
+              }
+            </article>
+          }
+          @if (esWiz() && !procesos().length && !propuestas().length && !editando()) {
+            <p class="xs muted">Sin procesos todavía.</p>
+          }
+        </div>
+
+        @if (esWiz()) {
+          @if (pendientesWiz().length) {
+            <div class="stack" style="gap:6px">
+              <div class="row between">
+                <p class="xs b">Pendientes</p>
+                <button type="button" class="btn outline sm" (click)="copiarPreguntas(pendientesWiz())"><lucide-icon name="copy" [size]="13" /> Copiar como preguntas para la IA</button>
+              </div>
+              @for (x of pendientesWiz(); track x.texto) {
+                <p class="note" [class.b-amber]="x.bloquea" [class.b-sky]="!x.bloquea"><lucide-icon [name]="x.icono" [size]="13" /> <span>{{ x.texto }} @if (x.bloquea) { <b>(bloquea)</b> }</span></p>
+              }
+            </div>
+          } @else if (procesos().length) {
+            <p class="note b-emerald"><lucide-icon name="check" [size]="13" /> <span>Reglas completas: puedes continuar.</span></p>
+          }
+        } @else {
+          <div class="stack">
+            <!-- Encabezado a la par de «Procesos»: separa la columna de la entrada de reglas. -->
+            <h2 class="sm b on-wall">Borrador y publicación</h2>
+            <div class="glass r-2xl stack" style="padding:16px">
+              <h2 class="sm b">Publicar</h2>
+              <p class="xs muted">Nova clasifica con la versión publicada. Lo que edites queda en un borrador hasta que lo publiques.</p>
+              <div class="row">
+                <button type="button" class="btn primary sm" [disabled]="!puedePublicar() || publicando()" (click)="publicar()"><lucide-icon name="upload-cloud" [size]="13" /> {{ publicando() ? 'Publicando…' : 'Publicar v' + siguiente() }}</button>
+                @if (est()?.borrador) { <span class="xxs muted">{{ est()!.cambios.length }} cambio(s) sin publicar</span> }
+              </div>
+              @if (!est()?.borrador) {
+                <p class="xxs muted">Edita un proceso, acepta una propuesta o carga un prompt para crear un borrador.</p>
+              }
+              @if (revGrupos(); as rg) {
+                @if (rg.aplica && rg.sin_grupo.length) {
+                  <!-- Discreto: no bloquea ni insiste; solo muestra qué etiquetas no llegan a ningún grupo. -->
+                  <div class="stack" style="gap:4px;border-top:1px solid var(--border);padding-top:8px">
+                    <p class="xxs muted"><lucide-icon name="layers" [size]="12" /> Sin grupo de Asignación: sus correos solo se etiquetan.</p>
+                    @for (x of rg.sin_grupo; track x.clave) {
+                      <div class="row xs" style="gap:6px;flex-wrap:wrap">
+                        <span class="key">{{ x.clave }}</span>
+                        @if (x.sugerido; as s) {
+                          <button type="button" class="linkbtn xs" [disabled]="agregandoGrupo() === x.clave" (click)="agregarAGrupo(x.clave, s.id, s.nombre)" [title]="'Reemplaza a ' + s.reemplaza.join(', ') + ': hereda su destino'">Agregar a {{ s.nombre }}</button>
+                        } @else if (gruposAsig().length) {
+                          <select class="input sm" style="width:auto;height:24px" [attr.aria-label]="'Grupo para ' + x.clave" [disabled]="agregandoGrupo() === x.clave" (change)="agregarAGrupo(x.clave, $any($event.target).value)">
+                            <option value="">Agregar a un grupo…</option>
+                            @for (g of gruposAsig(); track g.id) { <option [value]="g.id">{{ g.nombre }}</option> }
+                          </select>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              }
+              @if (est()?.versiones?.length) {
+                <!-- Si una publicación sale mal, quien configura vuelve a la que funcionaba con
+                     un clic, sin deshacer cambios a mano (el borrador se conserva). -->
+                <div class="stack" style="gap:4px;border-top:1px solid var(--border);padding-top:8px">
+                  <p class="xxs muted b">Versiones publicadas</p>
+                  @for (v of est()!.versiones.slice(0, 5); track v.version) {
+                    <div class="row xs" style="gap:6px;flex-wrap:wrap">
+                      <span class="b">v{{ v.version }}</span>
+                      <span class="muted">· {{ fecha(v.publicada_en) }} · {{ v.publicada_por }}</span>
+                      @if (vuelveA(v); as origen) { <span class="muted">· {{ origen }}</span> }
+                      @if (v.version === est()!.version) {
+                        <span class="badge b-emerald">Vigente</span>
+                      } @else {
+                        <button type="button" class="linkbtn xs" [disabled]="restaurando() !== null || publicando()" (click)="volverAVersion(v.version)">
+                          {{ restaurando() === v.version ? 'Volviendo…' : 'Volver a esta versión' }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            @if (est()?.borrador && est()!.cambios.length) {
+              <!-- El detalle del diff se consulta al revisar antes de publicar: plegado por defecto. -->
+              <div class="glass r-2xl stack" style="padding:16px">
+                <button type="button" class="plegable" (click)="verCambios.set(!verCambios())" [attr.aria-expanded]="verCambios()">
+                  <h2 class="sm b"><lucide-icon name="git-compare" [size]="13" /> Cambios en el prompt · borrador v{{ siguiente() }}</h2>
+                  <span class="row" style="gap:6px;flex-wrap:nowrap"><span class="badge b-violet">{{ est()!.cambios.length }}</span><lucide-icon [name]="verCambios() ? 'chevron-up' : 'chevron-down'" [size]="16" /></span>
+                </button>
+                @if (verCambios()) {
+                  @for (x of est()!.cambios; track $index) {
+                    <div class="diff">
+                      <p class="xs b">{{ x[0] }}</p>
+                      @if (x[1]) { <p class="del">− {{ x[1] }}</p> }
+                      <p class="add">+ {{ x[2] }}</p>
+                    </div>
+                  }
+                }
+              </div>
+            }
+            @if (pendientes().length) {
+              <div class="glass r-2xl stack" style="padding:16px">
+                <div class="row between">
+                  <h2 class="sm b"><lucide-icon name="alert-circle" [size]="13" /> Pendientes ({{ pendientes().length }})</h2>
+                  <button type="button" class="btn outline sm" (click)="copiarPreguntas(pendientes())"><lucide-icon name="copy" [size]="13" /> Copiar como preguntas para la IA</button>
+                </div>
+                @for (x of pendientes(); track x.texto) {
+                  <p class="note b-amber"><lucide-icon [name]="x.icono" [size]="13" /> <span>{{ x.texto }}</span></p>
+                }
+              </div>
+            }
+            <!-- Lo general del prompt se edita en «Reglas de X» → pestaña «General del área»;
+                 el orden, con las flechas de cada proceso. Aquí queda solo lo poco usado. -->
+            <div class="glass r-2xl stack" style="padding:16px">
+              <button type="button" class="plegable" (click)="verAvanzado.set(!verAvanzado())" [attr.aria-expanded]="verAvanzado()">
+                <h2 class="sm b"><lucide-icon name="sliders-horizontal" [size]="13" /> Avanzado</h2>
+                <lucide-icon [name]="verAvanzado() ? 'chevron-up' : 'chevron-down'" [size]="16" />
+              </button>
+              @if (verAvanzado()) {
+                <div class="row between sunk r-xl" style="padding:8px 12px;flex-wrap:nowrap;align-items:flex-start">
+                  <div style="min-width:0"><p class="xs b">Reglas fijas (sin IA)</p><p class="xxs muted">{{ textoFijas() }}</p></div>
+                    <button type="button" class="btn ghost" (click)="editarGlobal('fijas')" aria-label="Editar reglas fijas"><lucide-icon name="pencil" [size]="16" /></button>
+                </div>
+              }
+            </div>
+            @if (b.discriminacion.length) {
+              <div class="glass r-2xl stack" style="padding:16px">
+                <h2 class="sm b">Discriminación entre procesos</h2>
+                @for (d of b.discriminacion; track $index) {
+                  <div class="row between sunk r-xl" style="padding:8px 12px;flex-wrap:nowrap">
+                    <div style="min-width:0"><p class="xs b"><span class="key">{{ d.a }}</span> ↔ <span class="key">{{ d.b }}</span></p><p class="xxs muted">{{ d.manda }}</p></div>
+                    <span class="badge" [class.b-emerald]="!!d.manda.trim()" [class.b-amber]="!d.manda.trim()">{{ d.manda.trim() ? 'Definida' : 'Falta' }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Modales ── -->
+    @if (modal()) {
+      <div class="scrim" (click)="cerrarScrim($event)">
+        @switch (modal()) {
+          @case ('tpl') {
+            <div class="modal solid" role="dialog" aria-modal="true" aria-label="Plantilla de prompt">
+              <div class="row between mhead"><div><h2 class="sm b">Plantilla de prompt</h2><p class="xs muted">Cópiala completa en la IA corporativa (Copilot o Claude). La IA te hace las preguntas (PARTE A) y te entrega el prompt con la estructura que Nova lee (PARTE B). Si ya tienes un prompt, la IA lo convierte. Pégalo luego en «Pegar o subir prompt».</p></div><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              <pre class="tpl">{{ plantilla }}</pre>
+              <div class="row between">
+                <button type="button" class="btn outline sm" (click)="modal.set('ej')"><lucide-icon name="book-open" [size]="13" /> Ver ejemplo completo</button>
+                <button type="button" class="btn primary sm" (click)="copiar(plantilla, 'Plantilla copiada')"><lucide-icon name="copy" [size]="13" /> Copiar plantilla</button>
+              </div>
+            </div>
+          }
+          @case ('ej') {
+            <div class="modal solid" role="dialog" aria-modal="true" aria-label="Ejemplo de prompt">
+              <div class="row between"><button type="button" class="btn outline sm" (click)="modal.set('tpl')"><lucide-icon name="arrow-left" [size]="13" /> Volver</button><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              <h2 class="sm b">Ejemplo completo · Atención a Proveedores (ficticio)</h2>
+              <p class="xs muted">Ejemplo inventado de un área ficticia: así se ve el prompt que entrega la IA con la estructura de la PARTE B. No corresponde a ningún buzón real.</p>
+              <pre class="tpl">{{ ejemplo }}</pre>
+              <div class="row" style="justify-content:flex-end"><button type="button" class="btn primary sm" (click)="usarEjemplo()"><lucide-icon name="clipboard-paste" [size]="13" /> Usar este ejemplo</button></div>
+            </div>
+          }
+          @case ('pegar') {
+            @if (analizando()) {
+              <div class="modal solid" role="dialog" aria-modal="true" aria-label="Analizando">
+                <h2 class="sm b">{{ transcribiendo() || 'Nova está leyendo el prompt…' }}</h2>
+                <p class="xs muted">Separa procesos, etiquetas, datos a extraer, discriminación y Validar.</p>
+                @if (promptLargo()) {
+                  <p class="note b-amber"><lucide-icon name="clock" [size]="13" /> <span>Es un prompt largo ({{ caracteres() }} caracteres): el análisis puede tardar hasta 3 o 4 minutos. No cierres esta ventana.</span></p>
+                }
+              </div>
+            } @else {
+              <div class="modal solid" role="dialog" aria-modal="true" aria-label="Cargar prompt">
+                <div class="row between mhead">
+                  @if (objetivo(); as o) {
+                    @if (pestana() === 'general') {
+                      <div><h2 class="sm b">Reglas generales del área</h2><p class="xs muted">Aplican a todos los procesos de {{ buzon().nombre }}. Se guardan en el borrador y entran al publicar.</p></div>
+                    } @else if (o.reglas) {
+                      <div><h2 class="sm b">Reglas de {{ o.clave }}</h2><p class="xs muted">Es el texto completo de {{ o.clave }} que va a la IA en cada correo. Edítalo y guárdalo tal cual, o analízalo con Nova para actualizar también sus señales, etiquetas y datos (te muestra qué cambia antes de aplicarlo).</p></div>
+                    } @else {
+                      <div><h2 class="sm b">Actualizar {{ o.clave }} con prompt</h2><p class="xs muted">Este es el prompt guardado del buzón: ajusta la parte de {{ o.clave }} (o sube una versión nueva) y Nova te muestra qué cambia antes de aplicarlo. Solo se actualiza {{ o.clave }}, y desde ahí guarda sus reglas completas.</p></div>
+                    }
+                  } @else {
+                    <div><h2 class="sm b">Pegar o subir prompt</h2><p class="xs muted">Pega el prompt que te entregó la IA con la plantilla, o el prompt completo de tu agente, o sube el .txt / .md. Lo que Nova interprete llega como propuestas para aceptar; si un proceso ya existe, ves qué cambia antes de actualizarlo.</p></div>
+                  }
+                  <button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button>
+                </div>
+                @if (objetivo(); as o) {
+                  @if (!esWiz()) {
+                    <div class="row" style="gap:6px" role="tablist" aria-label="Qué reglas editar">
+                      <button type="button" role="tab" class="btn sm" [class.primary]="pestana() === 'proceso'" [class.outline]="pestana() !== 'proceso'" [attr.aria-selected]="pestana() === 'proceso'" (click)="pestana.set('proceso')">{{ o.clave }}</button>
+                      <button type="button" role="tab" class="btn sm" [class.primary]="pestana() === 'general'" [class.outline]="pestana() !== 'general'" [attr.aria-selected]="pestana() === 'general'" (click)="abrirGeneral()">General del área</button>
+                    </div>
+                  }
+                }
+                @if (pestana() === 'general' && objetivo()) {
+                  <p class="xs muted">Lo del prompt que aplica a todo el buzón (reglas comunes, preprocesamiento, exclusiones). Va completo a la IA en cada correo: entre más corto, menos tokens.</p>
+                  <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoGeneral" aria-label="Reglas generales del área"></textarea>
+                  <p class="xxs muted" style="text-align:right">{{ textoGeneral.length.toLocaleString('es-CO') }} caracteres · unos {{ tokensDe(textoGeneral) }} tokens en cada correo</p>
+                  @if (condensado(); as cd) {
+                    <p class="note b-emerald"><lucide-icon name="sparkles" [size]="13" /> <span>Condensado de {{ cd.original.toLocaleString('es-CO') }} a {{ cd.resultado.toLocaleString('es-CO') }} caracteres (−{{ menos(cd) }} %). Revísalo antes de guardar; nada se guarda hasta que pulses «Guardar». <button type="button" class="linkbtn xs" (click)="volverOriginalGeneral()">Volver al original</button></span></p>
+                  }
+                  @if (verContexto()) {
+                    <div class="fld"><label class="label" for="g-ctx">Contexto del área</label><textarea class="input" id="g-ctx" rows="3" style="height:auto" [(ngModel)]="contextoGeneral"></textarea></div>
+                  }
+                  @if (verExclusiones()) {
+                    <div class="fld"><label class="label" for="g-exc">Exclusiones globales</label><textarea class="input" id="g-exc" rows="3" style="height:auto" [(ngModel)]="exclusionesGeneral"></textarea></div>
+                  }
+                  <div class="row between">
+                    <button type="button" class="btn outline sm" [disabled]="condensando() || textoGeneral.length < 4000" (click)="condensarGeneral()" [title]="textoGeneral.length < 4000 ? 'Es corto: no hace falta condensarlo' : 'Quita lo redundante sin perder reglas'"><lucide-icon [name]="condensando() ? 'loader-2' : 'minimize-2'" [size]="13" [class.animate-spin]="condensando()" /> {{ condensando() ? 'Condensando… (puede tardar 1 a 2 min)' : 'Condensar con Nova' }}</button>
+                    <button type="button" class="btn primary sm" [disabled]="guardandoGlobal() || condensando()" (click)="guardarGeneral()"><lucide-icon name="save" [size]="13" /> Guardar en el borrador</button>
+                  </div>
+                } @else {
+                @if (!esWiz()) {
+                  <p class="xxs muted">¿Ajustaste reglas aquí en Nova? Parte de las reglas actuales con <button type="button" class="linkbtn xxs" (click)="usarPromptBase()">Cargar prompt base del borrador</button>.</p>
+                }
+                <textarea class="input mono" rows="14" style="height:auto" [(ngModel)]="textoPrompt" placeholder="1. CONTEXTO DEL ÁREA&#10;…"></textarea>
+                <p class="xxs muted" style="text-align:right">{{ caracteres() }} de {{ maxCaracteres }} caracteres</p>
+                @if (promptExcedido()) {
+                  <p class="note b-rose"><lucide-icon name="alert-triangle" [size]="13" /> <span>El prompt tiene <b>{{ caracteres() }}</b> caracteres y el máximo es <b>{{ maxCaracteres }}</b>. Quita texto que no sea de reglas (ejemplos repetidos, anexos) o pégalo por partes: un proceso a la vez con «Actualizar con prompt».</span></p>
+                } @else if (promptLargo()) {
+                  <p class="note b-amber"><lucide-icon name="clock" [size]="13" /> <span><b>Prompt largo.</b> Nova lo analiza completo, pero puede tardar hasta 3 o 4 minutos.</span></p>
+                }
+                <div class="row between">
+                  <label class="btn outline sm" for="prompt-file"><lucide-icon name="file-up" [size]="13" /> Subir .txt o .md</label>
+                  <input type="file" id="prompt-file" accept=".txt,.md" hidden (change)="subirPrompt($event)" />
+                  <div class="row">
+                    <button type="button" class="btn outline sm" (click)="textoPrompt = ejemplo; errorPrompt.set('')">Usar ejemplo</button>
+                    @if (objetivo()?.reglas) {
+                      <button type="button" class="btn outline sm" [disabled]="promptExcedido() || guardandoReglas()" (click)="guardarReglas()"><lucide-icon name="save" [size]="13" /> Guardar sin analizar</button>
+                    }
+                    <button type="button" class="btn primary sm" [disabled]="promptExcedido()" (click)="analizar()"><lucide-icon name="sparkles" [size]="13" /> Analizar con Nova</button>
+                  </div>
+                </div>
+                @if (errorPrompt()) { <p class="err">{{ errorPrompt() }}</p> }
+                }
+              </div>
+            }
+          }
+          @case ('prompt') {
+            <div class="modal solid" role="dialog" aria-modal="true" aria-label="Prompt vigente">
+              <div class="row between"><h2 class="sm b">Prompt de {{ b.nombre }} · {{ prompt()?.version ? 'v' + prompt()!.version : 'borrador' }}</h2><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              @if (b.version_reglas) {
+                <div class="pills">
+                  <button type="button" [attr.aria-selected]="promptCual() === 'vigente'" (click)="abrirPrompt('vigente')">Vigente v{{ b.version_reglas }}</button>
+                  <button type="button" [attr.aria-selected]="promptCual() === 'borrador'" (click)="abrirPrompt('borrador')">Borrador</button>
+                </div>
+              }
+              @if (b.modo_clasificacion === 'agente') {
+                <p class="note b-sky"><lucide-icon name="bot" [size]="13" /> <span>Este buzón clasifica con un agente de Foundry: las instrucciones viven en el agente. Abajo, el prompt que Nova armaría con estas reglas.</span></p>
+              }
+              <pre class="tpl">{{ prompt()?.prompt ?? 'Cargando…' }}</pre>
+              @if (prompt(); as pr) {
+                <div class="row between">
+                  <p class="xxs muted">Úsalo como prompt base: descárgalo, edítalo y vuelve a subirlo con «Pegar o subir prompt».</p>
+                  <div class="row">
+                    <button type="button" class="btn outline sm" (click)="descargarPrompt(pr)"><lucide-icon name="download" [size]="13" /> Descargar .md</button>
+                      <button type="button" class="btn primary sm" (click)="editarComoBase(pr.prompt)"><lucide-icon name="file-pen" [size]="13" /> Editar como base</button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          @case ('eliminar') {
+            @if (eliminar(); as x) {
+              <div class="modal solid" role="dialog" aria-modal="true" [attr.aria-label]="'Eliminar ' + x.p.clave">
+                <div class="row between"><h2 class="sm b">¿Eliminar {{ x.p.clave }}?</h2><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+                <p class="xs">{{ x.p.nombre }}</p>
+                <div class="stack" style="gap:6px">
+                  <p class="note b-sky"><lucide-icon name="scroll-text" [size]="13" /> <span>Sale del borrador v{{ siguiente() }}. La versión vigente sigue clasificando con {{ x.p.clave }} hasta que publiques.</span></p>
+                  <p class="note b-slate"><lucide-icon name="tag" [size]="13" />
+                    <span>@if (x.etiquetas.length) { {{ x.etiquetas.length }} etiqueta(s) quedan inactivas ({{ claves(x.etiquetas) }}): no se borran, porque los correos ya clasificados las conservan. } @else { No tiene etiquetas activas. }</span></p>
+                  @if (x.salidas === null) {
+                    <p class="xxs muted">Revisando exportación y grupos…</p>
+                  } @else {
+                    @if (x.salidas) {
+                      <p class="note b-amber"><lucide-icon name="file-spreadsheet" [size]="13" /> <span>Se borran <b>ya</b> sus {{ x.salidas }} salida(s) de exportación (no esperan a Publicar).</span></p>
+                    }
+                    @if (x.grupos.length) {
+                      <p class="note b-amber"><lucide-icon name="layers" [size]="13" /> <span>Los grupos {{ x.grupos.join(', ') }} se quedan sin estas etiquetas.</span></p>
+                    }
+                  }
+                </div>
+                @if (x.p.activo) {
+                  <p class="xxs muted">¿Solo quieres dejar de usarlo por un tiempo? Desactívalo: se puede volver a activar y conserva todo.</p>
+                }
+                <div class="row" style="justify-content:flex-end">
+                  <button type="button" class="btn outline" (click)="modal.set(null)">Cancelar</button>
+                  @if (x.p.activo) {
+                    <button type="button" class="btn outline" (click)="modal.set(null); alternarActivo(x.p)"><lucide-icon name="eye-off" [size]="16" /> Desactivar</button>
+                  }
+                  <button type="button" class="btn outline danger" [disabled]="!!descartando()" (click)="confirmarEliminar()"><lucide-icon name="trash-2" [size]="16" /> Eliminar</button>
+                </div>
+              </div>
+            }
+          }
+          @case ('global') {
+            <div class="modal solid" role="dialog" aria-modal="true" [attr.aria-label]="tituloGlobal()">
+              <div class="row between"><h2 class="sm b">{{ tituloGlobal() }}</h2><button type="button" class="btn ghost" (click)="modal.set(null)" aria-label="Cerrar"><lucide-icon name="x" [size]="16" /></button></div>
+              @if (globalEd() === 'fijas') {
+                <p class="xs muted">Coincidencias exactas que no pasan por la IA: si el correo cumple, recibe la etiqueta.</p>
+                @for (f of fijasEd; track $index; let i = $index) {
+                  <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:6px">
+                    <div class="row" style="flex-wrap:nowrap">
+                      <input class="input sm" [(ngModel)]="f.nombre" placeholder="Nombre de la regla" aria-label="Nombre" />
+                      <button type="button" class="btn ghost danger" (click)="fijasEd.splice(i, 1)" aria-label="Quitar"><lucide-icon name="x" [size]="13" /></button>
+                    </div>
+                    <div class="row" style="flex-wrap:nowrap">
+                      <select class="input sm" style="width:auto" [(ngModel)]="f.campo" aria-label="Dónde buscar">
+                        <option value="remitente_contiene">Remitente contiene</option><option value="asunto_contiene">Asunto contiene</option><option value="cuerpo_contiene">Cuerpo contiene</option>
+                      </select>
+                      <input class="input sm" [(ngModel)]="f.valor" placeholder="texto" aria-label="Texto" />
+                      <span class="xs">→</span>
+                      <select class="input sm" style="width:auto" [(ngModel)]="f.categoria_id" aria-label="Etiqueta">
+                        @for (c of etiquetasActivas(); track c.id) { <option [value]="c.id">{{ c.clave }}</option> }
+                      </select>
+                    </div>
+                  </div>
+                }
+                <button type="button" class="btn outline sm" style="justify-self:start" (click)="fijasEd.push({ nombre: '', campo: 'remitente_contiene', valor: '', categoria_id: etiquetasActivas()[0]?.id ?? '' })"><lucide-icon name="plus" [size]="13" /> Agregar regla fija</button>
+              } @else {
+                @if (globalEd() === 'generales') {
+                  <p class="xs muted">Lo del prompt del área que aplica a todo el buzón (reglas comunes, preprocesamiento, exclusiones, orden de evaluación). Va completo a la IA en cada correo.</p>
+                }
+                <textarea class="input" [class.mono]="globalEd() === 'generales'" [attr.rows]="globalEd() === 'generales' ? 18 : 8" style="height:auto" [(ngModel)]="textoGlobal"></textarea>
+                @if (globalEd() === 'generales') { <p class="xxs muted" style="text-align:right">{{ textoGlobal.length.toLocaleString('es-CO') }} caracteres</p> }
+              }
+              <div class="row" style="justify-content:flex-end">
+                <button type="button" class="btn outline" (click)="modal.set(null)">Cancelar</button>
+                <button type="button" class="btn primary" [disabled]="guardandoGlobal()" (click)="guardarGlobal()"><lucide-icon name="save" [size]="16" /> Guardar en el borrador</button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (etiquetaEd(); as c) {
+      <alma-categoria-editor [categoria]="c" [guardando]="guardandoEtiqueta()" (guardar)="guardarEtiqueta(c, $event)" (cancelar)="etiquetaEd.set(null)" />
+    }
+  `,
+})
+export class ReglasTabComponent implements OnInit {
+  private readonly api = inject(BuzonApi);
+  private readonly toast = inject(ToastService);
+
+  readonly buzon = input.required<Buzon>();
+  readonly modo = input<'buzon' | 'wiz'>('buzon');
+  /** El buzón cambió (contexto, exclusiones, discriminación, clasificador, versión). */
+  readonly buzonActualizado = output<Buzon>();
+  /** Asistente: ¿se puede continuar al paso 3? */
+  readonly listo = output<{ puedeSeguir: boolean; porque: string }>();
+
+  protected readonly plantilla = PLANTILLA_PROMPT;
+  protected readonly ejemplo = EJEMPLO_PROMPT;
+  protected readonly baseFields = BASE_FIELDS;
+
+  protected readonly cargando = signal(true);
+  protected readonly procesos = signal<Proceso[]>([]);
+  protected readonly categorias = signal<Categoria[]>([]);
+  /** Etiqueta abierta en el editor completo (umbral, acciones en Outlook, color…). */
+  protected readonly etiquetaEd = signal<Categoria | null>(null);
+  protected readonly guardandoEtiqueta = signal(false);
+  protected readonly fijas = signal<ReglaFija[]>([]);
+  protected readonly est = signal<EstadoReglas | null>(null);
+  protected readonly propuestas = signal<ProcesoPropuesto[]>([]);
+  protected readonly editando = signal<{ id: string | null; nuevo?: boolean; duplicar?: boolean } | null>(null);
+  protected readonly modal = signal<Modal>(null);
+  protected readonly verMas = signal<Record<string, boolean>>({});
+  protected readonly jsonAbierto = signal<string | null>(null);
+  protected readonly eligioClasificador = signal(false);
+  protected readonly analizando = signal(false);
+  protected readonly proponiendo = signal(false);
+  /** Id del proceso que se está descartando (evita clics repetidos). */
+  protected readonly descartando = signal<string | null>(null);
+  protected readonly eliminar = signal<Eliminacion | null>(null);
+  protected readonly aceptando = signal(false);
+  /** «Actualizar con prompt» de un proceso: solo se aplica la parte de ese proceso. */
+  protected readonly objetivo = signal<Proceso | null>(null);
+  /** Propuesta (clave) → proceso (id) sobre el que se aplica; '' = crear como nuevo. */
+  private readonly destinos = signal<Record<string, string>>({});
+  /** Propuestas en las que NO se desactivan las etiquetas que salen (por defecto sí). */
+  private readonly conservarSalen = signal<Set<string>>(new Set());
+  /** «Cambios en el prompt» desplegado (plegado por defecto). */
+  protected readonly verCambios = signal(false);
+  protected readonly publicando = signal(false);
+  /** Versión a la que se está volviendo («Volver a esta versión»). */
+  protected readonly restaurando = signal<number | null>(null);
+  protected readonly revGrupos = signal<RevisionGrupos | null>(null);
+  protected readonly gruposAsig = signal<Grupo[]>([]);
+  protected readonly agregandoGrupo = signal<string | null>(null);
+  protected readonly errorPrompt = signal('');
+  /** 069: progreso de la transcripción por proceso ('' = no está transcribiendo). */
+  protected readonly transcribiendo = signal('');
+  protected readonly guardandoReglas = signal(false);
+  protected readonly prompt = signal<PromptBuzon | null>(null);
+  protected readonly promptCual = signal<'vigente' | 'borrador'>('vigente');
+  protected readonly globalEd = signal<Global>('contexto');
+  protected readonly verAvanzado = signal(false);
+  protected readonly pestana = signal<'proceso' | 'general'>('proceso');
+  protected textoGeneral = '';
+  protected contextoGeneral = '';
+  protected exclusionesGeneral = '';
+  private originalGeneral = '';
+  protected readonly verContexto = signal(false);
+  protected readonly verExclusiones = signal(false);
+  protected readonly condensando = signal(false);
+  protected readonly condensado = signal<{ original: number; resultado: number } | null>(null);
+  protected readonly guardandoGlobal = signal(false);
+  /** Asistente: procesos aceptados y los que llegaron como propuesta desde correos. */
+  protected readonly aceptados = signal<Set<string>>(new Set());
+  private readonly desdeCorreos = signal<Set<string>>(new Set());
+  protected textoPrompt = '';
+  protected readonly maxCaracteres = PROMPT_MAX_CHARS.toLocaleString('es-CO');
+  protected caracteres(): string {
+    return this.textoPrompt.length.toLocaleString('es-CO');
+  }
+  protected promptLargo(): boolean {
+    return this.textoPrompt.length > PROMPT_LARGO_CHARS;
+  }
+  protected promptExcedido(): boolean {
+    return this.textoPrompt.length > PROMPT_MAX_CHARS;
+  }
+  protected textoGlobal = '';
+  protected fijasEd: FijaEd[] = [];
+
+  protected readonly esWiz = computed(() => this.modo() === 'wiz');
+  protected readonly siguiente = computed(() => this.est()?.siguiente ?? (this.buzon().version_reglas ?? 0) + 1);
+  /** Con agente de Foundry y reglas administradas en Foundry, aquí son de solo lectura. */
+  /** 070: OTROS siempre se ve (activa o no): no se borra, se activa o desactiva. */
+  protected readonly respaldo = computed(() => this.categorias().find((c) => c.es_fallback && !this.procesos().some((p) => p.id === c.proceso_id)) ?? null);
+  protected readonly etiquetasActivas = computed(() => this.categorias().filter((c) => c.activa));
+  protected readonly infoClasificador = computed(() => {
+    const b = this.buzon();
+    return b.modo_clasificacion === 'agente' ? `Agente Foundry ${b.agente_nombre ?? ''}`.trim() : `Prompt de Nova · ${b.modelo ?? 'modelo de la plataforma'}`;
+  });
+  protected readonly pasos = computed<[string, string][]>(() => [
+    ['Entrada', 'Prompt, correos o manual'],
+    ['Revisión', 'Aceptar o parametrizar'],
+    ['Discriminación', 'Qué diferencia los procesos'],
+    ['Publicar', this.buzon().modo_clasificacion === 'agente' ? 'Al agente' : 'En Nova'],
+  ]);
+  protected readonly paso = computed(() => (this.est()?.borrador ? 3 : this.procesos().length ? 2 : 1));
+  protected readonly puedePublicar = computed(() => {
+    const e = this.est();
+    return !!e && e.borrador;
+  });
+
+  protected readonly textoFijas = computed(() => {
+    const fijas = this.fijas().filter((f) => f.activa);
+    return fijas.length ? fijas.map((f) => `${f.nombre} → ${f.categoria_clave}`).join(' · ') : 'Ninguna: todo lo clasifica la IA.';
+  });
+  protected readonly tituloGlobal = computed(() => ({ contexto: 'Contexto del área', generales: 'Reglas generales del área', fijas: 'Reglas fijas', exclusiones: 'Exclusiones globales' })[this.globalEd()]);
+
+  /** Pares de procesos sin discriminación y procesos con una sola etiqueta sin criterio. */
+  private readonly faltantes = computed<Pendiente[]>(() => {
+    const out: Pendiente[] = [];
+    const neg = this.procesos().filter((p) => p.activo);
+    const disc = this.buzon().discriminacion;
+    for (let i = 0; i < neg.length; i++) {
+      for (let j = i + 1; j < neg.length; j++) {
+        const [a, c] = [neg[i].clave, neg[j].clave];
+        if (!disc.some((d) => (d.a === a && d.b === c) || (d.a === c && d.b === a))) {
+          out.push({ icono: 'git-compare', texto: `Define qué diferencia a ${a} de ${c} (pestaña Discriminación).`, bloquea: false });
+        }
+      }
+    }
+    for (const c of this.categorias()) {
+      if (c.activa && c.proceso_id && c.criterio !== 'datos' && !c.descripcion.trim()) {
+        out.push({ icono: 'tag', texto: `La etiqueta ${c.clave} no tiene criterio.`, bloquea: true });
+      }
+    }
+    return out;
+  });
+  /** Solo lo que impide que el buzón funcione bien (las sugerencias van en el asistente). */
+  protected readonly pendientes = computed<Pendiente[]>(() => this.faltantes().filter((x) => x.bloquea));
+  protected readonly pendientesWiz = computed<Pendiente[]>(() => {
+    const out: Pendiente[] = [];
+    const n = this.procesos().length;
+    if (!n) out.push({ icono: 'layers', texto: 'Aún no hay procesos. Pega el prompt, propón desde correos o crea uno manual.', bloquea: true });
+    if (n === 1) out.push({ icono: 'layers', texto: 'Solo se detectó 1 proceso. ¿El buzón recibe otros tipos de correo?', bloquea: false });
+    const porRevisar = this.procesos().filter((p) => this.estadoWiz(p) !== 'ok').length;
+    if (porRevisar) out.push({ icono: 'eye', texto: `${porRevisar} proceso(s) por revisar: ábrelos y pulsa «Aceptar proceso».`, bloquea: true });
+    if (this.propuestas().length) out.push({ icono: 'sparkles', texto: `${this.propuestas().length} propuesta(s) sin decidir: acéptalas o descártalas.`, bloquea: true });
+    return out.concat(this.faltantes());
+  });
+
+  constructor() {
+    // El asistente habilita «Continuar» cuando no queda nada que bloquee.
+    effect(() => {
+      if (!this.esWiz()) return;
+      const bloquea = this.pendientesWiz().some((x) => x.bloquea);
+      untracked(() => this.listo.emit({ puedeSeguir: !bloquea, porque: bloquea ? 'Acepta todos los procesos y resuelve los pendientes que bloquean' : '' }));
+    });
+  }
+
+  ngOnInit(): void {
+    void this.cargar();
+  }
+
+  private async cargar(): Promise<void> {
+    const id = this.buzon().id;
+    try {
+      const [procesos, categorias, fijas, est] = await Promise.all([
+        this.api.listarProcesos(id),
+        this.api.listarCategorias(id),
+        this.api.listarReglas(id),
+        this.esWiz() ? Promise.resolve(null) : this.api.estadoReglas(id),
+      ]);
+      this.procesos.set(procesos);
+      this.categorias.set(categorias);
+      this.fijas.set(fijas);
+      this.est.set(est);
+    } catch (e) {
+      this.toast.error('No se pudieron cargar las reglas', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.cargando.set(false);
+    }
+  }
+
+  private async refrescarBuzon(): Promise<void> {
+    this.buzonActualizado.emit(await this.api.obtenerBuzon(this.buzon().id));
+  }
+
+  // ── Procesos ──
+  protected etiquetasDe(p: Proceso): Categoria[] {
+    return this.categorias().filter((c) => c.proceso_id === p.id && c.activa).sort((a, c) => a.orden - c.orden);
+  }
+
+  protected criterioTexto(c: Categoria): string {
+    return c.criterio === 'datos' && c.condicion ? `${c.condicion.campo} ${c.condicion.op} ${c.condicion.valor}` : c.descripcion;
+  }
+
+  protected resumenCampos(p: Proceso): string {
+    const fs = p.campos_extraer;
+    return fs.slice(0, 5).map((f) => (f.origen === 'user' ? '✎' : '✦') + f.clave).join(', ') + (fs.length > 5 ? '…' : '');
+  }
+
+  protected ejemploBase(k: string, p: Proceso): string {
+    const etiquetas = this.etiquetasDe(p).map((e) => e.clave).join(' | ');
+    return ({
+      correlation_id: '"<id del correo>"', fecha_procesamiento: '"YYYY-MM-DD"', proceso: `"${p.clave}"`, score_confianza: '0.0',
+      etiqueta: `"${etiquetas} | Validar"`, asunto_correo: '"<asunto exacto>"',
+    } as Record<string, string>)[k];
+  }
+
+  protected ejemploCampo(f: Proceso['campos_extraer'][number]): string {
+    if (f.tipo === 'tabla') return `[ { ${(f.campos ?? []).join(', ') || '…'} } ]`;
+    if (f.tipo === 'lista') return '[]';
+    if (f.tipo === 'booleano') return 'true | false';
+    return `"<${f.descripcion.toLowerCase()} o vacío>"`;
+  }
+
+  protected alternarVerMas(k: string): void {
+    this.verMas.update((v) => ({ ...v, [k]: !v[k] }));
+  }
+
+  protected alternarJson(k: string): void {
+    this.jsonAbierto.update((v) => (v === k ? null : k));
+  }
+
+  protected editar(p: Proceso | null, duplicar = false): void {
+    this.editando.set(p ? { id: p.id, duplicar } : { id: null, nuevo: true });
+  }
+
+  protected async alGuardar(p: Proceso, nuevo: boolean): Promise<void> {
+    this.editando.set(null);
+    if (this.esWiz()) this.aceptados.update((s) => new Set(s).add(p.clave));
+    await this.recargar();
+    this.toast.show(this.esWiz() ? `${p.clave} aceptado` : `${p.clave} ${nuevo ? 'creado' : 'actualizado'} en el borrador v${this.siguiente()}`);
+  }
+
+  protected resumenEt(c: Categoria): string {
+    return resumenEtiqueta(c);
+  }
+
+  /** Guarda la etiqueta en el borrador (como el resto de Reglas) sin cambiar su proceso. */
+  protected async guardarEtiqueta(c: Categoria, body: CategoriaIn): Promise<void> {
+    this.guardandoEtiqueta.set(true);
+    try {
+      await this.api.actualizarCategoria(c.id, { ...body, proceso_id: c.proceso_id });
+      this.etiquetaEd.set(null);
+      this.toast.show('Etiqueta guardada en el borrador', c.clave);
+      await this.recargar();
+    } catch (e) {
+      this.toast.error('No se pudo guardar la etiqueta', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoEtiqueta.set(false);
+    }
+  }
+
+  private async recargar(): Promise<void> {
+    await this.cargar();
+    await this.refrescarBuzon();
+    void this.cargarRevisionGrupos();
+  }
+
+  /** Etiquetas sin grupo de Asignación: se muestran discretas junto a «Publicar». */
+  private async cargarRevisionGrupos(): Promise<void> {
+    if (this.esWiz() || !this.buzon().mod_asignacion) {
+      this.revGrupos.set(null);
+      return;
+    }
+    try {
+      const [rev, grupos] = await Promise.all([this.api.revisionGrupos(this.buzon().id), this.api.listarGrupos(this.buzon().id)]);
+      this.revGrupos.set(rev);
+      this.gruposAsig.set(grupos);
+    } catch {
+      this.revGrupos.set(null);
+    }
+  }
+
+  protected async agregarAGrupo(clave: string, grupoId: string, nombre?: string): Promise<void> {
+    if (!grupoId) return;
+    this.agregandoGrupo.set(clave);
+    try {
+      this.revGrupos.set(await this.api.agregarEtiquetaAGrupo(this.buzon().id, grupoId, clave));
+      this.toast.show(`${clave} quedó en ${nombre ?? this.gruposAsig().find((g) => g.id === grupoId)?.nombre ?? 'el grupo'}`, 'Sus correos van al destino de ese grupo.');
+    } catch (e) {
+      this.toast.error('No se pudo agregar al grupo', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.agregandoGrupo.set(null);
+    }
+  }
+
+  /** 070: activar o desactivar OTROS (en vivo; no se borra). */
+  protected async alternarRespaldo(c: Categoria, activa: boolean): Promise<void> {
+    try {
+      await this.api.actualizarCategoria(c.id, { ...c, activa });
+      await this.recargar();
+      this.toast.show(activa ? 'OTROS activada' : 'OTROS desactivada', activa
+        ? 'Lo que no es de ningún proceso deja de ir a Validar.'
+        : 'Lo que no encaje en un proceso irá a Validar.');
+    } catch (e) {
+      this.toast.error('No se pudo cambiar OTROS', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Acciones activas de OTROS: sin ninguna (ni grupo), lo que no es de un proceso se descarta. */
+  protected accionesActivas(c: Categoria): number {
+    return (c.acciones ?? []).filter((a) => a.activa !== false).length;
+  }
+
+  protected async alternarActivo(p: Proceso): Promise<void> {
+    try {
+      await this.api.actualizarProceso(p.id, { ...p, activo: !p.activo });
+      await this.recargar();
+      this.toast.show(
+        `${p.clave} ${p.activo ? 'desactivado' : 'activado'} en el borrador`,
+        p.activo
+          ? 'Publica la nueva versión para que el buzón deje de usar este proceso y sus etiquetas.'
+          : 'Publica la nueva versión para que el buzón vuelva a usarlo.',
+      );
+    } catch (e) {
+      this.toast.error('No se pudo cambiar el proceso', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  protected async mover(i: number, d: number): Promise<void> {
+    const lista = [...this.procesos()];
+    const j = i + d;
+    if (j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    try {
+      await Promise.all(lista.map((p, k) => (p.orden === k + 1 ? null : this.api.actualizarProceso(p.id, { ...p, orden: k + 1 }))));
+      await this.recargar();
+    } catch (e) {
+      this.toast.error('No se pudo cambiar el orden', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // ── Asistente ──
+  protected estadoWiz(p: Proceso): EstadoWiz {
+    if (this.aceptados().has(p.clave)) return 'ok';
+    return this.desdeCorreos().has(p.clave) ? 'propuesta' : 'revisar';
+  }
+
+  protected aceptarWiz(p: Proceso): void {
+    this.aceptados.update((s) => new Set(s).add(p.clave));
+    if (this.editando()?.id === p.id) this.editando.set(null);
+    this.toast.show(`${p.clave} aceptado`);
+  }
+
+  protected descartarWiz(p: Proceso): Promise<void> {
+    return this.quitarProceso(p, 'descartado');
+  }
+
+  /** Borra el proceso del borrador; sus etiquetas quedan inactivas y sin proceso. */
+  private async quitarProceso(p: Proceso, hecho: string): Promise<void> {
+    if (this.descartando()) return;
+    this.descartando.set(p.id);
+    const etiquetas = this.etiquetasDe(p);
+    try {
+      // Si un intento anterior ya lo borró, se sigue con sus etiquetas.
+      await this.api.eliminarProceso(p.id).catch((e: unknown) => {
+        if (!/no encontrado/i.test(e instanceof Error ? e.message : String(e))) throw e;
+      });
+      // Las etiquetas del proceso quedan inactivas (no se borran: pueden tener historial).
+      // proceso_id: null — el proceso ya no existe y mandar su id hace fallar la actualización.
+      await Promise.all(etiquetas.map((c) => this.api.actualizarCategoria(c.id, { ...c, proceso_id: null, activa: false })));
+      this.toast.show(`${p.clave} ${hecho}`);
+    } catch (e) {
+      this.toast.error(hecho === 'eliminado' ? 'No se pudo eliminar' : 'No se pudo descartar', e instanceof Error ? e.message : String(e));
+    } finally {
+      // Aunque falle, la lista refleja lo que quedó en el servidor.
+      await this.recargar().catch(() => undefined);
+      this.descartando.set(null);
+    }
+  }
+
+  // ── Eliminar (pestaña Reglas del buzón) ──
+  protected pedirEliminar(p: Proceso): void {
+    const etiquetas = this.etiquetasDe(p);
+    this.eliminar.set({ p, etiquetas, salidas: null, grupos: [] });
+    this.modal.set('eliminar');
+    const claves = new Set(etiquetas.map((c) => c.clave));
+    const id = this.buzon().id;
+    void Promise.all([
+      this.buzon().mod_exportacion ? this.api.exportacion(id).catch(() => null) : Promise.resolve(null),
+      this.buzon().mod_asignacion ? this.api.listarGrupos(id).catch(() => []) : Promise.resolve([]),
+    ]).then(([exp, grupos]) => {
+      if (this.eliminar()?.p.id !== p.id) return;
+      this.eliminar.set({
+        p, etiquetas,
+        salidas: exp?.procesos.find((x) => x.id === p.id)?.salidas.length ?? 0,
+        grupos: grupos.filter((g) => g.etiquetas.some((e) => claves.has(e))).map((g) => g.nombre),
+      });
+    });
+  }
+
+  protected async confirmarEliminar(): Promise<void> {
+    const x = this.eliminar();
+    if (!x) return;
+    this.modal.set(null);
+    if (this.editando()?.id === x.p.id) this.editando.set(null);
+    await this.quitarProceso(x.p, 'eliminado');
+    this.eliminar.set(null);
+  }
+
+  protected claves(cs: Categoria[]): string {
+    return cs.map((c) => c.clave).join(', ');
+  }
+
+  // ── Entrada de reglas ──
+  protected elegirClasificador(modo: 'prompt' | 'agente'): void {
+    this.eligioClasificador.set(true);
+    if (modo !== this.buzon().modo_clasificacion) {
+      void this.api.actualizarBuzon(this.buzon().id, { modo_clasificacion: modo }).then((b) => this.buzonActualizado.emit(b));
+    }
+  }
+
+  /** Con `p`, «Actualizar con prompt» de ese proceso: al analizar solo queda su propuesta. */
+  protected abrirPegar(p: Proceso | null = null): void {
+    this.objetivo.set(p);
+    this.pestana.set('proceso');
+    // Un proceso con reglas completas (069) se edita sobre SU texto; si no las tiene
+    // (cargado antes), sobre el prompt del área, como antes.
+    this.textoPrompt = p?.reglas ? p.reglas : this.textoPrompt || this.buzon().prompt_area || '';
+    this.errorPrompt.set('');
+    this.modal.set('pegar');
+  }
+
+  protected usarEjemplo(): void {
+    this.textoPrompt = this.ejemplo;
+    this.errorPrompt.set('');
+    this.modal.set('pegar');
+  }
+
+  protected subirPrompt(ev: Event): void {
+    const f = (ev.target as HTMLInputElement).files?.[0];
+    if (!f) return;
+    void f.text().then((t) => {
+      this.textoPrompt = t;
+      this.errorPrompt.set('');
+    });
+  }
+
+  /** 069: condensa con fidelidad (quita solo lo redundante) el texto de cada proceso y lo
+   *  general, de a 3 en paralelo. Lo corto, o lo que falle, queda literal. */
+  private async transcribir(r: PropuestaProcesos): Promise<void> {
+    const partes: { nombre: string; texto: string; poner: (t: string) => void }[] = [
+      ...r.procesos.map((p) => ({ nombre: p.clave, texto: p.reglas ?? '', poner: (t: string) => (p.reglas = t) })),
+      { nombre: 'reglas generales', texto: r.reglas_generales ?? '', poner: (t: string) => (r.reglas_generales = t) },
+    ].filter((x) => x.texto.length >= TRANSCRIBIR_DESDE);
+    let hechas = 0;
+    let antes = 0;
+    let despues = 0;
+    const cola = [...partes];
+    const trabajar = async (): Promise<void> => {
+      for (let x = cola.shift(); x; x = cola.shift()) {
+        this.transcribiendo.set(`Nova está transcribiendo ${x.nombre} (${hechas + 1} de ${partes.length})…`);
+        const c = await this.api.condensar(this.buzon().id, x.texto, x.nombre === 'reglas generales' ? 'reglas generales del buzón' : `proceso ${x.nombre}`)
+          .catch(() => null);
+        if (c) {
+          x.poner(c.texto);
+          antes += c.original;
+          despues += c.resultado;
+        }
+        hechas++;
+      }
+    };
+    try {
+      await Promise.all([trabajar(), trabajar(), trabajar()]);
+      if (antes > despues) {
+        this.toast.show('Transcripción completa', `Se conservaron todas las secciones del prompt (${antes.toLocaleString('es-CO')} → ${despues.toLocaleString('es-CO')} caracteres sin lo redundante).`);
+      }
+    } finally {
+      this.transcribiendo.set('');
+    }
+  }
+
+  /** Guarda en el borrador el texto de «Reglas de X» sin pasarlo por la IA. */
+  protected async guardarReglas(): Promise<void> {
+    const o = this.objetivo();
+    if (!o) return;
+    this.guardandoReglas.set(true);
+    try {
+      await this.api.actualizarProceso(o.id, { ...o, reglas: this.textoPrompt.trim() || null });
+      this.modal.set(null);
+      this.objetivo.set(null);
+      await this.recargar();
+      this.toast.show(`Reglas de ${o.clave} guardadas en el borrador v${this.siguiente()}`, 'Publica la nueva versión para que el buzón las use.');
+    } catch (e) {
+      this.errorPrompt.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoReglas.set(false);
+    }
+  }
+
+  protected async analizar(): Promise<void> {
+    if (!this.textoPrompt.trim()) {
+      this.errorPrompt.set('Pega el prompt o sube el archivo antes de analizar.');
+      return;
+    }
+    if (this.promptExcedido()) return;
+    this.analizando.set(true);
+    try {
+      const o0 = this.objetivo();
+      // Editando un proceso: Nova devuelve ESE proceso (su clave y sus etiquetas), no uno nuevo.
+      const r = await this.api.analizarPrompt(this.buzon().id, this.textoPrompt, this.esWiz() ? null : o0?.id);
+      // Texto de UN proceso: es todo suyo y ya viene editado; no se reparte ni se condensa.
+      const soloSuyo = !!o0?.reglas;
+      if (!soloSuyo) await this.transcribir(r);
+      if (!r.procesos.length) {
+        this.errorPrompt.set('No reconocí procesos, etiquetas ni un JSON de salida en el texto. Revisa que incluya las etiquetas y los datos a extraer, o usa el ejemplo.');
+        return;
+      }
+      this.modal.set(null);
+      if (this.esWiz()) {
+        // En el asistente se cargan de una vez y quedan «Por revisar».
+        await this.api.aplicarPropuesta(this.buzon().id, r, this.textoPrompt);
+        await this.recargar();
+        this.toast.show(`Nova detectó ${r.procesos.length} proceso(s): revisa y acepta cada uno`);
+      } else {
+        if (!soloSuyo) {
+          await this.api.actualizarBuzon(this.buzon().id, {
+            prompt_area: this.textoPrompt,
+            ...(r.reglas_generales ? { reglas_generales: r.reglas_generales } : {}),
+          });
+          this.refrescarBuzon().catch(() => undefined);
+        }
+        this.destinos.set({});
+        this.conservarSalen.set(new Set());
+        const o = this.objetivo();
+        if (o) {
+          // Solo la parte del proceso: por su clave o, si la cambió, la que el editor elija.
+          const suya = r.procesos.find((x) => x.clave === o.clave) ?? (r.procesos.length === 1 ? r.procesos[0] : null);
+          if (suya && soloSuyo) suya.reglas = this.textoPrompt.trim();
+          this.propuestas.set(suya ? [suya] : r.procesos);
+          if (suya && suya.clave !== o.clave) this.destinos.set({ [suya.clave]: o.id });
+          this.toast.show(suya ? `Revisa qué cambia en ${o.clave} antes de actualizarlo` : `No encontré ${o.clave} en el prompt: elige cuál propuesta lo actualiza`);
+        } else {
+          this.propuestas.set(r.procesos);
+          this.toast.show(`Nova detectó ${r.procesos.length} proceso(s): revisa cada uno y acéptalo para llevarlo al borrador`);
+        }
+      }
+    } catch (e) {
+      this.errorPrompt.set(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.analizando.set(false);
+    }
+  }
+
+  protected async proponer(): Promise<void> {
+    this.proponiendo.set(true);
+    try {
+      const r = await this.api.proponerProcesos(this.buzon().id);
+      if (this.esWiz()) {
+        if (r.procesos.length) {
+          await this.api.aplicarPropuesta(this.buzon().id, { procesos: r.procesos, instrucciones: r.instrucciones });
+          this.desdeCorreos.update((s) => new Set([...s, ...r.procesos.map((p) => p.clave)]));
+          await this.recargar();
+        }
+      } else {
+        this.propuestas.update((v) => [...v, ...r.procesos.filter((p) => !v.some((x) => x.clave === p.clave))]);
+      }
+      this.toast.show(r.procesos.length ? `${r.procesos.length} propuesta(s) desde los últimos ${r.correos_leidos} correos` : 'Sin propuestas nuevas');
+    } catch (e) {
+      this.toast.error('No se pudieron leer los correos', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.proponiendo.set(false);
+    }
+  }
+
+  protected notaPropuesta(p: ProcesoPropuesto): string {
+    const t = this.objetivoDe(p);
+    if (t) return t.clave === p.clave ? `Ya existe: al aceptar actualiza ${p.clave} en el borrador` : `Actualiza ${t.clave} (conserva su clave)`;
+    return 'Nuevo · ' + (p.campos.length ? `${p.campos.length} datos` : 'solo categorización');
+  }
+
+  protected mismaClave(p: ProcesoPropuesto): boolean {
+    return this.procesos().some((x) => x.clave === p.clave);
+  }
+
+  /** Propuestas que crean un proceso nuevo (arriba de la lista). */
+  protected readonly propuestasNuevas = computed(() => this.propuestas().filter((p) => !this.objetivoDe(p)));
+
+  /** Propuestas que actualizan `proc`: se muestran pegadas a su tarjeta. */
+  protected propuestasPara(proc: Proceso): ProcesoPropuesto[] {
+    return this.propuestas().filter((p) => this.objetivoDe(p)?.id === proc.id);
+  }
+
+  /** Proceso que la propuesta actualiza: el de su misma clave o el que eligió el editor. */
+  protected objetivoDe(p: ProcesoPropuesto): Proceso | null {
+    const ps = this.procesos();
+    const elegido = this.destinos()[p.clave];
+    return ps.find((x) => x.clave === p.clave) ?? (elegido ? ps.find((x) => x.id === elegido) ?? null : null);
+  }
+
+  protected elegirObjetivo(p: ProcesoPropuesto, id: string): void {
+    this.destinos.update((d) => ({ ...d, [p.clave]: id }));
+  }
+
+  protected desactivaSalen(p: ProcesoPropuesto): boolean {
+    return !this.conservarSalen().has(p.clave);
+  }
+
+  protected alternarSalen(p: ProcesoPropuesto): void {
+    this.conservarSalen.update((s) => {
+      const n = new Set(s);
+      if (!n.delete(p.clave)) n.add(p.clave);
+      return n;
+    });
+  }
+
+  /** Antes y después de un proceso existente (null si la propuesta crea uno nuevo). */
+  protected comparar(p: ProcesoPropuesto): Comparacion | null {
+    const t = this.objetivoDe(p);
+    if (!t) return null;
+    const norm = (x: string | null | undefined) => (x ?? '').trim();
+    const textos: [string, string, string][] = [];
+    for (const [k, a, d] of [['Nombre', t.nombre, p.nombre], ['Alcance y señales', t.descripcion, p.descripcion], ['Exclusiones', t.exclusiones, p.exclusiones]] as const) {
+      if (norm(a) !== norm(d)) textos.push([k, norm(a), norm(d)]);
+    }
+    if (p.reglas && norm(t.reglas) !== norm(p.reglas)) {
+      const n = (x: string | null | undefined) => `${norm(x).length.toLocaleString('es-CO')} caracteres`;
+      textos.push(['Reglas completas', n(t.reglas), n(p.reglas)]);
+    }
+    const actuales = this.etiquetasDe(t);
+    const propuestas = new Set(p.etiquetas.map((e) => e.clave));
+    const campos = new Set(t.campos_extraer.map((f) => f.clave));
+    const camposNuevos = new Set(p.campos.map((f) => f.clave));
+    return {
+      clave: t.clave,
+      textos,
+      nuevas: p.etiquetas.filter((e) => !actuales.some((c) => c.clave === e.clave)).map((e) => e.clave),
+      actualizadas: p.etiquetas.filter((e) => actuales.some((c) => c.clave === e.clave)).map((e) => e.clave),
+      salen: actuales.filter((c) => !propuestas.has(c.clave)),
+      camposMas: [...camposNuevos].filter((k) => !campos.has(k)),
+      camposMenos: [...campos].filter((k) => !camposNuevos.has(k)),
+      manuales: actuales.some((c) => c.origen === 'user') || t.campos_extraer.some((f) => f.origen === 'user'),
+    };
+  }
+
+  protected async aceptarPropuesta(p: ProcesoPropuesto): Promise<void> {
+    const t = this.objetivoDe(p);
+    const cmp = this.comparar(p);
+    this.aceptando.set(true);
+    try {
+      // Sobre otro proceso, la propuesta toma su clave: el backend actualiza por clave.
+      await this.api.aplicarPropuesta(this.buzon().id, { procesos: [t ? { ...p, clave: t.clave } : p], instrucciones: '' });
+      if (cmp?.salen.length && this.desactivaSalen(p)) {
+        await Promise.all(cmp.salen.map((c) => this.api.actualizarCategoria(c.id, { ...c, activa: false })));
+      }
+      // Una etiqueta que el prompt vuelve a nombrar se reactiva (el backend la actualiza pero la deja como estaba).
+      const nombradas = new Set(p.etiquetas.map((e) => e.clave));
+      const dormidas = (await this.api.listarCategorias(this.buzon().id)).filter((c) => !c.activa && nombradas.has(c.clave));
+      await Promise.all(dormidas.map((c) => this.api.actualizarCategoria(c.id, { ...c, activa: true })));
+      this.propuestas.update((v) => v.filter((x) => x.clave !== p.clave));
+      if (!this.propuestas().length) this.objetivo.set(null);
+      await this.recargar();
+      this.toast.show(t ? `${t.clave} actualizado en el borrador v${this.siguiente()}` : `${p.clave} agregado al borrador v${this.siguiente()}`);
+    } catch (e) {
+      this.toast.error('No se pudo aceptar la propuesta', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.aceptando.set(false);
+    }
+  }
+
+  protected descartarPropuesta(p: ProcesoPropuesto): void {
+    this.propuestas.update((v) => v.filter((x) => x.clave !== p.clave));
+    if (!this.propuestas().length) this.objetivo.set(null);
+    this.toast.show('Propuesta descartada');
+  }
+
+  // ── Prompt base ──
+  /** «Ver prompt» → «Editar como base»: el prompt armado con las reglas actuales. */
+  protected editarComoBase(texto: string): void {
+    this.textoPrompt = texto;
+    this.objetivo.set(null);
+    this.errorPrompt.set('');
+    this.modal.set('pegar');
+  }
+
+  protected async usarPromptBase(): Promise<void> {
+    try {
+      this.textoPrompt = (await this.api.verPrompt(this.buzon().id, 'borrador')).prompt;
+      this.errorPrompt.set('');
+    } catch (e) {
+      this.errorPrompt.set(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  protected descargarPrompt(pr: PromptBuzon): void {
+    const nombre = `${this.buzon().nombre}-prompt-${pr.version ? 'v' + pr.version : 'borrador'}.md`;
+    const url = URL.createObjectURL(new Blob([pr.prompt], { type: 'text/markdown;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  protected copiarPreguntas(lista: Pendiente[]): void {
+    this.copiar('Revisa la PARTE B y responde estas preguntas antes de devolverla:\n- ' + lista.map((x) => x.texto).join('\n- '), 'Preguntas copiadas: pégalas en la IA');
+  }
+
+  protected copiar(texto: string, aviso: string): void {
+    void navigator.clipboard?.writeText(texto).then(
+      () => this.toast.show(aviso),
+      () => this.toast.error('No se pudo copiar al portapapeles'),
+    );
+  }
+
+  // ── General del área (pestaña del editor de reglas) ──
+  protected abrirGeneral(): void {
+    const b = this.buzon();
+    this.textoGeneral = this.originalGeneral = b.reglas_generales ?? '';
+    this.contextoGeneral = b.contexto ?? '';
+    this.exclusionesGeneral = b.exclusiones_globales ?? '';
+    // Contexto y exclusiones solo se muestran en los buzones que ya los usan.
+    this.verContexto.set(!!this.contextoGeneral.trim());
+    this.verExclusiones.set(!!this.exclusionesGeneral.trim());
+    this.condensado.set(null);
+    this.pestana.set('general');
+  }
+
+  protected tokensDe(t: string): string {
+    return Math.round(t.length / 4).toLocaleString('es-CO');
+  }
+
+  protected menos(c: { original: number; resultado: number }): number {
+    return c.original ? Math.round((1 - c.resultado / c.original) * 100) : 0;
+  }
+
+  protected async condensarGeneral(): Promise<void> {
+    this.condensando.set(true);
+    try {
+      const r = await this.api.condensar(this.buzon().id, this.textoGeneral, 'las reglas generales del área');
+      if (r.condensado) {
+        this.textoGeneral = r.texto;
+        this.condensado.set({ original: r.original, resultado: r.resultado });
+      } else {
+        this.toast.show('Se deja como está', r.error ? 'Nova no pudo condensarlo; no se perdió nada.' : 'No había partes redundantes que quitar.');
+      }
+    } catch (e) {
+      this.toast.error('No se pudo condensar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.condensando.set(false);
+    }
+  }
+
+  protected volverOriginalGeneral(): void {
+    this.textoGeneral = this.originalGeneral;
+    this.condensado.set(null);
+  }
+
+  protected async guardarGeneral(): Promise<void> {
+    this.guardandoGlobal.set(true);
+    try {
+      await this.api.actualizarBuzon(this.buzon().id, {
+        reglas_generales: this.textoGeneral.trim() || null,
+        ...(this.verContexto() ? { contexto: this.contextoGeneral.trim() || null } : {}),
+        ...(this.verExclusiones() ? { exclusiones_globales: this.exclusionesGeneral.trim() || null } : {}),
+      });
+      this.modal.set(null);
+      await this.recargar();
+      this.toast.show('Reglas generales guardadas en el borrador', 'Publica para que Nova las use.');
+    } catch (e) {
+      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoGlobal.set(false);
+    }
+  }
+
+  // ── Reglas fijas ──
+  protected editarGlobal(s: Global): void {
+    const b = this.buzon();
+    this.globalEd.set(s);
+    if (s === 'fijas') {
+      this.fijasEd = this.fijas().map((f) => {
+        const campo = f.remitente_contiene ? 'remitente_contiene' : f.asunto_contiene ? 'asunto_contiene' : 'cuerpo_contiene';
+        return { nombre: f.nombre, campo, valor: f[campo] ?? '', categoria_id: f.categoria_id };
+      });
+    } else {
+      this.textoGlobal = (s === 'contexto' ? b.contexto : s === 'generales' ? b.reglas_generales : b.exclusiones_globales) ?? '';
+    }
+    this.modal.set('global');
+  }
+
+  protected async guardarGlobal(): Promise<void> {
+    const id = this.buzon().id;
+    this.guardandoGlobal.set(true);
+    try {
+      const s = this.globalEd();
+      if (s === 'fijas') {
+        // Se reemplaza el conjunto: las que se quitaron se borran, las demás se recrean en orden.
+        const validas = this.fijasEd.filter((f) => f.nombre.trim() && f.valor.trim() && f.categoria_id);
+        await Promise.all(this.fijas().map((f) => this.api.eliminarRegla(f.id)));
+        for (const [i, f] of validas.entries()) {
+          await this.api.crearRegla(id, {
+            nombre: f.nombre.trim(), remitente_contiene: null, asunto_contiene: null, cuerpo_contiene: null,
+            [f.campo]: f.valor.trim(), categoria_id: f.categoria_id, orden: i + 1, activa: true,
+          });
+        }
+      } else {
+        const texto = this.textoGlobal.trim() || null;
+        await this.api.actualizarBuzon(
+          id,
+          s === 'contexto' ? { contexto: texto } : s === 'generales' ? { reglas_generales: texto } : { exclusiones_globales: texto },
+        );
+      }
+      this.modal.set(null);
+      await this.recargar();
+      this.toast.show(`${this.tituloGlobal()} guardado en el borrador`);
+    } catch (e) {
+      this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.guardandoGlobal.set(false);
+    }
+  }
+
+  // ── Publicar y ver prompt ──
+  protected async publicar(): Promise<void> {
+    const n = this.est()?.cambios.length ?? 0;
+    if (!confirm(`¿Publicar v${this.siguiente()}? ${n} cambio(s): desde ya Nova clasifica los correos nuevos con estas reglas.`)) return;
+    this.publicando.set(true);
+    try {
+      const r = await this.api.publicarReglas(this.buzon().id);
+      await this.recargar();
+      const limpios = (r.grupos ?? []).filter((g) => g.quitadas.length);
+      this.toast.show(`Reglas v${r.version} publicadas`, limpios.length
+        ? 'Grupos al día: ' + limpios.map((g) => `${g.nombre} sin ${g.quitadas.join(', ')}${g.vacio ? ' (quedó sin etiquetas)' : ''}`).join(' · ')
+        : undefined);
+    } catch (e) {
+      this.toast.error('No se pudieron publicar las reglas', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.publicando.set(false);
+    }
+  }
+
+  /** «Vuelve a v17» cuando esa versión se publicó con «Volver a esta versión». */
+  protected vuelveA(v: VersionReglas): string {
+    const primero = v.cambios?.[0]?.[0] ?? '';
+    return primero.startsWith('Vuelve a v') ? primero : '';
+  }
+
+  protected async volverAVersion(version: number): Promise<void> {
+    if (!confirm(`¿Volver a la v${version}?\n\nDesde ya Nova clasifica los correos nuevos como lo hacía en la v${version}. `
+      + `Queda guardada como v${this.siguiente()} y lo que tengas en el borrador no se pierde.`)) return;
+    this.restaurando.set(version);
+    try {
+      const r = await this.api.restaurarVersion(this.buzon().id, version);
+      await this.recargar();
+      this.toast.show(`Nova volvió a la v${r.restaurada}`, `Quedó publicada como v${r.version}. Lo del borrador sigue sin publicar.`);
+    } catch (e) {
+      this.toast.error('No se pudo volver a esa versión', e instanceof Error ? e.message : String(e));
+    } finally {
+      this.restaurando.set(null);
+    }
+  }
+
+  protected async abrirPrompt(cual?: 'vigente' | 'borrador'): Promise<void> {
+    const c = cual ?? (this.buzon().version_reglas ? 'vigente' : 'borrador');
+    this.promptCual.set(c);
+    this.prompt.set(null);
+    this.modal.set('prompt');
+    try {
+      this.prompt.set(await this.api.verPrompt(this.buzon().id, c));
+    } catch (e) {
+      this.toast.error('No se pudo armar el prompt', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  protected cerrarScrim(ev: MouseEvent): void {
+    if (ev.target === ev.currentTarget && !this.analizando()) this.modal.set(null);
+  }
+
+  protected fecha(iso: string): string {
+    return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+  }
+}

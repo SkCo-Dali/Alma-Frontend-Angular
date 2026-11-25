@@ -2,6 +2,8 @@
 export const environment = {
   production: true,
   name: 'prd',
+  /** Buzón Inteligente: datos de demostración si el backend no responde (solo local y dev). */
+  buzonDemo: false,
   apiUrl: 'https://apis.skandia.com.co/SkCo.Alma.API',
   azure: {
     clientId: '30fe7ddc-476c-4341-adef-f053bfe376b3',

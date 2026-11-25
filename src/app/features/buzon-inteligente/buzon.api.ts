@@ -8,9 +8,9 @@
 
 import { Injectable, inject, signal } from '@angular/core';
 import { environment } from '@env/environment';
-import { ApiService } from '../../core/services/api.service';
+import { ApiService, ESPERA_LARGA_MS } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { DEMO, demoCorreoDetalle, demoMetricas, demoProbar } from './buzon.demo';
+import { DEMO, demoCorreoDetalle, demoLeerArchivo, demoMetricas } from './buzon.demo';
 
 // ── Tipos del contrato ───────────────────────────────────────────────────────
 
@@ -23,15 +23,22 @@ export type TipoAccion =
   | 'categorizar'
   | 'mover'
   | 'reenviar'
-  | 'asignar_analista'
   | 'notificar_teams'
   | 'marcar_leido';
+
+/** Rol del usuario en un buzón (migración 058). 'admin' = administrador de la App. */
+export type RolBuzon = 'admin' | 'editor' | 'revisor' | 'cuenta';
+/** Rol que se asigna a un miembro: editor configura, revisor solo trabaja la bandeja y
+ *  cuenta (065) solo conecta o reconecta el buzón con su cuenta de Microsoft. */
+export type RolMiembro = 'editor' | 'revisor' | 'cuenta';
+export type ModoClasificacion = 'prompt' | 'agente';
+export type AlDesactivar = 'respaldo' | 'roundrobin';
 
 export interface MiembroBuzon {
   user_id: string | null;
   email: string;
   name?: string | null;
-  rol: 'propietario' | 'analista';
+  rol: RolMiembro;
 }
 
 export interface Buzon {
@@ -47,17 +54,72 @@ export interface Buzon {
   max_correos_por_tick: number;
   contexto: string | null;
   activo: boolean;
-  /** Solo en la respuesta de crear: la dirección ya había tenido un buzón que
-   *  se eliminó, y se restauró con su configuración (queda pausado). */
-  restaurado?: boolean;
   ultima_sincronizacion: string | null;
   ultimo_error: string | null;
   categorias_count: number;
+  /** 061: procesos activos (tarjeta de la página Buzones). */
+  procesos_count: number;
   pendientes: number;
   en_revision: number;
   ejecutados_hoy: number;
   miembros: MiembroBuzon[];
+  /** Rol del usuario en este buzón. */
+  rol: RolBuzon | null;
+  /** Admin, dueño o editor del buzón: puede configurarlo. */
   puede_administrar: boolean;
+  /** Administrador de la App (compatibilidad: así se reconoce al admin en la lista). */
+  puede_conectar: boolean;
+  /** 066: conectar, reconectar o desconectar con Microsoft (admin, dueño o editor). */
+  puede_reconectar?: boolean;
+  /** 066: decidir quién trabaja el buzón (admin o dueño). */
+  puede_miembros?: boolean;
+  /** 066: quitarlo de la App (solo el administrador). */
+  puede_eliminar?: boolean;
+  /** La conexión la hizo un administrador con SU cuenta (acceso completo al buzón genérico). */
+  conexion_compartida: boolean;
+  conectada_por: string | null;
+  modo_clasificacion: ModoClasificacion;
+  agente_nombre: string | null;
+  /** Prompt con el que el área ya trabaja (lo lee «Leer el prompt del área»). */
+  prompt_area: string | null;
+  /** 069: secciones generales del prompt (de todo el buzón), completas. */
+  reglas_generales?: string | null;
+  /** 070: lo que la IA marca como OTROS → descartar sin tocar o etiquetar y aplicar su grupo. */
+  sin_proceso?: 'descartar' | 'acciones';
+  /** 071: categoría de Outlook para lo que queda en Validar ('' = no se pone). */
+  etiqueta_validar?: string;
+  /** 075: clasificación en dos pasos (gpt-4.1-mini decide el proceso; gpt-4.1 aplica sus reglas). */
+  dos_pasos?: boolean;
+  al_desactivar: AlDesactivar;
+  /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
+  borrador_en_hilo: boolean;
+  /** 061: genérica (buzón de área) o personal. El nombre es {TIPO}-{ALIAS}. */
+  tipo_cuenta: TipoCuenta;
+  descripcion: string | null;
+  /** 061: el asistente «Nuevo buzón» no ha terminado: no se lee hasta activarlo. */
+  en_configuracion: boolean;
+  /** 061: módulos que el área activó (desactivar conserva la configuración). */
+  mod_asignacion: boolean;
+  mod_bases: boolean;
+  mod_exportacion: boolean;
+  modelo: string | null;
+  exclusiones_globales: string | null;
+  discriminacion: ParDiscriminacion[];
+  ventana_hilos_dias: number;
+  /** 061: «tabla según el JSON» (extensión y separador) y entrega del archivo. */
+  tabla_formato: 'xlsx' | 'csv' | 'txt';
+  tabla_separador: ';' | ',' | '|';
+  /** Versión publicada de las reglas (vN); null = sin versión publicada. */
+  version_reglas: number | null;
+}
+
+export type TipoCuenta = 'gen' | 'per';
+
+/** Qué diferencia a dos procesos que se pueden confundir y qué señal manda. */
+export interface ParDiscriminacion {
+  a: string;
+  b: string;
+  manda: string;
 }
 
 export interface BuzonIn {
@@ -69,6 +131,9 @@ export interface BuzonIn {
   umbral_confianza?: number;
   contexto?: string;
   descripcion?: string;
+  /** 061: lo crea el asistente «Nuevo buzón» (queda En configuración). */
+  tipo_cuenta?: TipoCuenta;
+  en_configuracion?: boolean;
 }
 
 export type BuzonUpdate = Partial<
@@ -82,6 +147,25 @@ export type BuzonUpdate = Partial<
     | 'max_correos_por_tick'
     | 'contexto'
     | 'activo'
+    | 'modo_clasificacion'
+    | 'agente_nombre'
+    | 'prompt_area'
+    | 'reglas_generales'
+    | 'sin_proceso'
+    | 'etiqueta_validar'
+    | 'dos_pasos'
+    | 'al_desactivar'
+    | 'borrador_en_hilo'
+    | 'descripcion'
+    | 'mod_asignacion'
+    | 'mod_bases'
+    | 'mod_exportacion'
+    | 'modelo'
+    | 'exclusiones_globales'
+    | 'discriminacion'
+    | 'ventana_hilos_dias'
+    | 'tabla_formato'
+    | 'tabla_separador'
   >
 >;
 
@@ -114,10 +198,29 @@ export interface Categoria {
   campos_extraer: CampoExtraer[];
   acciones: Accion[];
   correos_30d: number;
+  /** Proceso al que pertenece la etiqueta (058). */
+  proceso_id: string | null;
+  /** 061: «por IA» (la IA decide con el texto) o «por datos» (condición sobre el JSON). */
+  criterio?: CriterioEtiqueta;
+  condicion?: CondicionEtiqueta | null;
+  /** ✦ propuesta de Alma · ✎ ajustada por el área. */
+  origen?: OrigenRegla;
 }
 
-export type CategoriaIn = Omit<Categoria, 'id' | 'buzon_id' | 'correos_30d' | 'orden'> & {
+export type CriterioEtiqueta = 'ia' | 'datos';
+export type OrigenRegla = 'ia' | 'user';
+export type OperadorCondicion = '=' | 'contiene' | 'distinto de';
+
+export interface CondicionEtiqueta {
+  campo: string;
+  op: OperadorCondicion;
+  valor: string;
+}
+
+export type CategoriaIn = Omit<Categoria, 'id' | 'buzon_id' | 'correos_30d' | 'orden' | 'proceso_id'> & {
   orden?: number;
+  /** Se reenvía siempre al editar: el PUT reemplaza la categoría completa. */
+  proceso_id?: string | null;
 };
 
 export interface ReglaFija {
@@ -159,6 +262,10 @@ export interface Correo {
   categoria_color: string | null;
   confianza: number | null;
   justificacion: string | null;
+  /** 071: qué le falta al correo para su proceso (por qué quedó en Validar). */
+  motivo_validacion?: string | null;
+  /** 071: tokens de entrada que el servicio de IA reutilizó. */
+  tokens_cacheados?: number | null;
   datos_extraidos: Record<string, unknown> | null;
   estado: EstadoCorreo;
   origen: OrigenDecision | null;
@@ -169,6 +276,62 @@ export interface Correo {
   error: string | null;
   modelo_ia: string | null;
   created_at: string;
+  // Migración 058: proceso, grupo, persona asignada y por qué.
+  proceso_clave: string | null;
+  grupo_id: string | null;
+  grupo_nombre: string | null;
+  asignado_persona_id: string | null;
+  asignacion_traza: PasoTraza[];
+  /** Nombre de la persona del equipo asignada (null si es carpeta o nadie). */
+  asignado_nombre: string | null;
+  // Migración 060: posible duplicado (misma llave de negocio) y respuestas en el hilo.
+  duplicado_de?: string | null;
+  duplicado_asunto?: string | null;
+  duplicado_estado?: 'posible' | 'confirmado' | 'descartado' | null;
+  respuestas?: number;
+  /** 061: versión de las reglas con la que se clasificó (null = borrador, antes de publicar). */
+  reglas_version?: number | null;
+}
+
+/** Un correo de la conversación (pestaña Hilo). */
+export interface MensajeHilo {
+  id: string;
+  remitente: string;
+  remitente_nombre: string | null;
+  asunto: string;
+  recibido_en: string;
+  adjuntos: string[];
+  resumen: string | null;
+  estado: EstadoCorreo;
+  asignado_a: string | null;
+  es_este: boolean;
+}
+
+export interface HiloCorreo {
+  buzon: { nombre: string; direccion: string; carpeta_vigilada: string };
+  items: MensajeHilo[];
+  /** Versión del archivo que está como borrador de respuesta en el hilo. */
+  borrador: ArchivoCorreo | null;
+  ultima_version: number | null;
+}
+
+/** Celdas de un archivo generado (vista previa de la bandeja). */
+export interface CeldasArchivo extends ArchivoCorreo {
+  hoja: string;
+  celdas: string[][];
+  /** Índice (0-based) de la fila de encabezados; arriba va el título. */
+  fila_encabezado: number;
+  /** De dónde sale cada columna (vista «Fórmulas»). */
+  origenes: string[];
+  anotaciones: { estado: 'ok' | 'warn'; texto: string }[];
+}
+
+export interface CorreccionDatos {
+  correo: Correo;
+  archivo: ArchivoGenerado | null;
+  cambios?: string[];
+  /** Cambió un campo crítico (identificador del caso): se ofrece recalcular la asignación. */
+  cambios_criticos?: string[];
 }
 
 export interface Ejecucion {
@@ -195,17 +358,15 @@ export interface FiltroCorreos {
   hasta?: string;
   limit?: number;
   offset?: number;
-}
-
-export interface ResultadoPrueba {
-  categoria_clave: string | null;
-  categoria_nombre: string | null;
-  confianza: number;
-  resumen: string;
-  justificacion: string;
-  datos_extraidos: Record<string, unknown>;
-  acciones_previstas: { tipo: TipoAccion; parametros: Record<string, unknown> }[];
-  cumple_umbral: boolean;
+  grupo_id?: string;
+  /** Cola del líder: correos de un grupo de personas que quedaron sin responsable. */
+  sin_asignar?: boolean;
+  /** «Posibles duplicados» pendientes de decidir (060). */
+  duplicado?: boolean;
+  /** Clave del proceso (sin lo que quedó en OTROS). */
+  proceso?: string;
+  /** Lo clasificado en OTROS o sin proceso. */
+  sin_proceso?: boolean;
 }
 
 export interface ResumenSync {
@@ -238,12 +399,548 @@ export interface CarpetaGraph {
 
 export interface ConexionBuzon {
   configurado: boolean;
+  correo_buzon_id?: string;
+  direccion?: string;
   estado: EstadoConexion | string;
   conectada_por: string | null;
   conectada_en: string | null;
+  /** Conectada por un administrador con su cuenta (acceso completo al buzón). */
+  compartida: boolean;
   scopes: string;
+  /** Con la cuenta del buzón (personales y genéricas): sin consentimiento de admin. */
+  scopes_propios?: string;
+  /** Con la cuenta de un administrador (solo genéricas): .Shared, requiere consentimiento de admin. */
+  scopes_compartidos?: string | null;
   puede_conectar: boolean;
 }
+
+/** Cómo se conecta una genérica: con la cuenta del buzón o con la de un administrador. */
+export type ModoConexion = 'propia' | 'compartida';
+
+/** El modo con que ya está conectado el buzón; las genéricas nuevas, con la cuenta del buzón. */
+export function modoConexion(b: Pick<Buzon, 'tipo_cuenta' | 'conexion_compartida'>): ModoConexion {
+  return b.tipo_cuenta === 'gen' && b.conexion_compartida ? 'compartida' : 'propia';
+}
+
+// ── 2.0: procesos ────────────────────────────────────────────────────────────
+
+export type TipoCampo = 'texto' | 'numero' | 'fecha' | 'booleano' | 'lista' | 'tabla';
+
+export interface CampoProceso {
+  clave: string;
+  descripcion: string;
+  /** Lo usan validaciones cruzadas o identifica el caso. */
+  critico: boolean;
+  /** Tipo de dato: valida la corrección del revisor (texto si no se declaró). */
+  tipo?: TipoCampo;
+  /** 061: crítico alterno (basta uno del grupo), identificador del caso y origen. */
+  alterno?: boolean;
+  identificador?: boolean;
+  origen?: OrigenRegla;
+  /** Campos de cada elemento cuando el tipo es «tabla» (lista de objetos). */
+  campos?: string[];
+}
+
+export interface Proceso {
+  id: string;
+  buzon_id: string;
+  clave: string;
+  nombre: string;
+  /** Señales con las que se reconoce el trámite. */
+  descripcion: string | null;
+  exclusiones: string | null;
+  campos_extraer: CampoProceso[];
+  color: string | null;
+  orden: number;
+  activo: boolean;
+  /** Claves de las etiquetas (categorías) del proceso. */
+  etiquetas: string[];
+  /** 061: confianza mínima (null = la del buzón) y causas que llevan a Validar. */
+  umbral?: number | null;
+  causas_validar?: string[];
+  /** 069: texto completo de las secciones del prompt que son de este proceso. */
+  reglas?: string | null;
+}
+
+export interface ProcesoIn {
+  clave: string;
+  nombre: string;
+  descripcion?: string | null;
+  exclusiones?: string | null;
+  campos_extraer: CampoProceso[];
+  color?: string | null;
+  orden?: number | null;
+  activo: boolean;
+  umbral?: number | null;
+  causas_validar?: string[];
+  reglas?: string | null;
+}
+
+/** Editor de procesos de Reglas (061): el proceso con sus etiquetas y su discriminación. */
+export interface ProcesoCompletoIn {
+  /** Clave anterior al renombrar; null = proceso nuevo. */
+  original: string | null;
+  proceso: ProcesoIn;
+  etiquetas: { clave: string; nombre?: string; descripcion: string; criterio: CriterioEtiqueta; condicion?: CondicionEtiqueta | null; origen: OrigenRegla }[];
+  discriminacion?: { con: string; manda: string }[];
+}
+
+// ── 061: reglas con versiones ────────────────────────────────────────────────
+
+/** [qué cambió, antes, después] del borrador frente a la versión vigente. */
+export type CambioRegla = [string, string, string];
+
+export interface VersionReglas {
+  version: number;
+  cambios: CambioRegla[];
+  publicada_en: string;
+  publicada_por: string;
+}
+
+export interface EstadoReglas {
+  /** Vigente (null = sin versión publicada). */
+  version: number | null;
+  siguiente: number;
+  /** Hay cambios sin publicar. */
+  borrador: boolean;
+  cambios: CambioRegla[];
+  procesos: number;
+  pares_discriminacion: number;
+  versiones: VersionReglas[];
+}
+
+export interface PromptBuzon {
+  version: number | null;
+  modo: ModoClasificacion;
+  prompt: string;
+  esquema: Record<string, unknown>;
+}
+
+export interface PruebaSeco {
+  total: number;
+  validar: number;
+  resumen: { proceso: string; resultado: string; correos: number }[];
+  filas: { asunto: string; proceso: string; etiqueta: string | null; confianza: number; datos: boolean; validar: boolean; destino: string }[];
+}
+
+/** Dominios conectables por defecto; el backend manda los del ambiente en /opciones. */
+export const DOMINIOS_CORREO = ['skandia.com.co'];
+
+export interface OpcionesBuzon {
+  modelos: string[];
+  dominios_correo?: string[];
+}
+
+export interface NombreBuzon {
+  nombre: string;
+  disponible: boolean;
+  /** La dirección es de un dominio corporativo conectable (BUZON_DOMINIOS_CORREO). */
+  dominio_permitido?: boolean;
+  existente: { id: string; nombre: string; misma_direccion: boolean } | null;
+}
+
+export interface EtiquetaPropuesta {
+  clave: string;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface ProcesoPropuesto {
+  clave: string;
+  nombre: string;
+  descripcion: string;
+  exclusiones: string;
+  campos: CampoProceso[];
+  etiquetas: EtiquetaPropuesta[];
+  color?: string;
+  /** 069: texto del prompt que es de este proceso (literal o condensado). */
+  reglas?: string;
+  /** 071: lo que el prompt llamaba «VALIDAR» (estado, no etiqueta). */
+  causas_validar?: string[];
+}
+
+/** Lo que Alma lee del prompt del área. No se guarda hasta aplicarla. */
+export interface PropuestaProcesos {
+  procesos: ProcesoPropuesto[];
+  instrucciones: string;
+  /** 069: secciones del prompt que son de todo el buzón. */
+  reglas_generales?: string;
+  /** 069: en cuántas secciones se partió el prompt. */
+  secciones?: number;
+}
+
+/** 069: resultado de condensar un texto (si falla o es corto, vuelve el original). */
+export interface Condensado {
+  texto: string;
+  original: number;
+  resultado: number;
+  condensado: boolean;
+  error?: string;
+}
+
+export interface ResultadoAplicar {
+  procesos_creados: number;
+  procesos_actualizados: number;
+  etiquetas_creadas: number;
+  etiquetas_actualizadas: number;
+}
+
+// ── 2.0: asignación ──────────────────────────────────────────────────────────
+
+export type Comparacion = 'exacta' | 'digitos' | 'doc' | 'pc' | 'aprox';
+/** 067: «reenviar» a direcciones fijas y «responder» al remitente, en el hilo. */
+export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar' | 'reenviar' | 'responder';
+export type SinActivosModo = 'cola' | 'carpeta' | 'persona';
+
+export interface Cruce {
+  /** Dato del JSON del proceso. */
+  campo: string;
+  /** Columna de la base. */
+  columna: string;
+  comparacion: Comparacion;
+  /** Unión con el cruce anterior: «y» = deben coincidir juntos; «o» = alternativa (por defecto). */
+  union?: 'y' | 'o';
+}
+
+export interface ReglaAsignacion {
+  id?: string;
+  grupo_id?: string;
+  base_id: string;
+  base_nombre?: string | null;
+  cruces: Cruce[];
+  col_responsable: string;
+  col_respaldo: string | null;
+  orden?: number;
+  activa: boolean;
+}
+
+export type ReglaAsignacionIn = Pick<ReglaAsignacion, 'base_id' | 'cruces' | 'col_responsable' | 'col_respaldo' | 'activa'>;
+
+export interface Grupo {
+  id: string;
+  buzon_id: string;
+  nombre: string;
+  etiquetas: string[];
+  destino: DestinoGrupo;
+  carpeta: string | null;
+  /** 067: a quién se reenvía (destino «reenviar»). */
+  destinatarios?: string[];
+  /** 067: texto que acompaña el reenvío o la respuesta. */
+  mensaje?: string | null;
+  sin_activos_modo: SinActivosModo;
+  sin_activos_carpeta: string | null;
+  sin_activos_persona_id: string | null;
+  orden: number;
+  activo: boolean;
+  reglas: ReglaAsignacion[];
+}
+
+/** Antes de publicar: etiquetas activas sin grupo de Asignación (y el grupo que
+ *  podrían heredar de la etiqueta que reemplazan). */
+export interface RevisionGrupos {
+  aplica: boolean;
+  sin_grupo: { clave: string; proceso: string | null; sugerido: { id: string; nombre: string; reemplaza: string[] } | null }[];
+}
+
+/** Grupos que perdieron etiquetas desactivadas o eliminadas al publicar. */
+export interface GrupoLimpiado {
+  nombre: string;
+  quitadas: string[];
+  vacio: boolean;
+}
+
+export interface GrupoIn {
+  nombre: string;
+  etiquetas: string[];
+  destino: DestinoGrupo;
+  carpeta?: string | null;
+  destinatarios?: string[];
+  mensaje?: string | null;
+  sin_activos_modo: SinActivosModo;
+  sin_activos_carpeta?: string | null;
+  sin_activos_persona_id?: string | null;
+  orden?: number | null;
+  activo: boolean;
+  /** Reemplaza las búsquedas del grupo (en este orden). */
+  reglas: ReglaAsignacionIn[];
+}
+
+export interface MembresiaGrupo {
+  activa: boolean;
+  respaldo_id: string | null;
+}
+
+export interface Persona {
+  id: string;
+  nombre: string;
+  correo: string;
+  carpeta: string | null;
+  disponible: boolean;
+  orden: number;
+  carga_hoy: number;
+  abiertos: number;
+  /** {grupo_id: membresía} */
+  grupos: Record<string, MembresiaGrupo>;
+}
+
+export interface PersonaIn {
+  nombre: string;
+  correo: string;
+  carpeta?: string | null;
+  disponible: boolean;
+  /** {grupo_id: {activa, respaldo = correo de otra persona del equipo}} */
+  grupos: Record<string, { activa: boolean; respaldo?: string | null }>;
+}
+
+export interface DisponibilidadIn {
+  disponible?: boolean;
+  grupo_id?: string;
+  activa?: boolean;
+}
+
+export type EstadoBase = 'sin_cargar' | 'ok' | 'rechazado';
+export type FilaBase = Record<string, string>;
+
+export interface Base {
+  id: string;
+  nombre: string;
+  origen: 'archivo' | 'sharepoint';
+  archivo: string | null;
+  hoja: string | null;
+  fila_encabezado: number | null;
+  columnas: string[];
+  total_filas: number;
+  estado: EstadoBase;
+  motivo: string | null;
+  sharepoint_url: string | null;
+  /** {valor normalizado de la base: correo de la persona} */
+  vinculos: Record<string, string>;
+  cargada_en: string | null;
+  cargada_por: string | null;
+  /** Buzones que la usan. */
+  buzones: string[];
+  /** Búsquedas de asignación que la usan. */
+  usos: number;
+}
+
+export interface BaseIn {
+  nombre: string;
+  origen: 'archivo' | 'sharepoint';
+  sharepoint_url?: string | null;
+  buzones: string[];
+}
+
+export type BaseUpdate = Partial<BaseIn>;
+
+/** Vista previa de un archivo (hojas, fila de encabezados, columnas, muestra). */
+export interface LecturaArchivo {
+  hojas: string[];
+  hoja: string | null;
+  fila_encabezado: number;
+  columnas: string[];
+  total_filas: number;
+  muestra: FilaBase[];
+  titulo: string | null;
+  /** Solo en /bases/leer: hasta 500 filas (importación del equipo). */
+  filas?: FilaBase[];
+}
+
+export interface ResultadoCarga extends LecturaArchivo {
+  aceptada: boolean;
+  motivo: string | null;
+  base: Base;
+}
+
+export interface PasoTraza {
+  estado: 'ok' | 'skip' | 'warn' | 'bad';
+  titulo: string;
+  detalle: string;
+}
+
+export interface ResultadoAsignacion {
+  grupo: { id: string; nombre: string } | null;
+  estado: 'asignado' | 'carpeta' | 'categorizar' | 'sin_asignar';
+  persona: { id: string; nombre: string; correo: string } | null;
+  carpeta: string | null;
+  via: string;
+  traza: PasoTraza[];
+}
+
+// ── 2.0: resumen del inicio ──────────────────────────────────────────────────
+
+export interface FlujoHoy {
+  llegaron: number;
+  con_adjuntos: number;
+  clasificados: number;
+  /** En Validar (revisión), de cualquier día. */
+  validar: number;
+  asignados: number;
+  ejecutados: number;
+  /** Recepción del más antiguo en Validar. */
+  validar_desde: string | null;
+  semana: { fecha: string; ejecutados: number }[];
+}
+
+export interface AlertaInicio {
+  tipo: 'conexion' | 'error' | 'reglas' | 'equipo' | 'base' | string;
+  buzon_id?: string;
+  base_id?: string;
+  texto: string;
+}
+
+export interface ResumenInicio {
+  buzones: Pick<Buzon, 'id' | 'nombre' | 'estado_conexion' | 'ultima_sincronizacion' | 'activo' | 'en_revision' | 'categorias_count'>[];
+  flujo: FlujoHoy;
+  sin_asignar: number;
+  alertas: AlertaInicio[];
+}
+
+export const COMPARACIONES: { id: Comparacion; nombre: string }[] = [
+  { id: 'exacta', nombre: 'Exacta' },
+  { id: 'digitos', nombre: 'Solo dígitos' },
+  { id: 'doc', nombre: 'Documento sin DV' },
+  { id: 'pc', nombre: 'Prefijo + número (PC0000)' },
+  { id: 'aprox', nombre: 'Texto aproximado ≥ 90 %' },
+];
+
+/** Administrador de la App (ve todos los buzones, crea, conecta y da accesos). */
+export const PERM_ADMIN_BUZON = 'app.buzon-inteligente.*';
+/** Entrada a la App. */
+export const PERM_VER_BUZON = 'app.buzon-inteligente.view';
+/** 065: «Dueño de buzón», da de alta y conecta su propio buzón. */
+export const PERM_PROPIO_BUZON = 'app.buzon-inteligente.conectar';
+
+/** Prompt del área: máximo que acepta el backend (BUZON_PROMPT_MAX_CHARS) y desde
+ *  cuánto se avisa que es largo (el análisis tarda minutos). */
+export const PROMPT_MAX_CHARS = 250_000;
+export const PROMPT_LARGO_CHARS = 100_000;
+
+// ── Exportación (059) ────────────────────────────────────────────────────────
+
+export type TipoOrigen = 'campo' | 'fijo' | 'correo' | 'fila' | 'base' | 'formula' | 'calculo' | 'vacio';
+export type DatoCorreo = 'asunto' | 'remitente' | 'fecha' | 'radicado' | 'etiqueta';
+export type FormatoColumna = 'texto' | 'numero' | 'entero' | 'moneda' | 'fecha' | 'fecha_mdy';
+export type ModoSalida = 'ninguno' | 'tabla' | 'plantilla';
+
+/** De dónde sale el valor de una columna de la plantilla. */
+export interface OrigenColumna {
+  tipo: TipoOrigen;
+  /** 'campo': dato del JSON («afiliados.cedula» para un campo del detalle). 'base': dato con el que se busca. */
+  campo?: string | null;
+  /** 'fijo': texto que se repite en cada fila. */
+  valor?: string | null;
+  /** 'correo': información del correo. */
+  dato?: DatoCorreo | null;
+  base_id?: string | null;
+  columna_busqueda?: string | null;
+  columna_resultado?: string | null;
+  comparacion?: Comparacion;
+  /** 'formula': empieza con «=»; {fila} = número de la fila en Excel. */
+  formula?: string | null;
+  /** 074 'calculo': CONTAR(lista) · SUMA(lista.campo) · REDONDEAR(x;n) · + - * / con datos. */
+  expresion?: string | null;
+  /** 074 'calculo': dato del correo con el que se compara (hoja «Observaciones»). */
+  contra?: string | null;
+  /** 074: si el valor viene vacío, de dónde se toma (p. ej. el código PC por NIT en una base). */
+  si_vacio?: OrigenColumna | null;
+}
+
+export interface ColumnaPlantilla {
+  encabezado: string;
+  origen: OrigenColumna;
+  formato: FormatoColumna;
+}
+
+export interface Plantilla {
+  id: string;
+  buzon_id: string;
+  nombre: string;
+  formato: 'xlsx' | 'csv';
+  separador: string;
+  hoja: string;
+  /** Con {campo}: Cargue_{codigo_pac}_{fecha} */
+  nombre_archivo: string;
+  /** Filas de título sobre los encabezados (se conservan del modelo). */
+  titulo: string[][];
+  columnas: ColumnaPlantilla[];
+  /** Campo lista del JSON: una fila por elemento. */
+  detalle: string | null;
+  modelo: string | null;
+  /** 074: fila de lote antes del detalle (5754 · PC · NIT · fecha · CONTAR · SUMA). */
+  lote: ColumnaPlantilla[];
+  /** 074: false = sin fila con los nombres de las columnas (cargue a Pipeline). */
+  encabezados: boolean;
+  /** 074: segunda hoja «Observaciones» en el .xlsx. */
+  observaciones: boolean;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export type PlantillaIn = Omit<Plantilla, 'id' | 'buzon_id' | 'updated_at' | 'updated_by'>;
+
+export interface Salida {
+  id?: string;
+  proceso_id?: string;
+  nombre: string;
+  modo: ModoSalida;
+  /** null = todas las etiquetas del proceso. */
+  etiquetas: string[] | null;
+  plantilla_id: string | null;
+  orden?: number;
+  activa: boolean;
+}
+
+export type SalidaIn = Pick<Salida, 'nombre' | 'modo' | 'etiquetas' | 'plantilla_id' | 'activa'>;
+
+export interface ProcesoExportacion extends Proceso {
+  salidas: Salida[];
+}
+
+export interface Exportacion {
+  borrador_en_hilo: boolean;
+  procesos: ProcesoExportacion[];
+  plantillas: Plantilla[];
+}
+
+export interface ArchivoCorreo {
+  id: string;
+  correo_id: string;
+  salida_id: string | null;
+  salida_nombre: string | null;
+  nombre: string;
+  formato: 'xlsx' | 'csv';
+  version: number;
+  filas: number;
+  tamano: number;
+  borrador_en_hilo: boolean;
+  borrador_en: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface ArchivoGenerado {
+  id: string;
+  nombre: string;
+  version: number;
+  filas: number;
+}
+
+export const DATOS_CORREO: { id: DatoCorreo; nombre: string }[] = [
+  { id: 'asunto', nombre: 'Asunto' },
+  { id: 'remitente', nombre: 'Remitente' },
+  { id: 'fecha', nombre: 'Fecha de recibido' },
+  { id: 'radicado', nombre: 'Id del correo (radicado)' },
+  { id: 'etiqueta', nombre: 'Etiqueta' },
+];
+
+export const FORMATOS_COLUMNA: { id: FormatoColumna; nombre: string }[] = [
+  { id: 'texto', nombre: 'Texto' },
+  { id: 'numero', nombre: 'Número' },
+  { id: 'entero', nombre: 'Entero' },
+  { id: 'moneda', nombre: 'Moneda' },
+  { id: 'fecha', nombre: 'Fecha (DD/MM/AAAA)' },
+  { id: 'fecha_mdy', nombre: 'Fecha M/D/AAAA (cargue)' },
+];
 
 // ── Catálogo de acciones (UI) ────────────────────────────────────────────────
 
@@ -251,28 +948,32 @@ export const TIPOS_ACCION: { tipo: TipoAccion; nombre: string; icono: string; ay
   { tipo: 'categorizar', nombre: 'Etiquetar en Outlook', icono: 'tag', ayuda: 'Asigna una categoría de Outlook al correo.' },
   { tipo: 'mover', nombre: 'Mover a carpeta', icono: 'folder-input', ayuda: 'Mueve el correo a una carpeta del buzón (la crea si no existe).' },
   { tipo: 'reenviar', nombre: 'Reenviar a', icono: 'forward', ayuda: 'Reenvía el correo a una o varias personas con un comentario.' },
-  { tipo: 'asignar_analista', nombre: 'Asignar analista', icono: 'user-check', ayuda: 'Reparte el correo entre analistas (el que menos tenga hoy) y lo mueve a su carpeta.' },
   { tipo: 'notificar_teams', nombre: 'Avisar en Teams', icono: 'bell', ayuda: 'Publica un aviso en un canal o chat de Teams.' },
   { tipo: 'marcar_leido', nombre: 'Marcar como leído', icono: 'mail-check', ayuda: 'Marca el correo como leído.' },
 ];
 
-export const ESTADO_CORREO: Record<EstadoCorreo, { nombre: string; clase: string }> = {
-  pendiente: { nombre: 'Pendiente', clase: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' },
-  revision: { nombre: 'Por revisar', clase: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
-  ejecutado: { nombre: 'Ejecutado', clase: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' },
-  ignorado: { nombre: 'Ignorado', clase: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' },
-  error: { nombre: 'Error', clase: 'bg-rose-500/15 text-rose-700 dark:text-rose-300' },
+/** Filas de Ejecuciones que no son acciones configurables. */
+const OTRAS_EJECUCIONES: Record<string, { nombre: string; icono: string }> = {
+  asignar: { nombre: 'Asignación', icono: 'route' },
+  decision: { nombre: 'Decisión', icono: 'user-check' },
+  ignorar: { nombre: 'Ignorado', icono: 'mail-x' },
 };
 
 export function nombreAccion(tipo: string): string {
-  return TIPOS_ACCION.find((t) => t.tipo === tipo)?.nombre ?? tipo;
+  return TIPOS_ACCION.find((t) => t.tipo === tipo)?.nombre ?? OTRAS_EJECUCIONES[tipo]?.nombre ?? tipo;
 }
 
 export function iconoAccion(tipo: string): string {
-  return TIPOS_ACCION.find((t) => t.tipo === tipo)?.icono ?? 'zap';
+  return TIPOS_ACCION.find((t) => t.tipo === tipo)?.icono ?? OTRAS_EJECUCIONES[tipo]?.icono ?? 'zap';
 }
 
 /** Texto corto de una acción para chips ("Mover a 4X1000 Davivienda"). */
+/** Umbral propio y acciones activas de una etiqueta, en una línea. */
+export function resumenEtiqueta(c: Categoria): string {
+  const acc = c.acciones.filter((a) => a.activa).map((a) => resumenAccion(a)).join(' · ') || 'Sin acciones';
+  return `${c.umbral_confianza != null ? `Umbral propio ${Math.round(c.umbral_confianza * 100)} % · ` : ''}${acc}`;
+}
+
 export function resumenAccion(a: { tipo: string; parametros: Record<string, unknown> }): string {
   const p = a.parametros ?? {};
   switch (a.tipo) {
@@ -284,14 +985,12 @@ export function resumenAccion(a: { tipo: string; parametros: Record<string, unkn
       const d = (p['destinatarios'] as string[] | undefined) ?? [];
       return `Reenviar a ${d.length ? d.join(', ') : '…'}`;
     }
-    case 'asignar_analista': {
-      const an = (p['analistas'] as string[] | undefined) ?? [];
-      return `Asignar analista (${an.length} en turno)`;
-    }
     case 'notificar_teams':
       return 'Avisar en Teams';
     case 'marcar_leido':
       return 'Marcar como leído';
+    case 'asignar':
+      return `Asignación${p['grupo'] ? ` · grupo ${p['grupo']}` : ''}${p['via'] ? ` · ${p['via']}` : ''}`;
     default:
       return a.tipo;
   }
@@ -318,12 +1017,13 @@ export class BuzonApi {
     return /HTTP (404|500|502|503|504)|no está configurado|Failed to fetch|NetworkError/i.test(msg);
   }
 
-  private async conDemo<T>(real: () => Promise<T>, demo: () => T): Promise<T> {
+  private async conDemo<T>(real: () => Promise<T>, demo: () => T | Promise<T>): Promise<T> {
     if (this.modoDemo()) return demo();
     try {
       return await real();
     } catch (e) {
-      if (!this.esCaidaDeModulo(e)) throw e;
+      // En stg y prd nunca se muestran datos inventados: el error se ve como error.
+      if (!environment.buzonDemo || !this.esCaidaDeModulo(e)) throw e;
       console.warn('[buzon-inteligente] backend no disponible, usando datos de demostración:', e);
       this.modoDemo.set(true);
       return demo();
@@ -334,7 +1034,7 @@ export class BuzonApi {
   listarBuzones(): Promise<Buzon[]> {
     return this.conDemo(
       async () => (await this.api.fetch<{ items: Buzon[] }>(`${BASE}/buzones`)).items,
-      () => this.demo.buzones,
+      () => this.demo.buzones.map((b) => this.demo.conConteos(b)),
     );
   }
 
@@ -344,7 +1044,7 @@ export class BuzonApi {
       () => {
         const b = this.demo.buzones.find((x) => x.id === id);
         if (!b) throw new Error('Buzón no encontrado.');
-        return b;
+        return this.demo.conConteos(b);
       },
     );
   }
@@ -364,15 +1064,16 @@ export class BuzonApi {
   }
 
   /** Borra la conexión y PAUSA el buzón: Alma deja de leerlo hasta reanudarlo. */
-  desconectarBuzon(id: string): Promise<Buzon> {
+  /** 076: pausa al instante y procesa la cola en segundo plano; `en_cola` = cuántos quedaban. */
+  desconectarBuzon(id: string): Promise<Buzon & { en_cola?: number }> {
     return this.conDemo(
-      () => this.api.fetch<Buzon>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
+      () => this.api.fetch<Buzon & { en_cola?: number }>(`${BASE}/buzones/${id}/desconectar`, { method: 'POST' }),
       () => this.demo.desconectarBuzon(id),
     );
   }
 
-  /** Quita el buzón de la App (borrado lógico: el historial se conserva y
-   *  registrar de nuevo la dirección lo restaura). */
+  /** Quita el buzón de la App (borrado lógico: el historial se conserva como
+   *  auditoría; registrar de nuevo la dirección crea un buzón en blanco). */
   eliminarBuzon(id: string): Promise<void> {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/buzones/${id}`, { method: 'DELETE' }),
@@ -386,7 +1087,7 @@ export class BuzonApi {
         this.api.fetch<ResumenSync>(`${BASE}/buzones/${id}/sincronizar`, {
           method: 'POST',
           body: JSON.stringify({ max_correos: maxCorreos }),
-        }),
+        }, ESPERA_LARGA_MS),
       () => this.demo.sincronizar(id),
     );
   }
@@ -394,14 +1095,25 @@ export class BuzonApi {
   conexion(id: string): Promise<ConexionBuzon> {
     return this.conDemo(
       () => this.api.fetch<ConexionBuzon>(`${BASE}/buzones/${id}/conexion`),
-      () => ({
-        configurado: true,
-        estado: 'sin_conectar',
-        conectada_por: null,
-        conectada_en: null,
-        scopes: 'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite',
-        puede_conectar: true,
-      }),
+      () => {
+        const b = this.demo.buzones.find((x) => x.id === id);
+        return {
+          configurado: true,
+          correo_buzon_id: b?.correo_buzon_id,
+          direccion: b?.direccion,
+          estado: b?.estado_conexion ?? 'sin_conectar',
+          conectada_por: b?.conectada_por ?? null,
+          conectada_en: null,
+          compartida: !!b?.conexion_compartida,
+          scopes:
+            'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite.Shared Mail.Send.Shared',
+          scopes_propios: 'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite',
+          scopes_compartidos: b?.tipo_cuenta === 'gen'
+            ? 'openid offline_access User.Read Mail.Send Mail.ReadWrite MailboxSettings.ReadWrite Mail.ReadWrite.Shared Mail.Send.Shared'
+            : null,
+          puede_conectar: !!b?.puede_conectar,
+        };
+      },
     );
   }
 
@@ -413,11 +1125,21 @@ export class BuzonApi {
   }
 
   /**
-   * URL de autorización (OAuth delegado) para conectar el buzón con su propia
-   * cuenta. Vuelve por la ruta existente /graph-callback con state
-   * "b:<correo_buzon_id>|<ruta>", que ya canjea el código en el backend.
+   * URL de autorización (OAuth delegado) para conectar el buzón. Vuelve por la
+   * ruta existente /graph-callback con state "b:<correo_buzon_id>:<p|c>|<ruta>",
+   * que canjea el código en el backend con el modo elegido.
+   * · propia: se inicia sesión con la cuenta del buzón (Microsoft la propone con
+   *   login_hint) y bastan los scopes básicos.
+   * · compartida (solo genéricas): la cuenta del administrador con acceso completo.
    */
-  urlConectar(correoBuzonId: string, scopes: string, volverA: string): string {
+  urlConectar(
+    b: Pick<Buzon, 'tipo_cuenta' | 'direccion' | 'correo_buzon_id' | 'conexion_compartida'>,
+    c: ConexionBuzon,
+    volverA: string,
+    modo: ModoConexion = modoConexion(b),
+  ): string {
+    const compartida = b.tipo_cuenta === 'gen' && modo === 'compartida';
+    const scopes = compartida ? (c.scopes_compartidos ?? c.scopes) : (c.scopes_propios ?? c.scopes);
     const redirect = `${window.location.origin}/graph-callback`;
     const qs = new URLSearchParams({
       client_id: environment.azure.clientId,
@@ -425,9 +1147,10 @@ export class BuzonApi {
       redirect_uri: redirect,
       response_mode: 'query',
       scope: scopes,
-      state: `b:${correoBuzonId}|${volverA}`,
+      state: `b:${c.correo_buzon_id ?? b.correo_buzon_id}:${compartida ? 'c' : 'p'}|${volverA}`,
       prompt: 'select_account',
     });
+    if (!compartida) qs.set('login_hint', b.direccion);
     return `https://login.microsoftonline.com/${environment.azure.tenantId}/oauth2/v2.0/authorize?${qs}`;
   }
 
@@ -440,28 +1163,10 @@ export class BuzonApi {
     );
   }
 
-  crearCategoria(buzonId: string, body: CategoriaIn): Promise<Categoria> {
-    return this.conDemo(
-      () =>
-        this.api.fetch<Categoria>(`${BASE}/buzones/${buzonId}/categorias`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }),
-      () => this.demo.crearCategoria(buzonId, body),
-    );
-  }
-
   actualizarCategoria(id: string, body: CategoriaIn): Promise<Categoria> {
     return this.conDemo(
       () => this.api.fetch<Categoria>(`${BASE}/categorias/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
       () => this.demo.actualizarCategoria(id, body),
-    );
-  }
-
-  eliminarCategoria(id: string): Promise<void> {
-    return this.conDemo(
-      () => this.api.fetch<void>(`${BASE}/categorias/${id}`, { method: 'DELETE' }),
-      () => this.demo.eliminarCategoria(id),
     );
   }
 
@@ -484,13 +1189,6 @@ export class BuzonApi {
     );
   }
 
-  actualizarRegla(id: string, body: ReglaIn): Promise<ReglaFija> {
-    return this.conDemo(
-      () => this.api.fetch<ReglaFija>(`${BASE}/reglas/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-      () => this.demo.actualizarRegla(id, body),
-    );
-  }
-
   eliminarRegla(id: string): Promise<void> {
     return this.conDemo(
       () => this.api.fetch<void>(`${BASE}/reglas/${id}`, { method: 'DELETE' }),
@@ -502,7 +1200,7 @@ export class BuzonApi {
   listarCorreos(f: FiltroCorreos): Promise<{ data: Correo[]; total: number }> {
     const qs = new URLSearchParams();
     Object.entries(f).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+      if (v !== undefined && v !== null && v !== '' && v !== false) qs.set(k, String(v));
     });
     return this.conDemo(
       () => this.api.fetch<{ data: Correo[]; total: number }>(`${BASE}/correos?${qs}`),
@@ -529,12 +1227,13 @@ export class BuzonApi {
     return resp.arrayBuffer();
   }
 
-  decidir(id: string, categoriaId: string, ejecutar: boolean, comentario?: string): Promise<Correo> {
+  /** `mensaje` (067): lo que el analista agrega al reenvío o la respuesta del grupo de la etiqueta. */
+  decidir(id: string, categoriaId: string, ejecutar: boolean, comentario?: string, mensaje?: string): Promise<Correo> {
     return this.conDemo(
       () =>
         this.api.fetch<Correo>(`${BASE}/correos/${id}/decidir`, {
           method: 'POST',
-          body: JSON.stringify({ categoria_id: categoriaId, ejecutar, comentario }),
+          body: JSON.stringify({ categoria_id: categoriaId, ejecutar, comentario, mensaje: mensaje || undefined }),
         }),
       () => this.demo.decidir(id, categoriaId, ejecutar, this.auth.user().correo),
     );
@@ -549,19 +1248,8 @@ export class BuzonApi {
 
   reclasificar(id: string): Promise<Correo> {
     return this.conDemo(
-      () => this.api.fetch<Correo>(`${BASE}/correos/${id}/reclasificar`, { method: 'POST' }),
+      () => this.api.fetch<Correo>(`${BASE}/correos/${id}/reclasificar`, { method: 'POST' }, ESPERA_LARGA_MS),
       () => this.demo.reclasificar(id),
-    );
-  }
-
-  probar(buzonId: string, body: { asunto: string; remitente: string; cuerpo: string; texto_adjuntos?: string }): Promise<ResultadoPrueba> {
-    return this.conDemo(
-      () =>
-        this.api.fetch<ResultadoPrueba>(`${BASE}/buzones/${buzonId}/probar`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        }),
-      () => demoProbar(this.demo, buzonId, body),
     );
   }
 
@@ -572,5 +1260,529 @@ export class BuzonApi {
       () => this.api.fetch<Metricas>(`${BASE}/metricas?${qs}`),
       () => demoMetricas(this.demo, buzonId),
     );
+  }
+
+  /** Reemplaza los miembros del buzón (solo administrador de la App). */
+  guardarMiembros(buzonId: string, miembros: { email: string; rol: RolMiembro }[]): Promise<Buzon> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Buzon>(`${BASE}/buzones/${buzonId}/miembros`, {
+          method: 'PUT',
+          body: JSON.stringify({ miembros }),
+        }),
+      () => this.demo.guardarMiembros(buzonId, miembros),
+    );
+  }
+
+  // ── 2.0: resumen del inicio ──
+  resumen(): Promise<ResumenInicio> {
+    return this.conDemo(
+      () => this.api.fetch<ResumenInicio>(`${BASE}/resumen`),
+      () => this.demo.resumen(),
+    );
+  }
+
+  // ── 2.0: procesos ──
+  /** Etiquetas y procesos de todos los buzones visibles en una petición (bandeja). */
+  catalogo(): Promise<{ categorias: Categoria[]; procesos: Record<string, Proceso[]> }> {
+    return this.conDemo(
+      () => this.api.fetch<{ categorias: Categoria[]; procesos: Record<string, Proceso[]> }>(`${BASE}/catalogo`),
+      () => ({
+        categorias: [...this.demo.categorias],
+        procesos: Object.fromEntries(this.demo.buzones.map((b) => [b.id, this.demo.listarProcesos(b.id)])),
+      }),
+    );
+  }
+
+  listarProcesos(buzonId: string): Promise<Proceso[]> {
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: Proceso[] }>(`${BASE}/buzones/${buzonId}/procesos`)).items,
+      () => this.demo.listarProcesos(buzonId),
+    );
+  }
+
+  actualizarProceso(id: string, body: ProcesoIn): Promise<Proceso> {
+    return this.conDemo(
+      () => this.api.fetch<Proceso>(`${BASE}/procesos/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.guardarProceso(null, body, id),
+    );
+  }
+
+  eliminarProceso(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/procesos/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarProceso(id),
+    );
+  }
+
+  /** La IA lee el prompt del área y PROPONE procesos (10–30 s). No guarda nada.
+   *  Con `procesoId` (editar un proceso) la propuesta es ese proceso, con su clave y
+   *  sus etiquetas: se actualiza, no se crea otro. */
+  analizarPrompt(buzonId: string, prompt: string, procesoId?: string | null): Promise<PropuestaProcesos> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<PropuestaProcesos>(`${BASE}/buzones/${buzonId}/analizar-prompt`, {
+          method: 'POST',
+          body: JSON.stringify(procesoId ? { prompt, proceso_id: procesoId } : { prompt }),
+        }, ESPERA_LARGA_MS),
+      () => this.demo.analizarPrompt(prompt),
+    );
+  }
+
+  /** 069: condensa con fidelidad el texto de un proceso o las reglas generales (no guarda nada). */
+  condensar(buzonId: string, texto: string, deQue: string): Promise<Condensado> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Condensado>(`${BASE}/buzones/${buzonId}/condensar`, {
+          method: 'POST',
+          body: JSON.stringify({ texto, de_que: deQue }),
+        }, ESPERA_LARGA_MS),
+      () => ({ texto, original: texto.length, resultado: texto.length, condensado: false }),
+    );
+  }
+
+  /** Crea o actualiza procesos y etiquetas por clave (no borra nada) y guarda el prompt del área. */
+  aplicarPropuesta(buzonId: string, propuesta: PropuestaProcesos, promptArea?: string): Promise<ResultadoAplicar> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<ResultadoAplicar>(`${BASE}/buzones/${buzonId}/aplicar-propuesta`, {
+          method: 'POST',
+          body: JSON.stringify({ propuesta, prompt_area: promptArea ?? null }),
+        }),
+      () => this.demo.aplicarPropuesta(buzonId, propuesta, promptArea),
+    );
+  }
+
+  // ── 2.0: grupos ──
+  listarGrupos(buzonId: string): Promise<Grupo[]> {
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: Grupo[] }>(`${BASE}/buzones/${buzonId}/grupos`)).items,
+      () => this.demo.listarGrupos(buzonId),
+    );
+  }
+
+  crearGrupo(buzonId: string, body: GrupoIn): Promise<Grupo> {
+    return this.conDemo(
+      () => this.api.fetch<Grupo>(`${BASE}/buzones/${buzonId}/grupos`, { method: 'POST', body: JSON.stringify(body) }),
+      () => this.demo.guardarGrupo(buzonId, body),
+    );
+  }
+
+  /** Actualiza el grupo y REEMPLAZA sus búsquedas en bases. */
+  actualizarGrupo(id: string, body: GrupoIn): Promise<Grupo> {
+    return this.conDemo(
+      () => this.api.fetch<Grupo>(`${BASE}/grupos/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.guardarGrupo(null, body, id),
+    );
+  }
+
+  eliminarGrupo(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/grupos/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarGrupo(id),
+    );
+  }
+
+  // ── 2.0: equipo ──
+  listarEquipo(buzonId: string): Promise<Persona[]> {
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: Persona[] }>(`${BASE}/buzones/${buzonId}/equipo`)).items,
+      () => this.demo.listarEquipo(buzonId),
+    );
+  }
+
+  /** Reemplaza el equipo completo (agregar, quitar e importar). */
+  guardarEquipo(buzonId: string, personas: PersonaIn[]): Promise<Persona[]> {
+    return this.conDemo(
+      async () =>
+        (
+          await this.api.fetch<{ items: Persona[] }>(`${BASE}/buzones/${buzonId}/equipo`, {
+            method: 'PUT',
+            body: JSON.stringify({ personas }),
+          })
+        ).items,
+      () => this.demo.guardarEquipo(buzonId, personas),
+    );
+  }
+
+  /** Cambio rápido: disponible (ausencias) o activa en un grupo. Devuelve el equipo. */
+  cambiarDisponibilidad(personaId: string, body: DisponibilidadIn): Promise<Persona[]> {
+    return this.conDemo(
+      async () =>
+        (
+          await this.api.fetch<{ items: Persona[] }>(`${BASE}/equipo/${personaId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(body),
+          })
+        ).items,
+      () => this.demo.cambiarDisponibilidad(personaId, body),
+    );
+  }
+
+  // ── 2.0: bases ──
+  listarBases(buzonId?: string): Promise<Base[]> {
+    const qs = buzonId ? `?buzon_id=${encodeURIComponent(buzonId)}` : '';
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: Base[] }>(`${BASE}/bases${qs}`)).items,
+      () => this.demo.listarBases(buzonId),
+    );
+  }
+
+  crearBase(body: BaseIn): Promise<Base> {
+    return this.conDemo(
+      () => this.api.fetch<Base>(`${BASE}/bases`, { method: 'POST', body: JSON.stringify(body) }),
+      () => this.demo.crearBase(body),
+    );
+  }
+
+  actualizarBase(id: string, body: BaseUpdate): Promise<Base> {
+    return this.conDemo(
+      () => this.api.fetch<Base>(`${BASE}/bases/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.actualizarBase(id, body),
+    );
+  }
+
+  eliminarBase(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/bases/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarBase(id),
+    );
+  }
+
+  private formArchivo(archivo: File, hoja?: string | null, filaEncabezado?: number | null): FormData {
+    const f = new FormData();
+    f.append('archivo', archivo, archivo.name);
+    if (hoja) f.append('hoja', hoja);
+    if (filaEncabezado) f.append('fila_encabezado', String(filaEncabezado));
+    return f;
+  }
+
+  /** Vista previa de un Excel/CSV sin guardar (hojas, encabezados, columnas, filas). */
+  leerArchivo(archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<LecturaArchivo> {
+    return this.conDemo(
+      () => this.api.upload<LecturaArchivo>(`${BASE}/bases/leer`, this.formArchivo(archivo, hoja, filaEncabezado)),
+      () => demoLeerArchivo(archivo, hoja, filaEncabezado),
+    );
+  }
+
+  /** Carga el archivo en la base. Si no sirve, `aceptada` = false y la base conserva la carga anterior. */
+  cargarBase(id: string, archivo: File, hoja?: string | null, filaEncabezado?: number | null): Promise<ResultadoCarga> {
+    return this.conDemo(
+      () => this.api.upload<ResultadoCarga>(`${BASE}/bases/${id}/cargar`, this.formArchivo(archivo, hoja, filaEncabezado)),
+      async () => this.demo.cargarBase(id, await demoLeerArchivo(archivo, hoja, filaEncabezado), archivo.name),
+    );
+  }
+
+  sincronizarBase(id: string): Promise<ResultadoCarga> {
+    return this.conDemo(
+      () => this.api.fetch<ResultadoCarga>(`${BASE}/bases/${id}/sincronizar`, { method: 'POST' }, ESPERA_LARGA_MS),
+      () => this.demo.sincronizarBase(id),
+    );
+  }
+
+  filasBase(id: string, q?: string, limit = 50): Promise<{ columnas: string[]; items: FilaBase[] }> {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (q) qs.set('q', q);
+    return this.conDemo(
+      () => this.api.fetch<{ columnas: string[]; items: FilaBase[] }>(`${BASE}/bases/${id}/filas?${qs}`),
+      () => this.demo.filasBase(id, q, limit),
+    );
+  }
+
+  /** «Vincular a…»: un valor de la base queda equivalente a un correo (null = quitar). */
+  vincular(baseId: string, valor: string, correo: string | null): Promise<Base> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Base>(`${BASE}/bases/${baseId}/vinculos`, {
+          method: 'PUT',
+          body: JSON.stringify({ valor, correo }),
+        }),
+      () => this.demo.vincular(baseId, valor, correo),
+    );
+  }
+
+  /** Simula a quién iría un correo con esa etiqueta y esos datos. No toca Outlook. */
+  probarAsignacion(buzonId: string, etiqueta: string, datos: Record<string, unknown>): Promise<ResultadoAsignacion> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<ResultadoAsignacion>(`${BASE}/buzones/${buzonId}/probar-asignacion`, {
+          method: 'POST',
+          body: JSON.stringify({ etiqueta, datos }),
+        }, ESPERA_LARGA_MS),
+      () => this.demo.probarAsignacion(buzonId, etiqueta, datos),
+    );
+  }
+
+  // ── Exportación (059) ──
+  /** Salidas por proceso, plantillas del buzón y entrega (solo quien configura). */
+  exportacion(buzonId: string): Promise<Exportacion> {
+    return this.conDemo(
+      () => this.api.fetch<Exportacion>(`${BASE}/buzones/${buzonId}/exportacion`),
+      () => this.demo.exportacion(buzonId),
+    );
+  }
+
+  /** Reemplaza las salidas del proceso (en este orden: la primera que cubre la etiqueta manda). */
+  guardarSalidas(procesoId: string, salidas: SalidaIn[]): Promise<Salida[]> {
+    return this.conDemo(
+      async () =>
+        (
+          await this.api.fetch<{ items: Salida[] }>(`${BASE}/procesos/${procesoId}/salidas`, {
+            method: 'PUT',
+            body: JSON.stringify({ salidas }),
+          })
+        ).items,
+      () => this.demo.guardarSalidas(procesoId, salidas),
+    );
+  }
+
+  listarPlantillas(buzonId: string): Promise<Plantilla[]> {
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: Plantilla[] }>(`${BASE}/buzones/${buzonId}/plantillas`)).items,
+      () => this.demo.listarPlantillas(buzonId),
+    );
+  }
+
+  crearPlantilla(buzonId: string, body: PlantillaIn): Promise<Plantilla> {
+    return this.conDemo(
+      () => this.api.fetch<Plantilla>(`${BASE}/buzones/${buzonId}/plantillas`, { method: 'POST', body: JSON.stringify(body) }),
+      () => this.demo.guardarPlantilla(buzonId, body),
+    );
+  }
+
+  actualizarPlantilla(id: string, body: PlantillaIn): Promise<Plantilla> {
+    return this.conDemo(
+      () => this.api.fetch<Plantilla>(`${BASE}/plantillas/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.guardarPlantilla(null, body, id),
+    );
+  }
+
+  eliminarPlantilla(id: string): Promise<void> {
+    return this.conDemo(
+      () => this.api.fetch<void>(`${BASE}/plantillas/${id}`, { method: 'DELETE' }),
+      () => this.demo.eliminarPlantilla(id),
+    );
+  }
+
+  archivosCorreo(correoId: string): Promise<ArchivoCorreo[]> {
+    return this.conDemo(
+      async () => (await this.api.fetch<{ items: ArchivoCorreo[] }>(`${BASE}/correos/${correoId}/archivos`)).items,
+      () => this.demo.archivosCorreo(correoId),
+    );
+  }
+
+  /** Genera la versión siguiente del archivo con los datos actuales del correo. */
+  regenerarArchivo(correoId: string): Promise<ArchivoGenerado> {
+    return this.conDemo(
+      () => this.api.fetch<ArchivoGenerado>(`${BASE}/correos/${correoId}/archivos`, { method: 'POST' }),
+      () => this.demo.regenerarArchivo(correoId, this.auth.user().correo),
+    );
+  }
+
+  /** El revisor corrige los datos extraídos. Si el correo ya se ejecutó, devuelve la
+   *  versión nueva del archivo como VISTA PREVIA (el borrador del hilo no cambia). */
+  corregirDatos(correoId: string, datos: Record<string, unknown>): Promise<CorreccionDatos> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<CorreccionDatos>(`${BASE}/correos/${correoId}/datos`, {
+          method: 'PUT',
+          body: JSON.stringify({ datos_extraidos: datos }),
+        }),
+      () => this.demo.corregirDatos(correoId, datos, this.auth.user().correo),
+    );
+  }
+
+  /** Conversación del correo (pestaña Hilo) y el borrador vigente de Alma. */
+  hilo(correoId: string): Promise<HiloCorreo> {
+    return this.conDemo(
+      () => this.api.fetch<HiloCorreo>(`${BASE}/correos/${correoId}/hilo`),
+      () => this.demo.hilo(correoId),
+    );
+  }
+
+  /** «Es duplicado» (se ignora y queda vinculado) o «No es duplicado» (flujo normal). */
+  decidirDuplicado(correoId: string, esDuplicado: boolean): Promise<Correo> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Correo>(`${BASE}/correos/${correoId}/duplicado`, {
+          method: 'POST',
+          body: JSON.stringify({ es_duplicado: esDuplicado }),
+        }),
+      () => this.demo.decidirDuplicado(correoId, esDuplicado, this.auth.user().correo),
+    );
+  }
+
+  /** Celdas, origen de cada columna y revisión de una versión del archivo. */
+  celdasArchivo(archivoId: string): Promise<CeldasArchivo> {
+    return this.conDemo(
+      () => this.api.fetch<CeldasArchivo>(`${BASE}/archivos/${archivoId}/celdas`),
+      () => this.demo.celdasArchivo(archivoId),
+    );
+  }
+
+  /** «Actualizar borrador»: deja esta versión como borrador de respuesta en el hilo. */
+  actualizarBorrador(archivoId: string): Promise<ArchivoCorreo[]> {
+    return this.conDemo(
+      async () =>
+        (await this.api.fetch<{ items: ArchivoCorreo[] }>(`${BASE}/archivos/${archivoId}/borrador`, { method: 'POST' })).items,
+      () => this.demo.actualizarBorrador(archivoId, this.auth.user().correo),
+    );
+  }
+
+  /** Reasignación manual (editor o administrador del buzón). */
+  reasignar(correoId: string, personaId: string): Promise<Correo> {
+    return this.conDemo(
+      () =>
+        this.api.fetch<Correo>(`${BASE}/correos/${correoId}/asignacion`, {
+          method: 'PUT',
+          body: JSON.stringify({ persona_id: personaId }),
+        }),
+      () => this.demo.reasignar(correoId, personaId, this.auth.user().correo),
+    );
+  }
+
+  // ── 061: asistente «Nuevo buzón» y reglas con versiones ──
+
+  /** Nombre {GEN|PER}-{ALIAS} y si está libre. */
+  nombreBuzon(direccion: string, tipo: TipoCuenta): Promise<NombreBuzon> {
+    const q = `direccion=${encodeURIComponent(direccion)}&tipo=${tipo}`;
+    return this.conDemo(
+      () => this.api.fetch<NombreBuzon>(`${BASE}/buzones/nombre?${q}`),
+      () => this.demo.nombreBuzon(direccion, tipo),
+    );
+  }
+
+  /** Solo demostración: en vez del inicio de sesión de Microsoft, el buzón queda conectado. */
+  simularConexionDemo(buzonId: string, modo: ModoConexion = 'propia'): Buzon {
+    return this.demo.conectarDemo(buzonId, this.auth.user().correo, modo === 'compartida');
+  }
+
+  /** Modelos de IA y dominios de correo que la plataforma ofrece. */
+  opciones(): Promise<OpcionesBuzon> {
+    return this.conDemo(
+      () => this.api.fetch<OpcionesBuzon>(`${BASE}/opciones`),
+      () => ({ modelos: ['gpt-5-mini', 'gpt-4.1'], dominios_correo: DOMINIOS_CORREO }),
+    );
+  }
+
+  /** Cuenta personal: crea la subcarpeta dedicada (p. ej. «Alma») y devuelve el árbol. */
+  crearCarpeta(buzonId: string, nombre: string): Promise<CarpetaGraph[]> {
+    return this.conDemo(
+      async () =>
+        (await this.api.fetch<{ items: CarpetaGraph[] }>(`${BASE}/buzones/${buzonId}/carpetas`, {
+          method: 'POST',
+          body: JSON.stringify({ nombre, dentro_de_bandeja: true }),
+        })).items,
+      () => this.demo.crearCarpeta(buzonId, nombre),
+    );
+  }
+
+  guardarProcesoCompleto(buzonId: string, body: ProcesoCompletoIn): Promise<Proceso> {
+    return this.conDemo(
+      () => this.api.fetch<Proceso>(`${BASE}/buzones/${buzonId}/procesos-completo`, { method: 'PUT', body: JSON.stringify(body) }),
+      () => this.demo.guardarProcesoCompleto(buzonId, body),
+    );
+  }
+
+  estadoReglas(buzonId: string): Promise<EstadoReglas> {
+    return this.conDemo(
+      () => this.api.fetch<EstadoReglas>(`${BASE}/buzones/${buzonId}/versiones`),
+      () => this.demo.estadoReglas(buzonId),
+    );
+  }
+
+  /** Etiquetas activas sin grupo de Asignación (revisión antes de publicar). */
+  revisionGrupos(buzonId: string): Promise<RevisionGrupos> {
+    // Sin respaldo a demo: a quien no configura el buzón le responde 403/404 y eso no
+    // debe pasar toda la pantalla a datos de demostración.
+    if (this.modoDemo()) return Promise.resolve({ aplica: false, sin_grupo: [] });
+    return this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/revision`);
+  }
+
+  /** Agrega una etiqueta a un grupo (hereda su destino). Devuelve la revisión al día. */
+  agregarEtiquetaAGrupo(buzonId: string, grupoId: string, clave: string): Promise<RevisionGrupos> {
+    return this.conDemo(
+      () => this.api.fetch<RevisionGrupos>(`${BASE}/buzones/${buzonId}/grupos/${grupoId}/etiquetas`, { method: 'POST', body: JSON.stringify({ clave }) }),
+      () => ({ aplica: false, sin_grupo: [] }),
+    );
+  }
+
+  /** Publica el borrador como vN+1 (y activa el buzón si estaba en configuración). */
+  publicarReglas(buzonId: string): Promise<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }>(`${BASE}/buzones/${buzonId}/versiones`, { method: 'POST' }),
+      () => this.demo.publicarReglas(buzonId, this.auth.user().correo),
+    );
+  }
+
+  /** «Volver a esta versión»: publica como vN+1 la foto de una versión anterior (el borrador no cambia). */
+  restaurarVersion(buzonId: string, version: number): Promise<{ version: number; restaurada: number; cambios: CambioRegla[] }> {
+    return this.conDemo(
+      () => this.api.fetch<{ version: number; restaurada: number; cambios: CambioRegla[] }>(`${BASE}/buzones/${buzonId}/versiones/${version}/restaurar`, { method: 'POST' }),
+      () => this.demo.restaurarVersion(buzonId, version, this.auth.user().correo),
+    );
+  }
+
+  verPrompt(buzonId: string, cual: 'borrador' | 'vigente' = 'borrador'): Promise<PromptBuzon> {
+    return this.conDemo(
+      () => this.api.fetch<PromptBuzon>(`${BASE}/buzones/${buzonId}/prompt?cual=${cual}`, undefined, ESPERA_LARGA_MS),
+      () => this.demo.verPrompt(buzonId),
+    );
+  }
+
+  /** La IA propone procesos nuevos a partir de los correos recientes (no guarda nada). */
+  proponerProcesos(buzonId: string): Promise<PropuestaProcesos & { correos_leidos: number }> {
+    return this.conDemo(
+      () => this.api.fetch<PropuestaProcesos & { correos_leidos: number }>(`${BASE}/buzones/${buzonId}/proponer-procesos`, { method: 'POST' }, ESPERA_LARGA_MS),
+      () => this.demo.proponerProcesos(buzonId),
+    );
+  }
+
+  /** Paso 6 del asistente: clasifica los últimos correos sin tocar Outlook. */
+  pruebaSeco(buzonId: string, correos = 20): Promise<PruebaSeco> {
+    return this.conDemo(
+      () => this.api.fetch<PruebaSeco>(`${BASE}/buzones/${buzonId}/prueba-seco`, { method: 'POST', body: JSON.stringify({ correos }) }, ESPERA_LARGA_MS),
+      () => this.demo.pruebaSeco(buzonId),
+    );
+  }
+
+  /** Vuelve a correr la asignación con los datos actuales del correo. */
+  recalcularAsignacion(correoId: string): Promise<Correo> {
+    return this.conDemo(
+      () => this.api.fetch<Correo>(`${BASE}/correos/${correoId}/recalcular-asignacion`, { method: 'POST' }),
+      () => this.demo.recalcularAsignacion(correoId),
+    );
+  }
+
+  /** Descarga el archivo (binario) y lo entrega al navegador con su nombre. */
+  async descargarArchivo(archivo: Pick<ArchivoCorreo, 'id' | 'nombre'>): Promise<void> {
+    let blob: Blob;
+    if (this.modoDemo()) {
+      blob = await this.demo.descargarArchivo(archivo.id);
+    } else {
+      const token = await this.auth.getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const base = environment.apiUrl.replace(/\/+$/, '');
+      const resp = await fetch(`${base}${BASE}/archivos/${encodeURIComponent(archivo.id)}/descargar`, { headers });
+      if (!resp.ok) {
+        let detalle = `HTTP ${resp.status} al descargar el archivo`;
+        try {
+          detalle = ((await resp.json()) as { detail?: string }).detail ?? detalle;
+        } catch {
+          /* cuerpo no JSON */
+        }
+        throw new Error(detalle);
+      }
+      blob = await resp.blob();
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = archivo.nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
