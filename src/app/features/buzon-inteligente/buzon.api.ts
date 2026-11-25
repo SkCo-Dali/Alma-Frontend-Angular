@@ -90,6 +90,8 @@ export interface Buzon {
   etiqueta_validar?: string;
   /** 075: clasificación en dos pasos (gpt-4.1-mini decide el proceso; gpt-4.1 aplica sus reglas). */
   dos_pasos?: boolean;
+  /** 083: si el correo menciona un soporte que solo viene como imagen externa o enlace → Validar. */
+  revisar_soporte_no_legible?: boolean;
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
@@ -154,6 +156,7 @@ export type BuzonUpdate = Partial<
     | 'sin_proceso'
     | 'etiqueta_validar'
     | 'dos_pasos'
+    | 'revisar_soporte_no_legible'
     | 'al_desactivar'
     | 'borrador_en_hilo'
     | 'descripcion'
