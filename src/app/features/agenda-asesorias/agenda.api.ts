@@ -34,6 +34,12 @@ export const REGIMENES: Record<string, string> = {
   NS: 'No está seguro',
 };
 
+/** Rótulos de las acciones del historial de una cita. */
+export const ACCIONES_HISTORIAL: Record<string, string> = {
+  creada: 'Creada', cancelada: 'Cancelada', reprogramada: 'Reprogramada', reasignada: 'Reasignada',
+  atendida: 'Atendida', no_asistio: 'No asistió', confirmada: 'Notas', solicitud: 'Solicitud generada',
+};
+
 export const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export interface Cita {
@@ -240,6 +246,10 @@ export class AgendaApi {
   // Asesor
   async misCitas(desde: string, hasta: string): Promise<Cita[]> {
     return (await this.api.fetch<{ citas: Cita[] }>(`${BASE}/mis-citas${consulta({ desde, hasta })}`)).citas;
+  }
+
+  miCita(id: string): Promise<CitaDetalle> {
+    return this.api.fetch<CitaDetalle>(`${BASE}/mis-citas/${encodeURIComponent(id)}`);
   }
 
   marcarMiCita(id: string, estado: EstadoCita | null, notas: string | null): Promise<void> {

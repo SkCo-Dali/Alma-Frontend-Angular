@@ -9,7 +9,7 @@ import { PERM_DILIGENCIAR } from '../solicitudes-prestaciones/prestaciones.api';
 import { CitaSolicitudService, tipoDocumentoFormulario } from '../prestaciones/cita-solicitud.service';
 import { AuthService } from '../../core/auth/auth.service';
 import {
-  AgendaApi, Cita, EstadoCita, REGIMENES, celularBonito, claseEstado, enlaceWhatsapp, fechaLarga, horaBonita,
+  ACCIONES_HISTORIAL, AgendaApi, Cita, CitaDetalle, EstadoCita, REGIMENES, fechaHoraColombia, celularBonito, claseEstado, enlaceWhatsapp, fechaLarga, horaBonita,
   hoyColombia, rotuloEstado, sumarDias,
 } from './agenda.api';
 
@@ -51,10 +51,20 @@ type Rango = 'proximas' | 'pasadas';
                 </div>
                 <div class="min-w-[14rem] flex-1 space-y-1">
                   <p class="text-sm font-semibold text-foreground">
-                    {{ c.datosPurgados ? 'Datos eliminados por retención' : c.nombre }}
+                    <button type="button" class="text-left hover:text-primary hover:underline" [attr.aria-expanded]="abierta() === c.id"
+                            [attr.aria-controls]="'det-' + c.id" (click)="alternarDetalle(c)">
+                      {{ c.datosPurgados ? 'Datos eliminados por retención' : c.nombre }}
+                    </button>
                     <span class="alma-badge ml-1" [class]="claseEstado(c.estado)">{{ rotuloEstado(c.estado) }}</span>
                   </p>
-                  <p class="text-xs text-muted-foreground">{{ c.tipoTitulo }} · {{ c.codigo }}</p>
+                  <p class="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                    <span>{{ c.tipoTitulo }} · {{ c.codigo }}</span>
+                    <button type="button" class="inline-flex items-center gap-0.5 font-medium text-primary hover:underline" [attr.aria-expanded]="abierta() === c.id"
+                            [attr.aria-controls]="'det-' + c.id" (click)="alternarDetalle(c)">
+                      {{ abierta() === c.id ? 'Ocultar detalle' : 'Ver detalle' }}
+                      <lucide-icon [name]="abierta() === c.id ? 'chevron-up' : 'chevron-down'" [size]="13" />
+                    </button>
+                  </p>
                   @if (!c.datosPurgados) {
                     <p class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground">
                       @if (enlaceWhatsapp(c.celular) && c.tipo === 'whatsapp') {
@@ -88,16 +98,59 @@ type Rango = 'proximas' | 'pasadas';
                 </div>
                 <div class="flex shrink-0 flex-col items-end gap-2">
                   @if (puedeIniciarSolicitud(c)) {
-                    <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" (click)="iniciarSolicitud(c)">
+                    <button type="button" class="alma-btn alma-btn-primary h-8 whitespace-nowrap text-xs" (click)="iniciarSolicitud(c)">
                       <lucide-icon name="file-text" [size]="14" /> Iniciar solicitud
                     </button>
                   }
                   @if (editando() !== c.id && puedeCerrar(c)) {
-                    <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" (click)="abrir(c)">
+                    <button type="button" class="alma-btn alma-btn-outline h-8 whitespace-nowrap text-xs" (click)="abrir(c)">
                       <lucide-icon name="check-circle-2" [size]="14" /> {{ c.estado === 'confirmada' ? 'Registrar resultado' : 'Cambiar resultado' }}
                     </button>
                   }
                 </div>
+                @if (abierta() === c.id) {
+                  <div [id]="'det-' + c.id" class="basis-full rounded-2xl border border-border/60 bg-[var(--table-header)] p-4">
+                    @if (detalle(); as d) {
+                      <div class="grid gap-4 md:grid-cols-2">
+                        <dl class="grid grid-cols-[8.5rem_1fr] gap-x-3 gap-y-1 text-sm">
+                          <dt class="text-muted-foreground">Asesoría</dt><dd class="text-foreground">{{ d.tipoTitulo }}</dd>
+                          <dt class="text-muted-foreground">Canal</dt><dd class="text-foreground">{{ d.canal }}</dd>
+                          <dt class="text-muted-foreground">Fecha y hora</dt><dd class="text-foreground">{{ fechaLarga(d.fecha) }}, {{ horaBonita(d.hora) }} ({{ d.duracion }} min)</dd>
+                          <dt class="text-muted-foreground">Código</dt><dd class="font-mono text-foreground">{{ d.codigo }}</dd>
+                          @if (d.datosPurgados) {
+                            <dt class="text-muted-foreground">Persona</dt><dd class="text-foreground">Datos eliminados por retención</dd>
+                          } @else {
+                            <dt class="text-muted-foreground">Nombre</dt><dd class="text-foreground">{{ d.nombre }}</dd>
+                            <dt class="text-muted-foreground">Documento</dt><dd class="text-foreground">{{ d.tipoDoc }} {{ d.documento }}</dd>
+                            <dt class="text-muted-foreground">Celular</dt><dd class="text-foreground">{{ celularBonito(d.celular) }}</dd>
+                            <dt class="text-muted-foreground">Correo</dt><dd class="break-all text-foreground">{{ d.correo }}</dd>
+                            <dt class="text-muted-foreground">Régimen actual</dt><dd class="text-foreground">{{ d.regimen ? regimen(d.regimen) : '—' }}</dd>
+                            <dt class="text-muted-foreground">Comentarios</dt><dd class="text-foreground">{{ d.comentarios || '—' }}</dd>
+                          }
+                          <dt class="text-muted-foreground">Origen</dt><dd class="text-foreground">{{ d.origen === 'web' ? 'Sitio web' : 'Agendada en Nova' }}@if (d.ciudad) { · {{ d.ciudad }} }</dd>
+                          <dt class="text-muted-foreground">Agendada el</dt><dd class="text-foreground">{{ fechaHora(d.creadaUtc) }}</dd>
+                          @if (d.notas) { <dt class="text-muted-foreground">Notas</dt><dd class="text-foreground">{{ d.notas }}</dd> }
+                        </dl>
+                        <div>
+                          <h4 class="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
+                            <lucide-icon name="history" [size]="13" /> Historial
+                          </h4>
+                          <ol class="space-y-1 text-xs">
+                            @for (h of d.historial; track $index) {
+                              <li class="text-foreground">
+                                <span class="text-muted-foreground">{{ fechaHora(h.Fecha) }}</span> ·
+                                <span class="font-medium">{{ accion(h.Accion) }}</span> · {{ h.Actor }}
+                                @if (h.Detalle) { <span class="text-muted-foreground">({{ h.Detalle }})</span> }
+                              </li>
+                            }
+                          </ol>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="flex justify-center py-4"><alma-loader [size]="40" label="Cargando…" /></div>
+                    }
+                  </div>
+                }
               </li>
             }
           </ul>
@@ -119,6 +172,10 @@ export class MiAgendaComponent {
   protected readonly editando = signal<string | null>(null);
   protected readonly notas = signal('');
   protected readonly guardando = signal(false);
+  /** Cita con el detalle abierto y su detalle (con historial). */
+  protected readonly abierta = signal<string | null>(null);
+  protected readonly detalle = signal<CitaDetalle | null>(null);
+  protected readonly fechaHora = fechaHoraColombia;
 
   protected readonly porDia = computed(() => {
     const grupos = new Map<string, Cita[]>();
@@ -140,6 +197,30 @@ export class MiAgendaComponent {
 
   constructor() {
     void this.cargar();
+  }
+
+  protected accion(a: string): string {
+    return ACCIONES_HISTORIAL[a] ?? a;
+  }
+
+  protected async alternarDetalle(c: Cita): Promise<void> {
+    if (this.abierta() === c.id) {
+      this.abierta.set(null);
+      return;
+    }
+    this.abierta.set(c.id);
+    await this.cargarDetalle(c.id);
+  }
+
+  private async cargarDetalle(id: string): Promise<void> {
+    this.detalle.set(null);
+    try {
+      const d = await this.api.miCita(id);
+      if (this.abierta() === id) this.detalle.set(d);
+    } catch (e) {
+      this.abierta.set(null);
+      this.toast.error('No se pudo abrir la cita', e instanceof Error ? e.message : String(e));
+    }
   }
 
   protected regimen(r: string): string {
@@ -200,6 +281,7 @@ export class MiAgendaComponent {
       this.toast.show('Resultado guardado', `${c.codigo}: ${rotuloEstado(estado)}`);
       this.editando.set(null);
       await this.cargar();
+      if (this.abierta() === c.id) await this.cargarDetalle(c.id);
     } catch (e) {
       this.toast.error('No se pudo guardar', e instanceof Error ? e.message : String(e));
     } finally {

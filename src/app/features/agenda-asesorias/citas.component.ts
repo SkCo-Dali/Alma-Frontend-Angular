@@ -7,15 +7,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import {
-  AgendaApi, Asesor, CitaDetalle, Cita, ESTADOS, EstadoCita, FiltroCitas, PERM_GESTIONAR, REGIMENES, TipoCita,
+  ACCIONES_HISTORIAL, AgendaApi, Asesor, CitaDetalle, Cita, ESTADOS, EstadoCita, FiltroCitas, PERM_GESTIONAR, REGIMENES, TipoCita,
   celularBonito, claseEstado, descargar, fechaHoraColombia, fechaLarga, horaBonita, hoyColombia, rotuloEstado,
   sumarDias,
 } from './agenda.api';
 
-const ACCIONES: Record<string, string> = {
-  creada: 'Creada', cancelada: 'Cancelada', reprogramada: 'Reprogramada', reasignada: 'Reasignada',
-  atendida: 'Atendida', no_asistio: 'No asistió', confirmada: 'Notas', solicitud: 'Solicitud generada',
-};
+const ACCIONES = ACCIONES_HISTORIAL;
 
 @Component({
   selector: 'alma-citas-agenda',
