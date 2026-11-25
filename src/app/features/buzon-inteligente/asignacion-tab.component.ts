@@ -26,7 +26,7 @@ const DESTINO_TXT: Record<DestinoGrupo, string> = { personas: 'Asignar a persona
 const DESTINO_BADGE: Record<DestinoGrupo, string> = { personas: 'b-emerald', carpeta: 'b-sky', categorizar: 'b-slate', reenviar: 'b-violet', responder: 'b-amber' };
 
 /** Cambios de un grupo que aún no se pueden guardar (p. ej. «a carpeta» sin carpeta). */
-type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id'>>;
+type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | 'mensaje' | 'sin_activos_modo' | 'sin_activos_carpeta' | 'sin_activos_persona_id' | 'sin_coincidencia'>>;
 
 @Component({
   selector: 'alma-asignacion-tab',
@@ -130,6 +130,18 @@ type Pendiente = Partial<Pick<Grupo, 'destino' | 'carpeta' | 'destinatarios' | '
                       </div>
                     } @else { <span></span> }
                   </div>
+                  @if (busquedas(g)) {
+                    <div class="g2">
+                      <div class="fld">
+                        <label class="label" [attr.for]="'gsc-' + g.id">Si las bases no encuentran al responsable</label>
+                        <select class="input sm" [id]="'gsc-' + g.id" [disabled]="!puede() || guardando() === g.id" (change)="cambiar(g0, { sin_coincidencia: $any($event.target).value })">
+                          <option value="roundrobin" [selected]="(g.sin_coincidencia ?? 'roundrobin') === 'roundrobin'">Seguir con el round-robin</option>
+                          <option value="validar" [selected]="g.sin_coincidencia === 'validar'">Dejar en Validar sin asignar</option>
+                        </select>
+                      </div>
+                      <p class="sm muted" style="align-self:end">{{ g.sin_coincidencia === 'validar' ? 'Si el correo no trae el dato, no está en la base o hay responsables distintos, queda en Validar con el motivo.' : 'Se reparte entre los activos del grupo (el de menos correos hoy).' }}</p>
+                    </div>
+                  }
                 }
                 @if (g.destino === 'reenviar' || g.destino === 'responder') {
                   <div class="fld">
@@ -321,6 +333,8 @@ export class AsignacionTabComponent {
           ? `${g.nombre}: ${(v.destinatarios ?? []).length ? `se reenvía a ${(v.destinatarios ?? []).join(', ')}` : 'agrega al menos un correo'}`
           : 'mensaje' in cambios
             ? `${g.nombre}: mensaje del envío ${v.mensaje ? 'guardado' : 'quitado'}`
+            : 'sin_coincidencia' in cambios
+              ? `${g.nombre}: si las bases no encuentran al responsable, ${v.sin_coincidencia === 'validar' ? 'queda en Validar' : 'sigue el round-robin'}`
             : 'carpeta' in cambios
           ? `${g.nombre}: ${v.carpeta ? `se envía a la carpeta «${v.carpeta}»` : 'elige una carpeta'}`
           : `${g.nombre}: si no hay nadie activo, ${sinActivosTxt(v, this.equipo())}`;
@@ -332,6 +346,7 @@ export class AsignacionTabComponent {
       sin_activos_modo: v.sin_activos_modo,
       sin_activos_carpeta: v.sin_activos_carpeta,
       sin_activos_persona_id: v.sin_activos_persona_id,
+      sin_coincidencia: v.sin_coincidencia ?? 'roundrobin',
     };
     if (!completo) {
       this.pendientes.update((m) => ({ ...m, [g.id]: pend }));
