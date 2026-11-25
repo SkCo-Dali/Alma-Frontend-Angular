@@ -876,6 +876,10 @@ export interface Plantilla {
   encabezados: boolean;
   /** 074: segunda hoja «Observaciones» en el .xlsx. */
   observaciones: boolean;
+  /** 082: un archivo por cada valor de esta columna del detalle (p. ej. «pago»); null = uno solo. */
+  archivo_por?: string | null;
+  /** 082: tabla con una fila por archivo (p. ej. «pagos»: PC, NIT, fecha y total de cada pago). */
+  tabla_archivos?: string | null;
   updated_at: string | null;
   updated_by: string | null;
 }
@@ -920,6 +924,13 @@ export interface ArchivoCorreo {
   borrador_en: string | null;
   created_at: string;
   created_by: string;
+  /** 082: una versión puede tener N partes (un archivo por pago). Sin migrar: 1 de 1. */
+  parte?: number;
+  partes?: number;
+  /** 082: valor de la columna por la que se separó (p. ej. el «pago»). */
+  grupo?: string | null;
+  /** 082: lo que la analista debe revisar en este archivo (p. ej. el total no cuadra con el pago). */
+  avisos?: { estado: string; texto: string }[];
 }
 
 export interface ArchivoGenerado {
@@ -927,6 +938,8 @@ export interface ArchivoGenerado {
   nombre: string;
   version: number;
   filas: number;
+  /** 082: cuántos archivos se generaron (uno por pago); sin el dato, 1. */
+  partes?: number;
 }
 
 export const DATOS_CORREO: { id: DatoCorreo; nombre: string }[] = [
