@@ -116,7 +116,7 @@ const ACCIONES = ACCIONES_HISTORIAL;
         </header>
 
         <div class="grid gap-4 md:grid-cols-2">
-          <dl class="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 text-sm">
+          <dl class="grid grid-cols-[minmax(8rem,40%)_1fr] gap-x-3 gap-y-1 text-sm">
             @if (d.datosPurgados) {
               <dt class="text-muted-foreground">Persona</dt><dd class="text-foreground">Datos eliminados por retención</dd>
             } @else {
@@ -124,7 +124,10 @@ const ACCIONES = ACCIONES_HISTORIAL;
               <dt class="text-muted-foreground">Documento</dt><dd class="text-foreground">{{ d.tipoDoc }} {{ d.documento }}</dd>
               <dt class="text-muted-foreground">Celular</dt><dd class="text-foreground">{{ celularBonito(d.celular) }}</dd>
               <dt class="text-muted-foreground">Correo</dt><dd class="break-all text-foreground">{{ d.correo }}</dd>
-              <dt class="text-muted-foreground">Régimen</dt><dd class="text-foreground">{{ regimen(d.regimen) }}</dd>
+              @if (d.regimen) { <dt class="text-muted-foreground">Régimen</dt><dd class="text-foreground">{{ regimen(d.regimen) }}</dd> }
+              @for (r of d.respuestas ?? []; track r.id) {
+                <dt class="text-muted-foreground">{{ r.etiqueta }}</dt><dd class="whitespace-pre-line text-foreground">{{ r.valor }}</dd>
+              }
               @if (d.comentarios) { <dt class="text-muted-foreground">Comentarios</dt><dd class="text-foreground">{{ d.comentarios }}</dd> }
             }
             <dt class="text-muted-foreground">Origen</dt><dd class="text-foreground">{{ d.origen === 'web' ? 'Sitio web' : 'Agendada en Nova' }}@if (d.ciudad) { · {{ d.ciudad }} }</dd>

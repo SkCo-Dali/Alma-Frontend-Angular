@@ -6,7 +6,8 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import {
-  AgendaApi, Asesor, Configuracion, DIAS_SEMANA, TipoCita, TurnoEntrada, fechaHoraColombia,
+  AgendaApi, Asesor, Configuracion, DIAS_SEMANA, FormularioServicio, TipoCita, TurnoEntrada, fechaHoraColombia,
+  leerFormulario,
 } from './agenda.api';
 
 interface TurnoForm {
@@ -45,6 +46,21 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
           <p class="mb-3 text-xs text-muted-foreground">Lo que ve la persona en el sitio. Un tipo inactivo deja de ofrecerse; sus citas siguen vigentes.</p>
           @for (srv of cfg()!.servicios; track srv.Id) {
           <h3 class="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-foreground/65 first-of-type:mt-0">{{ srv.Titulo }} · <span class="font-mono normal-case">{{ srv.Slug }}</span></h3>
+          @if (formularioDe(srv.CamposJson); as f) {
+            <div class="mb-3 rounded-2xl border border-border/60 p-3 text-xs">
+              <p class="mb-1 font-semibold text-foreground">Datos que pide el formulario</p>
+              <p class="text-muted-foreground">
+                Siempre: nombre, correo, celular y autorización de datos ·
+                {{ f.documento?.etiquetaNumero || 'Documento' }} ({{ (f.documento?.tipos ?? []).join(', ') }}){{ f.documento?.requerido ? '' : ', opcional' }}
+              </p>
+              <ul class="mt-1 list-disc pl-5 text-foreground">
+                @for (p of f.preguntas ?? []; track p.id) {
+                  <li>{{ p.etiqueta }}<span class="text-muted-foreground"> · {{ tipoPregunta(p.tipo) }}{{ p.requerido ? ' · obligatoria' : '' }}@if (p.opciones?.length) { : {{ p.opciones!.join(' / ') }} }</span></li>
+                }
+              </ul>
+              <p class="mt-1 text-muted-foreground">Para cambiar las preguntas, pídalo a TI (por ahora se ajustan en la base de datos).</p>
+            </div>
+          }
           <div class="grid gap-3 lg:grid-cols-2">
             @for (t of tiposDe(srv.Id); track t.Id) {
               <article class="rounded-2xl border border-border/60 p-4">
@@ -294,6 +310,15 @@ export class ConfiguracionAgendaComponent {
   }
 
   // ── Tipos ──
+  protected formularioDe(json: string | null): FormularioServicio | null {
+    return leerFormulario(json);
+  }
+
+  protected tipoPregunta(t: string): string {
+    return ({ texto: 'texto', texto_largo: 'texto largo', numero: 'número', fecha: 'fecha', opciones: 'una opción',
+              si_no: 'sí o no' } as Record<string, string>)[t] ?? t;
+  }
+
   protected tiposDe(servicioId: number): TipoCita[] {
     return (this.cfg()?.tipos ?? []).filter((t) => t.ServicioId === servicioId);
   }

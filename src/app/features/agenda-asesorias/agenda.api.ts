@@ -72,6 +72,30 @@ export interface Cita {
   celular?: string | null;
   correo?: string | null;
   comentarios?: string | null;
+  /** Respuestas a las preguntas propias del servicio (edad, beneficiarios…), ya legibles. */
+  respuestas?: RespuestaFormulario[];
+}
+
+export interface RespuestaFormulario {
+  id: string;
+  etiqueta: string;
+  valor: string;
+}
+
+/** Definición del formulario de un servicio (agenda.Servicios.CamposJson). */
+export interface FormularioServicio {
+  documento?: { requerido?: boolean; tipos?: string[]; etiquetaTipo?: string; etiquetaNumero?: string };
+  preguntas?: { id: string; etiqueta: string; tipo: string; requerido?: boolean; opciones?: string[] }[];
+}
+
+/** Texto de CamposJson → definición (o null si no hay o no se puede leer). */
+export function leerFormulario(json: string | null | undefined): FormularioServicio | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as FormularioServicio;
+  } catch {
+    return null;
+  }
 }
 
 export interface EventoHistorial {
@@ -147,7 +171,7 @@ export interface Politica {
 }
 
 export interface Configuracion {
-  servicios: { Id: number; Slug: string; Titulo: string; Activo: boolean }[];
+  servicios: { Id: number; Slug: string; Titulo: string; Activo: boolean; CamposJson: string | null }[];
   tipos: TipoCita[];
   asesores: Asesor[];
   ausencias: Ausencia[];
