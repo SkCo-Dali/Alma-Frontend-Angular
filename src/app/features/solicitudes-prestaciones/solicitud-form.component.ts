@@ -8,7 +8,7 @@
 // Nada de lo digitado se guarda en Alma: vive en esta pantalla y viaja en cada petición.
 
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, output, signal, untracked } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { ToastService } from '../../core/services/toast.service';
 import { AlmaCheckboxComponent } from '../../shared/components/alma-checkbox.component';
@@ -25,6 +25,8 @@ import {
   solicitudInicial,
 } from './prestaciones.domain';
 import { SiNoComponent } from './si-no.component';
+import { AgendaApi } from '../agenda-asesorias/agenda.api';
+import { CitaSolicitudService } from '../prestaciones/cita-solicitud.service';
 
 const AFILIADO: CampoDef[] = [
   { clave: 'primer_nombre', rotulo: 'Primer nombre', tipo: 'texto', max: 60 },
@@ -151,6 +153,18 @@ const REFRESCO_MS = 700;
         <button type="button" class="alma-btn alma-btn-outline mt-4 h-9 rounded-xl text-sm" (click)="cargarCatalogos()"><lucide-icon name="refresh-cw" [size]="14" /> Reintentar</button>
       </section>
     } @else if (cat(); as c) {
+      @if (citaActiva(); as ca) {
+        <div class="glass mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/40 px-4 py-3 text-sm shadow-[var(--shadow-sm)]">
+          <lucide-icon name="calendar-check" [size]="18" class="shrink-0 text-primary" />
+          <p class="mr-auto text-foreground">
+            Solicitud de la cita <span class="font-semibold">{{ ca.codigo }}</span> · {{ ca.tipoTitulo }}@if (ca.nombre) { · {{ ca.nombre }} }
+            <span class="block text-xs text-muted-foreground">Al generar el PDF, la cita queda marcada en su historial.</span>
+          </p>
+          <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" (click)="irABandeja.emit()">
+            <lucide-icon name="arrow-left" [size]="14" /> Volver a la bandeja
+          </button>
+        </div>
+      }
       <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div class="space-y-4">
           <!-- 1. Búsqueda -->
@@ -435,6 +449,12 @@ const REFRESCO_MS = 700;
 export class SolicitudFormComponent {
   private readonly api = inject(PrestacionesApi);
   private readonly toast = inject(ToastService);
+  private readonly agenda = inject(AgendaApi);
+  private readonly citaSolicitud = inject(CitaSolicitudService);
+
+  /** El asesor quiere volver a su bandeja (la App Prestaciones cambia de módulo). */
+  readonly irABandeja = output<void>();
+  protected readonly citaActiva = this.citaSolicitud.activa;
 
   protected readonly defsAfiliado = AFILIADO;
   protected readonly defsContacto = CONTACTO;
@@ -501,6 +521,11 @@ export class SolicitudFormComponent {
     inject(DestroyRef).onDestroy(() => this.temporizador && clearTimeout(this.temporizador));
     void this.cargarCatalogos();
     // Una vez revisada la solicitud, la revisión sigue al formulario (con una pausa para no consultar en cada tecla).
+    // Solicitud abierta desde una cita de la bandeja: documento puesto y búsqueda automática.
+    effect(() => {
+      if (!this.cat() || !this.citaSolicitud.pendiente()) return;
+      untracked(() => void this.desdeCita());
+    });
     effect(() => {
       const d = this.datos();
       if (!this.revisado()) return;
@@ -598,6 +623,38 @@ export class SolicitudFormComponent {
     this.datos.update((d) => escribir(d, 'beneficiarios', this.beneficiarios().filter((_, j) => j !== i)));
   }
 
+  // ── Desde una cita de la Agenda ─────────────────────────────────────────────
+
+  private async desdeCita(): Promise<void> {
+    const c = this.citaSolicitud.tomar();
+    if (!c) return;
+    const tipo = this.cat()?.tipos_documento_afiliado.includes(c.tipoDocumento) ? c.tipoDocumento : 'CC';
+    this.reiniciar(tipo, c.numeroDocumento);
+    this.ultimoDocumento = `${tipo}:${c.numeroDocumento}`;
+    // El celular y el correo que la persona dio al agendar son los más recientes: se ponen
+    // de una vez (como sugerencia) y, si la consulta trae otros, vuelven a ganar.
+    this.sugerirContacto(c);
+    if (this.puedeBuscar()) {
+      await this.buscar();
+      if (this.citaSolicitud.activa() === c) this.sugerirContacto(c);
+    }
+  }
+
+  private sugerirContacto(c: { celular: string | null; correo: string | null }): void {
+    let d = this.datos();
+    const marcados = new Set(this.sugeridos());
+    for (const [ruta, valor] of [['afiliado.celular', c.celular], ['afiliado.email', c.correo]] as const) {
+      const actual = leer(d, ruta);
+      // No pisa lo que el asesor ya digitó o confirmó (lo que no está marcado como sugerencia).
+      if (valor && (actual === undefined || actual === null || actual === '' || marcados.has(ruta))) {
+        d = escribir(d, ruta, valor);
+        marcados.add(ruta);
+      }
+    }
+    this.datos.set(d);
+    this.sugeridos.set(marcados);
+  }
+
   // ── Búsqueda por documento ──────────────────────────────────────────────────
 
   protected origenes(q: Consulta): Array<{ nombre: string; texto: string; icono: string; clase: string }> {
@@ -622,7 +679,10 @@ export class SolicitudFormComponent {
       const q = await this.api.consultar(tipo, numero);
       // Otra persona: lo que había de la anterior no debe quedar mezclado con la nueva.
       const clave = `${tipo}:${numero}`;
-      if (this.ultimoDocumento && this.ultimoDocumento !== clave) this.reiniciar(tipo, numero);
+      if (this.ultimoDocumento && this.ultimoDocumento !== clave) {
+        this.reiniciar(tipo, numero);
+        this.citaSolicitud.soltar();  // otra persona: ya no es la solicitud de esa cita
+      }
       this.ultimoDocumento = clave;
       this.consulta.set(q);
       this.aplicar(q);
@@ -689,6 +749,15 @@ export class SolicitudFormComponent {
       a.click();
       URL.revokeObjectURL(url);
       this.toast.show(borrador ? 'Borrador descargado' : 'PDF listo', 'Imprímelo para la firma y la huella del cliente.');
+      const cita = this.citaSolicitud.activa();
+      if (!borrador && cita) {
+        try {
+          await this.agenda.solicitudGenerada(cita.citaId);
+          this.toast.show('Cita actualizada', `${cita.codigo}: quedó registrada la solicitud. Márquela como atendida en la bandeja.`);
+        } catch (e) {
+          this.toast.error('No se pudo marcar la cita', e instanceof Error ? e.message : String(e));
+        }
+      }
     } catch (e) {
       if (e instanceof PdfConErrores) {
         this.revisado.set(true);
@@ -713,6 +782,7 @@ export class SolicitudFormComponent {
     if (hayDatos && !confirm('¿Empezar una solicitud nueva? Se borra lo que hay en pantalla (no se guarda en ningún lado).')) return;
     this.reiniciar('CC', '');
     this.ultimoDocumento = '';
+    this.citaSolicitud.soltar();
   }
 
   private reiniciar(tipo: string, numero: string): void {

@@ -225,15 +225,17 @@ export const routes: Routes = [
       ),
     title: 'Monitor-IA — Nova',
   },
-  // App Solicitudes Prestaciones (SAC): diligenciamiento asistido del FOR-0075.
+  // App Prestaciones (SAC): bandeja de asesorías agendadas desde el sitio público, citas,
+  // solicitud FOR-0075 (antes «Solicitudes Prestaciones»), consultas y configuración.
   {
-    path: 'apps/solicitudes-prestaciones',
+    path: 'apps/prestaciones',
     loadComponent: () =>
-      import('./features/solicitudes-prestaciones/solicitudes-prestaciones-page.component').then(
-        (m) => m.SolicitudesPrestacionesPageComponent,
-      ),
-    title: 'Solicitudes Prestaciones — Nova',
+      import('./features/prestaciones/prestaciones-page.component').then((m) => m.PrestacionesPageComponent),
+    title: 'Prestaciones — Nova',
   },
+  // Rutas anteriores (favoritos y enlaces guardados).
+  { path: 'apps/solicitudes-prestaciones', redirectTo: 'apps/prestaciones', pathMatch: 'full' },
+  { path: 'apps/asesoria-agenda', redirectTo: 'apps/prestaciones', pathMatch: 'full' },
   {
     path: 'apps/:appId',
     loadComponent: () =>
