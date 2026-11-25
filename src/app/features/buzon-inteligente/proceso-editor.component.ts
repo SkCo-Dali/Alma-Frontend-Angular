@@ -56,6 +56,8 @@ interface CampoEd {
   critico: Critico;
   identificador: boolean;
   origen: OrigenRegla;
+  /** Columnas de cada elemento, si el campo es «tabla» (082: cada tabla las suyas, p. ej. afiliados y pagos). */
+  cols?: string[];
 }
 
 interface Borrador {
@@ -66,7 +68,6 @@ interface Borrador {
   etiquetas: EtiquetaEd[];
   extrae: boolean;
   campos: CampoEd[];
-  af: string[];
   umbral: number;
   extras: string[];
   disc: { con: string; manda: string }[];
@@ -196,19 +197,22 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
                     </table>
                   </div>
                   <button type="button" class="btn outline sm" style="justify-self:start" (click)="agregarCampo()"><lucide-icon name="plus" [size]="13" /> Agregar campo</button>
-                  @if (tieneLista()) {
-                    <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:6px">
-                      <p class="xs b">Campos de cada elemento de la lista</p>
-                      <div class="row" style="gap:6px">
-                        @for (a of d.af; track a; let i = $index) {
-                          <span class="chipo">{{ a }} <button type="button" class="mini" (click)="d.af.splice(i, 1)" [attr.aria-label]="'Quitar ' + a">×</button></span>
-                        }
+                  @for (f of d.campos; track $index; let k = $index) {
+                    @if (f.tipo === 'tabla') {
+                      <!-- 082: cada lista con sus propias columnas (p. ej. «afiliados» por persona y «pagos» por pago). -->
+                      <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:6px">
+                        <p class="xs b">Campos de cada elemento de «{{ f.clave || 'la lista' }}»</p>
+                        <div class="row" style="gap:6px">
+                          @for (a of f.cols ?? []; track a; let i = $index) {
+                            <span class="chipo">{{ a }} <button type="button" class="mini" (click)="f.cols?.splice(i, 1)" [attr.aria-label]="'Quitar ' + a">×</button></span>
+                          }
+                        </div>
+                        <div class="row" style="flex-wrap:nowrap">
+                          <input class="input sm mono" [(ngModel)]="afNuevo[k]" [attr.aria-label]="'Nuevo campo de ' + f.clave" placeholder="nuevo_campo (p. ej. subcuenta)" />
+                          <button type="button" class="btn outline sm" (click)="agregarAf(f, k)">Agregar</button>
+                        </div>
                       </div>
-                      <div class="row" style="flex-wrap:nowrap">
-                        <input class="input sm mono" [(ngModel)]="afNuevo" placeholder="nuevo_campo (p. ej. subcuenta)" />
-                        <button type="button" class="btn outline sm" (click)="agregarAf()">Agregar</button>
-                      </div>
-                    </div>
+                    }
                   }
                 }
               </div>
@@ -319,14 +323,14 @@ export class ProcesoEditorComponent implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly ed = signal<Borrador>(this.vacio());
   protected jsonTexto = '';
-  protected afNuevo = '';
+  /** Texto del campo nuevo de cada lista (por posición del campo «tabla»). */
+  protected afNuevo: Record<number, string> = {};
   /** Como lo propuso Alma al abrir: «Restaurar» y las marcas ✦/✎. */
   private snap: Borrador = this.vacio();
 
   // Funciones y no computed: el borrador se edita en el sitio (ngModel) y un computed no lo vería.
   protected readonly otros = () => this.procesos().map((p) => p.clave).filter((k) => k !== this.ed().clave && k !== this.proceso()?.clave);
   protected readonly criticos = () => this.ed().campos.filter((f) => f.critico !== '0').map((f) => f.clave);
-  protected readonly tieneLista = () => this.ed().campos.some((f) => f.tipo === 'tabla');
 
   ngOnInit(): void {
     const p = this.proceso();
@@ -342,7 +346,7 @@ export class ProcesoEditorComponent implements OnInit {
 
   private vacio(): Borrador {
     return {
-      nombre: '', clave: '', senales: '', excl: [], extrae: false, campos: [], af: [], extras: [], disc: [],
+      nombre: '', clave: '', senales: '', excl: [], extrae: false, campos: [], extras: [], disc: [],
       etiquetas: [{ clave: '', criterio: '', tipo: 'ia', origen: 'user', campo: '', op: '=', valor: '' }],
       umbral: 70,
     };
@@ -356,6 +360,7 @@ export class ProcesoEditorComponent implements OnInit {
     const campos = p.campos_extraer.filter((f) => !BASE_FIELDS.includes(f.clave)).map<CampoEd>((f) => ({
       clave: f.clave, tipo: f.tipo ?? 'texto', descripcion: f.descripcion, identificador: !!f.identificador, origen: f.origen ?? 'ia',
       critico: f.critico ? (f.alterno ? 'alt' : '1') : '0',
+      ...(f.tipo === 'tabla' ? { cols: [...(f.campos ?? [])] } : {}),
     }));
     return {
       nombre: p.nombre, clave: p.clave, senales: p.descripcion ?? '',
@@ -365,7 +370,6 @@ export class ProcesoEditorComponent implements OnInit {
         campo: c.condicion?.campo ?? campos[0]?.clave ?? '', op: c.condicion?.op ?? '=', valor: c.condicion?.valor ?? '',
       })),
       extrae: campos.length > 0, campos,
-      af: p.campos_extraer.find((f) => f.tipo === 'tabla')?.campos ?? [],
       umbral: Math.round((p.umbral ?? this.buzon().umbral_confianza ?? 0.7) * 100),
       extras: [...(p.causas_validar ?? [])],
       disc: this.buzon().discriminacion
@@ -394,27 +398,27 @@ export class ProcesoEditorComponent implements OnInit {
     this.ed().campos.push({ clave: 'nuevo_campo', tipo: 'texto', descripcion: 'Describe qué extraer', critico: '0', identificador: false, origen: 'user' });
   }
 
-  protected agregarAf(): void {
-    const v = this.afNuevo.trim();
+  protected agregarAf(f: CampoEd, k: number): void {
+    const v = (this.afNuevo[k] ?? '').trim();
     if (!RE_SNAKE.test(v)) {
       this.errores.set(['El campo de la lista debe ir en snake_case (p. ej. subcuenta).']);
       return;
     }
-    if (!this.ed().af.includes(v)) this.ed().af.push(v);
-    this.afNuevo = '';
+    f.cols ??= [];
+    if (!f.cols.includes(v)) f.cols.push(v);
+    this.afNuevo[k] = '';
     this.errores.set([]);
   }
 
   protected restaurar(): void {
     const d = this.ed();
     d.campos = structuredClone(this.snap.campos);
-    d.af = [...this.snap.af];
     this.json.set(false);
     this.errores.set([]);
   }
 
   protected valorEjemplo(f: CampoEd): string {
-    if (f.tipo === 'tabla') return `[ { ${this.ed().af.join(', ') || '…'} } ]`;
+    if (f.tipo === 'tabla') return `[ { ${(f.cols ?? []).join(', ') || '…'} } ]`;
     if (f.tipo === 'lista') return '[]';
     if (f.tipo === 'booleano') return 'true | false';
     return `"<${f.descripcion.toLowerCase()}>"`;
@@ -426,7 +430,7 @@ export class ProcesoEditorComponent implements OnInit {
       for (const f of this.ed().campos) {
         o[f.clave] = {
           tipo: f.tipo, descripcion: f.descripcion, critico: f.critico === 'alt' ? 'alterno' : f.critico === '1', identificador: f.identificador,
-          ...(f.tipo === 'tabla' ? { campos: this.ed().af } : {}),
+          ...(f.tipo === 'tabla' ? { campos: f.cols ?? [] } : {}),
         };
       }
       this.jsonTexto = JSON.stringify(o, null, 2);
@@ -445,10 +449,10 @@ export class ProcesoEditorComponent implements OnInit {
       const previos = new Map(this.ed().campos.map((f) => [f.clave, f]));
       const d = this.ed();
       d.campos = Object.entries(o).map(([k, x]) => {
-        if (Array.isArray(x?.campos)) d.af = x.campos;
         const nf: CampoEd = {
           clave: k, tipo: TIPOS_CAMPO.some((t) => t.id === x?.tipo) ? x.tipo! : 'texto', descripcion: x?.descripcion ?? '',
           critico: x?.critico === 'alterno' ? 'alt' : x?.critico ? '1' : '0', identificador: !!x?.identificador, origen: 'user',
+          ...(Array.isArray(x?.campos) ? { cols: x.campos.map(String) } : {}),
         };
         const pf = previos.get(k);
         if (pf && pf.tipo === nf.tipo && pf.descripcion === nf.descripcion && pf.critico === nf.critico && pf.identificador === nf.identificador) nf.origen = pf.origen;
@@ -495,7 +499,7 @@ export class ProcesoEditorComponent implements OnInit {
     const campos: CampoProceso[] = d.extrae
       ? d.campos.map((f) => ({
           clave: f.clave, tipo: f.tipo, descripcion: f.descripcion, critico: f.critico !== '0', alterno: f.critico === 'alt',
-          identificador: f.identificador, origen: f.origen, ...(f.tipo === 'tabla' ? { campos: d.af } : {}),
+          identificador: f.identificador, origen: f.origen, ...(f.tipo === 'tabla' ? { campos: f.cols ?? [] } : {}),
         }))
       : [];
     this.guardando.set(true);
