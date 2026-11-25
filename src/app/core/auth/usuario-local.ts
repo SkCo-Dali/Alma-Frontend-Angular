@@ -38,6 +38,7 @@ export const USUARIO_LOCAL: User = {
     'app.monitor-ia.*',   // administrador de la App: solo él ve y cambia las conexiones
     'app.solicitudes-prestaciones.diligenciar',
     'app.solicitudes-prestaciones.auditoria.view',
+    'app.asesoria-agenda.*',   // Agenda de Asesorías: administrador (asesor, coordinador y configuración)
     'platform.admin',
     'platform.access.view',
     'platform.access.assign',

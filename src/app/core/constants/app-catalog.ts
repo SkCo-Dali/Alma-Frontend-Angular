@@ -87,18 +87,27 @@ export const APP_CATALOG: Application[] = [
     favorito: false,
   },
   {
+    // Se conserva el id de «Solicitudes Prestaciones» para no perder favoritos ni el orden del Dock.
     id: 'app-solicitudes-prestaciones',
-    nombre: 'Solicitudes Prestaciones',
+    nombre: 'Prestaciones',
     descripcion:
-      'Diligencia la solicitud de prestaciones (FOR-0075) con datos prellenados por documento, validaciones en pantalla y PDF listo para firmar.',
-    resumen: 'Solicitud prellenada y lista para firmar.',
+      'Asesorías de pensión agendadas desde el sitio público y la solicitud de prestaciones (FOR-0075) prellenada, validada y lista para firmar.',
+    resumen: 'Asesorías agendadas y solicitudes de prestaciones.',
     categoria: 'Servicio al Cliente',
     icono: 'file-text',
     color: '#0F6CBD',
-    url: '/apps/solicitudes-prestaciones',
-    internalRoute: '/apps/solicitudes-prestaciones',
+    url: '/apps/prestaciones',
+    internalRoute: '/apps/prestaciones',
     integrationType: 'internal',
     requiredPermission: 'app.solicitudes-prestaciones.diligenciar',
+    // Basta con cualquiera de los módulos: Solicitudes, Consultas o la Agenda (bandeja, citas, configuración).
+    requiredAnyPermission: [
+      'app.solicitudes-prestaciones.diligenciar',
+      'app.solicitudes-prestaciones.auditoria.view',
+      'app.asesoria-agenda.atender',
+      'app.asesoria-agenda.citas.view',
+      'app.asesoria-agenda.config.manage',
+    ],
     estado: 'beta',
     favorito: false,
   },
