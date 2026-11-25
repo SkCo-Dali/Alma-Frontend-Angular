@@ -26,11 +26,17 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { PortalDirective } from '../../../shared/portal.directive';
 import { colocarPanel } from '../../../shared/popover-position';
-import { motivoDeError } from '../api-error';
+import { ApiHttpError, motivoDeError } from '../api-error';
 import { CatalogsStore } from '../catalogos/catalogs.store';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { CommissionRule } from './commission-plans.api';
-import { CommissionRulesApi, RulePreviewResponse } from './commission-rules.api';
+import {
+  CommissionRulesApi,
+  RulePreviewRequest,
+  RulePreviewResponse,
+  RuleSimulateField,
+  RuleSimulateResponse,
+} from './commission-rules.api';
 import {
   ConditionRow,
   FORMULA_FUNCTIONS,
@@ -502,6 +508,96 @@ type Tab = 'information' | 'rule' | 'preview';
                 la regla podría generar.
               </p>
             }
+
+            <!-- Simulación: solo cuando la vista previa no trajo datos -->
+            @if (sinDatos() && puedeCalcular()) {
+              <div class="space-y-3 rounded-lg border border-border p-3">
+                @if (simulacion(); as s) {
+                  <div
+                    class="rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    <strong>Simulación con datos inventados:</strong> no corresponde a clientes ni
+                    contratos reales. Sirve para ver cuánto daría la regla con estos valores.
+                  </div>
+                  <div class="grid gap-2 sm:grid-cols-2">
+                    @for (c of s.campos; track c.campo) {
+                      <label class="flex flex-col gap-1 text-xs">
+                        <span class="flex justify-between gap-2">
+                          <span class="font-medium">{{ c.campo }}</span>
+                          <span
+                            [class.text-destructive]="c.origen === 'falta'"
+                            [class.text-muted-foreground]="c.origen !== 'falta'"
+                          >
+                            {{ etiquetaOrigen(c) }}
+                          </span>
+                        </span>
+                        <input
+                          class="alma-input"
+                          [type]="c.tipo === 'date' ? 'date' : 'text'"
+                          [attr.inputmode]="c.tipo === 'int' || c.tipo === 'decimal' ? 'decimal' : null"
+                          [placeholder]="c.tipo === 'int' || c.tipo === 'decimal' ? '0.00' : ''"
+                          [(ngModel)]="valoresSim[c.campo]"
+                        />
+                      </label>
+                    }
+                  </div>
+                  <div class="flex justify-end">
+                    <button
+                      type="button"
+                      (click)="simular()"
+                      [disabled]="cargandoSim()"
+                      class="alma-btn alma-btn-outline w-full sm:w-auto"
+                    >
+                      {{ cargandoSim() ? 'Calculando…' : 'Calcular' }}
+                    </button>
+                  </div>
+                  @if (s.faltan.length) {
+                    <p class="text-sm text-amber-700 dark:text-amber-300">
+                      Escribe un valor para: {{ s.faltan.join(', ') }}.
+                    </p>
+                  } @else if (s.cumple !== null) {
+                    <div class="rounded-md border border-border p-3">
+                      <p class="text-xs text-muted-foreground">Comisión con estos datos</p>
+                      <p class="text-2xl font-semibold">{{ celda(s.comision, 'ValorComision') }}</p>
+                      @if (s.cumple) {
+                        <p class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+                          Con estos datos la regla aplica.
+                        </p>
+                      } @else {
+                        <p class="mt-1 text-sm text-destructive">
+                          Con estos datos la regla no aplicaría: el motor no pagaría esta comisión.
+                        </p>
+                      }
+                      <ul class="mt-2 space-y-1 text-xs">
+                        @for (cond of s.condiciones; track $index) {
+                          <li [class.text-destructive]="!cond.cumple">
+                            {{ cond.cumple ? '✓' : '✗' }} {{ cond.texto }}
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                } @else {
+                  <div class="flex flex-col items-center gap-2 py-2 text-center">
+                    <p class="text-sm text-muted-foreground">
+                      No hay datos reales para mostrar. Puedes ver cuánto daría la regla con datos
+                      de ejemplo.
+                    </p>
+                    <button
+                      type="button"
+                      (click)="simular()"
+                      [disabled]="cargandoSim()"
+                      class="alma-btn alma-btn-outline"
+                    >
+                      {{ cargandoSim() ? 'Preparando…' : 'Simular con datos de ejemplo' }}
+                    </button>
+                  </div>
+                }
+                @if (errorSim(); as error) {
+                  <p class="text-sm text-destructive">{{ error }}</p>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -554,6 +650,15 @@ export class RuleDialogComponent implements OnInit {
   protected readonly vistaPrevia = signal<RulePreviewResponse | null>(null);
   protected readonly cargandoPrevia = signal(false);
   protected readonly errorPrevia = signal<string | null>(null);
+
+  /** La vista previa no trajo datos (0 registros o sin insumo): se ofrece simular. */
+  protected readonly sinDatos = signal(false);
+  protected readonly simulacion = signal<RuleSimulateResponse | null>(null);
+  protected readonly cargandoSim = signal(false);
+  protected readonly errorSim = signal<string | null>(null);
+  protected valoresSim: Record<string, string> = {};
+  /** Lo que propuso el back: solo se reenvía lo que el usuario cambió. */
+  private propuestosSim: Record<string, string> = {};
 
   protected nombre = '';
   protected descripcion = '';
@@ -611,27 +716,74 @@ export class RuleDialogComponent implements OnInit {
     this.cargandoPrevia.set(true);
     this.errorPrevia.set(null);
     this.vistaPrevia.set(null);
+    this.sinDatos.set(false);
+    this.simulacion.set(null);
+    this.errorSim.set(null);
+    this.valoresSim = {};
+    this.propuestosSim = {};
     try {
-      const completas = this.condiciones().filter((c) => c.field && c.condition && c.value);
-      const res = await this.api.preview({
-        rule_name: this.nombre.trim(),
-        catalog_id: this.catalogo(),
-        formula: this.formula,
-        conditions: completas.map((c) => ({
-          field_name: c.field,
-          operator: mapUIOperatorToAPI(c.condition),
-          field_value: c.value,
-          value_type: c.valueType,
-          logical_operator: c.logical ?? 'AND',
-        })),
-      });
+      const res = await this.api.preview(this.solicitudRegla());
       this.vistaPrevia.set(res);
+      this.sinDatos.set(res.total === 0);
     } catch (e) {
       console.error('Error generando la vista previa:', e);
       this.errorPrevia.set(motivoDeError(e) || 'No se pudo generar la vista previa.');
+      // 404: el catálogo no tiene insumo (o el motor no tiene mes cerrado).
+      this.sinDatos.set(e instanceof ApiHttpError && e.status === 404);
     } finally {
       this.cargandoPrevia.set(false);
     }
+  }
+
+  /** La regla como está en pantalla (guardada o no). */
+  private solicitudRegla(): RulePreviewRequest {
+    const completas = this.condiciones().filter((c) => c.field && c.condition && c.value);
+    return {
+      rule_name: this.nombre.trim(),
+      catalog_id: this.catalogo(),
+      formula: this.formula,
+      conditions: completas.map((c) => ({
+        field_name: c.field,
+        operator: mapUIOperatorToAPI(c.condition),
+        field_value: c.value,
+        value_type: c.valueType,
+        logical_operator: c.logical ?? 'AND',
+      })),
+    };
+  }
+
+  /** Primera vez: el back propone valores. Después: recalcula con lo editado. */
+  protected async simular(): Promise<void> {
+    this.cargandoSim.set(true);
+    this.errorSim.set(null);
+    const valores: Record<string, string> = {};
+    for (const [campo, valor] of Object.entries(this.valoresSim)) {
+      const v = (valor ?? '').toString().trim();
+      if (v && v !== this.propuestosSim[campo]) valores[campo] = v;
+    }
+    try {
+      const res = await this.api.simulate({ ...this.solicitudRegla(), valores });
+      for (const c of res.campos) {
+        if (c.origen === 'condicion' || c.origen === 'ejemplo') this.propuestosSim[c.campo] = c.valor ?? '';
+        this.valoresSim[c.campo] = c.valor ?? '';
+      }
+      this.simulacion.set(res);
+    } catch (e) {
+      console.error('Error en la simulación:', e);
+      this.errorSim.set(motivoDeError(e) || 'No se pudo calcular la simulación.');
+    } finally {
+      this.cargandoSim.set(false);
+    }
+  }
+
+  protected etiquetaOrigen(c: RuleSimulateField): string {
+    const etiquetas: Record<RuleSimulateField['origen'], string> = {
+      condicion: 'cumple la condición',
+      ejemplo: 'ejemplo del catálogo',
+      usuario: 'escrito',
+      falta: 'falta',
+    };
+    return etiquetas[c.origen];
   }
 
   protected formatearNumero(n: number): string {
