@@ -1393,6 +1393,13 @@ export class BandejaBuzonComponent {
     const ultimo = pasos[pasos.length - 1]?.titulo ?? '';
     const cruce = [...pasos].reverse().find((t) => t.titulo.includes(' ↔ '))?.titulo.split(' ↔ ')[0];
     const via = /^(Asignado a|Respaldo)/.test(ultimo) && cruce ? cruce : ultimo.split(' → ')[0];
+    // 082: en Validar no se asigna; se asigna al aprobar con la etiqueta final.
+    if (!c.asignado_a && traza[0]?.titulo === 'Pendiente de aprobación') {
+      const propuesta = traza.find((t) => t.titulo.startsWith('Al aprobar iría a '));
+      return { icon: 'clock', quien: null, via: propuesta ? `Asignación pendiente de aprobación · ${propuesta.titulo.replace('Al aprobar iría a ', 'iría a ')}` : 'Asignación pendiente de aprobación' };
+    }
+    if (!c.asignado_a && traza.some((t) => t.titulo === 'Sin coincidencia en las bases → Validar'))
+      return { icon: 'user-x', quien: null, via: 'Sin coincidencia en las bases: se asigna al aprobar' };
     if (c.asignado_nombre || (c.asignado_a && c.asignado_a.includes('@'))) return { icon: 'user', quien: c.asignado_nombre ?? c.asignado_a, via: via || 'asignación' };
     if (c.asignado_a?.startsWith('Carpeta')) return { icon: 'folder-input', quien: null, via: `Enviado a la ${c.asignado_a.toLowerCase()}` };
     if (c.asignado_a === 'Solo categorizar') return { icon: 'tag', quien: null, via: 'Solo categorizar' };

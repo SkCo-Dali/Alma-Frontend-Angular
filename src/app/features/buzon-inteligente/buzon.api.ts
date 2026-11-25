@@ -591,6 +591,8 @@ export type Comparacion = 'exacta' | 'digitos' | 'doc' | 'pc' | 'aprox';
 /** 067: «reenviar» a direcciones fijas y «responder» al remitente, en el hilo. */
 export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar' | 'reenviar' | 'responder';
 export type SinActivosModo = 'cola' | 'carpeta' | 'persona';
+/** 082: si las bases no encuentran al responsable → round-robin (como antes) o Validar. */
+export type SinCoincidencia = 'roundrobin' | 'validar';
 
 export interface Cruce {
   /** Dato del JSON del proceso. */
@@ -630,6 +632,7 @@ export interface Grupo {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta: string | null;
   sin_activos_persona_id: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden: number;
   activo: boolean;
   reglas: ReglaAsignacion[];
@@ -659,6 +662,7 @@ export interface GrupoIn {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta?: string | null;
   sin_activos_persona_id?: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden?: number | null;
   activo: boolean;
   /** Reemplaza las búsquedas del grupo (en este orden). */
