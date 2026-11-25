@@ -119,7 +119,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
           <header class="mb-3 flex flex-wrap items-center gap-2">
             <div class="mr-auto">
               <h2 class="text-sm font-bold text-foreground">Asesores y turnos</h2>
-              <p class="text-xs text-muted-foreground">Los cupos salen de estos turnos (hora de Colombia), sin festivos. El correo debe ser el mismo con el que entra a Nova.</p>
+              <p class="text-xs text-muted-foreground">Los cupos salen de estos turnos (hora de Colombia), sin festivos, menos lo que el asesor tenga ocupado en su Outlook (se actualiza cada 5 minutos). El correo debe ser el mismo con el que entra a Nova.</p>
             </div>
             <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" (click)="nuevoAsesor()"><lucide-icon name="plus" [size]="14" /> Agregar asesor</button>
           </header>
@@ -185,7 +185,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
-                  <tr><th class="px-4 py-2">Asesor</th><th class="px-4 py-2">Atiende</th><th class="px-4 py-2">Turnos</th><th class="px-4 py-2">Estado</th><th class="px-4 py-2"></th></tr>
+                  <tr><th class="px-4 py-2">Asesor</th><th class="px-4 py-2">Atiende</th><th class="px-4 py-2">Turnos</th><th class="px-4 py-2">Outlook</th><th class="px-4 py-2">Estado</th><th class="px-4 py-2"></th></tr>
                 </thead>
                 <tbody>
                   @for (a of cfg()!.asesores; track a.Id) {
@@ -193,6 +193,15 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
                       <td class="px-4 py-2 text-foreground">{{ a.Nombre }}<span class="block text-xs text-muted-foreground">{{ a.Correo }}</span></td>
                       <td class="px-4 py-2 text-xs text-foreground">{{ nombresTipos(a.tipos) }}</td>
                       <td class="px-4 py-2 text-xs text-foreground">{{ resumenTurnos(a) }}</td>
+                      <td class="px-4 py-2 text-xs">
+                        @if (a.OutlookError) {
+                          <span class="text-amber-700 dark:text-amber-400" [title]="a.OutlookError">No se pudo leer su calendario</span>
+                        } @else if (a.OutlookSincronizadoUtc) {
+                          <span class="text-foreground" title="Lo ocupado en su Outlook descuenta cupos">Al día · {{ fechaHora(a.OutlookSincronizadoUtc) }}</span>
+                        } @else {
+                          <span class="text-muted-foreground">Pendiente</span>
+                        }
+                      </td>
                       <td class="px-4 py-2"><span class="alma-badge" [class]="a.Activo ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300'">{{ a.Activo ? 'Activo' : 'Inactivo' }}</span></td>
                       <td class="px-4 py-2 text-right"><button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="editarAsesor(a)"><lucide-icon name="pencil" [size]="14" /> Editar</button></td>
                     </tr>

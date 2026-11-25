@@ -149,6 +149,9 @@ export interface Asesor {
   Nombre: string;
   Activo: boolean;
   UltimaAsignacionUtc: string | null;
+  /** Última lectura correcta de su Outlook (lo ocupado ahí descuenta cupos) y último error. */
+  OutlookSincronizadoUtc?: string | null;
+  OutlookError?: string | null;
   tipos: number[];
   turnos: Turno[];
 }
