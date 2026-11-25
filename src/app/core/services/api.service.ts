@@ -8,11 +8,95 @@ import { MeApi, PreferenciasPortal } from '../models/platform.models';
 
 const API_BASE_URL = environment.apiUrl.replace(/\/+$/, '');
 
+// Topes de espera: sin ellos, un API colgado dejaba pantallas cargando sin fin.
+const ESPERA_MS = 60_000;
+const ESPERA_ARCHIVOS_MS = 5 * 60_000;
+/** Para llamadas que procesan con IA o recorren un buzón (minutos, no segundos). */
+export const ESPERA_LARGA_MS = 5 * 60_000;
+const SIN_RESPUESTA = 'El servidor no respondió a tiempo. Intenta de nuevo.';
+
+/** fetch con tope de espera; respeta el `signal` propio de quien llama. `hasta`
+ *  decide qué cubre el tope: la respuesta completa o solo sus encabezados (las
+ *  descargas leen el cuerpo después). */
+async function conEspera<T>(
+  url: string,
+  init: RequestInit,
+  ms: number,
+  leer: (res: Response) => Promise<T>,
+): Promise<T> {
+  const control = new AbortController();
+  let agotado = false;
+  const espera = setTimeout(() => {
+    agotado = true;
+    control.abort();
+  }, ms);
+  const externo = init.signal;
+  if (externo) {
+    if (externo.aborted) control.abort();
+    else externo.addEventListener('abort', () => control.abort(), { once: true });
+  }
+  try {
+    return await leer(await fetch(url, { ...init, signal: control.signal }));
+  } catch (err) {
+    if (agotado) throw new Error(SIN_RESPUESTA);
+    throw err;
+  } finally {
+    clearTimeout(espera);
+  }
+}
+
+async function cuerpo(res: Response): Promise<unknown> {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text;
+  }
+}
+
+const NUMERO = new Intl.NumberFormat('es-CO');
+
+/** Un error de validación de FastAPI (422) en palabras: el `detail` llega como
+ *  lista de objetos y, mostrado tal cual, salía «[object Object]». */
+function errorDeCampo(e: { type?: string; loc?: unknown[]; msg?: string; ctx?: Record<string, unknown> }): string {
+  const loc = (e.loc ?? []).filter((x) => x !== 'body' && x !== 'query' && x !== 'path');
+  const campo = loc.length ? `«${loc.join('.')}»` : 'Un dato';
+  const n = (k: string) => NUMERO.format(Number(e.ctx?.[k] ?? 0));
+  switch (e.type) {
+    case 'string_too_long':
+      return `${campo} es demasiado largo: el máximo es ${n('max_length')} caracteres.`;
+    case 'string_too_short':
+      return `${campo} es demasiado corto: el mínimo es ${n('min_length')} caracteres.`;
+    case 'too_long':
+      return `${campo} tiene demasiados elementos: el máximo es ${n('max_length')}.`;
+    case 'missing':
+      return `Falta ${campo}.`;
+    default:
+      return `${campo}: ${e.msg ?? 'valor no válido'}.`;
+  }
+}
+
+/** Mensaje legible para un error del backend, sea cual sea la forma de su cuerpo. */
+export function mensajeDeError(body: unknown, status: number, path: string): string {
+  if (status === 413) return 'El contenido es demasiado grande para enviarlo al servidor.';
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((d) => (typeof d === 'string' ? d : errorDeCampo(d ?? {}))).join(' ');
+  }
+  if (detail && typeof detail === 'object') {
+    const m = (detail as { message?: unknown; detail?: unknown }).message ?? (detail as { detail?: unknown }).detail;
+    if (typeof m === 'string' && m.trim()) return m;
+  }
+  if (status === 502 || status === 503 || status === 504) return SIN_RESPUESTA;
+  return `HTTP ${status} en ${path}`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly auth = inject(AuthService);
 
-  async fetch<T>(path: string, init?: RequestInit): Promise<T> {
+  async fetch<T>(path: string, init?: RequestInit, esperaMs = ESPERA_MS): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...((init?.headers as Record<string, string> | undefined) ?? {}),
@@ -20,19 +104,13 @@ export class ApiService {
     const token = await this.auth.getAccessToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-    const text = await res.text();
-    let body: unknown = null;
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch {
-      body = text;
-    }
-    if (!res.ok) {
-      const detail =
-        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
-      throw new Error(detail);
-    }
+    const { res, body } = await conEspera(
+      `${API_BASE_URL}${path}`,
+      { ...init, headers },
+      esperaMs,
+      async (res) => ({ res, body: await cuerpo(res) }),
+    );
+    if (!res.ok) throw new Error(mensajeDeError(body, res.status, path));
     return body as T;
   }
 
@@ -47,7 +125,7 @@ export class ApiService {
     };
     const token = await this.auth.getAccessToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    return fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+    return conEspera(`${API_BASE_URL}${path}`, { ...init, headers }, ESPERA_ARCHIVOS_MS, async (res) => res);
   }
 
   /**
@@ -58,19 +136,13 @@ export class ApiService {
     const headers: Record<string, string> = {};
     const token = await this.auth.getAccessToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers, body: form });
-    const text = await res.text();
-    let body: unknown = null;
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch {
-      body = text;
-    }
-    if (!res.ok) {
-      const detail =
-        (body as { detail?: string } | null)?.detail ?? `HTTP ${res.status} en ${path}`;
-      throw new Error(detail);
-    }
+    const { res, body } = await conEspera(
+      `${API_BASE_URL}${path}`,
+      { method: 'POST', headers, body: form },
+      ESPERA_ARCHIVOS_MS,
+      async (res) => ({ res, body: await cuerpo(res) }),
+    );
+    if (!res.ok) throw new Error(mensajeDeError(body, res.status, path));
     return body as T;
   }
 

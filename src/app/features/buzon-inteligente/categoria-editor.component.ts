@@ -1,8 +1,8 @@
 // Editor de una categoría (tipo de correo) del Buzón Inteligente: cómo reconocerla
-// (descripción en lenguaje natural, ejemplos, palabras clave), qué datos extraer y qué
-// acciones ejecutar. Modal autocontenido; emite la categoría lista para guardar.
+// (descripción en lenguaje natural, ejemplos, palabras clave), qué datos extraer (opcional,
+// se activa) y qué acciones ejecutar. Modal autocontenido; emite la categoría lista para guardar.
 
-import { Component, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
@@ -18,8 +18,6 @@ interface AccionForm {
   carpeta: string;
   destinatarios: string;
   comentario: string;
-  analistas: string;
-  mover_a_carpeta_del_analista: boolean;
   webhook_url: string;
 }
 
@@ -31,8 +29,6 @@ function accionVacia(tipo: TipoAccion, clave = ''): AccionForm {
     carpeta: '',
     destinatarios: '',
     comentario: '',
-    analistas: '',
-    mover_a_carpeta_del_analista: true,
     webhook_url: '',
   };
 }
@@ -46,8 +42,6 @@ function aForm(a: Accion): AccionForm {
     carpeta: String(p['carpeta'] ?? ''),
     destinatarios: ((p['destinatarios'] as string[] | undefined) ?? []).join(', '),
     comentario: String(p['comentario'] ?? ''),
-    analistas: ((p['analistas'] as string[] | undefined) ?? []).join(', '),
-    mover_a_carpeta_del_analista: p['mover_a_carpeta_del_analista'] !== false,
     webhook_url: String(p['webhook_url'] ?? ''),
   };
 }
@@ -64,9 +58,6 @@ function aAccion(f: AccionForm, orden: number): Accion {
       break;
     case 'reenviar':
       parametros = { destinatarios: lista(f.destinatarios), comentario: f.comentario.trim() };
-      break;
-    case 'asignar_analista':
-      parametros = { estrategia: 'round_robin', analistas: lista(f.analistas), mover_a_carpeta_del_analista: f.mover_a_carpeta_del_analista };
       break;
     case 'notificar_teams':
       parametros = f.webhook_url.trim() ? { webhook_url: f.webhook_url.trim() } : {};
@@ -96,13 +87,17 @@ function aAccion(f: AccionForm, orden: number): Accion {
         </div>
 
         <!-- Pasos -->
-        <div class="flex gap-1 border-b border-border/60 px-5 py-2">
-          @for (p of pasos; track p.id; let i = $index) {
+        <div class="flex items-center gap-1 border-b border-border/60 px-5 py-2">
+          @for (p of pasos(); track p.id; let i = $index) {
             <button type="button" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" [class]="paso() === p.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'" (click)="paso.set(p.id)">
               <span class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold" [class]="paso() === p.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'">{{ i + 1 }}</span>
               {{ p.nombre }}
             </button>
           }
+          <!-- Opcional: casi siempre basta con Reconocer y Acciones. -->
+          <label class="ml-auto flex items-center gap-2 text-xs text-muted-foreground" almaTooltip="Actívalo si la IA debe leer datos del correo (cédula, valor, radicado…) para la bandeja o las acciones.">
+            <alma-switch [checked]="extraer()" (checkedChange)="alternarExtraer($event)" ariaLabel="Extraer datos" /> Extraer datos
+          </label>
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -147,10 +142,15 @@ function aAccion(f: AccionForm, orden: number): Accion {
                 <div class="flex flex-col gap-1.5">
                   <label class="alma-label flex items-center gap-1">Umbral propio <lucide-icon name="info" [size]="12" almaTooltip="Vacío = usa el umbral del buzón. Con este nivel de confianza o más, en modo automático se ejecuta sin preguntar." /></label>
                   <div class="flex items-center gap-2">
-                    <input type="range" min="50" max="99" class="flex-1 accent-[var(--primary)]" [ngModel]="umbral() ?? 80" (ngModelChange)="umbral.set(+$event)" />
+                    <!-- La de respaldo admite 10–100 %: Nova la usa cuando está segura de que el correo
+                         no es de ningún proceso, así que el área decide qué tan pronto se etiqueta sola. -->
+                    <input type="range" [min]="esFallback ? 10 : 50" [max]="esFallback ? 100 : 99" class="flex-1 accent-[var(--primary)]" [ngModel]="umbral() ?? 80" (ngModelChange)="umbral.set(+$event)" />
                     <span class="w-12 text-right text-sm tabular-nums">{{ umbral() !== null ? umbral() + '%' : 'buzón' }}</span>
                     @if (umbral() !== null) { <button type="button" class="alma-btn alma-btn-ghost" almaTooltip="Usar el del buzón" (click)="umbral.set(null)"><lucide-icon name="rotate-ccw" [size]="14" /></button> }
                   </div>
+                  @if (esFallback) {
+                    <p class="text-xs text-muted-foreground">Respaldo: de 10 a 100 %. Más bajo, más correos que no son de ningún proceso se etiquetan solos como {{ clave || 'OTROS' }}; más alto, más quedan en Validar.</p>
+                  }
                 </div>
               </div>
             }
@@ -194,10 +194,6 @@ function aAccion(f: AccionForm, orden: number): Accion {
                         @case ('reenviar') {
                           <div class="flex flex-col gap-1"><label class="alma-label">Destinatarios (coma)</label><input class="alma-input" [(ngModel)]="a.destinatarios" placeholder="litigios@skandia.com.co" /></div>
                           <div class="flex flex-col gap-1"><label class="alma-label">Comentario</label><input class="alma-input" [(ngModel)]="a.comentario" placeholder="Se adjunta resumen de la IA" /></div>
-                        }
-                        @case ('asignar_analista') {
-                          <div class="flex flex-col gap-1 sm:col-span-2"><label class="alma-label">Analistas en turno (coma). Se asigna al que menos tenga hoy.</label><input class="alma-input" [(ngModel)]="a.analistas" placeholder="Laura Gómez, Andrés Pérez" /></div>
-                          <label class="flex items-center gap-2 text-xs text-muted-foreground"><alma-switch [checked]="a.mover_a_carpeta_del_analista" (checkedChange)="a.mover_a_carpeta_del_analista = $event" /> Mover a la carpeta con el nombre del analista</label>
                         }
                         @case ('notificar_teams') {
                           <div class="flex flex-col gap-1 sm:col-span-2"><label class="alma-label">Webhook del canal (opcional)</label><input class="alma-input" [(ngModel)]="a.webhook_url" placeholder="https://…webhook.office.com/…" /></div>
@@ -243,11 +239,13 @@ export class CategoriaEditorComponent {
   readonly guardar = output<CategoriaIn>();
   readonly cancelar = output<void>();
 
-  protected readonly pasos = [
+  /** «Datos a extraer» solo aparece si se activa (o si el tipo ya tiene datos). */
+  protected readonly extraer = signal(false);
+  protected readonly pasos = computed(() => [
     { id: 'reconocer' as const, nombre: 'Reconocer' },
-    { id: 'extraer' as const, nombre: 'Datos a extraer' },
+    ...(this.extraer() ? [{ id: 'extraer' as const, nombre: 'Datos a extraer' }] : []),
     { id: 'acciones' as const, nombre: 'Acciones' },
-  ];
+  ]);
   protected readonly paso = signal<'reconocer' | 'extraer' | 'acciones'>('reconocer');
   protected readonly colores = COLORES;
   protected readonly tipos = TIPOS_ACCION;
@@ -287,6 +285,7 @@ export class CategoriaEditorComponent {
       this.umbral.set(c.umbral_confianza !== null ? Math.round(c.umbral_confianza * 100) : null);
       this.activa.set(c.activa);
       this.campos.set(c.campos_extraer.map((x) => ({ ...x })));
+      this.extraer.set(c.campos_extraer.length > 0);
       this.acciones.set([...c.acciones].sort((a, b) => a.orden - b.orden).map(aForm));
     });
   }
@@ -321,6 +320,11 @@ export class CategoriaEditorComponent {
   protected quitarEjemplo(i: number): void {
     this.ejemplos.update((l) => l.filter((_, j) => j !== i));
   }
+  protected alternarExtraer(on: boolean): void {
+    this.extraer.set(on);
+    if (on && !this.campos().length) this.agregarCampo();
+    if (!on && this.paso() === 'extraer') this.paso.set('acciones');
+  }
   protected agregarCampo(): void {
     this.campos.update((l) => [...l, { clave: '', descripcion: '' }]);
   }
@@ -345,7 +349,7 @@ export class CategoriaEditorComponent {
   protected siguiente(): void {
     if (this.paso() === 'reconocer') {
       if (!this.validarBase()) return;
-      this.paso.set('extraer');
+      this.paso.set(this.extraer() ? 'extraer' : 'acciones');
     } else if (this.paso() === 'extraer') {
       this.paso.set('acciones');
     }
@@ -389,8 +393,11 @@ export class CategoriaEditorComponent {
       activa: this.activa(),
       es_fallback: this.esFallback,
       umbral_confianza: this.umbral() !== null ? this.umbral()! / 100 : null,
-      campos_extraer: this.campos().filter((c) => c.clave.trim()).map((c) => ({ clave: c.clave.trim(), descripcion: c.descripcion.trim() })),
+      // Apagado: no se extrae nada (aunque hubiera datos escritos).
+      campos_extraer: !this.extraer() ? [] : this.campos().filter((c) => c.clave.trim()).map((c) => ({ clave: c.clave.trim(), descripcion: c.descripcion.trim() })),
       acciones,
+      // El PUT reemplaza la categoría: sin esto la etiqueta quedaría sin su proceso.
+      proceso_id: this.categoria()?.proceso_id ?? null,
     });
   }
 }
