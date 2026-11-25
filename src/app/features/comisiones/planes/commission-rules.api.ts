@@ -166,6 +166,29 @@ export interface RulePreviewResponse {
   filas: Record<string, string | number | boolean | null>[];
 }
 
+/** Simulación: la regla sobre una fila inventada, para cuando no hay datos.
+ *  Sin `valores` el back propone uno por campo. */
+export interface RuleSimulateRequest extends RulePreviewRequest {
+  valores: Record<string, string>;
+}
+
+export interface RuleSimulateField {
+  campo: string;
+  tipo: 'int' | 'decimal' | 'date' | 'string';
+  valor: string | null;
+  /** condicion: cumple la condición · ejemplo: del catálogo · usuario: escrito · falta: sin valor */
+  origen: 'condicion' | 'ejemplo' | 'usuario' | 'falta';
+}
+
+export interface RuleSimulateResponse {
+  catalogo: string;
+  campos: RuleSimulateField[];
+  faltan: string[];
+  condiciones: { texto: string; cumple: boolean | null }[];
+  cumple: boolean | null;
+  comision: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CommissionRulesApi {
   private readonly http = inject(ComisionesHttp);
@@ -230,6 +253,15 @@ export class CommissionRulesApi {
       'POST',
       data,
       'Error generando la vista previa',
+    );
+  }
+
+  simulate(data: RuleSimulateRequest): Promise<RuleSimulateResponse> {
+    return this.http.send<RuleSimulateResponse>(
+      '/api/commission-rules/simulate',
+      'POST',
+      data,
+      'Error en la simulación',
     );
   }
 
