@@ -4,8 +4,8 @@
 // - Paginación, tamaño de página y página actual SEPARADOS por estado (tab).
 // - Los conteos de cada tab salen de un GET por estado con page_size=1 (solo
 //   interesa el `total`), así los badges no dependen de traer las filas.
-// - Con filtros o orden activos NO se pagina en el servidor: se traen hasta
-//   1000 planes del estado activo (páginas de 200) y se filtra/ordena/pagina
+// - Con filtros o orden activos NO se pagina en el servidor: se traen todos
+//   los planes del estado activo (páginas de 200) y se filtra/ordena/pagina
 //   en cliente; sin filtros manda la página del API.
 // - Cualquier cambio de búsqueda, filtro u orden resetea TODOS los tabs a la
 //   página 1.
@@ -27,7 +27,6 @@ import {
 
 export type SortDirection = 'asc' | 'desc' | null;
 
-const MAX_TOTAL_FOR_FILTERS = 1000;
 const PAGE_SIZE_BULK = 200;
 
 const porEstado = <T>(valor: T): Record<CommissionPlanStatus, T> => ({
@@ -67,7 +66,7 @@ export class CommissionPlansStore {
 
   /** Página actual del API para el estado activo. */
   readonly plans = signal<CommissionPlan[]>([]);
-  /** Hasta 1000 planes del estado activo (para filtrar/ordenar en cliente). */
+  /** Todos los planes del estado activo (para filtrar/ordenar en cliente). */
   readonly allPlans = signal<CommissionPlan[]>([]);
   readonly loading = signal(true);
   readonly loadingAll = signal(false);
@@ -123,7 +122,7 @@ export class CommissionPlansStore {
     }
   }
 
-  /** Trae hasta 1000 planes del estado (páginas de 200) para filtros/orden. */
+  /** Trae todos los planes del estado (páginas de 200) para filtros/orden. */
   private async fetchAllPlansForStatus(status: CommissionPlanStatus): Promise<void> {
     try {
       this.loadingAll.set(true);
@@ -131,7 +130,7 @@ export class CommissionPlansStore {
       const primera = await this.api.list(1, PAGE_SIZE_BULK, status);
       let todos = primera.items.map(mapApiPlanToUI);
 
-      const limite = Math.min(primera.total, MAX_TOTAL_FOR_FILTERS);
+      const limite = primera.total;
       if (limite > PAGE_SIZE_BULK) {
         const paginas = Math.ceil(limite / PAGE_SIZE_BULK) - 1;
         const respuestas = await Promise.all(
