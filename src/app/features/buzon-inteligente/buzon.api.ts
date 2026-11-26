@@ -90,6 +90,8 @@ export interface Buzon {
   etiqueta_validar?: string;
   /** 075: clasificación en dos pasos (gpt-4.1-mini decide el proceso; gpt-4.1 aplica sus reglas). */
   dos_pasos?: boolean;
+  /** 083: si el correo menciona un soporte que solo viene como imagen externa o enlace → Validar. */
+  revisar_soporte_no_legible?: boolean;
   al_desactivar: AlDesactivar;
   /** 059: deja el archivo generado como borrador de respuesta en el hilo. */
   borrador_en_hilo: boolean;
@@ -154,6 +156,7 @@ export type BuzonUpdate = Partial<
     | 'sin_proceso'
     | 'etiqueta_validar'
     | 'dos_pasos'
+    | 'revisar_soporte_no_legible'
     | 'al_desactivar'
     | 'borrador_en_hilo'
     | 'descripcion'
@@ -591,6 +594,8 @@ export type Comparacion = 'exacta' | 'digitos' | 'doc' | 'pc' | 'aprox';
 /** 067: «reenviar» a direcciones fijas y «responder» al remitente, en el hilo. */
 export type DestinoGrupo = 'personas' | 'carpeta' | 'categorizar' | 'reenviar' | 'responder';
 export type SinActivosModo = 'cola' | 'carpeta' | 'persona';
+/** 082: si las bases no encuentran al responsable → round-robin (como antes) o Validar. */
+export type SinCoincidencia = 'roundrobin' | 'validar';
 
 export interface Cruce {
   /** Dato del JSON del proceso. */
@@ -630,6 +635,7 @@ export interface Grupo {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta: string | null;
   sin_activos_persona_id: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden: number;
   activo: boolean;
   reglas: ReglaAsignacion[];
@@ -659,6 +665,7 @@ export interface GrupoIn {
   sin_activos_modo: SinActivosModo;
   sin_activos_carpeta?: string | null;
   sin_activos_persona_id?: string | null;
+  sin_coincidencia?: SinCoincidencia;
   orden?: number | null;
   activo: boolean;
   /** Reemplaza las búsquedas del grupo (en este orden). */
@@ -872,6 +879,10 @@ export interface Plantilla {
   encabezados: boolean;
   /** 074: segunda hoja «Observaciones» en el .xlsx. */
   observaciones: boolean;
+  /** 082: un archivo por cada valor de esta columna del detalle (p. ej. «pago»); null = uno solo. */
+  archivo_por?: string | null;
+  /** 082: tabla con una fila por archivo (p. ej. «pagos»: PC, NIT, fecha y total de cada pago). */
+  tabla_archivos?: string | null;
   updated_at: string | null;
   updated_by: string | null;
 }
@@ -916,6 +927,13 @@ export interface ArchivoCorreo {
   borrador_en: string | null;
   created_at: string;
   created_by: string;
+  /** 082: una versión puede tener N partes (un archivo por pago). Sin migrar: 1 de 1. */
+  parte?: number;
+  partes?: number;
+  /** 082: valor de la columna por la que se separó (p. ej. el «pago»). */
+  grupo?: string | null;
+  /** 082: lo que la analista debe revisar en este archivo (p. ej. el total no cuadra con el pago). */
+  avisos?: { estado: string; texto: string }[];
 }
 
 export interface ArchivoGenerado {
@@ -923,6 +941,8 @@ export interface ArchivoGenerado {
   nombre: string;
   version: number;
   filas: number;
+  /** 082: cuántos archivos se generaron (uno por pago); sin el dato, 1. */
+  partes?: number;
 }
 
 export const DATOS_CORREO: { id: DatoCorreo; nombre: string }[] = [

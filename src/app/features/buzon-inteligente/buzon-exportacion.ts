@@ -241,6 +241,10 @@ export interface TplForm {
   encabezados: boolean;
   /** 074: hoja «Observaciones» (.xlsx). */
   observaciones: boolean;
+  /** 082: un archivo por cada valor de esta columna del detalle (p. ej. «pago»); '' = uno solo. */
+  archivo_por: string;
+  /** 082: tabla con una fila por archivo (p. ej. «pagos»); '' = ninguna. */
+  tabla_archivos: string;
   paso: PasoTpl;
   /** Columna seleccionada en el paso ②. */
   sel: number;
@@ -348,6 +352,8 @@ export function tplVacia(nombre: string, listas: string[]): TplForm {
     lote: [],
     encabezados: true,
     observaciones: false,
+    archivo_por: '',
+    tabla_archivos: '',
     paso: 1,
     sel: 0,
     zona: 'col',
@@ -393,6 +399,8 @@ export function tplDePlantilla(p: Plantilla): TplForm {
     lote: (p.lote ?? []).map((c) => ({ ...c, origen: { ...c.origen, si_vacio: c.origen.si_vacio ? { ...c.origen.si_vacio } : null } })),
     encabezados: p.encabezados !== false,
     observaciones: !!p.observaciones,
+    archivo_por: p.archivo_por ?? '',
+    tabla_archivos: p.tabla_archivos ?? '',
     paso: p.columnas.length ? 2 : 1,
     sel: 0,
     zona: 'col',
@@ -497,6 +505,8 @@ export function cuerpoTpl(t: TplForm): PlantillaIn {
     lote: (t.lote ?? []).map((c, i) => ({ encabezado: c.encabezado.trim() || `Lote ${i + 1}`, formato: c.formato, origen: conRespaldo(c) })),
     encabezados: t.encabezados !== false,
     observaciones: t.formato === 'xlsx' && !!t.observaciones,
+    archivo_por: t.archivo_por.trim() || null,
+    tabla_archivos: (t.archivo_por.trim() && t.tabla_archivos.trim()) || null,
   };
 }
 
