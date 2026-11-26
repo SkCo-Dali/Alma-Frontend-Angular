@@ -383,6 +383,26 @@ function buzonesBase(): Buzon[] {
   ];
 }
 
+/** 082 (demo): como exportacion.partir del backend: un archivo por cada valor de `archivo_por`
+ *  de la lista del detalle; la fila de `tabla_archivos` de cada grupo reemplaza los datos del correo. */
+function partirDemo(t: Plantilla | undefined, datos: Record<string, unknown>): [string | null, Record<string, unknown>][] {
+  const col = t?.archivo_por?.trim();
+  const detalle = t?.detalle;
+  const lista = detalle ? datos[detalle] : null;
+  if (!col || !detalle || !Array.isArray(lista)) return [[null, datos]];
+  const items = lista.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object');
+  const valores = items.map((it) => String(it[col] ?? '').trim());
+  const grupos = [...new Set(valores)];
+  if (valores.some((v) => !v) || grupos.length < 2) return [[null, datos]];
+  const tabla = t?.tabla_archivos && Array.isArray(datos[t.tabla_archivos]) ? (datos[t.tabla_archivos] as Record<string, unknown>[]) : [];
+  return grupos.map((g): [string, Record<string, unknown>] => {
+    const d: Record<string, unknown> = { ...datos, [detalle]: items.filter((_, i) => valores[i] === g) };
+    const fila = tabla.find((r) => String(r?.[col] ?? '').trim() === g);
+    for (const [k, v] of Object.entries(fila ?? {})) if (k !== col && v !== null && v !== '' && typeof v !== 'object') d[k] = v;
+    return [g, d];
+  });
+}
+
 /** Campos 061 de un buzón demo (los que no se pasan quedan como los crea el backend). */
 function camposV2(p: Partial<Buzon>): Pick<
   Buzon,
@@ -999,7 +1019,8 @@ export class DemoStore {
     if (!a) throw new Error('Archivo no encontrado.');
     const ahora = new Date().toISOString();
     this.archivos = this.archivos.map((x) =>
-      x.correo_id !== a.correo_id ? x : x.id === archivoId ? { ...x, borrador_en_hilo: true, borrador_en: ahora, created_by: x.created_by || por } : { ...x, borrador_en_hilo: false },
+      // 082: todas las partes de esa versión van al borrador.
+      x.correo_id !== a.correo_id ? x : x.version === a.version ? { ...x, borrador_en_hilo: true, borrador_en: ahora, created_by: x.created_by || por } : { ...x, borrador_en_hilo: false },
     );
     return this.archivosCorreo(a.correo_id);
   }
@@ -1101,7 +1122,7 @@ export class DemoStore {
   }
 
   archivosCorreo(correoId: string): ArchivoCorreo[] {
-    return clonar(this.archivos.filter((a) => a.correo_id === correoId).sort((a, b) => b.version - a.version));
+    return clonar(this.archivos.filter((a) => a.correo_id === correoId).sort((a, b) => b.version - a.version || (a.parte ?? 1) - (b.parte ?? 1)));
   }
 
   /** Versión siguiente del archivo según la salida de la etiqueta (null si no genera archivo). */
@@ -1116,30 +1137,39 @@ export class DemoStore {
     if (salida.modo === 'plantilla' && !t) return null;
     const meta = this.meta(c, cat.clave, proceso.clave);
     const datos = c.datos_extraidos ?? {};
-    const m = matriz(t ?? null, datos, meta, this.basesConFilas());
     const formato = t?.formato ?? 'xlsx';
     const version = Math.max(0, ...this.archivos.filter((a) => a.correo_id === c.id).map((a) => a.version)) + 1;
     const buzon = this.buzones.find((b) => b.id === c.buzon_id);
-    const archivo: ArchivoCorreo = {
-      id: nuevoId('demo-arch'),
-      correo_id: c.id,
-      salida_id: salida.id ?? null,
-      salida_nombre: salida.nombre,
-      nombre: nombreArchivo(t?.nombre_archivo ?? `${proceso.clave}_{radicado}`, datos, meta, formato),
-      formato,
-      version,
-      filas: m.filas.length,
-      tamano: 4_000 + m.filas.length * 120,
-      borrador_en_hilo: conBorrador && !!buzon?.borrador_en_hilo,
-      borrador_en: conBorrador && buzon?.borrador_en_hilo ? cuando : null,
-      created_at: cuando,
-      created_by: usuario,
-    };
+    const grupos = partirDemo(t, datos);
+    const conB = conBorrador && !!buzon?.borrador_en_hilo;
     // Un borrador nuevo reemplaza al anterior del mismo correo.
-    if (archivo.borrador_en_hilo) this.archivos = this.archivos.map((x) => (x.correo_id === c.id ? { ...x, borrador_en_hilo: false } : x));
-    this.archivos = [...this.archivos, archivo];
-    this.contenidos.set(archivo.id, { hoja: t?.hoja ?? proceso.clave, formato, separador: t?.separador ?? ';', celdas: [...m.titulo, m.encabezados, ...m.filas] });
-    return { id: archivo.id, nombre: archivo.nombre, version, filas: archivo.filas };
+    if (conB) this.archivos = this.archivos.map((x) => (x.correo_id === c.id ? { ...x, borrador_en_hilo: false } : x));
+    const nuevos = grupos.map(([grupo, d], i): ArchivoCorreo => {
+      const m = matriz(t ?? null, d, meta, this.basesConFilas());
+      const archivo: ArchivoCorreo = {
+        id: nuevoId('demo-arch'),
+        correo_id: c.id,
+        salida_id: salida.id ?? null,
+        salida_nombre: salida.nombre,
+        nombre: nombreArchivo((t?.nombre_archivo ?? `${proceso.clave}_{radicado}`) + (grupos.length > 1 ? `_${i + 1}` : ''), d, meta, formato),
+        formato,
+        version,
+        filas: m.filas.length,
+        tamano: 4_000 + m.filas.length * 120,
+        borrador_en_hilo: conB,
+        borrador_en: conB ? cuando : null,
+        created_at: cuando,
+        created_by: usuario,
+        parte: i + 1,
+        partes: grupos.length,
+        grupo,
+        avisos: [],
+      };
+      this.contenidos.set(archivo.id, { hoja: t?.hoja ?? proceso.clave, formato, separador: t?.separador ?? ';', celdas: [...m.titulo, m.encabezados, ...m.filas] });
+      return archivo;
+    });
+    this.archivos = [...this.archivos, ...nuevos];
+    return { id: nuevos[0].id, nombre: nuevos[0].nombre, version, filas: nuevos.reduce((s, a) => s + a.filas, 0), partes: nuevos.length };
   }
 
   regenerarArchivo(correoId: string, usuario: string): ArchivoGenerado {
@@ -1580,6 +1610,7 @@ export class DemoStore {
       sin_activos_modo: body.sin_activos_modo,
       sin_activos_carpeta: body.sin_activos_carpeta ?? null,
       sin_activos_persona_id: body.sin_activos_persona_id ?? null,
+      sin_coincidencia: body.sin_coincidencia ?? 'roundrobin',
       orden: body.orden ?? previo?.orden ?? this.grupos.filter((g) => g.buzon_id === bid).length + 1,
       activo: body.activo,
       reglas: body.reglas.map((r, i) => ({

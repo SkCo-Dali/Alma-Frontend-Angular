@@ -25,6 +25,7 @@ export function aGrupoIn(g: Grupo, cambios: Partial<GrupoIn> = {}): GrupoIn {
     sin_activos_modo: g.sin_activos_modo,
     sin_activos_carpeta: g.sin_activos_carpeta,
     sin_activos_persona_id: g.sin_activos_persona_id,
+    sin_coincidencia: g.sin_coincidencia ?? 'roundrobin',
     orden: g.orden,
     activo: g.activo,
     reglas: g.reglas.map((r) => ({
