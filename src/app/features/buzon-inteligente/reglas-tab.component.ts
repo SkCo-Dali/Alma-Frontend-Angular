@@ -33,6 +33,7 @@ import {
   RevisionGrupos,
   resumenEtiqueta,
 } from './buzon.api';
+import { ajustesConservados, columnasNuevas, Conservado } from './buzon-campos';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
@@ -61,8 +62,12 @@ interface Comparacion {
   salen: Categoria[];
   camposMas: string[];
   camposMenos: string[];
-  /** Tiene etiquetas o datos ajustados a mano (✎) que se reemplazarán. */
-  manuales: boolean;
+  /** Lo que el área configuró en «Datos» y se conserva (columnas, Crítico…). */
+  conserva: Conservado[];
+  /** Columnas nuevas que el prompt suma a una lista. */
+  columnasMas: { clave: string; columnas: string[] }[];
+  /** Etiquetas ajustadas a mano (✎): su texto sí pasa a ser el del prompt. */
+  etiquetasManuales: string[];
 }
 
 /** Impacto de eliminar un proceso (salidas: null mientras se consulta). */
@@ -201,22 +206,34 @@ interface FijaEd {
                     @for (e of cmp.actualizadas; track e) { <span class="badge b-sky">✎ {{ e }}</span> }
                     @for (e of cmp.salen; track e.id) { <span class="badge b-rose">− {{ e.clave }}</span> }
                   </div>
-                  @if (cmp.camposMas.length || cmp.camposMenos.length) {
-                    <p class="xxs muted"><lucide-icon name="braces" [size]="13" /> Datos:
-                      @if (cmp.camposMas.length) { agrega {{ cmp.camposMas.join(', ') }} }
-                      @if (cmp.camposMas.length && cmp.camposMenos.length) { · }
-                      @if (cmp.camposMenos.length) { quita {{ cmp.camposMenos.join(', ') }} }
-                    </p>
+                  @if (cmp.camposMas.length || cmp.camposMenos.length || cmp.columnasMas.length) {
+                    <div class="stack" style="gap:4px">
+                      <p class="xs b"><lucide-icon name="braces" [size]="13" /> Datos</p>
+                      <div class="row" style="gap:6px">
+                        @for (k of cmp.camposMas; track k) { <span class="badge b-emerald" title="Dato nuevo: el prompt lo pide">+ {{ k }}</span> }
+                        @for (x of cmp.columnasMas; track x.clave) { <span class="badge b-emerald" title="Columnas nuevas de la lista">+ {{ x.clave }}: {{ x.columnas.join(', ') }}</span> }
+                        @for (k of cmp.camposMenos; track k) { <span class="badge b-rose" title="Sale: el prompt ya no lo menciona">− {{ k }}</span> }
+                      </div>
+                    </div>
                   }
-                  @if (!cmp.textos.length && !cmp.nuevas.length && !cmp.salen.length && !cmp.camposMas.length && !cmp.camposMenos.length) {
+                  @if (cmp.conserva.length) {
+                    <div class="note b-emerald" style="display:grid;gap:6px">
+                      <span class="row" style="gap:6px"><lucide-icon name="check" [size]="13" /> <b>Se conserva lo que configuraste en Datos</b></span>
+                      <div class="row" style="gap:6px">
+                        @for (x of cmp.conserva; track x.clave) { <span class="chipo"><b class="mono">{{ x.clave }}</b> · {{ x.detalle }}</span> }
+                      </div>
+                      <span class="xxs muted">El texto nuevo no cambia columnas, Crítico, Alterno ni lo ajustado a mano. Eso solo lo cambias tú, en la pestaña Datos del proceso.</span>
+                    </div>
+                  }
+                  @if (!cmp.textos.length && !cmp.nuevas.length && !cmp.salen.length && !cmp.camposMas.length && !cmp.camposMenos.length && !cmp.columnasMas.length) {
                     <p class="xxs muted">Sin cambios de alcance, exclusiones, etiquetas ni datos: solo se actualizan los textos de las etiquetas.</p>
                   }
                   @if (cmp.salen.length) {
                     <label class="row xs" style="gap:6px"><input type="checkbox" [checked]="desactivaSalen(p)" (change)="alternarSalen(p)" />
                       Desactivar {{ cmp.salen.length === 1 ? 'la etiqueta que ya no está' : 'las ' + cmp.salen.length + ' etiquetas que ya no están' }} en el prompt</label>
                   }
-                  @if (cmp.manuales) {
-                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>{{ cmp.clave }} tiene ajustes hechos a mano en Nova (✎): al actualizar se reemplazan por lo que dice el prompt.</span></p>
+                  @if (cmp.etiquetasManuales.length) {
+                    <p class="note b-amber"><lucide-icon name="alert-triangle" [size]="13" /> <span>Las etiquetas ajustadas a mano (✎) toman el texto del prompt: <b>{{ cmp.etiquetasManuales.join(', ') }}</b>.</span></p>
                   }
                   <p class="xxs muted">Queda en el borrador v{{ siguiente() }}: la versión vigente sigue clasificando hasta que publiques.</p>
                 </div>
@@ -1287,7 +1304,9 @@ export class ReglasTabComponent implements OnInit {
       salen: actuales.filter((c) => !propuestas.has(c.clave)),
       camposMas: [...camposNuevos].filter((k) => !campos.has(k)),
       camposMenos: [...campos].filter((k) => !camposNuevos.has(k)),
-      manuales: actuales.some((c) => c.origen === 'user') || t.campos_extraer.some((f) => f.origen === 'user'),
+      conserva: ajustesConservados(t.campos_extraer, p.campos),
+      columnasMas: columnasNuevas(t.campos_extraer, p.campos),
+      etiquetasManuales: actuales.filter((c) => c.origen === 'user' && propuestas.has(c.clave)).map((c) => c.clave),
     };
   }
 
