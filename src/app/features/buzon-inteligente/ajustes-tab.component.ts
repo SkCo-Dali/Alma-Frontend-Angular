@@ -79,6 +79,13 @@ interface CarpetaPlana {
               <input class="input sm" [(ngModel)]="etiquetaValidar" (change)="guardarEtiquetaValidar()" maxlength="80" aria-label="Nombre de la categoría de Outlook" />
             }
           </div>
+          <div class="sunk r-xl row between" style="padding:10px 12px;flex-wrap:nowrap">
+            <div style="min-width:0">
+              <p class="sm b">Revisar a mano los soportes que Nova no puede leer</p>
+              <p class="xxs muted">Si el correo menciona un soporte o comprobante pero solo trae una imagen de otro servidor o un enlace a un archivo compartido, va a Validar aunque la confianza sea alta. Apágalo si en este buzón esas imágenes suelen ser logos o boletines: decidirá la confianza.</p>
+            </div>
+            <alma-switch [checked]="b.revisar_soporte_no_legible !== false" (checkedChange)="guardar({ revisar_soporte_no_legible: $event })" ariaLabel="Revisar a mano los soportes que Nova no puede leer" />
+          </div>
         </div>
 
         <div class="glass r-2xl stack" style="padding:20px">
