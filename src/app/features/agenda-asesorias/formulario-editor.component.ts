@@ -182,7 +182,7 @@ let secuencia = 0;
           <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="guardar()">
             <lucide-icon name="save" [size]="14" /> {{ formulario() ? 'Guardar cambios' : 'Crear formulario' }}
           </button>
-          <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="cancelado.emit()">Cancelar</button>
+          <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="cancelado.emit()">Cancelar</button>
         </div>
       </div>
 
