@@ -5,6 +5,7 @@
 import {
   AlertaInicio,
   ArchivoCorreo,
+  CampoProceso,
   CeldasArchivo,
   CorreccionDatos,
   HiloCorreo,
@@ -59,6 +60,7 @@ import {
   VersionReglas,
 } from './buzon.api';
 import { nrm, simularAsignacion } from './buzon-asignacion';
+import { fusionarCampos } from './buzon-campos';
 import { matriz, nombreArchivo, salidaPara, sugerirColumna } from './buzon-exportacion';
 
 const B_RECAUDOS = 'demo-buzon-recaudos';
@@ -642,14 +644,14 @@ function correosBase(cats: Categoria[]): Correo[] {
 // ── 2.0: procesos, grupos, equipo y bases (Recaudos) ─────────────────────────
 
 function procesosBase(): Proceso[] {
-  const p = (clave: string, nombre: string, color: string, orden: number, descripcion: string, exclusiones: string | null, campos: [string, string, boolean][]): Proceso => ({
+  const p = (clave: string, nombre: string, color: string, orden: number, descripcion: string, exclusiones: string | null, campos: [string, string, boolean, Partial<CampoProceso>?][]): Proceso => ({
     id: `demo-proc-${clave.toLowerCase()}`,
     buzon_id: B_RECAUDOS,
     clave,
     nombre,
     descripcion,
     exclusiones,
-    campos_extraer: campos.map(([c, d, k]) => ({ clave: c, descripcion: d, critico: k })),
+    campos_extraer: campos.map(([c, d, k, extra]) => ({ clave: c, descripcion: d, critico: k, ...extra })),
     color,
     orden,
     activo: true,
@@ -663,7 +665,11 @@ function procesosBase(): Proceso[] {
     p('PAC', 'Planes colectivos (PAC)', '#0A84FF', 2,
       'Aportes de planes colectivos de empresas: contrato que empieza por PC, planilla o soporte de pago de la empresa.',
       'No es PAC si la empresa pide un retiro o una certificación.',
-      [['codigo_pac', 'Código del contrato PAC (PC + número)', true], ['nit_empresa', 'NIT de la empresa', true], ['razon_social', 'Razón social', false], ['valor', 'Valor del aporte', false], ['periodo', 'Periodo AAAA-MM', false], ['afiliados', 'Lista de afiliados del aporte (cedula, nombre, valor)', false]]),
+      // Como el real: lista con columnas y críticos alternos (basta uno) configurados a mano en Datos.
+      [['codigo_pac', 'Código del contrato PAC (PC + número)', true, { alterno: true, identificador: true }],
+        ['nit_empresa', 'NIT de la empresa', true, { alterno: true }], ['razon_social', 'Razón social', false],
+        ['valor', 'Valor del aporte', false], ['periodo', 'Periodo AAAA-MM', false],
+        ['afiliados', 'Lista de afiliados del aporte (cedula, nombre, valor)', false, { tipo: 'tabla', campos: ['cedula', 'nombre', 'valor'] }]]),
     p('MFUND', 'Fondos MFUND', '#6D4AE0', 3, 'Novedades de recaudo de fondos MFUND: aportes y aplicaciones pendientes.', null,
       [['numero_encargo', 'Número de encargo', true], ['valor', 'Valor', false]]),
     p('PILA', 'Planillas PILA', '#30D158', 4, 'Planillas integradas de liquidación de aportes enviadas por empresas.', null,
@@ -1389,7 +1395,10 @@ export class DemoStore {
         nombre: clave,
         descripcion: resto.replace(/Etiquetas?:[^.]*\.?/i, '').replace(exclusion, '').trim(),
         exclusiones: exclusion,
-        campos: (this.procesos.find((p) => p.clave === clave)?.campos_extraer ?? [{ clave: 'numero_caso', descripcion: 'Identificador del caso', critico: true }]).map((c) => ({ ...c })),
+        // Como la IA real: devuelve clave, descripción, crítico y tipo, pero no las columnas
+        // ni los ajustes del área (Alterno, Identificador). Aplicar la propuesta los conserva.
+        campos: (this.procesos.find((p) => p.clave === clave)?.campos_extraer ?? [{ clave: 'numero_caso', descripcion: 'Identificador del caso', critico: true }])
+          .map((c) => ({ clave: c.clave, descripcion: c.descripcion, critico: c.critico, tipo: c.tipo })),
         etiquetas,
         color: paleta[procesos.length % paleta.length],
       });
@@ -1403,7 +1412,8 @@ export class DemoStore {
     const r: ResultadoAplicar = { procesos_creados: 0, procesos_actualizados: 0, etiquetas_creadas: 0, etiquetas_actualizadas: 0 };
     for (const pr of propuesta.procesos) {
       const previo = this.procesos.find((p) => p.buzon_id === buzonId && p.clave === pr.clave);
-      const p = this.guardarProceso(buzonId, { clave: pr.clave, nombre: pr.nombre, descripcion: pr.descripcion, exclusiones: pr.exclusiones, campos_extraer: pr.campos, color: previo?.color ?? pr.color ?? null, activo: true }, previo?.id);
+      const campos = previo ? fusionarCampos(previo.campos_extraer, pr.campos) : pr.campos;
+      const p = this.guardarProceso(buzonId, { clave: pr.clave, nombre: pr.nombre, descripcion: pr.descripcion, exclusiones: pr.exclusiones, campos_extraer: campos, color: previo?.color ?? pr.color ?? null, activo: true }, previo?.id);
       r[previo ? 'procesos_actualizados' : 'procesos_creados']++;
       for (const e of pr.etiquetas) {
         const c = this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.clave);
