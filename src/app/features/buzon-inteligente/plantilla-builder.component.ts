@@ -527,6 +527,31 @@ export class HojaVistaComponent {
               <option [value]="l" [selected]="t.detalle === l">Una fila por elemento de «{{ l }}»</option>
             }
           </select>
+          @if (t.detalle) {
+            <!-- 082: un archivo por pago (una empresa con varios pagos, o cartas de varias empresas). -->
+            <label class="xs" [for]="ids + 'apor'">Archivos:</label>
+            <select class="input sm" [id]="ids + 'apor'" style="width:auto;min-width:220px" (change)="t.archivo_por = val($event); cambio()">
+              <option value="">Uno solo por correo</option>
+              @if (t.archivo_por && !columnasDetalle(t).includes(t.archivo_por)) {
+                <option [value]="t.archivo_por" selected>Uno por cada valor de «{{ t.archivo_por }}»</option>
+              }
+              @for (k of columnasDetalle(t); track k) {
+                <option [value]="k" [selected]="t.archivo_por === k">Uno por cada valor de «{{ k }}»</option>
+              }
+            </select>
+            @if (t.archivo_por) {
+              <label class="xs" [for]="ids + 'tarch'">Resumen de cada archivo desde:</label>
+              <select class="input sm" [id]="ids + 'tarch'" style="width:auto;min-width:180px" (change)="t.tabla_archivos = val($event); cambio()">
+                <option value="">Los datos del correo</option>
+                @if (t.tabla_archivos && !listas().includes(t.tabla_archivos)) {
+                  <option [value]="t.tabla_archivos" selected>«{{ t.tabla_archivos }}»</option>
+                }
+                @for (l of listas(); track l) {
+                  @if (l !== t.detalle) { <option [value]="l" [selected]="t.tabla_archivos === l">«{{ l }}» (una fila por archivo)</option> }
+                }
+              </select>
+            }
+          }
           <label class="row xs" [for]="ids + 'csv'"><input type="checkbox" [id]="ids + 'csv'" [checked]="t.formato === 'csv'" (change)="t.formato = chk($event) ? 'csv' : 'xlsx'; cambio()" /> Generar el archivo en .csv (en lugar de .xlsx)</label>
           @if (t.formato === 'csv') {
             <select class="input sm" style="width:auto;min-width:180px" aria-label="Separador" (change)="t.separador = val($event); cambio()">
@@ -771,6 +796,13 @@ export class PlantillaBuilderComponent {
 
   protected camposSimples(): CampoExp[] {
     return this.campos().filter((c) => !c[1]);
+  }
+
+  /** 082: columnas de cada elemento de la lista del detalle (p. ej. «pago» de afiliados). */
+  protected columnasDetalle(t: TplForm): string[] {
+    return this.campos()
+      .filter((c) => c[1] === t.detalle)
+      .map((c) => c[0].split('.').pop() ?? c[0]);
   }
 
   protected respaldo(c: ColForm, on: boolean): void {

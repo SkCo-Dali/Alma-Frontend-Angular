@@ -472,8 +472,9 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                       <div class="row between">
                         <div class="row">
                           <lucide-icon name="file-spreadsheet" [size]="16" />
-                          <b class="mono xs">{{ a.nombre }}</b>
+                          <b class="mono xs">{{ archivoVista().nombre }}</b>
                           <span [class]="'badge ' + (borradorDesactualizado() ? 'b-sky' : 'b-slate')">v{{ a.version }}{{ borradorDesactualizado() ? ' · vista previa' : '' }}</span>
+                          @if (partesVigentes().length > 1) { <span class="badge b-violet">{{ partesVigentes().length }} archivos · uno por pago</span> }
                         </div>
                         <button type="button" class="btn primary sm" [disabled]="!borradorDesactualizado() || accionando()" (click)="pedirBorrador()">
                           <lucide-icon name="file-pen" [size]="13" /> Actualizar borrador{{ borradorDesactualizado() ? ' (v' + a.version + ')' : '' }}
@@ -490,10 +491,27 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                       } @else if (borrador(); as b) {
                         <div class="note b-emerald"><lucide-icon name="check-circle-2" [size]="13" /> <span>El borrador del hilo tiene la versión vigente (v{{ b.version }}) · actualizado {{ cuando(b.borrador_en || b.created_at) }} por {{ b.created_by }}.</span></div>
                       }
+                      @if (partesVigentes().length > 1) {
+                        <!-- 082: un archivo por pago; se ve uno a la vez y van todos al borrador. -->
+                        <div class="pills" role="tablist" aria-label="Archivos de esta versión">
+                          @for (p of partesVigentes(); track p.id) {
+                            <button type="button" role="tab" [attr.aria-selected]="(p.parte ?? 1) === parteSel()" (click)="verParte(p.parte ?? 1)">
+                              Archivo {{ p.parte }}@if (p.grupo) { · pago {{ p.grupo }} } · {{ p.filas }} fila{{ p.filas === 1 ? '' : 's' }}
+                              @if ((p.avisos ?? []).length) { <lucide-icon name="alert-triangle" [size]="12" /> }
+                            </button>
+                          }
+                        </div>
+                      }
+                      @if (avisosArchivos().length) {
+                        <div class="note b-amber" style="display:grid;gap:2px">
+                          @for (t of avisosArchivos(); track $index) { <span><lucide-icon name="alert-triangle" [size]="12" /> {{ t }}</span> }
+                          <span class="xs muted">Corrige el «pago» de cada persona en «Corregir datos» (pestaña IA) y vuelve a generar.</span>
+                        </div>
+                      }
                       @if (confirmarBorrador()) {
                         <div class="effect" style="border-color:var(--amber)">
                           <lucide-icon name="alert-triangle" [size]="15" />
-                          <span style="flex:1">{{ advertencias().join(' ') }} ¿Actualizar el borrador de todas formas?</span>
+                          <span style="flex:1">{{ advertenciasBorrador().join(' ') }} ¿Actualizar el borrador de todas formas?</span>
                           <button type="button" class="btn outline sm" (click)="revisarDatos()">Revisar datos</button>
                           <button type="button" class="btn primary sm" (click)="actualizarBorrador()">Actualizar igual</button>
                         </div>
@@ -542,11 +560,11 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                         </div>
                         @for (v of archivos(); track v.id) {
                           <div class="row between xs">
-                            <span><b>v{{ v.version }}</b> · {{ v.created_by }} · {{ cuando(v.created_at) }}</span>
+                            <span><b>v{{ v.version }}</b>@if ((v.partes ?? 1) > 1) { <span class="muted"> · archivo {{ v.parte }} de {{ v.partes }}</span> } · {{ v.created_by }} · {{ cuando(v.created_at) }}</span>
                             <span class="row" style="gap:6px">
                               <span class="muted">{{ v.salida_nombre }} · {{ v.filas }} filas</span>
                               @if (v.borrador_en_hilo) { <b style="color:var(--emerald)">en el borrador</b> }
-                              <button type="button" class="btn ghost" [attr.aria-label]="'Descargar v' + v.version" (click)="descargar(v)"><lucide-icon name="download" [size]="14" /></button>
+                              <button type="button" class="btn ghost" [attr.aria-label]="'Descargar v' + v.version + ((v.partes ?? 1) > 1 ? ' archivo ' + v.parte : '')" (click)="descargar(v)"><lucide-icon name="download" [size]="14" /></button>
                             </span>
                           </div>
                         }
@@ -739,7 +757,20 @@ export class BandejaBuzonComponent {
     const buzon = this.buzones().find((x) => x.id === this.detalle()?.buzon_id);
     return !!v && (b ? v.version > b.version : buzon?.borrador_en_hilo !== false);
   });
+  /** 082: una versión puede tener N archivos (uno por pago): los de la versión vigente y el que se ve. */
+  protected readonly parteSel = signal(1);
+  protected readonly partesVigentes = computed(() => {
+    const v = this.vigente();
+    return v ? this.archivos().filter((a) => a.version === v.version).sort((a, b) => (a.parte ?? 1) - (b.parte ?? 1)) : [];
+  });
+  protected readonly archivoVista = computed(() => this.partesVigentes().find((a) => (a.parte ?? 1) === this.parteSel()) ?? this.vigente());
+  /** 082: avisos guardados con cada archivo (p. ej. «el total no cuadra con el valor del pago»). */
+  protected readonly avisosArchivos = computed(() =>
+    this.partesVigentes().flatMap((a) => (a.avisos ?? []).filter((x) => x.estado === 'warn').map((x) => (this.partesVigentes().length > 1 ? `Archivo ${a.parte}: ${x.texto}` : x.texto))),
+  );
   protected readonly advertencias = computed(() => (this.celdas()?.anotaciones ?? []).filter((a) => a.estado === 'warn').map((a) => a.texto));
+  /** Lo que se le advierte a la analista antes de «Actualizar borrador» (082: también los avisos de cada archivo). */
+  protected readonly advertenciasBorrador = computed(() => [...this.avisosArchivos(), ...this.advertencias()]);
   protected readonly anotacionesOrdenadas = computed(() =>
     [...(this.celdas()?.anotaciones ?? [])].sort((a, b) => (a.estado === 'warn' ? 0 : 1) - (b.estado === 'warn' ? 0 : 1)),
   );
@@ -883,6 +914,7 @@ export class BandejaBuzonComponent {
     this.reasignando.set(false);
     this.archivos.set([]);
     this.celdas.set(null);
+    this.parteSel.set(1);
     this.hilo.set(null);
     this.verOriginal.set(false);
     this.emlSvc.revoke(this.eml());
@@ -1161,11 +1193,12 @@ export class BandejaBuzonComponent {
   }
 
   private async cargarCeldas(): Promise<void> {
-    const v = this.vigente();
+    const v = this.archivoVista();
     if (!v) return;
     try {
       const cel = await this.api.celdasArchivo(v.id);
-      const b = this.borrador();
+      // 082: se compara contra la MISMA parte que está en el borrador (archivo 2 contra archivo 2).
+      const b = this.archivos().find((a) => a.borrador_en_hilo && (a.parte ?? 1) === (v.parte ?? 1)) ?? null;
       this.celdasBorrador.set(b && b.id !== v.id ? await this.api.celdasArchivo(b.id).catch(() => null) : null);
       this.celdas.set({ ...cel, filas: Math.max(0, cel.celdas.length - cel.fila_encabezado - 1) });
     } catch (e) {
@@ -1204,8 +1237,16 @@ export class BandejaBuzonComponent {
     });
   }
 
+  /** 082: ver otro de los archivos de la versión vigente. */
+  protected verParte(n: number): void {
+    if (n === this.parteSel()) return;
+    this.parteSel.set(n);
+    this.celdas.set(null);
+    void this.cargarCeldas();
+  }
+
   protected pedirBorrador(): void {
-    if (this.advertencias().length) this.confirmarBorrador.set(true);
+    if (this.advertenciasBorrador().length) this.confirmarBorrador.set(true);
     else void this.actualizarBorrador();
   }
 
@@ -1224,7 +1265,8 @@ export class BandejaBuzonComponent {
       this.archivos.set(await this.api.actualizarBorrador(v.id));
       this.hilo.set(null);
       this.celdasBorrador.set(null);
-      this.toast.show('Borrador actualizado', `El borrador del hilo ya tiene el archivo v${v.version}.`);
+      const n = this.partesVigentes().length;
+      this.toast.show('Borrador actualizado', n > 1 ? `El borrador del hilo ya tiene los ${n} archivos de la v${v.version}.` : `El borrador del hilo ya tiene el archivo v${v.version}.`);
     }, 'No se pudo actualizar el borrador');
   }
 
@@ -1232,9 +1274,13 @@ export class BandejaBuzonComponent {
     await this.accion(async () => {
       const a = await this.api.regenerarArchivo(c.id);
       await this.cargarArchivos(c.id);
+      this.parteSel.set(1);
       this.celdas.set(null);
       void this.cargarCeldas();
-      this.toast.show('Archivo generado', `${a.nombre} · versión ${a.version} · ${a.filas} filas.`);
+      this.toast.show(
+        (a.partes ?? 1) > 1 ? 'Archivos generados' : 'Archivo generado',
+        (a.partes ?? 1) > 1 ? `${a.partes} archivos (uno por pago) · versión ${a.version} · ${a.filas} filas.` : `${a.nombre} · versión ${a.version} · ${a.filas} filas.`,
+      );
     }, 'No se pudo generar el archivo');
   }
 
@@ -1393,6 +1439,13 @@ export class BandejaBuzonComponent {
     const ultimo = pasos[pasos.length - 1]?.titulo ?? '';
     const cruce = [...pasos].reverse().find((t) => t.titulo.includes(' ↔ '))?.titulo.split(' ↔ ')[0];
     const via = /^(Asignado a|Respaldo)/.test(ultimo) && cruce ? cruce : ultimo.split(' → ')[0];
+    // 082: en Validar no se asigna; se asigna al aprobar con la etiqueta final.
+    if (!c.asignado_a && traza[0]?.titulo === 'Pendiente de aprobación') {
+      const propuesta = traza.find((t) => t.titulo.startsWith('Al aprobar iría a '));
+      return { icon: 'clock', quien: null, via: propuesta ? `Asignación pendiente de aprobación · ${propuesta.titulo.replace('Al aprobar iría a ', 'iría a ')}` : 'Asignación pendiente de aprobación' };
+    }
+    if (!c.asignado_a && traza.some((t) => t.titulo === 'Sin coincidencia en las bases → Validar'))
+      return { icon: 'user-x', quien: null, via: 'Sin coincidencia en las bases: se asigna al aprobar' };
     if (c.asignado_nombre || (c.asignado_a && c.asignado_a.includes('@'))) return { icon: 'user', quien: c.asignado_nombre ?? c.asignado_a, via: via || 'asignación' };
     if (c.asignado_a?.startsWith('Carpeta')) return { icon: 'folder-input', quien: null, via: `Enviado a la ${c.asignado_a.toLowerCase()}` };
     if (c.asignado_a === 'Solo categorizar') return { icon: 'tag', quien: null, via: 'Solo categorizar' };
