@@ -7,6 +7,7 @@
 // Módulos (cada uno con el permiso que ya tenía; el backend no cambia):
 //   · Bandeja de asesorías   app.asesoria-agenda.atender
 //   · Citas                  app.asesoria-agenda.citas.view
+//   · Analítica              app.asesoria-agenda.citas.view
 //   · Solicitudes            app.solicitudes-prestaciones.diligenciar
 //   · Consultas              app.solicitudes-prestaciones.auditoria.view
 //   · Configuración          app.asesoria-agenda.config.manage
@@ -17,6 +18,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessDeniedComponent } from '../../shared/components/access-denied.component';
 import { PERM_ATENDER, PERM_CONFIG, PERM_VER } from '../agenda-asesorias/agenda.api';
+import { AnaliticaAgendaComponent } from '../agenda-asesorias/analitica.component';
 import { CitasAgendaComponent } from '../agenda-asesorias/citas.component';
 import { ConfiguracionAgendaComponent } from '../agenda-asesorias/configuracion.component';
 import { MiAgendaComponent } from '../agenda-asesorias/mi-agenda.component';
@@ -25,11 +27,12 @@ import { PERM_AUDITORIA, PERM_DILIGENCIAR } from '../solicitudes-prestaciones/pr
 import { SolicitudFormComponent } from '../solicitudes-prestaciones/solicitud-form.component';
 import { CitaSolicitudService } from './cita-solicitud.service';
 
-type Vista = 'bandeja' | 'citas' | 'solicitud' | 'consultas' | 'configuracion';
+type Vista = 'bandeja' | 'citas' | 'analitica' | 'solicitud' | 'consultas' | 'configuracion';
 
 const VISTAS: { id: Vista; rotulo: string; permiso: string }[] = [
   { id: 'bandeja', rotulo: 'Bandeja de asesorías', permiso: PERM_ATENDER },
   { id: 'citas', rotulo: 'Citas', permiso: PERM_VER },
+  { id: 'analitica', rotulo: 'Analítica', permiso: PERM_VER },
   { id: 'solicitud', rotulo: 'Solicitudes', permiso: PERM_DILIGENCIAR },
   { id: 'consultas', rotulo: 'Consultas', permiso: PERM_AUDITORIA },
   { id: 'configuracion', rotulo: 'Configuración', permiso: PERM_CONFIG },
@@ -37,7 +40,7 @@ const VISTAS: { id: Vista; rotulo: string; permiso: string }[] = [
 
 @Component({
   selector: 'alma-prestaciones-page',
-  imports: [RouterLink, LucideAngularModule, AccessDeniedComponent, MiAgendaComponent, CitasAgendaComponent,
+  imports: [RouterLink, LucideAngularModule, AccessDeniedComponent, MiAgendaComponent, CitasAgendaComponent, AnaliticaAgendaComponent,
             ConfiguracionAgendaComponent, SolicitudFormComponent, ConsultasPrestacionesComponent],
   template: `
     @if (!vistas().length) {
@@ -71,6 +74,7 @@ const VISTAS: { id: Vista; rotulo: string; permiso: string }[] = [
         @switch (vistaActual()) {
           @case ('bandeja') { <alma-mi-agenda /> }
           @case ('citas') { <alma-citas-agenda /> }
+          @case ('analitica') { <alma-analitica-agenda /> }
           @case ('consultas') { <alma-consultas-prestaciones /> }
           @case ('configuracion') { <alma-configuracion-agenda /> }
         }

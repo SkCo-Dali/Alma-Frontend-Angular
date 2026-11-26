@@ -82,10 +82,61 @@ export interface RespuestaFormulario {
   valor: string;
 }
 
-/** Definición del formulario de un servicio (agenda.Servicios.CamposJson). */
+export type TipoPregunta = 'texto' | 'texto_largo' | 'numero' | 'fecha' | 'opciones' | 'si_no';
+
+export const TIPOS_PREGUNTA: { valor: TipoPregunta; rotulo: string }[] = [
+  { valor: 'texto', rotulo: 'Texto corto' },
+  { valor: 'texto_largo', rotulo: 'Texto largo' },
+  { valor: 'numero', rotulo: 'Número' },
+  { valor: 'fecha', rotulo: 'Fecha' },
+  { valor: 'opciones', rotulo: 'Una opción de una lista' },
+  { valor: 'si_no', rotulo: 'Sí o no' },
+];
+
+export const TIPOS_DOCUMENTO: { valor: string; rotulo: string }[] = [
+  { valor: 'CC', rotulo: 'Cédula de ciudadanía' },
+  { valor: 'CE', rotulo: 'Cédula de extranjería' },
+  { valor: 'PA', rotulo: 'Pasaporte' },
+];
+
+export interface PreguntaFormulario {
+  id: string;
+  etiqueta: string;
+  tipo: string;
+  requerido?: boolean;
+  opciones?: string[];
+  min?: number;
+  max?: number;
+  ayuda?: string;
+}
+
+/** Definición de un formulario de datos (agenda.FormulariosDatos o Servicios.CamposJson). */
 export interface FormularioServicio {
   documento?: { requerido?: boolean; tipos?: string[]; etiquetaTipo?: string; etiquetaNumero?: string };
-  preguntas?: { id: string; etiqueta: string; tipo: string; requerido?: boolean; opciones?: string[] }[];
+  preguntas?: PreguntaFormulario[];
+}
+
+/** Formulario de datos con nombre que eligen los tipos de cita (migración 087). */
+export interface FormularioDatos {
+  Id: number;
+  Nombre: string;
+  Descripcion: string | null;
+  DefinicionJson: string;
+  Activo: boolean;
+  ActualizadoEn: string;
+  ActualizadoPor: string | null;
+  /** Cuántos tipos de cita lo usan. */
+  Tipos: number;
+}
+
+export interface Servicio {
+  Id: number;
+  Slug: string;
+  Titulo: string;
+  Encabezado: string;
+  Descripcion: string | null;
+  Activo: boolean;
+  CamposJson: string | null;
 }
 
 /** Texto de CamposJson → definición (o null si no hay o no se puede leer). */
@@ -129,9 +180,29 @@ export interface TipoCita {
   VentanaInicio: string | null;
   VentanaFin: string | null;
   Formulario: string | null;
+  /** Formulario de datos que pide el sitio (087). null = el del servicio. */
+  FormularioDatosId: number | null;
   Orden: number;
   Activo: boolean;
 }
+
+/**
+ * Colores de los tipos de cita, de los tonos del Design System de Skandia. El orden está
+ * validado (skill dataviz, validate_palette.js) en fondo claro y oscuro: vecinos distinguibles
+ * con daltonismo. Siempre van junto al nombre del tipo, nunca solos.
+ */
+export const PALETA_TIPOS: { valor: string; nombre: string }[] = [
+  { valor: '#009a2f', nombre: 'Verde Skandia' },
+  { valor: '#1f6feb', nombre: 'Azul' },
+  { valor: '#d06a22', nombre: 'Naranja' },
+  { valor: '#8a4fd6', nombre: 'Morado' },
+  { valor: '#bc6995', nombre: 'Ciruela' },
+  { valor: '#8c9e2a', nombre: 'Oliva' },
+];
+
+export type TipoNuevo = Partial<TipoCita> & {
+  ServicioId: number; Slug: string; Titulo: string; Canal: string; asignarATodos: boolean;
+};
 
 export interface Turno {
   Id?: number;
@@ -174,11 +245,42 @@ export interface Politica {
 }
 
 export interface Configuracion {
-  servicios: { Id: number; Slug: string; Titulo: string; Activo: boolean; CamposJson: string | null }[];
+  servicios: Servicio[];
   tipos: TipoCita[];
   asesores: Asesor[];
   ausencias: Ausencia[];
   politicas: Politica[];
+  formularios: FormularioDatos[];
+}
+
+/** «Asesoría para empresas» → «asesoria-para-empresas» (o con _ para ids de preguntas). */
+export function identificador(texto: string, sep: '-' | '_' = '-', max = 40): string {
+  const partes = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  let salida = '';
+  for (const p of partes) {
+    const siguiente = salida ? `${salida}${sep}${p}` : p;
+    if (siguiente.length > max) break;
+    salida = siguiente;
+  }
+  return salida || partes.join('').slice(0, max);
+}
+
+export type EstadoAnalitica = 'atendida' | 'proxima' | 'no_asistio' | 'cancelada' | 'sin_registrar';
+type ConteoEstados = Record<EstadoAnalitica, number>;
+
+/** GET /analitica: cifras sin datos personales, por fecha de la cita (hora de Colombia). */
+export interface Analitica {
+  desde: string;
+  hasta: string;
+  totales: ConteoEstados & {
+    citas: number; anteriores: number | null; reprogramaciones: number; asistencia: number | null;
+    cancelacion: number | null; anticipacionDias: number | null; desdeSitio: number; desdeNova: number;
+  };
+  porSemana: (ConteoEstados & { semana: string; n: number })[];
+  porTipo: (ConteoEstados & { tipoId: number; titulo: string; servicio: string; color: string; n: number; asistencia: number | null })[];
+  porAsesor: (ConteoEstados & { asesorId: number; nombre: string; n: number; asistencia: number | null })[];
+  /** dia: 0 = lunes; hora: 0–23. */
+  calor: { dia: number; hora: number; n: number }[];
 }
 
 export interface FiltroCitas {
@@ -328,6 +430,12 @@ export class AgendaApi {
     return { blob: await res.blob(), nombre };
   }
 
+  analitica(desde: string, hasta: string, servicio: number | null): Promise<Analitica> {
+    const p = new URLSearchParams({ desde, hasta });
+    if (servicio) p.set('servicio', String(servicio));
+    return this.api.fetch<Analitica>(`${BASE}/analitica?${p}`);
+  }
+
   // Configuración
   configuracion(): Promise<Configuracion> {
     return this.api.fetch<Configuracion>(`${BASE}/configuracion`);
@@ -335,6 +443,27 @@ export class AgendaApi {
 
   actualizarTipo(id: number, campos: Partial<TipoCita>): Promise<void> {
     return this.api.fetch(`${BASE}/tipos/${id}`, { method: 'PATCH', body: JSON.stringify(campos) });
+  }
+
+  crearTipo(t: TipoNuevo): Promise<{ id: number }> {
+    return this.api.fetch(`${BASE}/tipos`, { method: 'POST', body: JSON.stringify(t) });
+  }
+
+  crearServicio(s: { Slug: string; Titulo: string; Encabezado: string; Descripcion: string | null }): Promise<{ id: number }> {
+    return this.api.fetch(`${BASE}/servicios`, { method: 'POST', body: JSON.stringify(s) });
+  }
+
+  actualizarServicio(id: number, s: Partial<Pick<Servicio, 'Titulo' | 'Encabezado' | 'Descripcion' | 'Activo'>>): Promise<void> {
+    return this.api.fetch(`${BASE}/servicios/${id}`, { method: 'PATCH', body: JSON.stringify(s) });
+  }
+
+  crearFormulario(f: { nombre: string; descripcion: string | null; definicion: FormularioServicio }): Promise<{ id: number }> {
+    return this.api.fetch(`${BASE}/formularios`, { method: 'POST', body: JSON.stringify(f) });
+  }
+
+  actualizarFormulario(id: number, f: { nombre: string; descripcion: string | null; definicion: FormularioServicio;
+                                        activo: boolean }): Promise<void> {
+    return this.api.fetch(`${BASE}/formularios/${id}`, { method: 'PUT', body: JSON.stringify(f) });
   }
 
   crearAsesor(a: { correo: string; nombre: string; activo: boolean; tipos: number[] }): Promise<{ id: number }> {
