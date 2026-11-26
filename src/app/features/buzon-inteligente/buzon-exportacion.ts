@@ -297,13 +297,17 @@ export function extrae(p: Proceso): boolean {
   return p.clave.toUpperCase() !== 'OTROS' && p.campos_extraer.length > 0;
 }
 
-/** Datos para las columnas: los simples y, de cada lista, «lista.campo» (campos vistos en los correos). */
+/** Datos para las columnas: los simples y, de cada lista, «lista.campo»: las columnas
+ *  configuradas en el proceso (aunque ningún correo las traiga todavía, p. ej. «pago»
+ *  recién agregado) y las vistas en los correos. */
 export function camposExp(p: Proceso, listasJson: Record<string, string[]>): CampoExp[] {
   if (!extrae(p)) return [];
   const out: CampoExp[] = [];
   p.campos_extraer.forEach((c) => {
-    if (LISTA.has(c.tipo ?? '') || listasJson[c.clave]) (listasJson[c.clave] ?? []).forEach((a) => out.push([`${c.clave}.${a}`, c.clave]));
-    else out.push([c.clave, '']);
+    if (LISTA.has(c.tipo ?? '') || listasJson[c.clave]) {
+      const cols = [...new Set([...(c.campos ?? []), ...(listasJson[c.clave] ?? [])])];
+      cols.forEach((a) => out.push([`${c.clave}.${a}`, c.clave]));
+    } else out.push([c.clave, '']);
   });
   return out;
 }
