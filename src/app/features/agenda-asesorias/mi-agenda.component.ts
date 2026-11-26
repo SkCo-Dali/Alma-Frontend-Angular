@@ -89,7 +89,7 @@ type Rango = 'proximas' | 'pasadas';
                       <div class="flex flex-wrap gap-2">
                         <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="cerrar(c, 'atendida')">Atendida</button>
                         <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" [disabled]="guardando()" (click)="cerrar(c, 'no_asistio')">No asistió</button>
-                        <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" [disabled]="guardando()" (click)="editando.set(null)">Cancelar</button>
+                        <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" [disabled]="guardando()" (click)="editando.set(null)">Cancelar</button>
                       </div>
                     </div>
                   } @else if (c.notas) {

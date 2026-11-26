@@ -140,7 +140,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
               </div>
               <div class="mt-3 flex gap-2">
                 <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="crearServicio()"><lucide-icon name="save" [size]="14" /> Crear servicio</button>
-                <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="nuevoServicio.set(null)">Cancelar</button>
+                <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="nuevoServicio.set(null)">Cancelar</button>
               </div>
             </div>
           }
@@ -203,7 +203,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
               <p class="mt-1 text-[11px] text-muted-foreground">Margen, anticipación, horizonte y ventana horaria toman los valores de siempre (0 min, 12 h, 45 días, sin ventana); se ajustan después en la tarjeta del tipo.</p>
               <div class="mt-3 flex gap-2">
                 <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="crearTipo()"><lucide-icon name="save" [size]="14" /> Crear tipo</button>
-                <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="nuevoTipo.set(null)">Cancelar</button>
+                <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="nuevoTipo.set(null)">Cancelar</button>
               </div>
             </div>
           }
@@ -239,7 +239,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
               </label>
               <div class="mt-3 flex gap-2">
                 <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="guardarServicio(srv.Id)"><lucide-icon name="save" [size]="14" /> Guardar</button>
-                <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="servicioEdit.set(null)">Cancelar</button>
+                <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="servicioEdit.set(null)">Cancelar</button>
               </div>
             } @else {
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -247,7 +247,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
                 <span class="text-muted-foreground">Enlace: <code class="font-mono text-foreground">servicio: '{{ srv.Slug }}'</code></span>
                 @if (!srv.Activo) { <span class="alma-badge bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300">Inactivo</span> }
                 @if (!tiposDe(srv.Id).length) { <span class="text-amber-700 dark:text-amber-400">Sin tipos: aún no aparece en el sitio</span> }
-                <button type="button" class="alma-btn alma-btn-ghost ml-auto h-7 text-xs" (click)="editarServicio(srv)"><lucide-icon name="pencil" [size]="13" /> Editar servicio</button>
+                <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 ml-auto h-7 text-xs" (click)="editarServicio(srv)"><lucide-icon name="pencil" [size]="13" /> Editar servicio</button>
               </div>
             }
           </div>
@@ -311,7 +311,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
                 @if (cambiosTipo()[t.Id]) {
                   <div class="mt-3 flex items-center gap-2">
                     <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="guardarTipo(t)"><lucide-icon name="save" [size]="14" /> Guardar</button>
-                    <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="descartarTipo(t)">Descartar</button>
+                    <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="descartarTipo(t)">Descartar</button>
                     <span class="text-[11px] text-muted-foreground">Cambios sin guardar</span>
                   </div>
                 }
@@ -376,7 +376,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
                   </p>
                   <div class="mt-3 flex gap-2">
                     <button type="button" class="alma-btn alma-btn-outline h-8 text-xs" (click)="abrirEditor(f)"><lucide-icon name="pencil" [size]="14" /> Editar</button>
-                    <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="abrirEditor(null, f)"><lucide-icon name="copy" [size]="14" /> Duplicar</button>
+                    <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="abrirEditor(null, f)"><lucide-icon name="copy" [size]="14" /> Duplicar</button>
                   </div>
                 </article>
               }
@@ -453,7 +453,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
               </fieldset>
               <div class="mt-4 flex gap-2">
                 <button type="button" class="alma-btn alma-btn-primary h-8 text-xs" [disabled]="guardando()" (click)="guardarAsesor()"><lucide-icon name="save" [size]="14" /> Guardar</button>
-                <button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="form.set(null)">Cancelar</button>
+                <button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="form.set(null)">Cancelar</button>
               </div>
             </div>
           }
@@ -482,7 +482,7 @@ const CAMPOS_TIPO: { campo: keyof TipoCita; rotulo: string; ayuda: string; min: 
                         }
                       </td>
                       <td class="px-4 py-2"><span class="alma-badge" [class]="a.Activo ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-300'">{{ a.Activo ? 'Activo' : 'Inactivo' }}</span></td>
-                      <td class="px-4 py-2 text-right"><button type="button" class="alma-btn alma-btn-ghost h-8 text-xs" (click)="editarAsesor(a)"><lucide-icon name="pencil" [size]="14" /> Editar</button></td>
+                      <td class="px-4 py-2 text-right"><button type="button" class="alma-btn alma-btn-ghost w-auto px-3 h-8 text-xs" (click)="editarAsesor(a)"><lucide-icon name="pencil" [size]="14" /> Editar</button></td>
                     </tr>
                   }
                 </tbody>
