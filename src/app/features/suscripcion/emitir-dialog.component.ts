@@ -233,7 +233,7 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
               @if (detalleError(); as det) {
                 <!-- El motivo crudo de Pharos no le sirve al analista, pero sí a
                      soporte: se conserva, discreto y plegado. -->
-                <details class="mt-2">
+                <details animate.enter="nova-expande" animate.leave="nova-colapsa" class="mt-2">
                   <summary class="cursor-pointer text-destructive/70 select-none">
                     Detalle técnico
                   </summary>

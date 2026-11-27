@@ -180,7 +180,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
           <!-- Detalle -->
           <section class="glass">
             @if (detalle(); as c) {
-              <header class="dh">
+              <header animate.enter="nova-expande" animate.leave="nova-colapsa" class="dh">
                 <div class="row between" style="align-items:flex-start;flex-wrap:nowrap">
                   <div style="min-width:0;flex:1">
                     <h2 style="font-size:1rem" class="bb">{{ c.asunto || '(sin asunto)' }}</h2>
@@ -427,7 +427,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
                   <!-- ── Asignación ── -->
                   @case ('asig') {
-                    <div class="g2" style="align-items:start">
+                    <div animate.enter="nova-entra" class="g2" style="align-items:start">
                       <div class="box line">
                         <p class="cap"><lucide-icon name="route" [size]="13" /> Recorrido de la asignación</p>
                         @if (sinGrupoDe(c); as clave) {
@@ -623,7 +623,7 @@ const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
                   <!-- ── Traza ── -->
                   @case ('traza') {
-                    <ol class="tl">
+                    <ol animate.enter="nova-entra" class="tl">
                       <li class="ok"><p class="w">{{ cuando(c.recibido_en) }}</p><p class="sm b">Correo recibido en {{ c.buzon_nombre }}</p></li>
                       @if (c.categoria_clave || c.origen) {
                         <li class="ok"><p class="sm b">{{ c.origen === 'regla' ? 'Regla fija aplicada' : origenTexto(c) }}</p><p class="w">{{ c.proceso_clave || '—' }} · {{ c.categoria_clave || '—' }}@if (c.confianza !== null) { · {{ pct(c.confianza) }} }</p></li>

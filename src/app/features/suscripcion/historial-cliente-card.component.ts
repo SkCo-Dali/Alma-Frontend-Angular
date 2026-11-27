@@ -31,7 +31,7 @@ import { fmtCOP } from './suscripcion.domain';
             El cliente no tiene otras cotizaciones en Control Emisión.
           </p>
         } @else {
-          <div class="divide-y divide-border/40">
+          <div animate.enter="nova-entra" class="divide-y divide-border/40">
             @for (h of anteriores(); track $index) {
               <div class="px-4 py-2.5">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">

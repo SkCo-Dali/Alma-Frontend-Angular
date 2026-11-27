@@ -86,7 +86,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
         <!-- ── Previsualizar ── -->
         @if (pestana() === 'previsualizar') {
-          <div class="min-h-0 flex-1 overflow-y-auto">
+          <div animate.enter="nova-entra" class="min-h-0 flex-1 overflow-y-auto">
             <div class="mb-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs">
               <p><span class="text-muted-foreground">Para:</span> <b>{{ para() ?? '(sin correo del FP)' }}</b></p>
               @if (ccDirector() && copiarDirector) {
@@ -104,7 +104,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
         <!-- ── Historial ── -->
         @if (pestana() === 'historial') {
-          <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div animate.enter="nova-entra" class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
             <div class="flex items-center gap-2">
               <div class="relative flex-1">
                 <lucide-icon name="search" [size]="14" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -126,7 +126,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
               } @else if (historial().length === 0) {
                 <p class="p-6 text-center text-xs text-muted-foreground">Sin correos para esa búsqueda.</p>
               } @else {
-                <div class="divide-y divide-border/40">
+                <div animate.enter="nova-entra" class="divide-y divide-border/40">
                   @for (c of historial(); track $index) {
                     <div class="px-3 py-2">
                       <div class="flex flex-wrap items-baseline justify-between gap-x-3">

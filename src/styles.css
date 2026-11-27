@@ -837,6 +837,106 @@ html.dark[data-bg="cielo"] {
   }
 }
 
+/* ── Salidas ──
+   Al cerrar no hay rebote: como en iOS, lo que se va se va rápido (menos de
+   la mitad del spring snappy) y acelerando. Se usan con animate.leave de
+   Angular, que espera a que termine la animación antes de quitar el nodo. */
+:root {
+  --nova-salida-dur: calc(var(--spring-snappy-dur, 300ms) * 0.45);
+  --nova-salida: cubic-bezier(0.4, 0, 1, 1);
+}
+.nova-pop-out {
+  transform-origin: var(--nova-pop-origin, top center);
+  animation: nova-pop-out var(--nova-salida-dur) var(--nova-salida) both;
+}
+.nova-launchpad-out {
+  animation: nova-launchpad-out var(--nova-salida-dur) var(--nova-salida) both;
+}
+@keyframes nova-launchpad-out {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes nova-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+/* ── Contenido que aparece ──
+   nova-entra: pestañas y contenido que llega después de cargar (spring
+   «smooth», sube 6px y aparece). Se usa con animate.enter="nova-entra". */
+.nova-entra {
+  animation: nova-entra var(--spring-smooth-dur) var(--spring-smooth) both;
+}
+@keyframes nova-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* nova-expande / nova-colapsa: secciones y detalles que se abren y cierran
+   (spring «snappy» al abrir, salida corta al cerrar). */
+.nova-expande {
+  transform-origin: top center;
+  animation: nova-expande var(--spring-snappy-dur) var(--spring-snappy) both;
+}
+@keyframes nova-expande {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.nova-colapsa {
+  animation: nova-colapsa var(--nova-salida-dur) var(--nova-salida) both;
+}
+@keyframes nova-colapsa {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ── Cambio de página (View Transitions del router) ──
+   Solo se anima <main class="nova-pagina">: la página que se va se desvanece
+   rápido y la nueva entra con el spring «smooth». El header y el resto del
+   shell (root) no se animan, y el Dock tiene nombre propio para quedar encima
+   de la página durante la transición. Los nombres solo existen con
+   html.nova-vt (lo pone transicion-paginas.ts mientras dura la transición). */
+html.nova-vt .nova-pagina {
+  view-transition-name: nova-pagina;
+}
+html.nova-vt .dock-panel {
+  view-transition-name: nova-dock;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(nova-pagina) {
+  animation-duration: var(--spring-smooth-dur);
+}
+::view-transition-old(nova-pagina) {
+  animation: nova-pagina-sale var(--nova-salida-dur) var(--nova-salida) both;
+}
+::view-transition-new(nova-pagina) {
+  animation: nova-pagina-entra var(--spring-smooth-dur) var(--spring-smooth) both;
+}
+@keyframes nova-pagina-sale {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes nova-pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* La esfera de Alma queda exenta cuando actúa como loader (feedback de
      estado); el resto de animaciones se reducen. */

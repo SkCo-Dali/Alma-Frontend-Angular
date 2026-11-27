@@ -35,7 +35,7 @@ const RENDER_CAP = 200;
         <div class="py-4 text-center text-sm text-destructive">Error: {{ err }}</div>
       } @else {
         @if (mostrarPestanaTexto()) {
-          <div class="mb-3 flex">
+          <div animate.enter="nova-expande" animate.leave="nova-colapsa" class="mb-3 flex">
             <div class="flex rounded-xl bg-muted p-1">
               <button
                 type="button"
@@ -66,7 +66,7 @@ const RENDER_CAP = 200;
         }
 
         @if (tab() === 'specific') {
-          <div class="mb-3">
+          <div animate.enter="nova-entra" class="mb-3">
             <input
               class="alma-input h-8 rounded-lg text-sm"
               placeholder="Buscar valores..."

@@ -97,7 +97,7 @@ export interface CuentaPharosApi {
         }
 
         @if (mostrarForm()) {
-          <div class="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4">
+          <div animate.enter="nova-expande" animate.leave="nova-colapsa" class="mt-4 flex flex-col gap-3 border-t border-border/50 pt-4">
             <div class="grid gap-3 sm:grid-cols-2">
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-medium text-foreground">Usuario Pharos</label>

@@ -106,7 +106,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
             <p>Error al cargar planes de comisiones: {{ err }}</p>
           </div>
         } @else {
-          <div class="flex w-full min-w-0 flex-col">
+          <div animate.enter="nova-entra" class="flex w-full min-w-0 flex-col">
             <!-- Tabs móvil/tablet -->
             <div class="mb-2 flex flex-col gap-2 px-1 lg:hidden">
               <p class="px-1 text-[10px] font-semibold uppercase text-muted-foreground">
