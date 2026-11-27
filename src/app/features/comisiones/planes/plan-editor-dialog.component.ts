@@ -18,6 +18,7 @@ import { ComisionesToast } from '../comisiones-toast.service';
 import { aFechaCalendario, CommissionPlan, CommissionRule } from './commission-plans.api';
 import { CommissionRulesApi, mapApiRuleToUI } from './commission-rules.api';
 import { CommissionRulesTableComponent } from './commission-rules-table.component';
+import { PlanHistoryComponent } from './plan-history.component';
 import { RuleDialogComponent } from './rule-dialog.component';
 
 type MotivoPara = 'reject' | 'inactivate';
@@ -28,6 +29,7 @@ type MotivoPara = 'reject' | 'inactivate';
     FormsModule,
     LucideAngularModule,
     CommissionRulesTableComponent,
+    PlanHistoryComponent,
     RuleDialogComponent,
   ],
   template: `
@@ -184,9 +186,7 @@ type MotivoPara = 'reject' | 'inactivate';
             </div>
           </div>
         } @else {
-          <div class="flex-1 overflow-y-auto py-8 text-center text-sm text-muted-foreground">
-            Funcionalidad de historial próximamente.
-          </div>
+          <alma-plan-history class="flex min-h-0 flex-1 flex-col" [planId]="plan().id" />
         }
 
         <!-- Acciones según el estado del plan -->
