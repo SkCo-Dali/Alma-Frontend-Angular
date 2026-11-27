@@ -21,6 +21,7 @@ import {
   startOfYear,
   ymd,
 } from './date-utils';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 interface DatePreset {
   id: string;
@@ -152,7 +153,7 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
 
 @Component({
   selector: 'alma-date-filter-tab',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule],
   template: `
     <div class="space-y-0.5">
       @for (preset of presets; track preset.id) {
@@ -181,13 +182,15 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
     </div>
 
     @if (dialogoAbierto()) {
-      <div
-        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
-        (click)="dialogoAbierto.set(false)"
+      <nova-dialog
+        ariaLabel="Autofiltro personalizado"
+        width="448px"
+        [padded]="false"
+        [showClose]="false"
+        (closed)="dialogoAbierto.set(false)"
       >
         <div
-          class="surface-solid w-full max-w-md rounded-xl border border-border p-5 shadow-2xl"
-          (click)="$event.stopPropagation()"
+          class="p-5"
         >
           <h3 class="text-sm font-medium">Autofiltro personalizado</h3>
 
@@ -250,7 +253,7 @@ const OPERATOR_OPTIONS: { value: DateOp; label: string }[] = [
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
   `,
 })
