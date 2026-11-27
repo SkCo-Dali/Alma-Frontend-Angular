@@ -70,7 +70,7 @@ const ACCIONES = ACCIONES_HISTORIAL;
       } @else if (!citas().length) {
         <p class="px-5 py-10 text-center text-sm text-muted-foreground">No hay citas con esos filtros.</p>
       } @else {
-        <div class="overflow-x-auto">
+        <div animate.enter="nova-entra" class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
               <tr>
@@ -103,7 +103,7 @@ const ACCIONES = ACCIONES_HISTORIAL;
     </section>
 
     @if (detalle(); as d) {
-      <section class="glass mt-4 rounded-3xl p-5 shadow-[var(--shadow-sm)]" aria-label="Detalle de la cita">
+      <section animate.enter="nova-expande" animate.leave="nova-colapsa" class="glass mt-4 rounded-3xl p-5 shadow-[var(--shadow-sm)]" aria-label="Detalle de la cita">
         <header class="mb-3 flex flex-wrap items-start gap-3">
           <div class="mr-auto">
             <h2 class="text-base font-bold text-foreground">{{ d.tipoTitulo }} · {{ d.codigo }}</h2>

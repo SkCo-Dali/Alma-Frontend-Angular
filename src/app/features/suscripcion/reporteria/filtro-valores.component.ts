@@ -44,6 +44,7 @@ export interface OpcionFiltro {
       <div
         #panel
         almaPortal
+        animate.leave="nova-pop-out"
         class="nova-pop surface-solid fixed z-[95] w-72 rounded-lg border border-border p-3 text-left text-sm text-foreground shadow-[var(--shadow-lg)]"
         (click)="$event.stopPropagation()"
       >

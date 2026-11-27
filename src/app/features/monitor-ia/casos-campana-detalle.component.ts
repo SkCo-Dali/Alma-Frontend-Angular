@@ -244,7 +244,7 @@ const REFRESCO_MS = 3000;
                       </td>
                     </tr>
                     @if (abierto() === x.id) {
-                      <tr class="bg-[var(--surface-sunken)]">
+                      <tr animate.enter="nova-expande" animate.leave="nova-colapsa" class="bg-[var(--surface-sunken)]">
                         <td [attr.colspan]="columnas()" class="space-y-3 px-5 py-4 text-sm">
                           @if (x.error) {
                             <p class="text-xs text-destructive">{{ x.error }}</p>

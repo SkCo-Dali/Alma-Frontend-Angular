@@ -97,7 +97,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Información -->
         @if (tab() === 'information') {
-          <div class="mt-4 space-y-4">
+          <div animate.enter="nova-entra" class="mt-4 space-y-4">
             <div>
               <label class="text-sm font-medium" for="rule-name">
                 Nombre <span class="text-destructive">*</span>
@@ -127,7 +127,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Regla -->
         @if (tab() === 'rule') {
-          <div class="mt-4 space-y-4">
+          <div animate.enter="nova-entra" class="mt-4 space-y-4">
             <div>
               <label class="text-sm font-medium" for="rule-catalog">
                 Catálogo <span class="text-destructive">*</span>
@@ -424,7 +424,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Vista previa -->
         @if (tab() === 'preview') {
-          <div class="mt-4 space-y-3">
+          <div animate.enter="nova-entra" class="mt-4 space-y-3">
             <div
               class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
             >

@@ -42,7 +42,7 @@ export function fmtFechaHora(iso: string): string {
           Sin cambios registrados. La configuración vigente es la del despliegue inicial.
         </p>
       } @else {
-        <div class="overflow-x-auto">
+        <div animate.enter="nova-entra" class="overflow-x-auto">
           <table class="alma-table">
             <thead>
               <tr>

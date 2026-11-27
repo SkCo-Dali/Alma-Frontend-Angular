@@ -48,7 +48,7 @@ import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
               El buzón no tiene correos que mencionen la cédula o la cotización.
             </p>
           } @else {
-            <div class="divide-y divide-border/40">
+            <div animate.enter="nova-entra" class="divide-y divide-border/40">
               @for (c of items(); track $index) {
                 <div class="px-4 py-2.5">
                   <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">

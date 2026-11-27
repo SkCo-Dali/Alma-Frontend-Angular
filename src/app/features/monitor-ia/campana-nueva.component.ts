@@ -39,7 +39,7 @@ const MAX_POR_ANALISTA = 50;
         </button>
       </section>
     } @else {
-      <form class="space-y-4" (ngSubmit)="crear()">
+      <form animate.enter="nova-entra" class="space-y-4" (ngSubmit)="crear()">
         <!-- 1. Formulario y período -->
         <section class="glass space-y-3 rounded-3xl p-5 shadow-[var(--shadow-sm)]">
           <h2 class="text-sm font-bold text-foreground">1. Formulario y período</h2>

@@ -166,7 +166,7 @@ interface FilaErrorValidacion {
 
           <!-- Zona de carga: visible al inicio o tras errores (hay que recargar) -->
           @if (mostrarZonaCarga()) {
-            <div
+            <div animate.enter="nova-expande" animate.leave="nova-colapsa"
               class="relative flex shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 transition-colors"
               [class]="
                 (arrastrando()
@@ -301,7 +301,7 @@ interface FilaErrorValidacion {
                   <alma-loader [size]="48" label="Cargando columnas…" />
                 </div>
               } @else {
-                <div class="scrollbar relative min-h-0 flex-1 overflow-auto">
+                <div animate.enter="nova-entra" class="scrollbar relative min-h-0 flex-1 overflow-auto">
                   <table class="alma-table w-max min-w-full border-separate border-spacing-0">
                     <thead class="sticky top-0 z-10 bg-[var(--table-header)]">
                       <tr>

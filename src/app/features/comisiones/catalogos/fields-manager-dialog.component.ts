@@ -83,7 +83,7 @@ const COLOR_TIPO: Record<string, string> = {
               No hay campos definidos aún. Agrega tu primer campo para comenzar.
             </div>
           } @else {
-            <div class="scrollbar w-full overflow-auto">
+            <div animate.enter="nova-entra" class="scrollbar w-full overflow-auto">
               <table class="alma-table w-full min-w-[1100px] border-separate border-spacing-0">
                 <thead class="sticky top-0 z-20 bg-[var(--table-header)] backdrop-blur-md">
                   <tr>
@@ -158,7 +158,8 @@ const COLOR_TIPO: Record<string, string> = {
                           <div
                             #panel
                             almaPortal
-                            class="nova-pop surface-solid fixed z-[116] min-w-[150px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        animate.leave="nova-pop-out"
+        class="nova-pop surface-solid fixed z-[116] min-w-[150px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"

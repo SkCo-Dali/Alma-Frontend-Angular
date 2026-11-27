@@ -179,7 +179,7 @@ import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova
                       Cargando condiciones…
                     </div>
                   } @else {
-                    <code class="block break-words rounded bg-muted p-2 text-xs">{{
+                    <code animate.enter="nova-entra" class="block break-words rounded bg-muted p-2 text-xs">{{
                       resumen(s) || 'Sin condiciones'
                     }}</code>
                   }

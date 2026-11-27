@@ -26,6 +26,19 @@ export class PortalDirective implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.host.nativeElement.remove();
+    // Si el panel tiene animate.leave, Angular le pone la clase de salida y lo
+    // quita al terminar. Quitarlo aquí de inmediato cortaría la animación, así
+    // que se espera un frame y, si hay animaciones en curso, a que terminen.
+    // Sin animación (o con reducir movimiento) se quita en ese mismo frame.
+    const el = this.host.nativeElement as HTMLElement;
+    requestAnimationFrame(() => {
+      if (!el.isConnected) return;
+      const animaciones = el.getAnimations?.() ?? [];
+      if (animaciones.length === 0) {
+        el.remove();
+        return;
+      }
+      void Promise.allSettled(animaciones.map((a) => a.finished)).then(() => el.remove());
+    });
   }
 }

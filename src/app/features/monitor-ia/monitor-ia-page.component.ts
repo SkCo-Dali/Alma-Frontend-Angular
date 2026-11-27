@@ -108,7 +108,7 @@ const REFRESCO_MS = 5000;
             }
           }
           @case ('config') {
-            <alma-monitor-ia-configuracion />
+            <alma-monitor-ia-configuracion animate.enter="nova-entra" class="block" />
           }
           @default {
             @if (abierta(); as id) {
@@ -129,7 +129,7 @@ const REFRESCO_MS = 5000;
                     @if (puedeGestionar()) { Crea la primera desde «Nueva campaña». }
                   </p>
                 } @else {
-                  <div class="overflow-x-auto">
+                  <div animate.enter="nova-entra" class="overflow-x-auto">
                     <table class="w-full text-sm">
                       <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
                         <tr>

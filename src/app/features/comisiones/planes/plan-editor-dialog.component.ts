@@ -77,7 +77,7 @@ type MotivoPara = 'reject' | 'inactivate';
         </div>
 
         @if (tab() === 'information') {
-          <div class="scrollbar mt-6 flex-1 overflow-y-auto pb-4 pr-2">
+          <div animate.enter="nova-entra" class="scrollbar mt-6 flex-1 overflow-y-auto pb-4 pr-2">
             <!-- Información general -->
             <div class="flex flex-col space-y-4">
               <h3 class="border-b border-border pb-2 text-sm font-semibold text-muted-foreground">
@@ -180,7 +180,7 @@ type MotivoPara = 'reject' | 'inactivate';
                   regla.
                 </div>
               } @else {
-                <alma-commission-rules-table
+                <alma-commission-rules-table animate.enter="nova-entra" class="block"
                   [rules]="reglas()"
                   [planId]="plan().id"
                   [bloqueo]="bloqueoReglas()"

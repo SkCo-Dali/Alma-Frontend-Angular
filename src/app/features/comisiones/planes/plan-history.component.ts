@@ -100,7 +100,7 @@ export function agrupar(eventos: PlanHistoryEvent[]): Tarjeta[] {
       } @else if (!tarjetas().length) {
         <div class="py-8 text-center text-sm text-muted-foreground">Este plan no tiene cambios registrados.</div>
       } @else {
-        <ol class="relative ml-2 space-y-4 border-l border-border pl-5">
+        <ol animate.enter="nova-entra" class="relative ml-2 space-y-4 border-l border-border pl-5">
           @for (t of tarjetas(); track $index) {
             <li class="relative">
               <span

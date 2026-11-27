@@ -57,7 +57,7 @@ const MAX_VISIBLES = 80;
     </div>
 
     @if (abierto()) {
-      <div
+      <div animate.enter="nova-expande" animate.leave="nova-colapsa"
         #panel
         almaPortal
         class="surface-solid fixed z-[125] overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-lg)]"
