@@ -52,7 +52,7 @@ interface FilaErrorValidacion {
       (closed)="closed.emit()"
     >
       <div
-        class="flex w-[90vw] flex-col overflow-hidden"
+        class="flex w-full flex-col overflow-hidden"
         style="height: 90vh; max-height: 90vh"
       >
         <!-- Cabecera -->
