@@ -1,6 +1,6 @@
-// Host del panel del simulador: el panel es un hermano `fixed` que flota POR ENCIMA del
-// contenido (overlay) SIN mover la tabla, con un backdrop atenuado detrás — clic fuera
-// del panel lo cierra (igual que el panel de Columnas). El botón flotante vive bajo el
+// Host del panel del simulador: el panel (nova-dialog lateral) flota POR ENCIMA del
+// contenido SIN mover la tabla; clic fuera, Esc o arrastrar lo cierran (igual que
+// el panel de Columnas). El botón flotante vive bajo el
 // header (top-24) y se OCULTA cuando la página monta su propio disparador en el toolbar
 // (alma-simulador-boton). El estado abierto/cerrado persiste en sessionStorage para
 // sobrevivir la navegación bandeja ↔ detalle (cada ruta monta su propio host).
@@ -30,19 +30,7 @@ import { SimuladorStore } from './simulador.store';
       </button>
     }
 
-    <!--
-      Backdrop: se desvanece y, al hacer clic fuera del panel, lo cierra. La opacidad
-      va como estilo inline (estático cerrado + binding), mismo patrón que el translate
-      del panel: gana sobre cualquier utilidad de la hoja y evita el parpadeo zoneless.
-    -->
-    <div
-      style="opacity: 0"
-      [style.opacity]="simulador.abierto() ? '1' : '0'"
-      class="fixed inset-0 z-40 bg-black/30 transition-opacity duration-300"
-      [class.pointer-events-none]="!simulador.abierto()"
-      (click)="simulador.alternar(false)"
-      aria-hidden="true"
-    ></div>
+    <!-- El panel es un nova-dialog lateral: trae su propio velo y animación. -->
 
     <alma-simulador-panel
       [open]="simulador.abierto()"

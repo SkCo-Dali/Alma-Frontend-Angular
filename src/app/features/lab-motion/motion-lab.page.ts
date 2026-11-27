@@ -259,6 +259,14 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
             >
               nova-dialog · sheet
             </button>
+            <button
+              novaPress
+              type="button"
+              class="h-11 rounded-full bg-primary px-5 font-semibold text-primary-foreground"
+              (click)="demoVariante.set('side'); demoAbierto.set(true)"
+            >
+              nova-dialog · lateral
+            </button>
           </div>
         </section>
 
@@ -353,7 +361,7 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
       [(open)]="demoAbierto"
       [variant]="demoVariante()"
       title="Nueva regla de comisión"
-      description="Arrástrame hacia abajo en modo sheet; Esc o el velo también cierran."
+      description="En sheet arrástrame hacia abajo; en lateral, hacia la derecha. Esc o el velo también cierran."
     >
       <div class="space-y-3">
         @for (campo of camposDemo; track campo) {
@@ -391,7 +399,7 @@ export class MotionLabPage {
   protected readonly switchPresionado = signal(false);
   protected readonly antes = signal(false);
   protected readonly demoAbierto = signal(false);
-  protected readonly demoVariante = signal<'dialog' | 'sheet'>('dialog');
+  protected readonly demoVariante = signal<'dialog' | 'sheet' | 'side'>('dialog');
   protected readonly camposDemo = ['Nombre de la regla', 'Producto', 'Canal', 'Porcentaje'];
   protected readonly generacion = signal(0);
 

@@ -11,11 +11,12 @@
 import { Injectable } from '@angular/core';
 import { SpringParams, animateSpring } from '../../motion/spring';
 
-export type Profundidad = 'dialog' | 'sheet';
+export type Profundidad = 'dialog' | 'sheet' | 'side';
 
 const HUNDIDO: Record<Profundidad, { escala: number; y: number; radio: number }> = {
   dialog: { escala: 0.97, y: 0, radio: 14 },
   sheet: { escala: 0.94, y: 10, radio: 18 },
+  side: { escala: 0.97, y: 0, radio: 14 },
 };
 
 @Injectable({ providedIn: 'root' })
