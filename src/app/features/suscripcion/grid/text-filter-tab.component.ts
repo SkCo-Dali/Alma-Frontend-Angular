@@ -120,9 +120,7 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
         [showClose]="false"
         (closed)="dialogoAbierto.set(false)"
       >
-        <div
-          class="p-5"
-        >
+        <div class="p-5">
           <h3 class="text-sm font-medium">Autofiltro personalizado</h3>
 
           <div class="space-y-4 py-3">

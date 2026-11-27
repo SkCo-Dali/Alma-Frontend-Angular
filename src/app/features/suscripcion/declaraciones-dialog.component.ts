@@ -93,9 +93,7 @@ function filtrarItems(
       [showClose]="false"
       (closed)="closed.emit()"
     >
-      <div
-        class="flex max-h-[90vh] flex-col overflow-hidden"
-      >
+      <div class="flex max-h-[90vh] flex-col overflow-hidden">
         <!-- Header compacto -->
         <div class="flex-none border-b border-border px-5 py-3">
           <div class="flex items-center gap-3 pr-10">

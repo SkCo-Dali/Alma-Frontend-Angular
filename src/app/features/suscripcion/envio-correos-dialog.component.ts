@@ -32,9 +32,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
       [dismissable]="!enviando()"
       (closed)="closed.emit()"
     >
-      <div
-        class="flex h-[94vh] max-h-[94vh] flex-col gap-2 px-4 pb-3 pt-3"
-      >
+      <div class="flex h-[94vh] max-h-[94vh] flex-col gap-2 px-4 pb-3 pt-3">
         <!-- ── Header (Dali): ícono + título + DESTINATARIOS + X ── -->
         <div class="flex items-center justify-between gap-2">
           <div class="flex min-w-0 items-center gap-2.5">

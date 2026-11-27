@@ -6,7 +6,16 @@
 //  - CreateFieldsDialogComponent: agrega campos a un catálogo existente.
 //  - EditFieldDialogComponent: edita un campo.
 
-import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import {
@@ -18,19 +27,22 @@ import {
 } from './catalogs.api';
 import { CatalogsStore } from './catalogs.store';
 import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 @Component({
   selector: 'alma-create-catalog-dialog',
-  imports: [FormsModule, AlmaSwitchComponent, FieldRowsComponent],
+  imports: [NovaDialogComponent, FormsModule, AlmaSwitchComponent, FieldRowsComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Crear catálogo"
+      width="560px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full max-w-[560px] rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-6">
         <h2 class="text-lg font-bold">Crear Nuevo Catálogo</h2>
         <p class="text-sm text-muted-foreground">
           Crear un nuevo catálogo de datos para cálculos de comisiones
@@ -115,11 +127,12 @@ import { FieldRowsComponent, camposCompletos, campoVacio } from './field-rows.co
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class CreateCatalogDialogComponent {
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   private readonly store = inject(CatalogsStore);
 
@@ -153,7 +166,7 @@ export class CreateCatalogDialogComponent {
           console.error('Error creando el campo del catálogo:', e);
         }
       }
-      this.closed.emit();
+      this.dlg().close();
     } finally {
       this.guardando.set(false);
     }
@@ -161,22 +174,24 @@ export class CreateCatalogDialogComponent {
 
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }
 
 @Component({
   selector: 'alma-edit-catalog-dialog',
-  imports: [FormsModule],
+  imports: [NovaDialogComponent, FormsModule],
   template: `
-    <div
-      class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Editar catálogo"
+      width="560px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid w-full max-w-[560px] rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-6">
         <h2 class="text-lg font-bold">Editar Catálogo</h2>
         <p class="text-sm text-muted-foreground">Actualizar la información del catálogo</p>
 
@@ -227,12 +242,13 @@ export class CreateCatalogDialogComponent {
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class EditCatalogDialogComponent implements OnInit {
   readonly catalog = input.required<Catalog>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   private readonly store = inject(CatalogsStore);
 
@@ -257,7 +273,7 @@ export class EditCatalogDialogComponent implements OnInit {
         description: this.descripcion,
         source_path: this.rutaOrigen,
       });
-      if (ok) this.closed.emit();
+      if (ok) this.dlg().close();
     } finally {
       this.guardando.set(false);
     }
@@ -265,22 +281,24 @@ export class EditCatalogDialogComponent implements OnInit {
 
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }
 
 @Component({
   selector: 'alma-create-fields-dialog',
-  imports: [FieldRowsComponent],
+  imports: [NovaDialogComponent, FieldRowsComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Crear campos"
+      width="700px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full max-w-[700px] rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-6">
         <h2 class="text-lg font-bold">Agregar Nuevos Campos</h2>
         <p class="text-sm text-muted-foreground">Define uno o más campos para este catálogo</p>
 
@@ -311,12 +329,13 @@ export class EditCatalogDialogComponent implements OnInit {
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class CreateFieldsDialogComponent {
   readonly catalogId = input.required<string>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   private readonly store = inject(CatalogsStore);
 
@@ -332,7 +351,7 @@ export class CreateFieldsDialogComponent {
       for (const campo of this.campos()) {
         await this.store.crearCampo(this.catalogId(), campo);
       }
-      this.closed.emit();
+      this.dlg().close();
     } catch (e) {
       console.error('Error creando los campos:', e);
     } finally {
@@ -342,22 +361,24 @@ export class CreateFieldsDialogComponent {
 
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }
 
 @Component({
   selector: 'alma-edit-field-dialog',
-  imports: [FormsModule, AlmaSwitchComponent],
+  imports: [NovaDialogComponent, FormsModule, AlmaSwitchComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Editar campo"
+      width="560px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full max-w-[560px] rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-6">
         <h2 class="text-lg font-bold">Editar Campo</h2>
         <p class="text-sm text-muted-foreground">Actualizar la definición del campo</p>
 
@@ -459,13 +480,14 @@ export class CreateFieldsDialogComponent {
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class EditFieldDialogComponent implements OnInit {
   readonly catalogId = input.required<string>();
   readonly field = input.required<CatalogField>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   private readonly store = inject(CatalogsStore);
 
@@ -513,7 +535,7 @@ export class EditFieldDialogComponent implements OnInit {
         is_filterable: this.filtrable(),
         is_visible: this.visible(),
       });
-      if (ok) this.closed.emit();
+      if (ok) this.dlg().close();
     } finally {
       this.guardando.set(false);
     }
@@ -521,6 +543,6 @@ export class EditFieldDialogComponent implements OnInit {
 
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }
