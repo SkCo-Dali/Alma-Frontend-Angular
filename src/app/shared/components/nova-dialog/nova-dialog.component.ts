@@ -4,6 +4,8 @@
 //   más pequeño; la app de atrás se hunde levemente.
 // - Sheet (móvil, o variant="sheet"): sube desde abajo, la app se hunde con
 //   esquinas redondeadas y se cierra ARRASTRANDO, heredando la velocidad.
+// - Lateral (variant="side"): panel a la derecha a toda la altura; entra desde
+//   la derecha y se cierra arrastrándolo hacia la derecha.
 // - Salida más rápida que la entrada. Con reduced motion, cambios directos.
 // - Accesible: role="dialog", aria-modal, foco atrapado, Esc (solo el de
 //   arriba), foco devuelto al cerrar e `inert` en la app de atrás.
@@ -50,7 +52,7 @@ import { SPRING_SOURCE } from '../../motion/spring-source';
 import { NovaDialogStack } from './nova-dialog-stack.service';
 
 export type NovaDialogSize = 'sm' | 'md' | 'lg' | 'xl';
-export type NovaDialogVariant = 'auto' | 'dialog' | 'sheet';
+export type NovaDialogVariant = 'auto' | 'dialog' | 'sheet' | 'side';
 
 const ANCHOS: Record<NovaDialogSize, string> = {
   sm: '420px',
@@ -64,6 +66,10 @@ const ENFOCABLES =
 
 /** Una velocidad absurda (un tirón de 1px en 1ms) haría oscilar el resorte. */
 const limitar = (v: number) => Math.min(Math.max(v, -12), 12);
+
+/** Donde un gesto horizontal NO debe arrastrar el panel lateral. */
+const NO_ARRASTRABLE =
+  'input, textarea, select, button, a, label, [contenteditable], [draggable="true"], [role="slider"], [data-nova-no-drag]';
 
 let secuencia = 0;
 
@@ -82,8 +88,14 @@ let secuencia = 0;
           (click)="pedirCierre()"
         ></div>
         <div
-          class="pointer-events-none fixed inset-0 flex justify-center"
-          [class]="esSheet() ? 'items-end' : 'items-center p-4'"
+          class="pointer-events-none fixed inset-0 flex"
+          [class]="
+            esLateral()
+              ? 'items-stretch justify-end sm:p-3'
+              : esSheet()
+                ? 'items-end justify-center'
+                : 'items-center justify-center p-4'
+          "
           [style.z-index]="z + 1"
         >
           <div
@@ -97,21 +109,24 @@ let secuencia = 0;
             [attr.aria-label]="title() ? null : ariaLabel()"
             class="pointer-events-auto flex w-full flex-col bg-card text-card-foreground outline-none"
             [class]="
-              esSheet()
+              esLateral()
+                ? 'h-full touch-pan-y overflow-hidden border-border shadow-[-12px_0_48px_-12px_rgb(0_0_0/0.35)] sm:rounded-[24px] sm:border'
+                : esSheet()
                 ? 'max-h-[92dvh] rounded-t-[28px] pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_48px_-12px_rgb(0_0_0/0.35)]'
                 : 'max-h-[calc(100dvh-2rem)] rounded-[24px] border border-border shadow-[var(--shadow-lg)]'
             "
             [style.max-width]="ancho()"
             (keydown)="trampaFoco($event)"
+            (pointerdown)="inicioArrastre($event)"
+            (pointermove)="moverArrastre($event)"
+            (pointerup)="finArrastre($event)"
+            (pointercancel)="finArrastre($event)"
           >
-            <!-- Encabezado (en sheet también es la zona de arrastre) -->
+            <!-- Encabezado (en sheet y lateral también es la zona de arrastre) -->
             <div
+              data-nova-drag
               class="shrink-0"
               [class]="esSheet() ? 'cursor-grab touch-none select-none active:cursor-grabbing' : ''"
-              (pointerdown)="inicioArrastre($event)"
-              (pointermove)="moverArrastre($event)"
-              (pointerup)="finArrastre($event)"
-              (pointercancel)="finArrastre($event)"
             >
               @if (esSheet()) {
                 <div class="mx-auto mt-3 h-1.5 w-10 rounded-full bg-foreground/20"></div>
@@ -168,7 +183,7 @@ export class NovaDialogComponent implements OnDestroy {
   readonly size = input<NovaDialogSize>('md');
   /** Ancho máximo explícito (p. ej. '640px'); manda sobre `size`. */
   readonly width = input<string | undefined>(undefined);
-  /** auto = diálogo en escritorio y sheet en pantallas angostas. */
+  /** auto = diálogo en escritorio y sheet en pantallas angostas; side = panel lateral derecho. */
   readonly variant = input<NovaDialogVariant>('auto');
   /** false = Esc, velo, X y arrastre no cierran (p. ej. mientras guarda). */
   readonly dismissable = input(true);
@@ -198,6 +213,9 @@ export class NovaDialogComponent implements OnDestroy {
     const v = this.variant();
     return v === 'sheet' || (v === 'auto' && this.angosta());
   });
+  /** Panel lateral derecho (entra desde la derecha; se cierra arrastrando a la derecha). */
+  protected readonly esLateral = computed(() => this.variant() === 'side');
+  protected readonly arrastrable = computed(() => this.esSheet() || this.esLateral());
   protected readonly ancho = computed(() => this.width() ?? ANCHOS[this.size()]);
   protected readonly mostrarCerrar = computed(() => this.showClose());
 
@@ -205,6 +223,7 @@ export class NovaDialogComponent implements OnDestroy {
   private focoPrevio: HTMLElement | null = null;
   private arrastre: { y0: number; muestras: { y: number; t: number }[] } | null = null;
   private desplazamiento = 0;
+  private candidato: { x: number; y: number } | null = null;
   private montado = false;
 
   constructor() {
@@ -257,16 +276,17 @@ export class NovaDialogComponent implements OnDestroy {
     if (!panel || !velo) return;
     panel.setAttribute('data-nova-dialog-abierto', '');
     const smooth = this.springs.spring('smooth');
-    this.stack.entrar(this, this.esSheet() ? 'sheet' : 'dialog', smooth);
+    this.stack.entrar(this, this.esLateral() ? 'side' : this.esSheet() ? 'sheet' : 'dialog', smooth);
 
     void velo.offsetWidth;
     velo.style.transition = prefiereMenosMovimiento() ? 'none' : 'opacity 240ms ease-out';
     velo.style.opacity = '1';
 
     let anim: Animation;
-    if (this.esSheet()) {
-      panel.style.transform = 'translateY(105%)';
-      anim = animateSpring(panel, [{ transform: 'translateY(0px)' }], smooth);
+    if (this.arrastrable()) {
+      // Sheet desde abajo; lateral desde la derecha.
+      panel.style.transform = this.trasladar(this.distanciaFuera(panel));
+      anim = animateSpring(panel, [{ transform: this.trasladar(0) }], smooth);
     } else {
       panel.style.transform = 'translateY(18px) scale(0.96)';
       panel.style.opacity = '0';
@@ -300,21 +320,21 @@ export class NovaDialogComponent implements OnDestroy {
     const panel = this.panelRef()?.nativeElement;
     const velo = this.veloRef()?.nativeElement;
     const smooth = this.springs.spring('smooth');
-    this.stack.salir(this, smooth, this.esSheet() ? velocidad : 0);
+    this.stack.salir(this, smooth, this.arrastrable() ? velocidad : 0);
     this.devolverFoco();
     if (!panel || !velo) return Promise.resolve();
     panel.removeAttribute('data-nova-dialog-abierto');
     panel.style.pointerEvents = 'none';
 
     const reducido = prefiereMenosMovimiento();
-    velo.style.transition = reducido ? 'none' : `opacity ${this.esSheet() ? 220 : 160}ms ease-in`;
+    velo.style.transition = reducido ? 'none' : `opacity ${this.arrastrable() ? 220 : 160}ms ease-in`;
     velo.style.opacity = '0';
 
     let anim: Animation;
-    if (this.esSheet()) {
+    if (this.arrastrable()) {
       anim = animateSpring(
         panel,
-        [{ transform: `translateY(${panel.offsetHeight * 1.05}px)` }],
+        [{ transform: this.trasladar(this.distanciaFuera(panel)) }],
         { ...smooth, bounce: 0 },
         { velocity: velocidad },
       );
@@ -406,31 +426,77 @@ export class NovaDialogComponent implements OnDestroy {
     if (f && f.isConnected) queueMicrotask(() => f.focus({ preventScroll: true }));
   }
 
-  // ── Arrastre (solo sheet) ──────────────────────────────────────────────
+  // ── Arrastre (sheet: hacia abajo; lateral: hacia la derecha) ──────────
 
+  /** translateY (sheet) o translateX (lateral) en px. */
+  private trasladar(px: number): string {
+    return this.esLateral() ? `translateX(${px}px)` : `translateY(${px}px)`;
+  }
+
+  /** Cuánto hay que mover el panel para dejarlo fuera de la pantalla. */
+  private distanciaFuera(panel: HTMLElement): number {
+    return this.esLateral() ? panel.offsetWidth + 24 : panel.offsetHeight * 1.05;
+  }
+
+  private coord(e: PointerEvent): number {
+    return this.esLateral() ? e.clientX : e.clientY;
+  }
+
+  /**
+   * Sheet: el arrastre empieza en el encabezado ([data-nova-drag]).
+   * Lateral: en cualquier punto que no sea un control; queda «candidato» y
+   * solo arranca si el gesto es claramente horizontal hacia la derecha (así
+   * no compite con el scroll vertical, la selección de texto ni los
+   * elementos que se reordenan arrastrando).
+   */
   protected inicioArrastre(e: PointerEvent): void {
-    if (!this.esSheet() || this.estado !== 'abierto' || e.button !== 0 || !this.dismissable()) return;
+    if (!this.arrastrable() || this.estado !== 'abierto' || e.button !== 0 || !this.dismissable()) return;
+    const objetivo = e.target as HTMLElement;
+    if (this.esSheet()) {
+      if (!objetivo.closest('[data-nova-drag]')) return;
+      this.empezarArrastre(e);
+      return;
+    }
+    if (objetivo.closest(NO_ARRASTRABLE)) return;
+    this.candidato = { x: e.clientX, y: e.clientY };
+  }
+
+  private empezarArrastre(e: PointerEvent): void {
     const panel = this.panelRef()!.nativeElement;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    panel.setPointerCapture(e.pointerId);
     panel.getAnimations().forEach((a) => {
       a.commitStyles();
       a.cancel();
     });
-    this.desplazamiento = new DOMMatrixReadOnly(getComputedStyle(panel).transform).m42;
-    this.arrastre = { y0: e.clientY - this.desplazamiento, muestras: [{ y: e.clientY, t: e.timeStamp }] };
+    const m = new DOMMatrixReadOnly(getComputedStyle(panel).transform);
+    this.desplazamiento = this.esLateral() ? m.m41 : m.m42;
+    const c = this.coord(e);
+    this.arrastre = { y0: c - this.desplazamiento, muestras: [{ y: c, t: e.timeStamp }] };
   }
 
   protected moverArrastre(e: PointerEvent): void {
+    if (this.candidato && !this.arrastre) {
+      const dx = e.clientX - this.candidato.x;
+      const dy = e.clientY - this.candidato.y;
+      if (dx > 8 && dx > Math.abs(dy) * 1.5) {
+        this.candidato = null;
+        window.getSelection()?.removeAllRanges();
+        this.empezarArrastre(e);
+      } else if (Math.abs(dy) > 8 || dx < -8) {
+        this.candidato = null;
+      }
+    }
     if (!this.arrastre) return;
-    let dy = e.clientY - this.arrastre.y0;
-    if (dy < 0) dy = -Math.pow(-dy, 0.7); // resistencia elástica hacia arriba
-    this.desplazamiento = dy;
-    this.arrastre.muestras.push({ y: e.clientY, t: e.timeStamp });
+    const c = this.coord(e);
+    let d = c - this.arrastre.y0;
+    if (d < 0) d = -Math.pow(-d, 0.7); // resistencia elástica en sentido contrario
+    this.desplazamiento = d;
+    this.arrastre.muestras.push({ y: c, t: e.timeStamp });
     if (this.arrastre.muestras.length > 6) this.arrastre.muestras.shift();
 
     const panel = this.panelRef()!.nativeElement;
-    panel.style.transform = `translateY(${dy}px)`;
-    const p = Math.min(Math.max(dy / panel.offsetHeight, 0), 1);
+    panel.style.transform = this.trasladar(d);
+    const p = Math.min(Math.max(d / this.distanciaFuera(panel), 0), 1);
     const velo = this.veloRef()?.nativeElement;
     if (velo) {
       velo.style.transition = 'none';
@@ -440,6 +506,7 @@ export class NovaDialogComponent implements OnDestroy {
   }
 
   protected finArrastre(e: PointerEvent): void {
+    this.candidato = null;
     if (!this.arrastre) return;
     const m = this.arrastre.muestras;
     this.arrastre = null;
@@ -448,17 +515,17 @@ export class NovaDialogComponent implements OnDestroy {
     const dt = Math.max((b.t - a.t) / 1000, 0.001);
     const vPx = e.type === 'pointercancel' ? 0 : (b.y - a.y) / dt;
     const panel = this.panelRef()!.nativeElement;
-    const alto = panel.offsetHeight;
+    const fuera = this.distanciaFuera(panel);
 
-    if (this.desplazamiento + vPx * 0.2 > alto * 0.45 || vPx > 900) {
-      const restante = Math.max(alto * 1.05 - this.desplazamiento, 1);
+    if (this.desplazamiento + vPx * 0.2 > fuera * 0.42 || vPx > 900) {
+      const restante = Math.max(fuera - this.desplazamiento, 1);
       this.pedirCierre(limitar(vPx / restante));
       return;
     }
     // Vuelve a su sitio con la velocidad del gesto.
     const d = Math.abs(this.desplazamiento) < 1 ? 0 : this.desplazamiento;
     const smooth = this.springs.spring('smooth');
-    animateSpring(panel, [{ transform: 'translateY(0px)' }], smooth, {
+    animateSpring(panel, [{ transform: this.trasladar(0) }], smooth, {
       velocity: d === 0 ? 0 : limitar(-vPx / d),
     })
       .finished.then(() => {
