@@ -104,9 +104,7 @@ function dia(iso: unknown): string | null {
       [showClose]="false"
       (closed)="closed.emit()"
     >
-      <div
-        class="flex max-h-[90vh] flex-col"
-      >
+      <div class="flex max-h-[90vh] flex-col">
         <header class="flex items-center justify-between gap-3 border-b border-border/50 px-5 py-3">
           <div class="flex items-center gap-2">
             <lucide-icon name="shield-check" [size]="18" class="text-primary" />

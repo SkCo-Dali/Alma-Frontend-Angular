@@ -106,9 +106,7 @@ const CASOS: CasoDef[] = [
       [dismissable]="!aplicando()"
       (closed)="closed.emit()"
     >
-      <div
-        class="flex max-h-[90vh] flex-col overflow-hidden"
-      >
+      <div class="flex max-h-[90vh] flex-col overflow-hidden">
         <!-- ── Encabezado ── -->
         <header class="flex items-start gap-3 border-b border-border/50 px-5 py-4">
           <div

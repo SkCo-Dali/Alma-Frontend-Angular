@@ -15,6 +15,7 @@ import { MotorEjecucionTabComponent } from './motor-ejecucion-tab.component';
 import { MotorTableToolbarComponent } from './motor-table-toolbar.component';
 import { MotorDataTab, MotorTableRow } from './motor.api';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 type Tab = 'motor' | MotorDataTab;
 
@@ -48,6 +49,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
 @Component({
   selector: 'alma-ejecucion-motor-page',
   imports: [
+    NovaDialogComponent,
     VolverInicioComponent,
     FormsModule,
     RouterLink,
@@ -162,14 +164,14 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
 
       <!-- Confirmar ejecución -->
       @if (porConfirmar() !== null) {
-        <div
-          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          (click)="porConfirmar.set(null)"
+        <nova-dialog
+          ariaLabel="Confirmar ejecución"
+          width="448px"
+          [padded]="false"
+          [showClose]="false"
+          (closed)="porConfirmar.set(null)"
         >
-          <div
-            class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-            (click)="$event.stopPropagation()"
-          >
+          <div class="p-6">
             <div
               class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-primary dark:bg-emerald-500/15"
             >
@@ -202,19 +204,19 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
 
       <!-- Detalle del error -->
       @if (errorDe() !== null) {
-        <div
-          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          (click)="errorDe.set(null)"
+        <nova-dialog
+          ariaLabel="Detalle del error"
+          width="448px"
+          [padded]="false"
+          [showClose]="false"
+          (closed)="errorDe.set(null)"
         >
-          <div
-            class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-            (click)="$event.stopPropagation()"
-          >
+          <div class="p-6">
             <div
               class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-lg font-bold text-destructive"
             >
@@ -247,19 +249,19 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
 
       <!-- Editar destinatario -->
       @if (porEditar(); as data) {
-        <div
-          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          (click)="porEditar.set(null)"
+        <nova-dialog
+          ariaLabel="Editar"
+          width="448px"
+          [padded]="false"
+          [showClose]="false"
+          (closed)="porEditar.set(null)"
         >
-          <div
-            class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-            (click)="$event.stopPropagation()"
-          >
+          <div class="p-6">
             <div
               class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-lg font-bold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
             >
@@ -319,19 +321,19 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
 
       <!-- Excluir del envío -->
       @if (porExcluir(); as data) {
-        <div
-          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          (click)="porExcluir.set(null)"
+        <nova-dialog
+          ariaLabel="Excluir"
+          width="448px"
+          [padded]="false"
+          [showClose]="false"
+          (closed)="porExcluir.set(null)"
         >
-          <div
-            class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-            (click)="$event.stopPropagation()"
-          >
+          <div class="p-6">
             <div
               class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-lg font-bold text-destructive"
             >
@@ -367,7 +369,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
     }
   `,

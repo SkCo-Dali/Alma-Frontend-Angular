@@ -88,6 +88,7 @@ let secuencia = 0;
         >
           <div
             #panel
+            data-nova-dialog-panel
             role="dialog"
             aria-modal="true"
             tabindex="-1"

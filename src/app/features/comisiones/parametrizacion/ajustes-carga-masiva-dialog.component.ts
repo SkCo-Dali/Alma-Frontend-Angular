@@ -17,6 +17,7 @@ import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.comp
 import { isApiValidationError } from '../api-error';
 import { ComisionesToast } from '../comisiones-toast.service';
 import { ParametrizacionApi } from './parametrizacion.api';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 export interface PreviewColumn {
   key: string;
@@ -39,16 +40,20 @@ interface FilaErrorValidacion {
 
 @Component({
   selector: 'alma-ajustes-carga-masiva-dialog',
-  imports: [LucideAngularModule, AlmaLoaderComponent],
+  imports: [NovaDialogComponent, LucideAngularModule, AlmaLoaderComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-3 sm:p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Carga masiva de ajustes"
+      width="90vw"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
       <div
-        class="surface-solid flex w-[90vw] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-border shadow-2xl"
+        class="flex w-[90vw] flex-col overflow-hidden"
         style="height: 90vh; max-height: 90vh"
-        (click)="$event.stopPropagation()"
       >
         <!-- Cabecera -->
         <div class="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
@@ -435,7 +440,7 @@ interface FilaErrorValidacion {
           </div>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class AjustesCargaMasivaDialogComponent implements OnInit {
@@ -443,6 +448,8 @@ export class AjustesCargaMasivaDialogComponent implements OnInit {
   private readonly toast = inject(ComisionesToast);
 
   readonly closed = output<void>();
+
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   /** Emite los IDs creados (si el confirm los trae) al guardar con éxito. */
   readonly guardado = output<string[]>();
 
@@ -503,7 +510,7 @@ export class AjustesCargaMasivaDialogComponent implements OnInit {
   }
 
   protected cerrar(): void {
-    this.closed.emit();
+    this.dlg().close();
   }
 
   protected async descargarPlantilla(): Promise<void> {
@@ -604,7 +611,7 @@ export class AjustesCargaMasivaDialogComponent implements OnInit {
       const ids = extraerIdsConfirm(res);
       this.toast.ok('Ajustes guardados exitosamente');
       this.guardado.emit(ids);
-      this.closed.emit();
+      this.dlg().close();
     } catch {
       this.toast.errorGenericoConMensaje('Falló el guardado de los ajustes');
     } finally {

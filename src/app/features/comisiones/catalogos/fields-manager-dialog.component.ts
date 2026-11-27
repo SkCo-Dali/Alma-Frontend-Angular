@@ -11,6 +11,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../../shared/components/alma-loader.component';
@@ -22,6 +23,7 @@ import {
   CreateFieldsDialogComponent,
   EditFieldDialogComponent,
 } from './catalog-dialogs.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 /** Color del chip por tipo de dato (mismo criterio que el original). */
 const COLOR_TIPO: Record<string, string> = {
@@ -37,6 +39,7 @@ const COLOR_TIPO: Record<string, string> = {
 @Component({
   selector: 'alma-fields-manager-dialog',
   imports: [
+    NovaDialogComponent,
     LucideAngularModule,
     AlmaLoaderComponent,
     PortalDirective,
@@ -44,14 +47,15 @@ const COLOR_TIPO: Record<string, string> = {
     EditFieldDialogComponent,
   ],
   template: `
-    <div
-      class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Administrar campos"
+      width="1024px"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex max-h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex max-h-[80vh] flex-col overflow-hidden p-6">
         <div class="flex items-center justify-between gap-4">
           <div>
             <h2 class="text-lg font-bold">Administrar Campos — {{ catalog().name }}</h2>
@@ -189,17 +193,18 @@ const COLOR_TIPO: Record<string, string> = {
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
 
     @if (porBorrar(); as f) {
-      <div
-        class="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4"
-        (click)="porBorrar.set(null)"
+      <nova-dialog
+        ariaLabel="Eliminar campo"
+        width="448px"
+        [padded]="false"
+        [showClose]="false"
+        [dismissable]="!borrando()"
+        (closed)="porBorrar.set(null)"
       >
-        <div
-          class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
+        <div class="p-6">
           <h2 class="text-lg font-bold">¿Estás seguro?</h2>
           <p class="mt-2 text-sm text-muted-foreground">
             Esto eliminará permanentemente el campo
@@ -224,7 +229,7 @@ const COLOR_TIPO: Record<string, string> = {
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
 
     @if (agregando()) {
@@ -246,6 +251,7 @@ const COLOR_TIPO: Record<string, string> = {
 export class FieldsManagerDialogComponent implements OnInit {
   readonly catalog = input.required<Catalog>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   private readonly store = inject(CatalogsStore);
 
@@ -312,6 +318,6 @@ export class FieldsManagerDialogComponent implements OnInit {
   }
 
   protected cerrar(): void {
-    this.closed.emit();
+    this.dlg().close();
   }
 }

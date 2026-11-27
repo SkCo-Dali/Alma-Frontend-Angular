@@ -15,11 +15,13 @@ import { DC_SECCIONES, DC_VISTAS, DcSeccionSpec } from './dc-specs';
 import { DesarrolloComercialStore, DcSeccionId } from './desarrollo-comercial.store';
 import { CalificacionAgenteRecord } from './desarrollo-comercial.domain';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 @Component({
   selector: 'alma-desarrollo-comercial-page',
   providers: [DesarrolloComercialStore],
   imports: [
+    NovaDialogComponent,
     VolverInicioComponent,
     FormsModule,
     RouterLink,
@@ -146,14 +148,14 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
       </div>
 
       @if (cambio(); as c) {
-        <div
-          class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
-          (click)="cancelarCambio()"
+        <nova-dialog
+          ariaLabel="Confirmar cambio"
+          width="520px"
+          [padded]="false"
+          [showClose]="false"
+          (closed)="cancelarCambio()"
         >
-          <div
-            class="surface-solid w-full max-w-[520px] rounded-2xl border border-border p-6 shadow-2xl"
-            (click)="$event.stopPropagation()"
-          >
+          <div class="p-6">
             <h2 class="text-lg font-bold">Cambiar clasificación</h2>
             <p class="text-sm text-muted-foreground">
               Agente {{ c.fila.IdAgte }} – {{ c.fila.NombreAgte }} · Sociedad
@@ -196,7 +198,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
     }
   `,
