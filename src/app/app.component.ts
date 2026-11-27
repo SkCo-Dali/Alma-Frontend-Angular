@@ -51,7 +51,8 @@ const EXTRA_ICONS = [
         <alma-inactive-screen [email]="auth.profile()?.email ?? auth.user().correo" />
       }
       @case ('ready') {
-        <div class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">
+        <!-- data-nova-fondo: el shell que se hunde detrás de un <nova-dialog>. -->
+        <div data-nova-fondo class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">
           <alma-header />
           <!-- Sin banda ni padding reservado para el Dock: es flotante y se
                auto-oculta dentro de las apps, así que reservarle alto le robaba

@@ -13,7 +13,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApiService } from '../../core/services/api.service';
-import { SPRING_PRESETS, SpringSet, springCssVars } from './spring';
+import { SPRING_PRESETS, SpringName, SpringParams, SpringSet, springCssVars } from './spring';
 
 export const PERM_MOTION_EDIT = 'platform.motion.edit';
 
@@ -49,6 +49,11 @@ export class MotionConfigService {
 
   constructor() {
     this.aplicar(this.publicado().springs);
+  }
+
+  /** Spring publicado (lo usan novaPress, nova-dialog… vía SPRING_SOURCE). */
+  spring(nombre: SpringName): SpringParams {
+    return this.publicado().springs[nombre];
   }
 
   fabrica(): SpringSet {

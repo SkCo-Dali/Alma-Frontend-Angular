@@ -5,7 +5,7 @@
 import { Component, ElementRef, computed, inject, signal, viewChildren } from '@angular/core';
 import { ToastService } from '../../../core/services/toast.service';
 import { DecimalPipe } from '@angular/common';
-import { PressDirective } from '../motion/press.directive';
+import { PressDirective } from '../../../shared/motion/press.directive';
 import { MotionTuningService } from '../motion/motion-tuning.service';
 import { SpringName, animateSpring, springCurve, springSamples } from '../../../shared/motion/spring';
 

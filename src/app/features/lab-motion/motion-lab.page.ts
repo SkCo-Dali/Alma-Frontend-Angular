@@ -20,23 +20,26 @@ import {
 import { LucideAngularModule } from 'lucide-angular';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { MotionConfigService } from '../../shared/motion/motion-config.service';
+import { SPRING_SOURCE } from '../../shared/motion/spring-source';
 import { MotionTuningService } from './motion/motion-tuning.service';
-import { PressDirective } from './motion/press.directive';
+import { PressDirective } from '../../shared/motion/press.directive';
 import { LabContainerComponent } from './demos/lab-container.component';
 import { LabIslaComponent } from './demos/lab-isla.component';
-import { LabSheetComponent } from './demos/lab-sheet.component';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 import { LabToastsComponent } from './demos/lab-toasts.component';
 import { LabTunerComponent } from './demos/lab-tuner.component';
 
 @Component({
   selector: 'nova-motion-lab',
-  providers: [MotionTuningService],
+  // SPRING_SOURCE → el borrador: novaPress y nova-dialog del laboratorio se
+  // mueven con los controles, no con lo publicado.
+  providers: [MotionTuningService, { provide: SPRING_SOURCE, useExisting: MotionTuningService }],
   imports: [
     LucideAngularModule,
     PageHeaderComponent,
     PressDirective,
     LabTunerComponent,
-    LabSheetComponent,
+    NovaDialogComponent,
     LabContainerComponent,
     LabIslaComponent,
     LabToastsComponent,
@@ -136,7 +139,7 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
     }
   `,
   template: `
-    <div #fondo class="bg-transparent pb-24">
+    <div class="pb-24">
       <alma-page-header
         title="Laboratorio de movimiento"
         description="Prototipo del nuevo lenguaje de animación de Nova: springs, profundidad y continuidad. Ajusta los springs, previsualiza aquí y publícalos para que apliquen en toda la app."
@@ -225,12 +228,12 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
           </div>
         </section>
 
-        <!-- 3. Sheets con profundidad -->
+        <!-- 3. nova-dialog -->
         <section class="nv-lab-seccion">
-          <h2 class="text-lg font-semibold">3 · Profundidad: el fondo se hunde</h2>
+          <h2 class="text-lg font-semibold">3 · Profundidad: &lt;nova-dialog&gt;</h2>
           <p class="mb-4 text-sm text-muted-foreground">
-            Compara el diálogo de hoy con el sheet de Nova. En el sheet, la página retrocede con esquinas
-            redondeadas y el panel se puede arrastrar para cerrarlo; hereda la velocidad del gesto.
+            El componente real que reemplaza a los diálogos de hoy. La app retrocede detrás; en modo sheet
+            se cierra arrastrando y hereda la velocidad del gesto. En pantallas angostas, «auto» se vuelve sheet.
           </p>
           <div class="flex flex-wrap gap-3">
             <button
@@ -244,9 +247,17 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
               novaPress
               type="button"
               class="h-11 rounded-full bg-primary px-5 font-semibold text-primary-foreground"
-              (click)="sheet.abrir()"
+              (click)="demoVariante.set('dialog'); demoAbierto.set(true)"
             >
-              Sheet Nova (después)
+              nova-dialog
+            </button>
+            <button
+              novaPress
+              type="button"
+              class="h-11 rounded-full bg-primary px-5 font-semibold text-primary-foreground"
+              (click)="demoVariante.set('sheet'); demoAbierto.set(true)"
+            >
+              nova-dialog · sheet
             </button>
           </div>
         </section>
@@ -338,8 +349,25 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
       </div>
     </div>
 
-    <!-- Overlays FUERA del fondo: el fondo se transforma y atraparía a los fixed. -->
-    <nova-lab-sheet #sheet [fondo]="fondo" />
+    <nova-dialog
+      [(open)]="demoAbierto"
+      [variant]="demoVariante()"
+      title="Nueva regla de comisión"
+      description="Arrástrame hacia abajo en modo sheet; Esc o el velo también cierran."
+    >
+      <div class="space-y-3">
+        @for (campo of camposDemo; track campo) {
+          <label class="block">
+            <span class="mb-1 block text-xs font-medium text-muted-foreground">{{ campo }}</span>
+            <input class="h-10 w-full rounded-[10px] border border-input bg-background px-3 text-sm" />
+          </label>
+        }
+      </div>
+      <div novaDialogFooter class="flex gap-2">
+        <button novaPress type="button" class="alma-btn alma-btn-outline" (click)="demoAbierto.set(false)">Cancelar</button>
+        <button novaPress type="button" class="alma-btn alma-btn-primary" (click)="demoAbierto.set(false)">Guardar</button>
+      </div>
+    </nova-dialog>
 
     @if (antes()) {
       <div class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4" (click)="antes.set(false)">
@@ -362,6 +390,9 @@ export class MotionLabPage {
   protected readonly switchOn = signal(true);
   protected readonly switchPresionado = signal(false);
   protected readonly antes = signal(false);
+  protected readonly demoAbierto = signal(false);
+  protected readonly demoVariante = signal<'dialog' | 'sheet'>('dialog');
+  protected readonly camposDemo = ['Nombre de la regla', 'Producto', 'Canal', 'Porcentaje'];
   protected readonly generacion = signal(0);
 
   protected readonly tarjetas = [
