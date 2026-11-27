@@ -358,9 +358,7 @@ interface GrupoVista {
             [dismissable]="!guardando()"
             (closed)="confirmOpen.set(false)"
           >
-            <div
-              class="p-5"
-            >
+            <div class="p-5">
               <h2 class="text-base font-bold">Confirmar cambios del simulador</h2>
               <p class="mt-1 text-sm text-muted-foreground">
                 Se aplicarán {{ cambios().length }}

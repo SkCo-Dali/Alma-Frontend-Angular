@@ -80,9 +80,7 @@ function parseSumaTxt(s: string): number {
       [showClose]="false"
       (closed)="closed.emit()"
     >
-      <div
-        class="flex max-h-[92vh] flex-col overflow-hidden"
-      >
+      <div class="flex max-h-[92vh] flex-col overflow-hidden">
         <!-- Header -->
         <div
           class="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-3.5"
