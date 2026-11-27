@@ -158,6 +158,37 @@ export function aFechaCalendario(iso?: string): string {
   return m ? m[1] : '';
 }
 
+// ── Historial ───────────────────────────────────────────────────────────────
+
+export interface PlanHistoryChange {
+  campo: string;
+  antes: string | null;
+  despues: string | null;
+}
+
+/** Un evento del historial del plan (GET /api/commission-plans/{id}/history). */
+export interface PlanHistoryEvent {
+  accion: string;
+  texto: string;
+  /** UTC; puede venir sin zona horaria. */
+  fecha: string;
+  usuario: string | null;
+  email: string | null;
+  motivo: string | null;
+  /** Regla a la que se refiere el evento, si aplica. */
+  objeto: string | null;
+  cambios: PlanHistoryChange[];
+  /** Armado con las columnas del plan (anterior a la auditoría). */
+  deducido: boolean;
+}
+
+export interface PlanHistoryResponse {
+  items: PlanHistoryEvent[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 // ── Cliente ─────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -227,6 +258,12 @@ export class CommissionPlansApi {
       'POST',
       undefined,
       'Error publicando el plan',
+    );
+  }
+
+  history(id: string, page = 1, pageSize = 50): Promise<PlanHistoryResponse> {
+    return this.http.get<PlanHistoryResponse>(
+      `${BASE}/${id}/history?page=${page}&page_size=${pageSize}`,
     );
   }
 
