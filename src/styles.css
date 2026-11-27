@@ -47,6 +47,13 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* Movimiento: las utilidades transition / transition-all / -colors /
+     -transform… de Tailwind siguen el spring «snappy» de Nova (lo define
+     MotionConfigService en <html> con lo publicado desde /lab/motion). Una
+     clase duration-* o ease-* explícita sigue mandando sobre esto. */
+  --default-transition-duration: var(--spring-snappy-dur, 150ms);
+  --default-transition-timing-function: var(--spring-snappy, cubic-bezier(0.4, 0, 0.2, 1));
 }
 
 :root {
@@ -180,7 +187,9 @@ html[data-bg='dorado'] body::before {
   background-position: center;
   background-repeat: no-repeat;
   /* Suaviza el encendido/apagado del desenfoque (filtro) y su leve escalado. */
-  transition: filter 0.4s ease, transform 0.4s ease;
+  transition:
+    filter var(--spring-smooth-dur) var(--spring-smooth),
+    transform var(--spring-smooth-dur) var(--spring-smooth);
 }
 html:not([data-bg]) body::before { background-image: url('/wallpapers/terraza.jpg'); }
 html[data-bg='mirador'] body::before { background-image: url('/wallpapers/mirador.jpg'); }
@@ -327,7 +336,7 @@ html.dark[data-bg="cielo"] {
       radial-gradient(60% 70% at 80% 95%, var(--wp-c), transparent 72%),
       radial-gradient(45% 55% at 18% 95%, var(--wp-d), transparent 70%);
     background-attachment: fixed;
-    transition: background-color 0.3s ease;
+    transition: background-color var(--spring-smooth-dur) var(--spring-smooth);
   }
 
   h1,
@@ -405,7 +414,9 @@ html.dark[data-bg="cielo"] {
     border-radius: var(--radius-md);
     font-size: 0.875rem;
     font-weight: 500;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color var(--spring-snappy-dur) var(--spring-snappy),
+      color var(--spring-snappy-dur) var(--spring-snappy);
     cursor: pointer;
   }
   .alma-btn:disabled {
@@ -571,7 +582,7 @@ html.dark[data-bg="cielo"] {
   align-items: center;
   justify-content: center;
   gap: 10cqmin;
-  transition: transform 0.18s ease-out;
+  transition: transform var(--spring-snappy-dur) var(--spring-snappy);
 }
 .almasph-socket {
   display: grid;
@@ -764,6 +775,8 @@ html.dark[data-bg="cielo"] {
   /* La magnificación es transform:scale con origen ABAJO: el ícono crece hacia
      arriba (sale por encima de la barra) sin alterar el layout del dock. */
   transform-origin: bottom center;
+  /* Se queda en 0.1s a propósito: sigue al mouse en cada mousemove y un spring
+     de ~470ms se sentiría arrastrado detrás del cursor. */
   transition: transform 0.1s ease-out;
   will-change: transform;
 }
@@ -776,18 +789,152 @@ html.dark[data-bg="cielo"] {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 .dock-panel {
-  /* Curva sobreamortiguada: sin rebote y sin prisa, para que mostrar/ocultar
-     el Dock se sienta suave. */
+  /* Mostrar/ocultar el Dock es una superficie: spring «smooth». */
   transition:
-    transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 0.3s ease;
+    transform var(--spring-smooth-dur) var(--spring-smooth),
+    opacity var(--spring-smooth-dur) var(--spring-smooth);
 }
 .dock-tooltip {
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition:
+    opacity var(--spring-snappy-dur) var(--spring-snappy),
+    transform var(--spring-snappy-dur) var(--spring-snappy);
 }
 /* Reordenamiento del Dock/Launchpad: desplazamiento suave de los tiles */
 .dock-reorder {
-  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0.35, 1);
+  transition: transform var(--spring-snappy-dur) var(--spring-snappy);
+}
+
+/* Menús, popovers y filtros desplegables: entran con el spring «snappy»
+   (crecen desde su borde superior). Se usa con la clase nova-pop en el panel. */
+.nova-pop {
+  /* Un panel que abre hacia arriba (p. ej. el menú del Dock) cambia el origen
+     con [--nova-pop-origin:bottom_left]. */
+  transform-origin: var(--nova-pop-origin, top center);
+  animation: nova-pop var(--spring-snappy-dur) var(--spring-snappy) both;
+}
+/* El Launchpad es una superficie a pantalla completa: spring «smooth». */
+.nova-launchpad {
+  animation: nova-launchpad var(--spring-smooth-dur) var(--spring-smooth) both;
+}
+@keyframes nova-launchpad {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nova-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Salidas ──
+   Al cerrar no hay rebote: como en iOS, lo que se va se va rápido (menos de
+   la mitad del spring snappy) y acelerando. Se usan con animate.leave de
+   Angular, que espera a que termine la animación antes de quitar el nodo. */
+:root {
+  --nova-salida-dur: calc(var(--spring-snappy-dur, 300ms) * 0.45);
+  --nova-salida: cubic-bezier(0.4, 0, 1, 1);
+}
+.nova-pop-out {
+  transform-origin: var(--nova-pop-origin, top center);
+  animation: nova-pop-out var(--nova-salida-dur) var(--nova-salida) both;
+}
+.nova-launchpad-out {
+  animation: nova-launchpad-out var(--nova-salida-dur) var(--nova-salida) both;
+}
+@keyframes nova-launchpad-out {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes nova-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+}
+
+/* ── Contenido que aparece ──
+   nova-entra: pestañas y contenido que llega después de cargar (spring
+   «smooth», sube 6px y aparece). Se usa con animate.enter="nova-entra". */
+.nova-entra {
+  animation: nova-entra var(--spring-smooth-dur) var(--spring-smooth) both;
+}
+@keyframes nova-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* nova-expande / nova-colapsa: secciones y detalles que se abren y cierran
+   (spring «snappy» al abrir, salida corta al cerrar). */
+.nova-expande {
+  transform-origin: top center;
+  animation: nova-expande var(--spring-snappy-dur) var(--spring-snappy) both;
+}
+@keyframes nova-expande {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.nova-colapsa {
+  animation: nova-colapsa var(--nova-salida-dur) var(--nova-salida) both;
+}
+@keyframes nova-colapsa {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ── Cambio de página (View Transitions del router) ──
+   Solo se anima <main class="nova-pagina">: la página que se va se desvanece
+   rápido y la nueva entra con el spring «smooth». El header y el resto del
+   shell (root) no se animan, y el Dock tiene nombre propio para quedar encima
+   de la página durante la transición. Los nombres solo existen con
+   html.nova-vt (lo pone transicion-paginas.ts mientras dura la transición). */
+html.nova-vt .nova-pagina {
+  view-transition-name: nova-pagina;
+}
+html.nova-vt .dock-panel {
+  view-transition-name: nova-dock;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(nova-pagina) {
+  animation-duration: var(--spring-smooth-dur);
+}
+::view-transition-old(nova-pagina) {
+  animation: nova-pagina-sale var(--nova-salida-dur) var(--nova-salida) both;
+}
+::view-transition-new(nova-pagina) {
+  animation: nova-pagina-entra var(--spring-smooth-dur) var(--spring-smooth) both;
+}
+@keyframes nova-pagina-sale {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes nova-pagina-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -867,8 +1014,8 @@ html.dark[data-bg="cielo"] {
 .susc-col1-sticky,
 .susc-col2-sticky {
   transition:
-    background-color 150ms ease,
-    color 150ms ease;
+    background-color var(--spring-snappy-dur) var(--spring-snappy),
+    color var(--spring-snappy-dur) var(--spring-snappy);
 }
 
 @media (min-width: 768px) {
@@ -887,9 +1034,9 @@ html.dark[data-bg="cielo"] {
     border-right: 1px solid var(--border) !important;
     box-shadow: none !important;
     transition:
-      background-color 150ms ease,
-      color 150ms ease,
-      box-shadow 220ms ease;
+      background-color var(--spring-snappy-dur) var(--spring-snappy),
+      color var(--spring-snappy-dur) var(--spring-snappy),
+      box-shadow var(--spring-snappy-dur) var(--spring-snappy);
   }
   /* Panel fijo elevado: la sombra aparece/crece SOLO al desplazar en horizontal,
      señalando que hay contenido oculto tras el borde de las columnas fijas. */
@@ -984,7 +1131,10 @@ html.dark[data-bg="cielo"] {
   border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
   box-shadow: 0 1px 2px rgba(20, 45, 30, 0.05);
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform var(--spring-snappy-dur) var(--spring-snappy),
+    background-color var(--spring-snappy-dur) var(--spring-snappy),
+    box-shadow var(--spring-snappy-dur) var(--spring-snappy);
 }
 .spk-chip:hover {
   background-color: var(--card);

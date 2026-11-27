@@ -47,7 +47,7 @@ interface AnioGrupo {
       } @else if (store.error(); as err) {
         <div class="py-4 text-center text-sm text-destructive">Error: {{ err }}</div>
       } @else {
-        <div class="mb-3 flex">
+        <div animate.enter="nova-entra" class="mb-3 flex">
           <div class="flex rounded-xl bg-muted p-1">
             <button
               type="button"

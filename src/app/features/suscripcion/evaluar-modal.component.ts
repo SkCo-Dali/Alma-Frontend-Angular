@@ -7,7 +7,6 @@
 import {
   Component,
   ElementRef,
-  HostListener,
   OnInit,
   ViewChild,
   computed,
@@ -15,6 +14,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import type { WritableSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -30,6 +30,7 @@ import {
 import { DECISION_META, MedicoFlags, Tarea } from './suscripcion.domain';
 import { CatalogoComboboxComponent } from './simulador/catalogo-combobox.component';
 import { SimuladorApi } from './simulador/simulador.api';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 const MED_CHIPS: Array<{ key: keyof MedicoFlags & string; label: string }> = [
   { key: 'cardiovascular', label: 'Cardiovascular' },
@@ -69,19 +70,17 @@ function parseSumaTxt(s: string): number {
 
 @Component({
   selector: 'alma-evaluar-modal',
-  imports: [FormsModule, LucideAngularModule, CatalogoComboboxComponent],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, CatalogoComboboxComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 sm:p-6"
-      (click)="closed.emit()"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Evaluar emisión con el motor"
+    <nova-dialog
+      #dlg
+      ariaLabel="Evaluar emisión con el motor"
+      width="1024px"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex max-h-[92vh] flex-col overflow-hidden">
         <!-- Header -->
         <div
           class="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-3.5"
@@ -98,7 +97,7 @@ function parseSumaTxt(s: string): number {
           </div>
           <button
             type="button"
-            (click)="closed.emit()"
+            (click)="dlg.close()"
             aria-label="Cerrar"
             class="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--surface-sunken)] hover:text-foreground"
           >
@@ -683,7 +682,7 @@ function parseSumaTxt(s: string): number {
 
             <button
               type="button"
-              (click)="closed.emit()"
+              (click)="dlg.close()"
               class="mt-auto inline-flex h-8 w-full flex-none items-center justify-center rounded-lg text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               Cerrar
@@ -691,7 +690,7 @@ function parseSumaTxt(s: string): number {
           </aside>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
   styles: `
     .campo {
@@ -733,6 +732,7 @@ export class EvaluarModalComponent implements OnInit {
 
   readonly tarea = input.required<Tarea>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   /** Se emite al aplicar el resultado (el padre refresca la cotización). */
   readonly aplicado = output<void>();
 
@@ -800,11 +800,6 @@ export class EvaluarModalComponent implements OnInit {
     this.anios = t.producto.anios_vigencia;
     this.medico = { ...t.medico };
     void this.cargarCatalogos();
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    this.closed.emit();
   }
 
   protected nivelMeta(n: NivelCumulo): { label: string; color: string } {
@@ -929,6 +924,6 @@ export class EvaluarModalComponent implements OnInit {
 
   protected aplicar(): void {
     this.aplicado.emit();
-    this.closed.emit();
+    this.dlg().close();
   }
 }

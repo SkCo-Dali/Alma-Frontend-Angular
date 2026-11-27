@@ -92,7 +92,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
           } @else if (!cargas().length) {
             <p class="px-5 py-10 text-center text-sm text-muted-foreground">Todavía no se ha cargado ningún MAESTRO.</p>
           } @else {
-            <div class="overflow-x-auto">
+            <div animate.enter="nova-entra" class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
                   <tr>

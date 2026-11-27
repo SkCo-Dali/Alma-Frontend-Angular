@@ -54,7 +54,8 @@ const ANCHO_PANEL = 300;
       <div
         #panel
         almaPortal
-        class="surface-solid pointer-events-auto fixed z-[70] rounded-lg border border-border p-2 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        animate.leave="nova-pop-out"
+        class="nova-pop surface-solid pointer-events-auto fixed z-[70] rounded-lg border border-border p-2 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         [style.width.px]="ancho()"
       >
         <div class="relative mb-2">

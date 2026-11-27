@@ -9,10 +9,12 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 import { ParamComboboxComponent } from './param-combobox.component';
 
 export type ParamFieldTipo =
@@ -60,24 +62,24 @@ const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
 
 @Component({
   selector: 'alma-param-form-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent, ParamComboboxComponent],
+  imports: [
+    FormsModule,
+    LucideAngularModule,
+    AlmaSwitchComponent,
+    ParamComboboxComponent,
+    NovaDialogComponent,
+  ],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      [title]="titulo()"
+      [description]="descripcion()"
+      [width]="ancho()"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full rounded-2xl border border-border p-6 shadow-2xl"
-        [style.max-width]="ancho()"
-        (click)="$event.stopPropagation()"
-      >
-        <h2 class="text-lg font-bold">{{ titulo() }}</h2>
-        @if (descripcion()) {
-          <p class="text-sm text-muted-foreground">{{ descripcion() }}</p>
-        }
-
         <div
-          class="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto py-4"
+          class="grid grid-cols-1 gap-4 py-2"
           [class]="columnas() === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'"
         >
           @for (f of fields(); track f.key) {
@@ -203,7 +205,7 @@ const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
           }
         </div>
 
-        <div class="flex justify-end gap-2 border-t border-border pt-4">
+        <div novaDialogFooter class="flex gap-2">
           <button
             type="button"
             (click)="cerrar()"
@@ -221,8 +223,7 @@ const MONTO_CON_SIGNO = /^-?\d+(\.\d{1,2})?$/;
             {{ guardando() ? textoGuardando() : textoGuardar() }}
           </button>
         </div>
-      </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class ParamFormDialogComponent implements OnInit {
@@ -241,6 +242,7 @@ export class ParamFormDialogComponent implements OnInit {
 
   readonly guardar = output<ParamValues>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   /** Lo marca quien guarda, mientras espera al servidor: evita el doble envío. */
   readonly guardando = input(false);
@@ -416,9 +418,10 @@ export class ParamFormDialogComponent implements OnInit {
     this.guardar.emit(this.estado());
   }
 
+  /** Cancelar: anima la salida; `closed` se emite cuando el diálogo ya salió. */
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 
   private comoTexto(v: string | boolean | undefined): string {

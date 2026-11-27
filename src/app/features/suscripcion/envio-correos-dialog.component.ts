@@ -15,18 +15,24 @@ import { EditorCorreoComponent } from '../../shared/correo/editor-correo.compone
 import { HtmlCorreoPipe } from '../../shared/correo/html-correo.pipe';
 import { GaleriaPlantillasDialogComponent } from '../../shared/correo/galeria-plantillas-dialog.component';
 import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
 @Component({
   selector: 'alma-envio-correos-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditarPlantillaDialogComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent, HtmlCorreoPipe],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, AlmaLoaderComponent, EditarPlantillaDialogComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent, HtmlCorreoPipe],
   template: `
-    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
-      <div
-        class="surface-solid flex h-[94vh] max-h-[94vh] w-full max-w-[97vw] flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl lg:max-w-[82vw]"
-        (click)="$event.stopPropagation()"
-      >
+    <nova-dialog
+      #dlg
+      ariaLabel="Enviar correos al cliente"
+      width="max(82vw, min(97vw, 900px))"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!enviando()"
+      (closed)="closed.emit()"
+    >
+      <div class="flex h-[94vh] max-h-[94vh] flex-col gap-2 px-4 pb-3 pt-3">
         <!-- ── Header (Dali): ícono + título + DESTINATARIOS + X ── -->
         <div class="flex items-center justify-between gap-2">
           <div class="flex min-w-0 items-center gap-2.5">
@@ -46,7 +52,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
                 <p class="text-xs font-bold">{{ destinatarios() }}</p>
               </div>
             </div>
-            <button type="button" (click)="closed.emit()" aria-label="Cerrar"
+            <button type="button" (click)="dlg.close()" aria-label="Cerrar"
                     class="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <lucide-icon name="x" [size]="16" />
             </button>
@@ -80,7 +86,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
         <!-- ── Previsualizar ── -->
         @if (pestana() === 'previsualizar') {
-          <div class="min-h-0 flex-1 overflow-y-auto">
+          <div animate.enter="nova-entra" class="min-h-0 flex-1 overflow-y-auto">
             <div class="mb-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs">
               <p><span class="text-muted-foreground">Para:</span> <b>{{ para() ?? '(sin correo del FP)' }}</b></p>
               @if (ccDirector() && copiarDirector) {
@@ -98,7 +104,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
         <!-- ── Historial ── -->
         @if (pestana() === 'historial') {
-          <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div animate.enter="nova-entra" class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
             <div class="flex items-center gap-2">
               <div class="relative flex-1">
                 <lucide-icon name="search" [size]="14" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -120,7 +126,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
               } @else if (historial().length === 0) {
                 <p class="p-6 text-center text-xs text-muted-foreground">Sin correos para esa búsqueda.</p>
               } @else {
-                <div class="divide-y divide-border/40">
+                <div animate.enter="nova-entra" class="divide-y divide-border/40">
                   @for (c of historial(); track $index) {
                     <div class="px-3 py-2">
                       <div class="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -186,29 +192,30 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
-         elegida se renderiza con los datos reales de la cotización. -->
-    @if (selectorPlantillas()) {
-      <alma-galeria-plantillas-dialog
-        [app]="APP"
-        (closed)="selectorPlantillas.set(false)"
-        (seleccionar)="usarPlantilla($event)"
-        (editar)="editarPlantilla($event)"
-      />
-    }
+      <!-- Diálogos anidados (también nova-dialog: se apilan encima de este). -->
+      <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
+           elegida se renderiza con los datos reales de la cotización. -->
+      @if (selectorPlantillas()) {
+        <alma-galeria-plantillas-dialog
+          [app]="APP"
+          (closed)="selectorPlantillas.set(false)"
+          (seleccionar)="usarPlantilla($event)"
+          (editar)="editarPlantilla($event)"
+        />
+      }
 
-    <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
-    @if (editandoPlantilla(); as ed) {
-      <alma-editar-plantilla-dialog
-        [app]="APP"
-        [plantilla]="ed"
-        [variables]="variables()"
-        (closed)="editandoPlantilla.set(null)"
-        (guardada)="plantillaGuardada()"
-      />
-    }
+      <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
+      @if (editandoPlantilla(); as ed) {
+        <alma-editar-plantilla-dialog
+          [app]="APP"
+          [plantilla]="ed"
+          [variables]="variables()"
+          (closed)="editandoPlantilla.set(null)"
+          (guardada)="plantillaGuardada()"
+        />
+      }
+    </nova-dialog>
   `,
 })
 export class EnvioCorreosDialogComponent {

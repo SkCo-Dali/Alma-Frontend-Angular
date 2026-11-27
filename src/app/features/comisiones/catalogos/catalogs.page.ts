@@ -25,10 +25,12 @@ import {
 } from './catalog-dialogs.component';
 import { FieldsManagerDialogComponent } from './fields-manager-dialog.component';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 @Component({
   selector: 'alma-catalogs-page',
   imports: [
+    NovaDialogComponent,
     VolverInicioComponent,
     RouterLink,
     LucideAngularModule,
@@ -88,7 +90,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                   <p>No se encontraron catálogos. Crea tu primer catálogo para comenzar.</p>
                 </div>
               } @else {
-                <div class="scrollbar overflow-x-auto rounded-md border border-border">
+                <div animate.enter="nova-entra" class="scrollbar overflow-x-auto rounded-md border border-border">
                   <table class="alma-table w-full min-w-[820px]">
                     <thead>
                       <tr>
@@ -140,7 +142,8 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                               <div
                                 #panel
                                 almaPortal
-                                class="surface-solid fixed z-[85] min-w-[160px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        animate.leave="nova-pop-out"
+        class="nova-pop surface-solid fixed z-[85] min-w-[160px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                               >
                                 <button
                                   type="button"
@@ -285,14 +288,14 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
         }
 
         @if (porBorrar(); as c) {
-          <div
-            class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
-            (click)="porBorrar.set(null)"
+          <nova-dialog
+            ariaLabel="Eliminar catálogo"
+            width="448px"
+            [padded]="false"
+            [showClose]="false"
+            (closed)="porBorrar.set(null)"
           >
-            <div
-              class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-              (click)="$event.stopPropagation()"
-            >
+            <div class="p-6">
               <h2 class="text-lg font-bold">¿Estás seguro?</h2>
               <p class="mt-2 text-sm text-muted-foreground">
                 Esto eliminará permanentemente el catálogo
@@ -317,7 +320,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                 </button>
               </div>
             </div>
-          </div>
+          </nova-dialog>
         }
       </div>
     }

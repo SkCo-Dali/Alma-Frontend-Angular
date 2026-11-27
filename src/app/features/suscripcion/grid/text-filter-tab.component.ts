@@ -4,6 +4,7 @@
 import { Component, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 export type TextFilterOp =
   | 'eq'
@@ -48,7 +49,7 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
 
 @Component({
   selector: 'alma-text-filter-tab',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule],
   template: `
     @if (presetPidiendoValor(); as preset) {
       <div class="space-y-3">
@@ -112,14 +113,14 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
 
     <!-- Diálogo de autofiltro personalizado -->
     @if (dialogoAbierto()) {
-      <div
-        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
-        (click)="dialogoAbierto.set(false)"
+      <nova-dialog
+        ariaLabel="Autofiltro personalizado"
+        width="448px"
+        [padded]="false"
+        [showClose]="false"
+        (closed)="dialogoAbierto.set(false)"
       >
-        <div
-          class="surface-solid w-full max-w-md rounded-xl border border-border p-5 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
+        <div class="p-5">
           <h3 class="text-sm font-medium">Autofiltro personalizado</h3>
 
           <div class="space-y-4 py-3">
@@ -179,7 +180,7 @@ const OPERATOR_OPTIONS: { value: TextFilterOp; label: string }[] = [
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
   `,
 })

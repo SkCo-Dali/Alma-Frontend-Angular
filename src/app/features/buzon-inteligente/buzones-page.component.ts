@@ -148,7 +148,7 @@ interface MiembroForm {
             }
           </div>
         } @else {
-          <div class="glass r-3xl empty">
+          <div animate.enter="nova-entra" class="glass r-3xl empty">
             <div>
               @if (editables().length) {
                 <p class="sm b">No hay buzones que coincidan</p>

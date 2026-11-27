@@ -21,6 +21,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -45,21 +46,24 @@ import {
   mapApiOperatorToUI,
   mapUIOperatorToAPI,
 } from './rule-form.domain';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 type Tab = 'information' | 'rule' | 'preview';
 
 @Component({
   selector: 'alma-rule-dialog',
-  imports: [FormsModule, LucideAngularModule, PortalDirective],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, PortalDirective],
   template: `
-    <div
-      class="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cancelar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Regla de comisión"
+      width="800px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full max-w-[800px] rounded-2xl border border-border p-4 shadow-2xl sm:p-6"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-4 sm:p-6">
         <div class="mb-4">
           <h2 class="text-lg font-bold">
             {{ esEdicion() ? 'Editar Regla de Comisión' : 'Crear Regla de Comisión' }}
@@ -93,7 +97,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Información -->
         @if (tab() === 'information') {
-          <div class="mt-4 space-y-4">
+          <div animate.enter="nova-entra" class="mt-4 space-y-4">
             <div>
               <label class="text-sm font-medium" for="rule-name">
                 Nombre <span class="text-destructive">*</span>
@@ -123,7 +127,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Regla -->
         @if (tab() === 'rule') {
-          <div class="mt-4 space-y-4">
+          <div animate.enter="nova-entra" class="mt-4 space-y-4">
             <div>
               <label class="text-sm font-medium" for="rule-catalog">
                 Catálogo <span class="text-destructive">*</span>
@@ -420,7 +424,7 @@ type Tab = 'information' | 'rule' | 'preview';
 
         <!-- Vista previa -->
         @if (tab() === 'preview') {
-          <div class="mt-4 space-y-3">
+          <div animate.enter="nova-entra" class="mt-4 space-y-3">
             <div
               class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
             >
@@ -620,7 +624,7 @@ type Tab = 'information' | 'rule' | 'preview';
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class RuleDialogComponent implements OnInit {
@@ -628,6 +632,7 @@ export class RuleDialogComponent implements OnInit {
   readonly planId = input.required<string>();
   readonly rule = input<CommissionRule | null>(null);
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   readonly saved = output<void>();
 
   protected readonly catalogos = inject(CatalogsStore);
@@ -1111,7 +1116,7 @@ export class RuleDialogComponent implements OnInit {
         );
       }
       this.saved.emit();
-      this.closed.emit();
+      this.dlg().close();
     } catch (e) {
       this.toast.errorMutacion(e, this.esEdicion() ? 'update' : 'create');
     } finally {
@@ -1135,6 +1140,6 @@ export class RuleDialogComponent implements OnInit {
 
   protected cancelar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }

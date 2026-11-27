@@ -8,6 +8,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../shared/components/alma-switch.component';
 import { TooltipDirective } from '../../shared/tooltip.directive';
 import { Accion, CampoExtraer, Categoria, CategoriaIn, TIPOS_ACCION, TipoAccion, nombreAccion } from './buzon.api';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 const COLORES = ['#00C83C', '#0A84FF', '#6D4AE0', '#BF5AF2', '#FF9F0A', '#FF375F', '#E5392A', '#F2B600', '#30B0C7', '#A2845E', '#8E8E93'];
 
@@ -70,10 +71,18 @@ function aAccion(f: AccionForm, orden: number): Accion {
 
 @Component({
   selector: 'alma-categoria-editor',
-  imports: [FormsModule, LucideAngularModule, AlmaSwitchComponent, TooltipDirective],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, AlmaSwitchComponent, TooltipDirective],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" (click)="cancelar.emit()">
-      <div class="surface-solid flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border shadow-[var(--shadow-lg)]" (click)="$event.stopPropagation()">
+    <nova-dialog
+      #dlg
+      ariaLabel="Tipo de correo"
+      width="768px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="cancelar.emit()"
+    >
+      <div class="flex max-h-[92dvh] flex-col overflow-hidden">
         <!-- Encabezado -->
         <div class="flex items-center justify-between border-b border-border/60 px-5 py-4">
           <div class="flex items-center gap-3">
@@ -83,7 +92,7 @@ function aAccion(f: AccionForm, orden: number): Accion {
               <p class="text-xs text-muted-foreground">Descríbelo como se lo explicarías a alguien nuevo en el área.</p>
             </div>
           </div>
-          <button type="button" class="alma-btn alma-btn-ghost" (click)="cancelar.emit()"><lucide-icon name="x" [size]="16" /></button>
+          <button type="button" class="alma-btn alma-btn-ghost" (click)="dlg.close()"><lucide-icon name="x" [size]="16" /></button>
         </div>
 
         <!-- Pasos -->
@@ -219,7 +228,7 @@ function aAccion(f: AccionForm, orden: number): Accion {
           <label class="flex items-center gap-2 text-xs text-muted-foreground"><alma-switch [checked]="activa()" (checkedChange)="activa.set($event)" /> Tipo activo</label>
           @if (error(); as e) { <p class="text-xs text-destructive">{{ e }}</p> }
           <div class="flex gap-2">
-            <button type="button" class="alma-btn alma-btn-outline" (click)="cancelar.emit()">Cancelar</button>
+            <button type="button" class="alma-btn alma-btn-outline" (click)="dlg.close()">Cancelar</button>
             @if (paso() !== 'acciones') {
               <button type="button" class="alma-btn alma-btn-primary" (click)="siguiente()">Siguiente <lucide-icon name="arrow-right" [size]="15" /></button>
             } @else {
@@ -230,7 +239,7 @@ function aAccion(f: AccionForm, orden: number): Accion {
           </div>
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class CategoriaEditorComponent {

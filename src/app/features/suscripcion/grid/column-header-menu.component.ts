@@ -69,7 +69,8 @@ import { TextFilterCondition, TextFilterTabComponent } from './text-filter-tab.c
       <div
         #panel
         almaPortal
-        class="surface-solid fixed z-[95] rounded-lg border border-border p-0 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        animate.leave="nova-pop-out"
+        class="nova-pop surface-solid fixed z-[95] rounded-lg border border-border p-0 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         [style.width.px]="ancho()"
         (click)="$event.stopPropagation()"
       >

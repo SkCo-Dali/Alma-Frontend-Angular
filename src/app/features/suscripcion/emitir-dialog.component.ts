@@ -2,25 +2,28 @@
 // NUNCA es automática: la dispara el analista con confirmación explícita, y requiere su
 // cuenta de Pharos conectada (queda a su nombre).
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 import { CuentaPharosApi, SuscripcionApi } from './suscripcion.api';
 import { Tarea, fmtCOP } from './suscripcion.domain';
 
 @Component({
   selector: 'alma-emitir-dialog',
-  imports: [FormsModule, RouterLink, LucideAngularModule],
+  imports: [FormsModule, RouterLink, LucideAngularModule, NovaDialogComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Emitir póliza"
+      width="448px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!emitiendo()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="p-6">
         @if (emitida(); as res) {
           <!-- Éxito -->
           <div
@@ -230,7 +233,7 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
               @if (detalleError(); as det) {
                 <!-- El motivo crudo de Pharos no le sirve al analista, pero sí a
                      soporte: se conserva, discreto y plegado. -->
-                <details class="mt-2">
+                <details animate.enter="nova-expande" animate.leave="nova-colapsa" class="mt-2">
                   <summary class="cursor-pointer text-destructive/70 select-none">
                     Detalle técnico
                   </summary>
@@ -264,7 +267,7 @@ import { Tarea, fmtCOP } from './suscripcion.domain';
           </div>
         }
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class EmitirDialogComponent {
@@ -272,6 +275,7 @@ export class EmitirDialogComponent {
 
   readonly tarea = input.required<Tarea>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   /** Se emite tras una emisión exitosa (el padre refresca la cotización). */
   readonly emitido = output<void>();
 
@@ -396,8 +400,9 @@ export class EmitirDialogComponent {
     }
   }
 
+  /** Anima la salida; `closed` se emite cuando el diálogo ya salió. */
   protected cerrar(): void {
     this.acepta = false;
-    this.closed.emit();
+    this.dlg().close();
   }
 }

@@ -432,7 +432,7 @@ const ZONA = { timeZone: 'America/Bogota' } as const;
               <lucide-icon name="loader-2" [size]="18" class="animate-spin text-primary" />
             </div>
           } @else {
-            <table class="w-full border-separate border-spacing-0 text-sm">
+            <table animate.enter="nova-entra" class="w-full border-separate border-spacing-0 text-sm">
               <thead class="sticky top-0 z-10">
                 <tr>
                   @for (c of columnas; track c.clave) {
