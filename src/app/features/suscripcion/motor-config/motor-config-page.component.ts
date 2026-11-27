@@ -27,6 +27,7 @@ import {
   ValorParametro,
 } from './motor-config.api';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 /** Opciones válidas del mapeo código Pipeline → reglas de producto del motor. */
 const MAPA_OPCIONES: Record<string, string> = {
@@ -129,7 +130,7 @@ interface GrupoVista {
 
 @Component({
   selector: 'alma-motor-config-page',
-  imports: [
+  imports: [NovaDialogComponent, 
     VolverInicioComponent,
     FormsModule,
     RouterLink,
@@ -396,13 +397,16 @@ interface GrupoVista {
 
         <!-- Confirmación: lista de cambios + comentario opcional -->
         @if (confirmOpen()) {
-          <div
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-            (click)="!guardando() && confirmOpen.set(false)"
+          <nova-dialog
+            ariaLabel="Confirmar cambios del motor"
+            width="512px"
+            [padded]="false"
+            [showClose]="false"
+            [dismissable]="!guardando()"
+            (closed)="confirmOpen.set(false)"
           >
             <div
-              class="surface-solid w-full max-w-lg rounded-2xl border border-border p-5 shadow-2xl"
-              (click)="$event.stopPropagation()"
+              class="p-5"
             >
               <h2 class="text-base font-bold">Confirmar cambios del motor</h2>
               <p class="mt-1 text-sm text-muted-foreground">
@@ -464,7 +468,7 @@ interface GrupoVista {
                 </button>
               </div>
             </div>
-          </div>
+          </nova-dialog>
         }
       </div>
     }

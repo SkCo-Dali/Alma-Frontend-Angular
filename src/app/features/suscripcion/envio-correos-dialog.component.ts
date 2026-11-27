@@ -15,17 +15,25 @@ import { EditorCorreoComponent } from '../../shared/correo/editor-correo.compone
 import { HtmlCorreoPipe } from '../../shared/correo/html-correo.pipe';
 import { GaleriaPlantillasDialogComponent } from '../../shared/correo/galeria-plantillas-dialog.component';
 import { CorreoClienteApi, SuscripcionApi } from './suscripcion.api';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 type Pestana = 'nuevo' | 'previsualizar' | 'historial';
 
 @Component({
   selector: 'alma-envio-correos-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, EditarPlantillaDialogComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent, HtmlCorreoPipe],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, AlmaLoaderComponent, EditarPlantillaDialogComponent, EditorCorreoComponent, GaleriaPlantillasDialogComponent, HtmlCorreoPipe],
   template: `
-    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
+    <nova-dialog
+      #dlg
+      ariaLabel="Enviar correos al cliente"
+      width="max(82vw, min(97vw, 900px))"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!enviando()"
+      (closed)="closed.emit()"
+    >
       <div
-        class="surface-solid flex h-[94vh] max-h-[94vh] w-full max-w-[97vw] flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl lg:max-w-[82vw]"
-        (click)="$event.stopPropagation()"
+        class="flex h-[94vh] max-h-[94vh] flex-col gap-2 px-4 pb-3 pt-3"
       >
         <!-- ── Header (Dali): ícono + título + DESTINATARIOS + X ── -->
         <div class="flex items-center justify-between gap-2">
@@ -46,7 +54,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
                 <p class="text-xs font-bold">{{ destinatarios() }}</p>
               </div>
             </div>
-            <button type="button" (click)="closed.emit()" aria-label="Cerrar"
+            <button type="button" (click)="dlg.close()" aria-label="Cerrar"
                     class="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <lucide-icon name="x" [size]="16" />
             </button>
@@ -186,29 +194,31 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
-         elegida se renderiza con los datos reales de la cotización. -->
-    @if (selectorPlantillas()) {
-      <alma-galeria-plantillas-dialog
-        [app]="APP"
-        (closed)="selectorPlantillas.set(false)"
-        (seleccionar)="usarPlantilla($event)"
-        (editar)="editarPlantilla($event)"
-      />
-    }
+      <!-- Diálogos anidados DENTRO del nova-dialog: así quedan sobre él (el
+           nova-dialog vive en <body> y la página de atrás queda inert). -->
+      <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
+           elegida se renderiza con los datos reales de la cotización. -->
+      @if (selectorPlantillas()) {
+        <alma-galeria-plantillas-dialog
+          [app]="APP"
+          (closed)="selectorPlantillas.set(false)"
+          (seleccionar)="usarPlantilla($event)"
+          (editar)="editarPlantilla($event)"
+        />
+      }
 
-    <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
-    @if (editandoPlantilla(); as ed) {
-      <alma-editar-plantilla-dialog
-        [app]="APP"
-        [plantilla]="ed"
-        [variables]="variables()"
-        (closed)="editandoPlantilla.set(null)"
-        (guardada)="plantillaGuardada()"
-      />
-    }
+      <!-- Editor de plantilla (Editar desde la galería o "Guardar plantilla") -->
+      @if (editandoPlantilla(); as ed) {
+        <alma-editar-plantilla-dialog
+          [app]="APP"
+          [plantilla]="ed"
+          [variables]="variables()"
+          (closed)="editandoPlantilla.set(null)"
+          (guardada)="plantillaGuardada()"
+        />
+      }
+    </nova-dialog>
   `,
 })
 export class EnvioCorreosDialogComponent {
