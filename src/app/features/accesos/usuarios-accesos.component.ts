@@ -179,7 +179,7 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
           [dismissable]="!creandoUsuario()"
           (closed)="creando.set(false)"
         >
-          <div class="w-[95vw] p-4 sm:rounded-2xl sm:p-6">
+          <div class="p-4 sm:p-6">
             <div class="flex flex-col items-center justify-center space-y-1">
               <h2 class="text-xl font-bold">Crear usuario</h2>
               <p class="text-center text-xs text-muted-foreground sm:text-sm">
