@@ -72,7 +72,7 @@ import { ColumnConfig } from './suscripcion-grid.api';
           </p>
           <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
             <div
-              class="h-full rounded-full bg-primary transition-all duration-500"
+              class="h-full rounded-full bg-primary transition-all duration-(--spring-smooth-dur) ease-(--spring-smooth)"
               [style.width.%]="progreso()"
             ></div>
           </div>

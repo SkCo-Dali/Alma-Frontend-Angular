@@ -15,7 +15,7 @@ import { Component, input, model } from '@angular/core';
       [attr.aria-label]="ariaLabel() || null"
       [disabled]="disabled()"
       (click)="alternar($event)"
-      class="group peer relative inline-flex h-[26px] w-[46px] shrink-0 cursor-pointer items-center overflow-hidden rounded-full border border-white/20 p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,.25)] backdrop-blur-md transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+      class="group peer relative inline-flex h-[26px] w-[46px] shrink-0 cursor-pointer items-center overflow-hidden rounded-full border border-white/20 p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,.25)] backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
       [style.background]="
         checked()
           ? 'color-mix(in oklch, var(--primary) 85%, transparent)'
@@ -28,7 +28,7 @@ import { Component, input, model } from '@angular/core';
         class="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-full bg-gradient-to-b from-white/45 to-transparent"
       ></span>
       <span
-        class="pointer-events-none relative block h-[22px] w-[22px] rounded-full border border-black/5 bg-[radial-gradient(120%_120%_at_30%_25%,#ffffff_0%,#f2f2f5_60%,#e4e4e9_100%)] shadow-[0_1px_3px_rgba(0,0,0,.35),inset_0_1px_1px_rgba(255,255,255,.9)] transition-transform duration-300 ease-[cubic-bezier(.3,1.3,.5,1)]"
+        class="pointer-events-none relative block h-[22px] w-[22px] rounded-full border border-black/5 bg-[radial-gradient(120%_120%_at_30%_25%,#ffffff_0%,#f2f2f5_60%,#e4e4e9_100%)] shadow-[0_1px_3px_rgba(0,0,0,.35),inset_0_1px_1px_rgba(255,255,255,.9)] transition-transform"
         [style.transform]="checked() ? 'translateX(20px)' : 'translateX(0)'"
       ></span>
     </button>

@@ -39,7 +39,7 @@ import { colocarPanel } from '../../../shared/popover-position';
       <div
         #panel
         almaPortal
-        class="surface-solid fixed z-[95] w-80 rounded-lg border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        class="nova-pop surface-solid fixed z-[95] w-80 rounded-lg border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         (click)="$event.stopPropagation()"
       >
         <h3 class="mb-4 text-sm font-medium">Filtrar por {{ label() }}</h3>

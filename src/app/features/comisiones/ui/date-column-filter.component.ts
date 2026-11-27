@@ -60,7 +60,7 @@ function fmt(d: Date): string {
       <div
         #panel
         almaPortal
-        class="surface-solid fixed z-[95] w-80 overflow-hidden rounded-xl border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        class="nova-pop surface-solid fixed z-[95] w-80 overflow-hidden rounded-xl border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         (click)="$event.stopPropagation()"
       >
         <div class="mb-4 flex items-center justify-between">
