@@ -53,7 +53,11 @@ jobs:
           # Autenticacion Basic con el PAT via cabecera (evita exponer el PAT en la URL/logs)
           AUTH=$(printf ':%s' "${AZDO_PAT}" | base64 -w0)
           DEST="https://dev.azure.com/${AZDO_ORG}/${AZDO_PROJECT_ENC}/_git/${AZDO_REPO}"
-          # Empuja solo ramas y tags (ignora refs/pull/* de GitHub) y poda lo borrado
+          # Empuja solo ramas y tags (ignora refs/pull/* de GitHub) y poda lo borrado.
+          # El "+" fuerza cada ref: AzDO es replica, asi que una rama reescrita en
+          # GitHub (rebase + force-push) debe reemplazar la de alla. Sin el "+" el
+          # push la rechaza con "fetch first" y todas las corridas siguientes quedan
+          # en rojo hasta que esa rama se borre (paso el 19/20-nov y el 27-nov).
           git -c http.extraHeader="Authorization: Basic ${AUTH}" \
-              push --prune "${DEST}" 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+              push --prune "${DEST}" '+refs/heads/*:refs/heads/*' '+refs/tags/*:refs/tags/*'
           echo "Mirror OK: ${SRC_REPO} -> ${AZDO_REPO}"
