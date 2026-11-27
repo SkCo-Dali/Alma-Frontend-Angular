@@ -79,7 +79,7 @@ interface DockEntry {
           (mouseenter)="invocar()"
           (click)="invocar()"
           (focus)="invocar()"
-          class="flex cursor-pointer flex-col items-center px-3 pb-1.5 pt-3 transition-opacity duration-200"
+          class="flex cursor-pointer flex-col items-center px-3 pb-1.5 pt-3 transition-opacity"
           [style.opacity]="hidden() ? 1 : 0"
           [style.pointerEvents]="hidden() ? 'auto' : 'none'"
         >
@@ -202,7 +202,7 @@ interface DockEntry {
         (contextmenu)="$event.preventDefault(); menuCtx.set(null)"
       ></div>
       <div
-        class="surface-solid fixed z-50 min-w-44 rounded-lg border border-border p-1 shadow-[var(--shadow-lg)]"
+        class="nova-pop surface-solid fixed z-50 min-w-44 [--nova-pop-origin:bottom_left] rounded-lg border border-border p-1 shadow-[var(--shadow-lg)]"
         [style.left.px]="ctx.x"
         [style.top.px]="ctx.y - 88 > 8 ? ctx.y - 88 : 8"
       >

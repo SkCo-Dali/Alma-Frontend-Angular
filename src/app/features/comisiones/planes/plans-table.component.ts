@@ -183,7 +183,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                           <div
                             #panel
                             almaPortal
-                            class="surface-solid fixed z-[85] min-w-[170px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+                            class="nova-pop surface-solid fixed z-[85] min-w-[170px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"

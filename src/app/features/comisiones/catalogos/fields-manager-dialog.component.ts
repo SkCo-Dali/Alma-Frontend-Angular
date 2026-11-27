@@ -158,7 +158,7 @@ const COLOR_TIPO: Record<string, string> = {
                           <div
                             #panel
                             almaPortal
-                            class="surface-solid fixed z-[116] min-w-[150px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+                            class="nova-pop surface-solid fixed z-[116] min-w-[150px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"
