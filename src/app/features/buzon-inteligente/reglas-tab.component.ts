@@ -510,7 +510,7 @@ interface FijaEd {
                 <div class="row between mhead">
                   @if (objetivo(); as o) {
                     @if (pestana() === 'general') {
-                      <div><h2 class="sm b">Reglas generales del área</h2><p class="xs muted">Aplican a todos los procesos de {{ buzon().nombre }}. Se guardan en el borrador y entran al publicar.</p></div>
+                      <div animate.enter="nova-entra"><h2 class="sm b">Reglas generales del área</h2><p class="xs muted">Aplican a todos los procesos de {{ buzon().nombre }}. Se guardan en el borrador y entran al publicar.</p></div>
                     } @else if (o.reglas) {
                       <div><h2 class="sm b">Reglas de {{ o.clave }}</h2><p class="xs muted">Es el texto completo de {{ o.clave }} que va a la IA en cada correo. Edítalo y guárdalo tal cual, o analízalo con Nova para actualizar también sus señales, etiquetas y datos (te muestra qué cambia antes de aplicarlo).</p></div>
                     } @else {

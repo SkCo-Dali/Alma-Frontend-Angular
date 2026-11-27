@@ -111,7 +111,7 @@ type Rango = 'proximas' | 'pasadas';
                 @if (abierta() === c.id) {
                   <div [id]="'det-' + c.id" class="basis-full rounded-2xl border border-border/60 bg-[var(--table-header)] p-4">
                     @if (detalle(); as d) {
-                      <div class="grid gap-4 md:grid-cols-2">
+                      <div animate.enter="nova-expande" animate.leave="nova-colapsa" class="grid gap-4 md:grid-cols-2">
                         <dl class="grid grid-cols-[minmax(8.5rem,40%)_1fr] gap-x-3 gap-y-1 text-sm">
                           <dt class="text-muted-foreground">Asesoría</dt><dd class="text-foreground">{{ d.tipoTitulo }}</dd>
                           <dt class="text-muted-foreground">Canal</dt><dd class="text-foreground">{{ d.canal }}</dd>

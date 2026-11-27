@@ -35,7 +35,7 @@ import { LucideAngularModule } from 'lucide-angular';
       </button>
 
       @if (abierto()) {
-        <div
+        <div animate.enter="nova-expande" animate.leave="nova-colapsa"
           class="space-y-4 border-t border-border bg-card p-5 text-xs leading-relaxed text-muted-foreground"
         >
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -44,7 +44,7 @@ const COLOR_ESTADO: Record<string, string> = {
           <alma-loader [size]="72" label="Cargando registros…" />
         </div>
       } @else {
-        <div class="scrollbar min-h-0 flex-1 overflow-auto">
+        <div animate.enter="nova-entra" class="scrollbar min-h-0 flex-1 overflow-auto">
           <div class="min-w-max">
             <table class="alma-table w-full">
               <thead class="sticky top-0 z-20 bg-[var(--table-header)] backdrop-blur-md">

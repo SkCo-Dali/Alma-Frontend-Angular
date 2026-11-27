@@ -67,7 +67,7 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
     @switch (activeTab()) {
       @case ('apps') {
         <!-- Catálogo de Apps registradas en la plataforma (registry del frontend) -->
-        <p class="text-on-wallpaper mb-2 text-xs text-foreground/75">
+        <p animate.enter="nova-entra" class="text-on-wallpaper mb-2 text-xs text-foreground/75">
           Haz clic en una aplicación para ver quién tiene acceso y con qué rol.
         </p>
         <alma-admin-table
@@ -113,7 +113,7 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
         </ng-template>
       }
       @case ('usuarios') {
-        <alma-usuarios-accesos />
+        <alma-usuarios-accesos animate.enter="nova-entra" class="block" />
       }
       @case ('roles') {
         <!-- Roles reales del RBAC (alma.Roles vía API, filtrados al ámbito) -->
@@ -154,10 +154,10 @@ type Tab = 'apps' | 'usuarios' | 'roles' | 'auditoria' | 'metricas';
         }
       }
       @case ('auditoria') {
-        <alma-auditoria-accesos />
+        <alma-auditoria-accesos animate.enter="nova-entra" class="block" />
       }
       @case ('metricas') {
-        <alma-metricas-uso />
+        <alma-metricas-uso animate.enter="nova-entra" class="block" />
       }
     }
   `,

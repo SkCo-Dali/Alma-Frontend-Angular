@@ -45,6 +45,7 @@ const MAX_VISIBLES = 60;
     @if (abierto()) {
       <div class="fixed inset-0 z-[110]" (click)="cerrar()"></div>
       <div
+        animate.leave="nova-pop-out"
         class="nova-pop surface-solid fixed z-[115] rounded-xl border border-border p-0 shadow-[var(--shadow-lg)]"
         [style.top.px]="pos().top"
         [style.left.px]="pos().left"

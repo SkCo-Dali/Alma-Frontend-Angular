@@ -72,11 +72,11 @@ const VISTAS: { id: Vista; rotulo: string; permiso: string }[] = [
           <div [hidden]="vistaActual() !== 'solicitud'"><alma-solicitud-form (irABandeja)="vista.set('bandeja')" /></div>
         }
         @switch (vistaActual()) {
-          @case ('bandeja') { <alma-mi-agenda /> }
-          @case ('citas') { <alma-citas-agenda /> }
-          @case ('analitica') { <alma-analitica-agenda /> }
-          @case ('consultas') { <alma-consultas-prestaciones /> }
-          @case ('configuracion') { <alma-configuracion-agenda /> }
+          @case ('bandeja') { <alma-mi-agenda animate.enter="nova-entra" class="block" /> }
+          @case ('citas') { <alma-citas-agenda animate.enter="nova-entra" class="block" /> }
+          @case ('analitica') { <alma-analitica-agenda animate.enter="nova-entra" class="block" /> }
+          @case ('consultas') { <alma-consultas-prestaciones animate.enter="nova-entra" class="block" /> }
+          @case ('configuracion') { <alma-configuracion-agenda animate.enter="nova-entra" class="block" /> }
         }
       </div>
     }

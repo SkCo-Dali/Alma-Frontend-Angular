@@ -108,7 +108,7 @@ const TITULOS: Record<MotorDataTab, { titulo: string; subtitulo: string }> = {
 
         <div class="glass min-h-[500px] rounded-2xl p-3 shadow-[var(--shadow-md)]">
           @if (tab() === 'motor') {
-            <alma-motor-ejecucion-tab
+            <alma-motor-ejecucion-tab animate.enter="nova-entra" class="block"
               (confirmar)="pedirConfirmacion($event)"
               (verError)="errorDe.set($event)"
             />
