@@ -10,6 +10,7 @@ import { Component, computed, effect, inject, input, output, signal, untracked }
 import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { DeclaracionItemApi, DeclaracionesApi, SuscripcionApi, TerceroApi } from './suscripcion.api';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 interface FilaValor {
   etiqueta: string;
@@ -93,16 +94,17 @@ function dia(iso: unknown): string | null {
 
 @Component({
   selector: 'alma-validacion-pharos-dialog',
-  imports: [LucideAngularModule, AlmaLoaderComponent],
+  imports: [NovaDialogComponent, LucideAngularModule, AlmaLoaderComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-      (click)="closed.emit()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Validación en Pharos"
+      width="768px"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl border border-border shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex max-h-[90vh] flex-col">
         <header class="flex items-center justify-between gap-3 border-b border-border/50 px-5 py-3">
           <div class="flex items-center gap-2">
             <lucide-icon name="shield-check" [size]="18" class="text-primary" />
@@ -115,7 +117,7 @@ function dia(iso: unknown): string | null {
           </div>
           <button
             type="button"
-            (click)="closed.emit()"
+            (click)="dlg.close()"
             class="alma-btn alma-btn-outline h-8 w-8 rounded-xl p-0"
             aria-label="Cerrar"
           >
@@ -238,7 +240,7 @@ function dia(iso: unknown): string | null {
           }
         </div>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class ValidacionPharosDialogComponent {

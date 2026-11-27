@@ -44,7 +44,7 @@ function polar(cx: number, cy: number, r: number, ang: number): [number, number]
         }
       </div>
     } @else {
-      <div class="grid grid-cols-1 gap-4 pt-4 xl:grid-cols-3">
+      <div animate.enter="nova-entra" class="grid grid-cols-1 gap-4 pt-4 xl:grid-cols-3">
         <!-- Dona por canal -->
         <div class="rounded-xl border border-border/30 bg-card">
           <div class="px-4 pb-0 pt-4">

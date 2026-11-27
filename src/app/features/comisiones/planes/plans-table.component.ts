@@ -28,6 +28,7 @@ import {
   fmtFecha,
 } from './commission-plans.store';
 import { PlanEditorDialogComponent } from './plan-editor-dialog.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 /** Máx. 200 por el límite de page_size del API de planes. */
 export const PLANS_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200] as const;
@@ -45,6 +46,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
 @Component({
   selector: 'alma-plans-table',
   imports: [
+    NovaDialogComponent,
     LucideAngularModule,
     PortalDirective,
     GridPaginationComponent,
@@ -181,7 +183,8 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
                           <div
                             #panel
                             almaPortal
-                            class="surface-solid fixed z-[85] min-w-[170px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
+        animate.leave="nova-pop-out"
+        class="nova-pop surface-solid fixed z-[85] min-w-[170px] rounded-xl border border-border p-1 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
                           >
                             <button
                               type="button"
@@ -227,14 +230,14 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
     }
 
     @if (porBorrar(); as p) {
-      <div
-        class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
-        (click)="porBorrar.set(null)"
+      <nova-dialog
+        ariaLabel="Eliminar plan"
+        width="448px"
+        [padded]="false"
+        [showClose]="false"
+        (closed)="porBorrar.set(null)"
       >
-        <div
-          class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
+        <div class="p-6">
           <h2 class="text-xl font-bold">Eliminar Plan de Comisiones</h2>
           <p class="mt-2 text-sm text-muted-foreground">
             ¿Estás seguro de que deseas eliminar
@@ -264,7 +267,7 @@ const COLUMNAS: { key: string; label: string; fecha?: boolean }[] = [
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
 
     @if (enEdicion(); as p) {

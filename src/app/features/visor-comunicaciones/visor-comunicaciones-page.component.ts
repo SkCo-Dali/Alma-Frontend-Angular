@@ -318,7 +318,7 @@ function leerAnchoGuardado(): number {
                         <p class="text-sm text-muted-foreground">Sin eventos de entrega registrados para este envío.</p>
                       </div>
                     } @else {
-                      <ol class="relative ml-3 border-l border-border/60">
+                      <ol animate.enter="nova-entra" class="relative ml-3 border-l border-border/60">
                         @for (e of traza(); track $index) {
                           <li class="mb-5 ml-5">
                             <span
@@ -376,7 +376,7 @@ function leerAnchoGuardado(): number {
             </div>
           } @else {
             <!-- Estado inicial (sin selección) -->
-            <div class="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
+            <div animate.enter="nova-entra" class="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
               <div class="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
                 <lucide-icon name="mail-search" [size]="44" class="text-primary" />
               </div>

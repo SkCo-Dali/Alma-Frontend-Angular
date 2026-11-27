@@ -30,7 +30,7 @@ import { ProductoClienteApi, SuscripcionApi } from './suscripcion.api';
             El cliente no tiene otros productos registrados.
           </p>
         } @else {
-          <div class="divide-y divide-border/40">
+          <div animate.enter="nova-entra" class="divide-y divide-border/40">
             @for (p of items(); track $index) {
               <div class="flex items-center justify-between gap-3 px-4 py-2">
                 <div class="min-w-0">

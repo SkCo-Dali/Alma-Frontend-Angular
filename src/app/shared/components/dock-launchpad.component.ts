@@ -20,7 +20,8 @@ const DIVIDER = '__divider__';
   template: `
     @if (open()) {
       <div
-        class="fixed inset-0 z-[80] flex flex-col bg-[rgba(20,30,25,.35)] backdrop-blur-2xl"
+        animate.leave="nova-launchpad-out"
+        class="nova-launchpad fixed inset-0 z-[80] flex flex-col bg-[rgba(20,30,25,.35)] backdrop-blur-2xl"
         (click)="closed.emit()"
       >
         <div

@@ -39,7 +39,7 @@ import { Evento, PrestacionesApi } from './prestaciones.api';
       } @else if (!eventos().length) {
         <p class="px-5 py-10 text-center text-sm text-muted-foreground">No hay movimientos para mostrar.</p>
       } @else {
-        <div class="overflow-x-auto">
+        <div animate.enter="nova-entra" class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-[var(--table-header)] text-left text-[11px] font-semibold uppercase tracking-wider text-foreground/65">
               <tr>

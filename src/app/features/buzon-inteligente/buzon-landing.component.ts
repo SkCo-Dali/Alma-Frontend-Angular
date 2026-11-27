@@ -263,7 +263,7 @@ const REFRESCO_MS = 60_000;
             }
           </div>
           @if (abierto() !== null) {
-            <p id="bz-paso-detalle" class="flex items-start gap-1.5 px-1 pb-0.5 pt-1 text-[13px] text-muted-foreground">
+            <p animate.enter="nova-expande" animate.leave="nova-colapsa" id="bz-paso-detalle" class="flex items-start gap-1.5 px-1 pb-0.5 pt-1 text-[13px] text-muted-foreground">
               <lucide-icon name="info" [size]="14" class="mt-0.5 shrink-0" />
               <span><b class="text-foreground">Paso {{ abierto()! + 1 }}.</b> {{ pasos[abierto()!].texto }}</span>
             </p>

@@ -1,30 +1,24 @@
 // Creación de un plan de compensación. Nace en borrador; las reglas se agregan después
 // desde el editor.
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 import { CommissionPlan } from './commission-plans.api';
 
 @Component({
   selector: 'alma-create-plan-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, NovaDialogComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      title="Crear Plan de Comisiones"
+      description="Crea un nuevo plan de comisiones con reglas y asignaciones."
+      width="600px"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid my-6 w-full max-w-[600px] rounded-2xl border border-border p-4 shadow-2xl sm:p-6"
-        (click)="$event.stopPropagation()"
-      >
-        <div class="flex flex-col items-center justify-center space-y-2">
-          <h2 class="text-xl font-bold">Crear Plan de Comisiones</h2>
-          <p class="text-center text-xs text-muted-foreground sm:text-sm">
-            Crea un nuevo plan de comisiones con reglas y asignaciones.
-          </p>
-        </div>
-
-        <div class="mt-4 space-y-3 sm:space-y-4">
+        <div class="space-y-3 sm:space-y-4">
           <div>
             <label class="text-sm font-medium" for="new-plan-name">
               Nombre <span class="text-destructive">*</span>
@@ -93,7 +87,7 @@ import { CommissionPlan } from './commission-plans.api';
           </div>
         </div>
 
-        <div class="mt-6 flex justify-end gap-2">
+        <div novaDialogFooter class="flex gap-2">
           <button
             type="button"
             (click)="cerrar()"
@@ -111,14 +105,14 @@ import { CommissionPlan } from './commission-plans.api';
             {{ guardando() ? 'Creando…' : 'Crear Plan' }}
           </button>
         </div>
-      </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class CreatePlanDialogComponent {
   readonly createPlan =
     input.required<(data: Partial<CommissionPlan>) => Promise<CommissionPlan | null>>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   protected readonly guardando = signal(false);
   protected readonly nombre = signal('');
@@ -145,7 +139,8 @@ export class CreatePlanDialogComponent {
         endDate: this.fin(),
         assignmentType: 'all_users',
       });
-      if (res) this.closed.emit();
+      // Sale con animación; `closed` llega cuando ya salió.
+      if (res) this.dlg().close();
     } finally {
       this.guardando.set(false);
     }
@@ -153,6 +148,6 @@ export class CreatePlanDialogComponent {
 
   protected cerrar(): void {
     if (this.guardando()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }

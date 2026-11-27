@@ -16,6 +16,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AlmaLoaderComponent } from '../components/alma-loader.component';
 import { HtmlCorreoPipe } from './html-correo.pipe';
 import { CorreoApi, PlantillaCorreoApi } from './correo.api';
+import { NovaDialogComponent } from '../components/nova-dialog/nova-dialog.component';
 
 // Web component <swiper-container> (bundle: trae Navigation/Autoplay/FreeMode/
 // Mousewheel y sus estilos en shadow DOM). Registrar es idempotente.
@@ -48,7 +49,7 @@ const SWIPER_PARAMS = {
 
 @Component({
   selector: 'alma-galeria-plantillas-dialog',
-  imports: [FormsModule, LucideAngularModule, AlmaLoaderComponent, HtmlCorreoPipe],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, AlmaLoaderComponent, HtmlCorreoPipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   styles: [`
     .glass { background: color-mix(in oklab, var(--background) 60%, transparent);
@@ -92,11 +93,15 @@ const SWIPER_PARAMS = {
   `],
   template: `
     <!-- ── Galería (dims de Dali: max-w-6xl / 85vh) ── -->
-    <div class="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4" (click)="closed.emit()">
-      <div
-        class="surface-solid flex max-h-[85vh] w-full max-w-6xl flex-col gap-2 rounded-2xl border border-border px-3 pb-3 pt-3 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+    <nova-dialog
+      #dlg
+      ariaLabel="Plantillas de correo"
+      width="1152px"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="closed.emit()"
+    >
+      <div class="flex max-h-[85vh] flex-col gap-2 px-3 pb-3 pt-3">
         <!-- Header: ícono + títulos + buscador inline + Buscar + X (Dali) -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
@@ -116,7 +121,7 @@ const SWIPER_PARAMS = {
                     class="h-8 rounded-lg bg-gradient-to-r from-primary to-emerald-500 px-3 text-xs font-medium text-white shadow-md shadow-primary/20">
               Buscar
             </button>
-            <button type="button" (click)="closed.emit()" aria-label="Cerrar"
+            <button type="button" (click)="dlg.close()" aria-label="Cerrar"
                     class="rounded-sm p-1 opacity-70 transition-opacity hover:opacity-100">
               <lucide-icon name="x" [size]="16" />
             </button>
@@ -199,15 +204,18 @@ const SWIPER_PARAMS = {
           }
         </div>
       </div>
-    </div>
+    </nova-dialog>
 
     <!-- ── Preview Modal (encima, 700px, como Dali) ── -->
     @if (previa(); as p) {
-      <div class="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 p-4" (click)="previa.set(null)">
-        <div
-          class="surface-solid flex max-h-[90vh] w-full max-w-[92vw] flex-col overflow-hidden rounded-2xl border border-border shadow-2xl lg:max-w-[700px]"
-          (click)="$event.stopPropagation()"
-        >
+      <nova-dialog
+        ariaLabel="Vista previa de la plantilla"
+        width="700px"
+        [padded]="false"
+        [showClose]="false"
+        (closed)="previa.set(null)"
+      >
+        <div class="flex max-h-[90vh] flex-col overflow-hidden">
           <div class="flex shrink-0 items-center justify-between border-b border-border/30 px-5 py-3">
             <h3 class="truncate text-sm font-semibold">{{ p.nombre }}</h3>
             <button type="button" (click)="previa.set(null)" aria-label="Cerrar"
@@ -238,13 +246,21 @@ const SWIPER_PARAMS = {
             }
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
 
     <!-- Confirmación de eliminación (todas las plantillas son compartidas) -->
     @if (confirmarEliminar(); as p) {
-      <div class="fixed inset-0 z-[135] flex items-center justify-center bg-black/60 p-4" (click)="confirmarEliminar.set(null)">
-        <div class="surface-solid w-full max-w-sm rounded-2xl border border-border p-6 shadow-2xl" (click)="$event.stopPropagation()">
+      <nova-dialog
+        dialogRole="alertdialog"
+        ariaLabel="Eliminar plantilla"
+        width="384px"
+        [padded]="false"
+        [showClose]="false"
+        [dismissable]="!eliminando()"
+        (closed)="confirmarEliminar.set(null)"
+      >
+        <div class="p-6">
           <h2 class="text-base font-bold">¿Eliminar "{{ p.nombre }}"?</h2>
           <p class="mt-1 text-sm text-muted-foreground">
             La plantilla es compartida por todo el equipo y esta acción no se
@@ -263,7 +279,7 @@ const SWIPER_PARAMS = {
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
   `,
 })
@@ -276,6 +292,7 @@ export class GaleriaPlantillasDialogComponent {
   /** true = solo elegir (sin Editar/Eliminar): p.ej. "usar como base". */
   readonly soloSeleccion = input(false);
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   readonly seleccionar = output<PlantillaCorreoApi>();
   /** El usuario pidió editar esta plantilla (el padre abre el editor). */
   readonly editar = output<PlantillaCorreoApi>();

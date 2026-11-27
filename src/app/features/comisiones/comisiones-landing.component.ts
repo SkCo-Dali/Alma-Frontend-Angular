@@ -48,7 +48,7 @@ interface MotorModule {
               [tabindex]="m.disabled ? -1 : 0"
               [attr.aria-disabled]="m.disabled"
               [style.background]="m.gradient"
-              class="group relative flex min-h-36 flex-col justify-between overflow-hidden rounded-3xl p-4 text-white shadow-[var(--shadow-md)] transition-all duration-300"
+              class="group relative flex min-h-36 flex-col justify-between overflow-hidden rounded-3xl p-4 text-white shadow-[var(--shadow-md)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] active:scale-[0.98]"
               [class]="
                 m.disabled
                   ? 'cursor-not-allowed opacity-55'
@@ -77,7 +77,7 @@ interface MotorModule {
                   <lucide-icon
                     name="move-right"
                     [size]="16"
-                    class="opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-90"
+                    class="opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-90"
                   />
                 }
               </div>

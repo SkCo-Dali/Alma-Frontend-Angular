@@ -31,6 +31,7 @@ import {
   ValorParametroSim,
 } from './simulador-config.api';
 import { VolverInicioComponent } from '../../../shared/components/volver-inicio.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 const GRUPO_ICONO: Record<string, string> = {
   generales: 'sliders-horizontal',
@@ -113,7 +114,7 @@ interface GrupoVista {
 
 @Component({
   selector: 'alma-simulador-config-page',
-  imports: [
+  imports: [NovaDialogComponent, 
     VolverInicioComponent,
     FormsModule,
     RouterLink,
@@ -349,14 +350,15 @@ interface GrupoVista {
         }
 
         @if (confirmOpen()) {
-          <div
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-            (click)="!guardando() && confirmOpen.set(false)"
+          <nova-dialog
+            ariaLabel="Confirmar cambios del simulador"
+            width="512px"
+            [padded]="false"
+            [showClose]="false"
+            [dismissable]="!guardando()"
+            (closed)="confirmOpen.set(false)"
           >
-            <div
-              class="surface-solid w-full max-w-lg rounded-2xl border border-border p-5 shadow-2xl"
-              (click)="$event.stopPropagation()"
-            >
+            <div class="p-5">
               <h2 class="text-base font-bold">Confirmar cambios del simulador</h2>
               <p class="mt-1 text-sm text-muted-foreground">
                 Se aplicarán {{ cambios().length }}
@@ -420,7 +422,7 @@ interface GrupoVista {
                 </button>
               </div>
             </div>
-          </div>
+          </nova-dialog>
         }
       </div>
     }

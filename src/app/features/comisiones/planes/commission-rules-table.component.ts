@@ -12,10 +12,11 @@ import {
 } from './commission-rules.api';
 import { mapApiOperatorToShort } from './rule-form.domain';
 import { RuleDialogComponent } from './rule-dialog.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 @Component({
   selector: 'alma-commission-rules-table',
-  imports: [LucideAngularModule, RuleDialogComponent],
+  imports: [NovaDialogComponent, LucideAngularModule, RuleDialogComponent],
   template: `
     @if (rules().length === 0) {
       <div class="py-8 text-center text-sm text-muted-foreground">
@@ -178,7 +179,7 @@ import { RuleDialogComponent } from './rule-dialog.component';
                       Cargando condiciones…
                     </div>
                   } @else {
-                    <code class="block break-words rounded bg-muted p-2 text-xs">{{
+                    <code animate.enter="nova-entra" class="block break-words rounded bg-muted p-2 text-xs">{{
                       resumen(s) || 'Sin condiciones'
                     }}</code>
                   }
@@ -196,14 +197,14 @@ import { RuleDialogComponent } from './rule-dialog.component';
 
     <!-- Confirmación de borrado -->
     @if (porBorrar(); as r) {
-      <div
-        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4"
-        (click)="porBorrar.set(null)"
+      <nova-dialog
+        ariaLabel="Eliminar regla"
+        width="448px"
+        [padded]="false"
+        [showClose]="false"
+        (closed)="porBorrar.set(null)"
       >
-        <div
-          class="surface-solid w-full max-w-md rounded-2xl border border-border p-6 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
+        <div class="p-6">
           <h2 class="text-lg font-bold">Eliminar Regla</h2>
           <p class="mt-2 text-sm text-muted-foreground">
             ¿Estás seguro de que deseas eliminar la regla
@@ -229,7 +230,7 @@ import { RuleDialogComponent } from './rule-dialog.component';
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
 
     @if (enEdicion(); as r) {
