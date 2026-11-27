@@ -17,6 +17,7 @@ import { HeaderComponent } from './shared/components/header.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
 import { LoginScreenComponent } from './shared/components/login-screen.component';
 import { SinRespuestaScreenComponent } from './shared/components/sin-respuesta-screen.component';
+import { MotionConfigService } from './shared/motion/motion-config.service';
 
 // Íconos de plataforma/nav que no viven en el catálogo.
 const EXTRA_ICONS = [
@@ -80,6 +81,9 @@ export class AppComponent {
   protected readonly prefs = inject(PreferencesService);
   private readonly apps = inject(ApplicationsService);
   private readonly inactividad = inject(InactividadService);
+  // Se inyecta al arrancar para que las variables --spring-* existan desde el
+  // primer render (valores de fábrica hasta que llegan los publicados).
+  private readonly movimiento = inject(MotionConfigService);
 
   constructor() {
     void this.auth.init(() => this.api.getMe());
@@ -90,6 +94,8 @@ export class AppComponent {
       if (this.auth.status() !== 'ready') return;
       // Cierre por inactividad real (hallazgo del pentest de 7Way).
       this.inactividad.iniciar();
+      // Springs publicados desde /lab/motion (sin backend se quedan los de fábrica).
+      void this.movimiento.cargar();
       if (authEnabled) {
         this.prefs.conectarServidor(
           () => this.api.getPreferences(),

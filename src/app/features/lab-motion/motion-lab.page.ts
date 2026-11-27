@@ -19,6 +19,7 @@ import {
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
+import { MotionConfigService } from '../../shared/motion/motion-config.service';
 import { MotionTuningService } from './motion/motion-tuning.service';
 import { PressDirective } from './motion/press.directive';
 import { LabContainerComponent } from './demos/lab-container.component';
@@ -138,7 +139,7 @@ import { LabTunerComponent } from './demos/lab-tuner.component';
     <div #fondo class="bg-transparent pb-24">
       <alma-page-header
         title="Laboratorio de movimiento"
-        description="Prototipo del nuevo lenguaje de animación de Nova: springs, profundidad y continuidad. Ajusta los springs y todo el laboratorio responde."
+        description="Prototipo del nuevo lenguaje de animación de Nova: springs, profundidad y continuidad. Ajusta los springs, previsualiza aquí y publícalos para que apliquen en toda la app."
       />
 
       <div class="flex flex-col gap-6">
@@ -394,8 +395,8 @@ export class MotionLabPage {
         raiz.style.setProperty(k, v);
       }
     });
-    inject(DestroyRef).onDestroy(() => {
-      for (const k of Object.keys(this.tuning.cssVars())) raiz.style.removeProperty(k);
-    });
+    // Al salir, <html> vuelve a lo publicado: el borrador no se filtra al resto de la app.
+    const config = inject(MotionConfigService);
+    inject(DestroyRef).onDestroy(() => config.restaurar());
   }
 }

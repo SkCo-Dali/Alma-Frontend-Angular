@@ -1,12 +1,13 @@
 // Panel para ajustar en vivo los tres springs de Nova. Todo el laboratorio se
-// mueve con estos valores, así se puede decidir el «carácter» de la marca
-// viendo el resultado en cada demo.
+// mueve con el borrador; «Publicar para todos» lo guarda en el backend y desde
+// ahí aplica a toda la app (MotionConfigService).
 
-import { Component, ElementRef, computed, inject, viewChildren } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChildren } from '@angular/core';
+import { ToastService } from '../../../core/services/toast.service';
 import { DecimalPipe } from '@angular/common';
 import { PressDirective } from '../motion/press.directive';
 import { MotionTuningService } from '../motion/motion-tuning.service';
-import { SpringName, animateSpring, springCurve, springSamples } from '../motion/spring';
+import { SpringName, animateSpring, springCurve, springSamples } from '../../../shared/motion/spring';
 
 const INFO: Record<SpringName, { titulo: string; uso: string }> = {
   snappy: { titulo: 'Snappy', uso: 'Botones, switches, press' },
@@ -91,19 +92,91 @@ const INFO: Record<SpringName, { titulo: string; uso: string }> = {
           {{ v === 1 ? 'Normal' : 'Lenta ×' + v }}
         </button>
       }
-      <button
-        novaPress
-        type="button"
-        class="ml-auto h-8 rounded-full px-3 font-medium text-primary hover:bg-secondary"
-        (click)="tuning.restablecer()"
-      >
-        Restablecer
-      </button>
+      <span class="text-xs text-muted-foreground">Solo para previsualizar: no se publica.</span>
+    </div>
+
+    <!-- Publicación -->
+    <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-sm">
+      <span class="flex min-w-0 items-center gap-2">
+        @if (tuning.hayCambios()) {
+          <span class="size-2 shrink-0 rounded-full bg-[var(--warning)]"></span>
+          <span><b class="font-semibold">Borrador sin publicar.</b> Solo lo ves tú, en esta página.</span>
+        } @else {
+          <span class="size-2 shrink-0 rounded-full bg-primary"></span>
+          <span class="text-muted-foreground">{{ estadoPublicado() }}</span>
+        }
+      </span>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        @if (tuning.hayCambios()) {
+          <button
+            novaPress
+            type="button"
+            class="h-9 rounded-full px-4 font-medium hover:bg-secondary"
+            (click)="tuning.volverAPublicado()"
+          >
+            Volver a lo publicado
+          </button>
+        }
+        @if (tuning.distintoDeFabrica()) {
+          <button
+            novaPress
+            type="button"
+            class="h-9 rounded-full px-4 font-medium hover:bg-secondary"
+            (click)="tuning.valoresDeFabrica()"
+          >
+            Valores de fábrica
+          </button>
+        }
+        @if (tuning.puedePublicar()) {
+          <button
+            novaPress
+            type="button"
+            class="h-9 rounded-full px-5 font-semibold transition-colors disabled:opacity-40"
+            [class]="confirmando() ? 'bg-[var(--warning)] text-black' : 'bg-primary text-primary-foreground'"
+            [disabled]="!tuning.hayCambios() || tuning.publicando()"
+            (click)="publicar()"
+          >
+            {{ tuning.publicando() ? 'Publicando…' : confirmando() ? 'Confirmar: aplica a todos' : 'Publicar para todos' }}
+          </button>
+        } @else {
+          <span class="text-xs text-muted-foreground">Solo los administradores de plataforma pueden publicar.</span>
+        }
+      </div>
     </div>
   `,
 })
 export class LabTunerComponent {
   protected readonly tuning = inject(MotionTuningService);
+  private readonly toast = inject(ToastService);
+  protected readonly confirmando = signal(false);
+  private confirmTimer?: ReturnType<typeof setTimeout>;
+
+  protected readonly estadoPublicado = computed(() => {
+    const p = this.tuning.publicado();
+    if (!p.actualizadoPor) return 'Valores de fábrica: aún no se ha publicado nada.';
+    const fecha = p.actualizadoEn
+      ? new Date(p.actualizadoEn).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+      : '';
+    return `Publicado por ${p.actualizadoPor}${fecha ? ' · ' + fecha : ''} · Es lo que ven todos`;
+  });
+
+  /** Dos pasos: el primer clic pide confirmación (aplica a todos los usuarios). */
+  protected async publicar(): Promise<void> {
+    if (!this.confirmando()) {
+      this.confirmando.set(true);
+      clearTimeout(this.confirmTimer);
+      this.confirmTimer = setTimeout(() => this.confirmando.set(false), 4000);
+      return;
+    }
+    clearTimeout(this.confirmTimer);
+    this.confirmando.set(false);
+    try {
+      await this.tuning.publicar();
+      this.toast.show('Movimiento publicado', 'Los nuevos springs aplican a todos los usuarios al cargar Nova.');
+    } catch (e) {
+      this.toast.error('No se pudo publicar', e instanceof Error ? e.message : undefined);
+    }
+  }
   private readonly bolas = viewChildren<ElementRef<HTMLElement>>('bola');
   private readonly ida: boolean[] = [];
 

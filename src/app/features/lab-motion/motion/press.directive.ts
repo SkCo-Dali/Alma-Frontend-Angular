@@ -4,7 +4,7 @@
 // no produce saltos.
 
 import { Directive, ElementRef, inject, input } from '@angular/core';
-import { animateSpring } from './spring';
+import { animateSpring } from '../../../shared/motion/spring';
 import { MotionTuningService } from './motion-tuning.service';
 
 @Directive({
