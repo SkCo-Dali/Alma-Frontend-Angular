@@ -6,6 +6,7 @@
 
 import { Component, computed, input, output } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 import { Application } from '../../core/models/platform.models';
 import { RolCatalogo, UsuarioDirectorio } from '../../core/services/accesos.api';
 
@@ -22,16 +23,18 @@ function concede(permisos: string[], requerido: string): boolean {
 
 @Component({
   selector: 'alma-app-accesos-panel',
-  imports: [LucideAngularModule],
+  imports: [LucideAngularModule, NovaDialogComponent],
   template: `
-    <div class="fixed inset-0 z-[90] flex justify-end bg-black/30 backdrop-blur-[2px]" (click)="cerrar.emit()">
-      <aside
-        class="surface-solid flex h-full w-full max-w-lg flex-col border-l border-border shadow-[var(--shadow-lg)]"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-label]="'Accesos de ' + app().nombre"
-        (click)="$event.stopPropagation()"
-      >
+    <nova-dialog
+      #dlg
+      variant="side"
+      width="512px"
+      [ariaLabel]="'Accesos de ' + app().nombre"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="cerrar.emit()"
+    >
+      <div class="flex h-full flex-col">
         <header class="flex items-start gap-3 border-b border-border px-5 py-4">
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -52,7 +55,7 @@ function concede(permisos: string[], requerido: string): boolean {
             type="button"
             class="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Cerrar"
-            (click)="cerrar.emit()"
+            (click)="dlg.close()"
           >
             <lucide-icon name="x" [size]="18" />
           </button>
@@ -124,10 +127,9 @@ function concede(permisos: string[], requerido: string): boolean {
             <lucide-icon name="user-circle-2" [size]="16" /> Gestionar en Usuarios
           </button>
         </footer>
-      </aside>
-    </div>
+      </div>
+    </nova-dialog>
   `,
-  host: { '(document:keydown.escape)': 'cerrar.emit()' },
 })
 export class AppAccesosPanelComponent {
   readonly app = input.required<Application>();
