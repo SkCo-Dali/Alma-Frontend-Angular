@@ -357,6 +357,9 @@ export class NovaDialogComponent implements OnDestroy {
 
   protected escape(e: Event): void {
     if (this.estado !== 'abierto' || !this.stack.esTope(this)) return;
+    // Un diálogo antiguo abierto DENTRO de este (fixed inset-0) maneja su
+    // propio Esc: no cerrar los dos de un golpe.
+    if (this.panelRef()?.nativeElement.querySelector('.fixed.inset-0')) return;
     e.stopPropagation();
     this.pedirCierre();
   }

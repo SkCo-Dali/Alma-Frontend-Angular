@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AlmaLoaderComponent } from '../../shared/components/alma-loader.component';
 import { DeclaracionItemApi, DeclaracionesApi, SuscripcionApi } from './suscripcion.api';
 import { veredictoSalud } from './suscripcion.domain';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 const FORM_SALUD = '400500';
 const FORM_MEDICO = '400100';
@@ -82,15 +83,18 @@ function filtrarItems(
 
 @Component({
   selector: 'alma-declaraciones-dialog',
-  imports: [LucideAngularModule, AlmaLoaderComponent],
+  imports: [NovaDialogComponent, LucideAngularModule, AlmaLoaderComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      (click)="closed.emit()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Declaraciones de asegurabilidad"
+      width="768px"
+      [padded]="false"
+      [showClose]="false"
+      (closed)="closed.emit()"
     >
       <div
-        class="surface-solid flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border shadow-2xl"
-        (click)="$event.stopPropagation()"
+        class="flex max-h-[90vh] flex-col overflow-hidden"
       >
         <!-- Header compacto -->
         <div class="flex-none border-b border-border px-5 py-3">
@@ -115,7 +119,7 @@ function filtrarItems(
             </div>
             <button
               type="button"
-              (click)="closed.emit()"
+              (click)="dlg.close()"
               class="text-muted-foreground hover:text-foreground"
               aria-label="Cerrar"
             >
@@ -286,7 +290,7 @@ function filtrarItems(
           </div>
         }
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class DeclaracionesDialogComponent {
