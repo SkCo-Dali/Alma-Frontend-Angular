@@ -23,7 +23,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { animateSpring, prefiereMenosMovimiento } from '../motion/spring';
+import { animateSpring, prefiereMenosMovimiento } from '../../../shared/motion/spring';
 import { MotionTuningService } from '../motion/motion-tuning.service';
 import { PressDirective } from '../motion/press.directive';
 
