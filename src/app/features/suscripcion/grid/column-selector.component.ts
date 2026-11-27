@@ -7,6 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AlmaCheckboxComponent } from '../../../shared/components/alma-checkbox.component';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { TooltipDirective } from '../../../shared/tooltip.directive';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 import { ColumnConfig } from './suscripcion-grid.api';
 
 @Component({
@@ -17,6 +18,7 @@ import { ColumnConfig } from './suscripcion-grid.api';
     AlmaCheckboxComponent,
     AlmaSwitchComponent,
     TooltipDirective,
+    NovaDialogComponent,
   ],
   template: `
     <button
@@ -28,26 +30,19 @@ import { ColumnConfig } from './suscripcion-grid.api';
       Columnas
     </button>
 
-    <!-- Overlay: se desvanece al abrir/cerrar. -->
-    <div
-      class="fixed inset-0 z-[60] bg-black/30 transition-opacity duration-300"
-      [class.opacity-0]="!abierto()"
-      [class.pointer-events-none]="!abierto()"
-      (click)="cerrar()"
-    ></div>
-    <!--
-      Sheet lateral derecho. Mismo patrón del simulador: panel flotante con
-      esquinas redondeadas y animación de deslizamiento. El estado cerrado va
-      como estilo inline estático (translate:100%) para que el primer pintado
-      sea el cerrado con la app zoneless; el binding gana cuando corre.
-    -->
-    <div
-      style="translate: 100%"
-      [style.translate]="abierto() ? '0' : '100%'"
-      [attr.aria-hidden]="!abierto()"
-      class="surface-solid fixed bottom-4 right-0 top-24 z-[61] flex w-72 flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 sm:w-80"
-      [class.pointer-events-none]="!abierto()"
+    <!-- Panel lateral derecho (nova-dialog side): entra con spring, la página
+         retrocede detrás y se cierra arrastrándolo a la derecha, con Esc o
+         con clic afuera. -->
+    <nova-dialog
+      variant="side"
+      width="320px"
+      ariaLabel="Columnas"
+      [padded]="false"
+      [showClose]="false"
+      [(open)]="abierto"
+      (closed)="alCerrar()"
     >
+      <div class="flex h-full flex-col overflow-hidden">
         <!-- Header -->
         <div
           class="shrink-0 border-b border-border/60 bg-[var(--table-header)] px-4 pb-4 pt-5"
@@ -173,6 +168,7 @@ import { ColumnConfig } from './suscripcion-grid.api';
           </div>
         </div>
       </div>
+    </nova-dialog>
   `,
 })
 export class ColumnSelectorComponent {
@@ -220,8 +216,13 @@ export class ColumnSelectorComponent {
     this.abierto.set(true);
   }
 
+  /** Pide cerrar: nova-dialog anima la salida y luego llama a alCerrar(). */
   protected cerrar(): void {
     this.abierto.set(false);
+  }
+
+  /** Ya cerró (por la X, Esc, clic afuera o arrastre). */
+  protected alCerrar(): void {
     this.filtro = '';
     this.filtroSig.set('');
     if (this.dirty) {

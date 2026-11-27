@@ -12,6 +12,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { EditorCorreoComponent } from './editor-correo.component';
 import { GaleriaPlantillasDialogComponent } from './galeria-plantillas-dialog.component';
 import { CorreoApi, PlantillaCorreoApi } from './correo.api';
+import { NovaDialogComponent } from '../components/nova-dialog/nova-dialog.component';
 
 /** Valores iniciales del editor. `id` vacío = plantilla nueva. */
 export interface PlantillaEnEdicion {
@@ -24,16 +25,18 @@ export interface PlantillaEnEdicion {
 
 @Component({
   selector: 'alma-editar-plantilla-dialog',
-  imports: [FormsModule, LucideAngularModule, EditorCorreoComponent, GaleriaPlantillasDialogComponent],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, EditorCorreoComponent, GaleriaPlantillasDialogComponent],
   template: `
-    <div
-      class="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 p-4"
-      (click)="closed.emit()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Editar plantilla de correo"
+      width="1024px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!guardando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex h-[92vh] max-h-[92vh] w-full max-w-5xl flex-col gap-2 rounded-2xl border-l-[3px] border border-border border-l-primary px-4 pb-3 pt-3 shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex h-[92vh] max-h-[92vh] flex-col gap-2 px-4 pb-3 pt-3">
         <!-- Header: ícono degradado + título + subtítulo + X (Dali) -->
         <div class="flex items-center justify-between gap-2">
           <div class="flex min-w-0 items-center gap-2.5">
@@ -51,7 +54,7 @@ export interface PlantillaEnEdicion {
           </div>
           <button
             type="button"
-            (click)="closed.emit()"
+            (click)="dlg.close()"
             class="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Cerrar"
           >
@@ -119,7 +122,7 @@ export interface PlantillaEnEdicion {
               </label>
             }
             <div class="ml-auto flex items-center gap-2">
-              <button type="button" (click)="closed.emit()" [disabled]="guardando()"
+              <button type="button" (click)="dlg.close()" [disabled]="guardando()"
                       class="rounded-xl border border-border/60 bg-background/50 px-3 py-1.5 text-xs transition-all hover:border-amber-500 hover:bg-amber-500 hover:text-white">
                 Cancelar
               </button>
@@ -136,7 +139,7 @@ export interface PlantillaEnEdicion {
           </div>
         </div>
       </div>
-    </div>
+    </nova-dialog>
 
     <!-- Galería (solo selección) para usar otra plantilla como base -->
     @if (selectorBase()) {
@@ -158,6 +161,7 @@ export class EditarPlantillaDialogComponent {
   readonly plantilla = input.required<PlantillaEnEdicion>();
   readonly variables = input<Record<string, string>>({});
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   /** Se emitió crear/actualizar con éxito (el padre recarga sus listas). */
   readonly guardada = output<void>();
 
@@ -237,7 +241,7 @@ export class EditarPlantillaDialogComponent {
       else await this.api.crearPlantilla(this.app(), {
         ...body, ambito: this.soloParaMi() ? 'personal' : 'app' });
       this.guardada.emit();
-      this.closed.emit();
+      this.dlg().close();
     } catch (e) {
       this.errorEditor.set(e instanceof Error ? e.message : String(e));
     } finally {

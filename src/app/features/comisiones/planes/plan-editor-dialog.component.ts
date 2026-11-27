@@ -11,6 +11,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -20,12 +21,14 @@ import { CommissionRulesApi, mapApiRuleToUI } from './commission-rules.api';
 import { CommissionRulesTableComponent } from './commission-rules-table.component';
 import { PlanHistoryComponent } from './plan-history.component';
 import { RuleDialogComponent } from './rule-dialog.component';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 
 type MotivoPara = 'reject' | 'inactivate';
 
 @Component({
   selector: 'alma-plan-editor-dialog',
   imports: [
+    NovaDialogComponent,
     FormsModule,
     LucideAngularModule,
     CommissionRulesTableComponent,
@@ -33,14 +36,16 @@ type MotivoPara = 'reject' | 'inactivate';
     RuleDialogComponent,
   ],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Editor del plan"
+      width="1200px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!ocupado()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex h-[90vh] w-full max-w-[1200px] flex-col overflow-hidden rounded-2xl border border-border p-4 shadow-2xl sm:p-6"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex h-[90vh] flex-col overflow-hidden p-4 sm:p-6">
         <h2 class="text-center text-xl font-bold">Editor de Planes de Compensación</h2>
 
         <!-- Pestañas -->
@@ -269,18 +274,19 @@ type MotivoPara = 'reject' | 'inactivate';
           </button>
         </div>
       </div>
-    </div>
+    </nova-dialog>
 
     <!-- Motivo (rechazo / inactivación) -->
     @if (motivoPara(); as destino) {
-      <div
-        class="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-4"
-        (click)="motivoPara.set(null)"
+      <nova-dialog
+        ariaLabel="Motivo"
+        width="500px"
+        [padded]="false"
+        [showClose]="false"
+        [dismissable]="!ocupado()"
+        (closed)="motivoPara.set(null)"
       >
-        <div
-          class="surface-solid w-full max-w-[500px] rounded-2xl border border-border p-6 shadow-2xl"
-          (click)="$event.stopPropagation()"
-        >
+        <div class="p-6">
           <h2 class="text-lg font-bold">
             {{
               destino === 'reject'
@@ -336,7 +342,7 @@ type MotivoPara = 'reject' | 'inactivate';
             </button>
           </div>
         </div>
-      </div>
+      </nova-dialog>
     }
 
     @if (creandoRegla()) {
@@ -352,6 +358,7 @@ type MotivoPara = 'reject' | 'inactivate';
 export class PlanEditorDialogComponent implements OnInit {
   readonly plan = input.required<CommissionPlan>();
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
 
   /** Las mutaciones viven en el store de la página; el diálogo solo las invoca. */
   readonly updatePlan = input.required<
@@ -438,7 +445,7 @@ export class PlanEditorDialogComponent implements OnInit {
         startDate: this.inicio || undefined,
         endDate: this.fin || undefined,
       });
-      if (res) this.closed.emit();
+      if (res) this.dlg().close();
     } finally {
       this.ocupado.set(false);
     }
@@ -447,7 +454,7 @@ export class PlanEditorDialogComponent implements OnInit {
   protected async enviarAAprobacion(): Promise<void> {
     this.ocupado.set(true);
     try {
-      if (await this.sendToApproval()(this.plan().id)) this.closed.emit();
+      if (await this.sendToApproval()(this.plan().id)) this.dlg().close();
     } finally {
       this.ocupado.set(false);
     }
@@ -456,7 +463,7 @@ export class PlanEditorDialogComponent implements OnInit {
   protected async publicar(): Promise<void> {
     this.ocupado.set(true);
     try {
-      if (await this.publishPlan()(this.plan().id)) this.closed.emit();
+      if (await this.publishPlan()(this.plan().id)) this.dlg().close();
     } finally {
       this.ocupado.set(false);
     }
@@ -477,7 +484,7 @@ export class PlanEditorDialogComponent implements OnInit {
           : await this.inactivatePlan()(this.plan().id, razon);
       if (ok) {
         this.motivoPara.set(null);
-        this.closed.emit();
+        this.dlg().close();
       }
     } finally {
       this.ocupado.set(false);
@@ -486,6 +493,6 @@ export class PlanEditorDialogComponent implements OnInit {
 
   protected cerrar(): void {
     if (this.ocupado()) return;
-    this.closed.emit();
+    this.dlg().close();
   }
 }

@@ -1,6 +1,6 @@
 // Panel lateral del Simulador de asegurabilidad (réplica del Excel del equipo
-// operativo). Panel fixed a la derecha, flotante por encima de la página con un backdrop
-// atenuado; clic fuera lo cierra (el backdrop lo pone el host). Precarga: con
+// operativo). Es un <nova-dialog variant="side">: flota a la derecha por encima de
+// la página, que retrocede detrás; clic fuera, Esc o arrastrar lo cierran. Precarga: con
 // `solicitudId` (subpágina de detalle) trae la entrada precargada + la pre-simulación
 // automática del worker; en la bandeja permite buscar una cotización por
 // número/asegurado y precargarla.
@@ -11,6 +11,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AlmaSwitchComponent } from '../../../shared/components/alma-switch.component';
 import { ToastService } from '../../../core/services/toast.service';
 import { SuscripcionGridApi } from '../grid/suscripcion-grid.api';
+import { NovaDialogComponent } from '../../../shared/components/nova-dialog/nova-dialog.component';
 import { CatalogoComboboxComponent } from './catalogo-combobox.component';
 import {
   CatalogosSimulador,
@@ -77,34 +78,25 @@ interface ItemVista {
     LucideAngularModule,
     AlmaSwitchComponent,
     CatalogoComboboxComponent,
+    NovaDialogComponent,
   ],
   template: `
     <!--
-      El desplazamiento va como ESTILO INLINE, no como clase, y con el valor
-      cerrado ya puesto en el atributo estático.
-
-      Con la app en zoneless, el binding [class] puede evaluarse un ciclo de
-      detección DESPUÉS de que el elemento se inserta en el DOM (medido en Dev:
-      1,8 s, mientras resuelven getSolicitud/getAfiliacion). En ese hueco el
-      panel se pintaba en su posición ABIERTA —porque el estado cerrado vivía
-      solo en el binding— y al llegar el binding «transition-transform» animaba
-      la corrección: el panel se abría solo y se cerraba a los dos segundos.
-      En Prd no se notaba porque el build optimizado cierra ese hueco.
-
-      El estilo estático garantiza que el primer pintado ya sea el cerrado, y
-      el binding gana cuando corre. No sirve poner el cerrado como clase
-      estática: entre «translate-x-full» y «translate-x-0» gana el primero (son
-      la misma especificidad y decide el orden de la hoja), así que el panel no
-      volvería a abrirse.
+      Panel lateral (nova-dialog side): entra con spring desde la derecha, la
+      página retrocede detrás y se cierra con la X, Esc, clic afuera o
+      arrastrándolo a la derecha. El contenido sigue vivo mientras está cerrado
+      (el estado del simulador no se pierde al cerrarlo y reabrirlo).
     -->
-    <aside
-      aria-label="Simulador de asegurabilidad"
-      [attr.aria-hidden]="!open()"
-      style="translate: 100%"
-      [style.translate]="open() ? '0' : '100%'"
-      class="surface-solid fixed bottom-4 right-0 top-24 z-50 flex w-full max-w-[420px] flex-col overflow-hidden rounded-l-2xl border border-border shadow-[var(--shadow-lg)] transition-transform duration-300 md:w-[400px]"
-      [class.pointer-events-none]="!open()"
+    <nova-dialog
+      variant="side"
+      width="420px"
+      ariaLabel="Simulador de asegurabilidad"
+      [padded]="false"
+      [showClose]="false"
+      [open]="open()"
+      (openChange)="!$event && closed.emit()"
     >
+      <div class="flex h-full flex-col overflow-hidden">
       <!-- Cabecera -->
       <div class="flex items-center gap-2 border-b border-border px-4 py-3">
         <lucide-icon name="calculator" [size]="16" class="text-primary" />
@@ -553,7 +545,8 @@ interface ItemVista {
           </div>
         }
       </div>
-    </aside>
+      </div>
+    </nova-dialog>
   `,
 })
 export class SimuladorPanelComponent {

@@ -44,5 +44,6 @@ export const USUARIO_LOCAL: User = {
     'platform.access.assign',
     'platform.audit.view',
     'platform.metrics.view',
+    'platform.motion.edit', // publicar los springs desde /lab/motion
   ],
 };

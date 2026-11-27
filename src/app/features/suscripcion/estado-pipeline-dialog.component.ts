@@ -8,7 +8,7 @@
 // que se dejen vacíos NO se tocan en Pipeline (el backend usa COALESCE), así
 // que el registro de exámenes se puede diligenciar por etapas.
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -19,6 +19,7 @@ import {
   SuscripcionApi,
 } from './suscripcion.api';
 import { Tarea } from './suscripcion.domain';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 interface CasoDef {
   id: CasoEstado;
@@ -94,16 +95,18 @@ const CASOS: CasoDef[] = [
 
 @Component({
   selector: 'alma-estado-pipeline-dialog',
-  imports: [FormsModule, LucideAngularModule],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule],
   template: `
-    <div
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      (click)="cerrar()"
+    <nova-dialog
+      #dlg
+      ariaLabel="Estado en Pipeline"
+      width="512px"
+      [padded]="false"
+      [showClose]="false"
+      [dismissable]="!aplicando()"
+      (closed)="closed.emit()"
     >
-      <div
-        class="surface-solid flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border shadow-2xl"
-        (click)="$event.stopPropagation()"
-      >
+      <div class="flex max-h-[90vh] flex-col overflow-hidden">
         <!-- ── Encabezado ── -->
         <header class="flex items-start gap-3 border-b border-border/50 px-5 py-4">
           <div
@@ -492,7 +495,7 @@ const CASOS: CasoDef[] = [
           }
         </footer>
       </div>
-    </div>
+    </nova-dialog>
   `,
 })
 export class EstadoPipelineDialogComponent {
@@ -502,6 +505,7 @@ export class EstadoPipelineDialogComponent {
   /** Rechazar y retractar cierran la cotización: piden el permiso de emitir. */
   readonly puedeCerrar = input(false);
   readonly closed = output<void>();
+  private readonly dlg = viewChild.required<NovaDialogComponent>('dlg');
   /** Se emite tras una escritura exitosa (el padre refresca la cotización). */
   readonly aplicadoOk = output<void>();
 
@@ -767,6 +771,6 @@ export class EstadoPipelineDialogComponent {
   }
 
   protected cerrar(): void {
-    this.closed.emit();
+    this.dlg().close();
   }
 }

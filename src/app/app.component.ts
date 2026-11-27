@@ -17,6 +17,7 @@ import { HeaderComponent } from './shared/components/header.component';
 import { InactiveScreenComponent } from './shared/components/inactive-screen.component';
 import { LoginScreenComponent } from './shared/components/login-screen.component';
 import { SinRespuestaScreenComponent } from './shared/components/sin-respuesta-screen.component';
+import { MotionConfigService } from './shared/motion/motion-config.service';
 
 // Íconos de plataforma/nav que no viven en el catálogo.
 const EXTRA_ICONS = [
@@ -55,7 +56,8 @@ const EXTRA_ICONS = [
         <alma-sin-respuesta-screen [email]="auth.user().correo" />
       }
       @case ('ready') {
-        <div class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">
+        <!-- data-nova-fondo: el shell que se hunde detrás de un <nova-dialog>. -->
+        <div data-nova-fondo class="flex h-[100dvh] w-full flex-col overflow-hidden text-foreground">
           <alma-header />
           <!-- Sin banda ni padding reservado para el Dock: es flotante y se
                auto-oculta dentro de las apps, así que reservarle alto le robaba
@@ -80,6 +82,9 @@ export class AppComponent {
   protected readonly prefs = inject(PreferencesService);
   private readonly apps = inject(ApplicationsService);
   private readonly inactividad = inject(InactividadService);
+  // Se inyecta al arrancar para que las variables --spring-* existan desde el
+  // primer render (valores de fábrica hasta que llegan los publicados).
+  private readonly movimiento = inject(MotionConfigService);
 
   constructor() {
     void this.auth.init(() => this.api.getMe());
@@ -90,6 +95,8 @@ export class AppComponent {
       if (this.auth.status() !== 'ready') return;
       // Cierre por inactividad real (hallazgo del pentest de 7Way).
       this.inactividad.iniciar();
+      // Springs publicados desde /lab/motion (sin backend se quedan los de fábrica).
+      void this.movimiento.cargar();
       if (authEnabled) {
         this.prefs.conectarServidor(
           () => this.api.getPreferences(),

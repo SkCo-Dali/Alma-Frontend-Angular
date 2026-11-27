@@ -260,6 +260,13 @@ export const routes: Routes = [
       import('./ui/profile/profile.component').then((m) => m.ProfileComponent),
     title: 'Mi perfil — Nova',
   },
+  // Laboratorio de movimiento: prototipo del lenguaje de animación (sin enlace en la navegación).
+  {
+    path: 'lab/motion',
+    loadComponent: () =>
+      import('./features/lab-motion/motion-lab.page').then((m) => m.MotionLabPage),
+    title: 'Laboratorio de movimiento — Nova',
+  },
   {
     path: '**',
     loadComponent: () =>

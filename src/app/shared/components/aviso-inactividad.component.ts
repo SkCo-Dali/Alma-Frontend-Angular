@@ -6,21 +6,22 @@ import { Component, computed, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { InactividadService } from '../../core/auth/inactividad.service';
+import { NovaDialogComponent } from './nova-dialog/nova-dialog.component';
 
 @Component({
   selector: 'alma-aviso-inactividad',
-  imports: [LucideAngularModule],
+  imports: [NovaDialogComponent, LucideAngularModule],
   template: `
     @if (segundos(); as s) {
-      <div
-        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="aviso-inactividad-titulo"
+      <nova-dialog
+        dialogRole="alertdialog"
+        ariaLabel="¿Sigues ahí?"
+        width="384px"
+        [padded]="false"
+        [showClose]="false"
+        [dismissable]="false"
       >
-        <div
-          class="surface-solid w-full max-w-sm rounded-2xl border border-border p-6 text-center shadow-[var(--shadow-lg)]"
-        >
+        <div class="p-6 text-center">
           <span
             class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500"
           >
@@ -45,7 +46,7 @@ import { InactividadService } from '../../core/auth/inactividad.service';
             Seguir trabajando
           </button>
         </div>
-      </div>
+      </nova-dialog>
     }
   `,
 })
