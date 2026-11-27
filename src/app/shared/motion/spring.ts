@@ -25,15 +25,32 @@ export interface SpringCurve {
   duration: number;
 }
 
-/** Presets de Nova, por intención. */
+/**
+ * Valores de FÁBRICA de Nova, por intención. Los que ven los usuarios son los
+ * publicados desde /lab/motion (MotionConfigService); estos solo aplican si no
+ * hay nada publicado o el backend no responde.
+ */
 export const SPRING_PRESETS = {
   /** Controles: botones, switches, press feedback. */
-  snappy: { response: 0.3, bounce: 0.15 },
+  snappy: { response: 0.34, bounce: 0.18 },
   /** Superficies: sheets, diálogos, transiciones de contenedor. */
-  smooth: { response: 0.5, bounce: 0 },
+  smooth: { response: 0.49, bounce: 0.09 },
   /** Momentos expresivos: la isla, confirmaciones, toasts. */
-  bouncy: { response: 0.5, bounce: 0.32 },
+  bouncy: { response: 0.59, bounce: 0.23 },
 } satisfies Record<string, SpringParams>;
+
+export type SpringSet = Record<keyof typeof SPRING_PRESETS, SpringParams>;
+
+/** Variables CSS (--spring-<nombre> y --spring-<nombre>-dur) de un juego de springs. */
+export function springCssVars(springs: SpringSet, lentitud = 1): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const [nombre, s] of Object.entries(springs)) {
+    const c = springCurve({ response: s.response * lentitud, bounce: s.bounce });
+    vars[`--spring-${nombre}`] = c.easing;
+    vars[`--spring-${nombre}-dur`] = `${c.duration}ms`;
+  }
+  return vars;
+}
 
 export type SpringName = keyof typeof SPRING_PRESETS;
 

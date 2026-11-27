@@ -11,7 +11,7 @@
 import { ApplicationRef, Component, ViewEncapsulation, inject, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { PressDirective } from '../motion/press.directive';
-import { prefiereMenosMovimiento } from '../motion/spring';
+import { prefiereMenosMovimiento } from '../../../shared/motion/spring';
 
 interface AppDemo {
   id: string;
