@@ -4,12 +4,13 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { routes } from './app.routes';
 import { ALMA_ICONS } from './shared/icons';
+import { alCrearTransicionDePagina } from './shared/motion/transicion-paginas';
 
 // El diseño de Alma es la única fuente de estilos: sus tokens y componentes
 // propios (styles.css + shared/components) gobiernan toda la interfaz. La
@@ -21,7 +22,15 @@ import { ALMA_ICONS } from './shared/icons';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      // Cambio de página con el spring «smooth» (ver shared/motion/transicion-paginas.ts).
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: alCrearTransicionDePagina,
+      }),
+    ),
     provideHttpClient(),
     provideAnimationsAsync(),
     importProvidersFrom(LucideAngularModule.pick(ALMA_ICONS)),

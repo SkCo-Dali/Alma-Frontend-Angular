@@ -91,7 +91,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 
       @switch (tab()) {
         @case ('rec') {
-          <div class="g2">
+          <div animate.enter="nova-entra" class="g2">
             <div class="fld"><label class="label" for="ep-nombre">Nombre *</label><input class="input" id="ep-nombre" [(ngModel)]="d.nombre" /></div>
             <div class="fld"><label class="label" for="ep-k">Clave (MAYÚSCULAS, sin espacios) *</label><input class="input mono" id="ep-k" [(ngModel)]="d.clave" /></div>
           </div>
@@ -108,7 +108,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
           </div>
         }
         @case ('et') {
-          <p class="xs muted">Por datos: Nova evalúa la condición sobre el JSON (exacto y auditable). Por IA: la IA decide con el texto.</p>
+          <p animate.enter="nova-entra" class="xs muted">Por datos: Nova evalúa la condición sobre el JSON (exacto y auditable). Por IA: la IA decide con el texto.</p>
           @for (e of d.etiquetas; track $index; let i = $index) {
             <div class="sunk r-xl" style="padding:10px 12px;display:grid;gap:8px">
               <div class="row" style="flex-wrap:nowrap">
@@ -144,7 +144,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
           <button type="button" class="btn outline sm" style="justify-self:start" (click)="agregarEtiqueta()"><lucide-icon name="plus" [size]="13" /> Agregar etiqueta</button>
         }
         @case ('dat') {
-          <p class="sm">¿Este proceso necesita extraer datos del correo?</p>
+          <p animate.enter="nova-entra" class="sm">¿Este proceso necesita extraer datos del correo?</p>
           <div class="g2">
             <button type="button" class="optcard" [attr.aria-pressed]="!d.extrae" (click)="d.extrae = false">
               <span class="row sm b"><lucide-icon name="tag" [size]="13" /> No, solo categorizar</span>
@@ -224,7 +224,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
           }
         }
         @case ('val') {
-          <div class="fld">
+          <div animate.enter="nova-entra" class="fld">
             <label class="label" for="ep-umb">Confianza mínima: <b>{{ d.umbral }}%</b></label>
             <input type="range" id="ep-umb" min="50" max="95" step="5" [(ngModel)]="d.umbral" />
           </div>
@@ -247,7 +247,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
           </div>
         }
         @case ('dis') {
-          <p class="xs muted">Pares de procesos que se pueden confundir con {{ d.clave || 'este proceso' }}: cuándo es cada uno y qué señal manda.</p>
+          <p animate.enter="nova-entra" class="xs muted">Pares de procesos que se pueden confundir con {{ d.clave || 'este proceso' }}: cuándo es cada uno y qué señal manda.</p>
           @if (!otros().length) {
             <p class="note b-sky"><lucide-icon name="info" [size]="13" /> <span>Con un solo proceso no hay nada que discriminar.</span></p>
           }

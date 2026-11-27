@@ -69,7 +69,7 @@ function concede(permisos: string[], requerido: string): boolean {
           } @else if (error(); as err) {
             <p class="py-8 text-sm text-destructive">{{ err }}</p>
           } @else {
-            <p class="mb-4 text-sm text-muted-foreground">
+            <p animate.enter="nova-entra" class="mb-4 text-sm text-muted-foreground">
               @if (totalPersonas() === 0) {
                 Nadie tiene acceso a esta aplicación todavía.
               } @else {

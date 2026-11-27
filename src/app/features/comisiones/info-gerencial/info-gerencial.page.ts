@@ -94,7 +94,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
 
           <div class="glass mt-4 overflow-hidden rounded-2xl shadow-[var(--shadow-sm)]">
             @if (tab() === 'desempeno') {
-              <div class="p-3 md:p-6">
+              <div animate.enter="nova-entra" class="p-3 md:p-6">
                 <div class="mb-6 space-y-6 rounded-2xl bg-[var(--surface-sunken)] p-3 md:p-6">
                   <!-- Filtros (se aplican al pulsar Filtrar) -->
                   <div

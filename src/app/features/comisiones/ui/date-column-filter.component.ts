@@ -60,6 +60,7 @@ function fmt(d: Date): string {
       <div
         #panel
         almaPortal
+        animate.leave="nova-pop-out"
         class="nova-pop surface-solid fixed z-[95] w-80 overflow-hidden rounded-xl border border-border p-4 text-left text-sm normal-case tracking-normal text-foreground shadow-[var(--shadow-lg)]"
         (click)="$event.stopPropagation()"
       >

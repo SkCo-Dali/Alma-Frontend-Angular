@@ -202,6 +202,7 @@ interface DockEntry {
         (contextmenu)="$event.preventDefault(); menuCtx.set(null)"
       ></div>
       <div
+        animate.leave="nova-pop-out"
         class="nova-pop surface-solid fixed z-50 min-w-44 [--nova-pop-origin:bottom_left] rounded-lg border border-border p-1 shadow-[var(--shadow-lg)]"
         [style.left.px]="ctx.x"
         [style.top.px]="ctx.y - 88 > 8 ? ctx.y - 88 : 8"

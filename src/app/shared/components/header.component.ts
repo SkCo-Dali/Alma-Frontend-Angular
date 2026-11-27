@@ -73,7 +73,8 @@ import { IslaComponent } from './isla.component';
 
           @if (menuOpen()) {
             <div
-              class="surface-solid absolute right-0 z-50 mt-2 w-56 rounded-md border border-border p-1 text-popover-foreground shadow-[var(--shadow-md)]"
+              animate.leave="nova-pop-out"
+              class="nova-pop [--nova-pop-origin:top_right] surface-solid absolute right-0 z-50 mt-2 w-56 rounded-md border border-border p-1 text-popover-foreground shadow-[var(--shadow-md)]"
             >
               <div class="px-2 py-1.5">
                 <p class="text-sm font-semibold">{{ user().nombre }}</p>

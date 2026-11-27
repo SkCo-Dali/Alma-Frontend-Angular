@@ -18,7 +18,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
           tabindex="0"
           (click)="open(app)"
           (keydown.enter)="open(app)"
-          class="glass group flex cursor-pointer flex-col rounded-xl p-5 text-left shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="glass group flex cursor-pointer flex-col rounded-xl p-5 text-left shadow-[var(--shadow-sm)] transition-[box-shadow,translate,scale] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <div class="flex items-start justify-between">
             <div

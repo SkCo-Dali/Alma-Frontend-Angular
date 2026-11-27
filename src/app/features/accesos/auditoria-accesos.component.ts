@@ -16,7 +16,7 @@ import { AdminTableComponent } from '../../shared/components/admin-table.compone
     } @else if (error(); as err) {
       <p class="py-8 text-sm text-destructive">{{ err }}</p>
     } @else {
-      <div class="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+      <div animate.enter="nova-entra" class="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
         <lucide-icon name="scroll-text" [size]="14" />
         Últimos movimientos de acceso (solo lectura).
       </div>

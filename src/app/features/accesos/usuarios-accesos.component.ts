@@ -57,7 +57,7 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
           <lucide-icon name="loader-2" [size]="16" class="animate-spin" /> Cargando usuarios…
         </div>
       } @else {
-        <alma-admin-table
+        <alma-admin-table animate.enter="nova-entra" class="block"
           [headers]="headers()"
           [rows]="filtrados()"
           [rowTpl]="fila"
