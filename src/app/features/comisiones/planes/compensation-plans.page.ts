@@ -147,7 +147,7 @@ import { VolverInicioComponent } from '../../../shared/components/volver-inicio.
                   <button
                     type="button"
                     (click)="store.handleStatusChange(s)"
-                    class="relative flex shrink-0 cursor-pointer items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-all duration-200 ease-out focus:outline-none"
+                    class="relative flex shrink-0 cursor-pointer items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-all focus:outline-none"
                     [class]="
                       store.activeStatus() === s
                         ? 'border border-b-0 border-border bg-background text-foreground shadow-sm after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[1px] after:bg-background'

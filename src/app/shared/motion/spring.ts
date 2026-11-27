@@ -32,7 +32,7 @@ export interface SpringCurve {
  */
 export const SPRING_PRESETS = {
   /** Controles: botones, switches, press feedback. */
-  snappy: { response: 0.34, bounce: 0.18 },
+  snappy: { response: 0.34, bounce: 0.2 },
   /** Superficies: sheets, diálogos, transiciones de contenedor. */
   smooth: { response: 0.49, bounce: 0.09 },
   /** Momentos expresivos: la isla, confirmaciones, toasts. */

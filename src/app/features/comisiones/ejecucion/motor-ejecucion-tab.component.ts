@@ -133,7 +133,7 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
               <td class="px-4 py-2">
                 <div class="space-y-1">
                   <div class="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div class="h-full rounded-full transition-all duration-500" [class]="barraAdf()"></div>
+                    <div class="h-full rounded-full transition-all duration-(--spring-smooth-dur) ease-(--spring-smooth)" [class]="barraAdf()"></div>
                   </div>
                   <div class="text-[10px] text-muted-foreground">{{ textoAdf() }}</div>
                 </div>
@@ -207,7 +207,7 @@ const TEXTO_ADF: Record<AdfPhase, string> = {
                     <div class="flex items-center gap-2">
                       <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                         <div
-                          class="h-full rounded-full transition-all duration-500"
+                          class="h-full rounded-full transition-all duration-(--spring-smooth-dur) ease-(--spring-smooth)"
                           [class]="
                             s.phase === 'error'
                               ? 'bg-destructive'
