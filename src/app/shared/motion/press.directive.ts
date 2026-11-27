@@ -4,8 +4,8 @@
 // no produce saltos.
 
 import { Directive, ElementRef, inject, input } from '@angular/core';
-import { animateSpring } from '../../../shared/motion/spring';
-import { MotionTuningService } from './motion-tuning.service';
+import { animateSpring } from './spring';
+import { SPRING_SOURCE } from './spring-source';
 
 @Directive({
   selector: '[novaPress]',
@@ -23,7 +23,7 @@ export class PressDirective {
   readonly novaPress = input<number | ''>(0.96);
 
   private readonly el = inject(ElementRef<HTMLElement>).nativeElement as HTMLElement;
-  private readonly tuning = inject(MotionTuningService);
+  private readonly tuning = inject(SPRING_SOURCE);
   private presionado = false;
 
   protected bajar(e?: PointerEvent): void {

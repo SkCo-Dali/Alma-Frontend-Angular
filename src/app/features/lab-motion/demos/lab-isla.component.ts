@@ -7,7 +7,7 @@
 
 import { Component, computed, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { PressDirective } from '../motion/press.directive';
+import { PressDirective } from '../../../shared/motion/press.directive';
 
 type EstadoIsla = 'reposo' | 'actividad' | 'aviso' | 'expandida';
 
