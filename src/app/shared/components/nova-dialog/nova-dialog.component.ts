@@ -89,7 +89,7 @@ let secuencia = 0;
           <div
             #panel
             data-nova-dialog-panel
-            role="dialog"
+            [attr.role]="dialogRole()"
             aria-modal="true"
             tabindex="-1"
             [attr.aria-labelledby]="title() ? idTitulo : null"
@@ -163,6 +163,8 @@ export class NovaDialogComponent implements OnDestroy {
   readonly description = input('');
   /** Nombre accesible cuando no hay título visible. */
   readonly ariaLabel = input('Diálogo');
+  /** «alertdialog» para avisos que exigen respuesta (p. ej. inactividad). */
+  readonly dialogRole = input<'dialog' | 'alertdialog'>('dialog');
   readonly size = input<NovaDialogSize>('md');
   /** Ancho máximo explícito (p. ej. '640px'); manda sobre `size`. */
   readonly width = input<string | undefined>(undefined);

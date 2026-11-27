@@ -193,8 +193,7 @@ type Pestana = 'nuevo' | 'previsualizar' | 'historial';
         </div>
       </div>
 
-      <!-- Diálogos anidados DENTRO del nova-dialog: así quedan sobre él (el
-           nova-dialog vive en <body> y la página de atrás queda inert). -->
+      <!-- Diálogos anidados (también nova-dialog: se apilan encima de este). -->
       <!-- Galería de plantillas (estilo Dali, con miniaturas, autocargada); la
            elegida se renderiza con los datos reales de la cotización. -->
       @if (selectorPlantillas()) {

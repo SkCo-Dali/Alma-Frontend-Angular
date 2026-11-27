@@ -12,12 +12,13 @@ import {
 } from '../../core/services/accesos.api';
 import { AdminTableComponent } from '../../shared/components/admin-table.component';
 import { RolesPickerComponent } from './roles-picker.component';
+import { NovaDialogComponent } from '../../shared/components/nova-dialog/nova-dialog.component';
 
 type FiltroEstado = 'todos' | 'activos' | 'inactivos';
 
 @Component({
   selector: 'alma-usuarios-accesos',
-  imports: [FormsModule, LucideAngularModule, AdminTableComponent, RolesPickerComponent],
+  imports: [NovaDialogComponent, FormsModule, LucideAngularModule, AdminTableComponent, RolesPickerComponent],
   template: `
     <div class="flex flex-col gap-4">
       <!-- Barra de filtros + crear -->
@@ -170,10 +171,15 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
 
       <!-- Modal de creación: solo correo (el nombre llega de Entra) + roles -->
       @if (creando()) {
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div
-            class="surface-solid w-[95vw] rounded-xl p-4 shadow-2xl sm:max-w-[480px] sm:rounded-2xl sm:p-6"
-          >
+        <nova-dialog
+          ariaLabel="Crear usuario"
+          width="480px"
+          [padded]="false"
+          [showClose]="false"
+          [dismissable]="!creandoUsuario()"
+          (closed)="creando.set(false)"
+        >
+          <div class="w-[95vw] p-4 sm:rounded-2xl sm:p-6">
             <div class="flex flex-col items-center justify-center space-y-1">
               <h2 class="text-xl font-bold">Crear usuario</h2>
               <p class="text-center text-xs text-muted-foreground sm:text-sm">
@@ -233,7 +239,7 @@ type FiltroEstado = 'todos' | 'activos' | 'inactivos';
               </button>
             </div>
           </div>
-        </div>
+        </nova-dialog>
       }
     </div>
   `,
