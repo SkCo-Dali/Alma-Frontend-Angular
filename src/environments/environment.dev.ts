@@ -2,8 +2,10 @@
 export const environment = {
   production: false,
   name: 'dev',
-  /** Buzón Inteligente: datos de demostración si el backend no responde (solo local y dev). */
-  buzonDemo: true,
+  /** Buzón Inteligente: sin datos de demostración. El backend de dev ya tiene el módulo;
+   *  con la demo encendida, un fallo de red pasaba la sesión a datos inventados y los
+   *  guardados no llegaban al backend (solo quedan en local, environment.ts). */
+  buzonDemo: false,
   apiUrl: 'https://skcoalmadev-bmdza3angyh0dab9.eastus2-01.azurewebsites.net',
   azure: {
     clientId: 'd43d6a91-ee68-4e97-ada0-069a106a142a',
