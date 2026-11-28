@@ -13,6 +13,7 @@ import {
   BuzonApi,
   CampoProceso,
   Categoria,
+  CondicionEtiqueta,
   CriterioEtiqueta,
   OperadorCondicion,
   OrigenRegla,
@@ -20,6 +21,7 @@ import {
   resumenEtiqueta,
   TipoCampo,
 } from './buzon.api';
+import { describirCondicion, esCondicionClasica } from './buzon-casillas';
 
 /** La base fija que agrega Alma a toda salida: no se redefine en un proceso. */
 export const BASE_FIELDS = ['correlation_id', 'fecha_procesamiento', 'proceso', 'score_confianza', 'etiqueta', 'asunto_correo'];
@@ -47,6 +49,9 @@ interface EtiquetaEd {
   campo: string;
   op: OperadorCondicion;
   valor: string;
+  /** Condición que esta pantalla no sabe editar (grupos y/o u operadores nuevos): se
+   *  muestra en solo lectura y se reenvía intacta, para no convertirla en una simple. */
+  compuesta?: CondicionEtiqueta | null;
 }
 
 interface CampoEd {
@@ -126,7 +131,10 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
               @if (guardadaDe(e.clave); as c) {
                 <p class="xxs muted trunc">{{ resumen(c) }}</p>
               }
-              @if (e.tipo === 'datos') {
+              @if (e.tipo === 'datos' && e.compuesta) {
+                <p class="lock" title="Se editó fuera de esta pantalla; al guardar se conserva tal cual">{{ describirCondicion(e.compuesta) }}</p>
+                <p class="xxs muted"><lucide-icon name="lock" [size]="11" /> Condición compuesta: aquí no se edita y al guardar se conserva tal cual.</p>
+              } @else if (e.tipo === 'datos') {
                 <div class="row" style="flex-wrap:nowrap">
                   <select class="input sm" [(ngModel)]="e.campo" aria-label="Campo">
                     @for (f of d.campos; track f.clave) { <option [value]="f.clave">{{ f.clave }}</option> }
@@ -287,6 +295,7 @@ const RE_SNAKE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 })
 export class ProcesoEditorComponent implements OnInit {
   private readonly api = inject(BuzonApi);
+  protected readonly describirCondicion = describirCondicion;
 
   readonly buzon = input.required<Buzon>();
   /** Proceso a editar; null = proceso nuevo. */
@@ -365,10 +374,14 @@ export class ProcesoEditorComponent implements OnInit {
     return {
       nombre: p.nombre, clave: p.clave, senales: p.descripcion ?? '',
       excl: (p.exclusiones ?? '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
-      etiquetas: cats.map((c) => ({
-        clave: c.clave, original: c.clave, criterio: c.descripcion, tipo: c.criterio ?? 'ia', origen: c.origen ?? 'ia',
-        campo: c.condicion?.campo ?? campos[0]?.clave ?? '', op: c.condicion?.op ?? '=', valor: c.condicion?.valor ?? '',
-      })),
+      etiquetas: cats.map((c) => {
+        const simple = esCondicionClasica(c.condicion) ? c.condicion : null;
+        return {
+          clave: c.clave, original: c.clave, criterio: c.descripcion, tipo: c.criterio ?? 'ia', origen: c.origen ?? 'ia',
+          campo: simple?.campo ?? campos[0]?.clave ?? '', op: simple?.op ?? '=', valor: simple?.valor ?? '',
+          compuesta: c.criterio === 'datos' && c.condicion && !simple ? c.condicion : null,
+        };
+      }),
       extrae: campos.length > 0, campos,
       umbral: Math.round((p.umbral ?? this.buzon().umbral_confianza ?? 0.7) * 100),
       extras: [...(p.causas_validar ?? [])],
@@ -479,7 +492,7 @@ export class ProcesoEditorComponent implements OnInit {
     for (const e of ets) {
       if (!RE_MAYUS.test(e.clave)) errs.push(`La etiqueta «${e.clave}» debe ir en MAYÚSCULAS sin espacios.`);
       if (e.tipo === 'ia' && !e.criterio.trim()) errs.push(`La etiqueta «${e.clave}» no tiene criterio.`);
-      if (e.tipo === 'datos' && (!d.extrae || !d.campos.some((f) => f.clave === e.campo))) errs.push(`La etiqueta «${e.clave}» es por datos: elige un dato que el proceso extraiga.`);
+      if (e.tipo === 'datos' && !e.compuesta && (!d.extrae || !d.campos.some((f) => f.clave === e.campo))) errs.push(`La etiqueta «${e.clave}» es por datos: elige un dato que el proceso extraiga.`);
     }
     if (d.extrae) {
       const vistos = new Set<string>();
@@ -515,8 +528,8 @@ export class ProcesoEditorComponent implements OnInit {
         etiquetas: ets.map((e) => ({
           clave: e.clave,
           original: e.original ?? null,
-          descripcion: e.tipo === 'datos' ? `${e.campo} ${e.op} ${e.valor}` : e.criterio.trim(),
-          criterio: e.tipo, condicion: e.tipo === 'datos' ? { campo: e.campo, op: e.op, valor: e.valor } : null, origen: e.origen,
+          descripcion: e.tipo !== 'datos' ? e.criterio.trim() : e.compuesta ? e.criterio || describirCondicion(e.compuesta) : `${e.campo} ${e.op} ${e.valor}`,
+          criterio: e.tipo, condicion: e.tipo === 'datos' ? (e.compuesta ?? { campo: e.campo, op: e.op, valor: e.valor }) : null, origen: e.origen,
         })),
         discriminacion: d.disc.filter((x) => x.con && x.manda.trim()).map((x) => ({ con: x.con, manda: x.manda.trim() })),
       });

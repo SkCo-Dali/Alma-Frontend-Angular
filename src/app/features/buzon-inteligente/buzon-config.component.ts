@@ -16,10 +16,11 @@ import { AsignacionTabComponent } from './asignacion-tab.component';
 import { Buzon, BuzonApi, Categoria, ModoConexion, modoConexion, PERM_VER_BUZON } from './buzon.api';
 import { DemoBadgeComponent } from './demo-badge.component';
 import { ExportacionTabComponent } from './exportacion-tab.component';
+import { ProcesosSimplesTabComponent } from './procesos-simples-tab.component';
 import { ReglasTabComponent } from './reglas-tab.component';
 import { VolverInicioComponent } from '../../shared/components/volver-inicio.component';
 
-type Tab = 'reglas' | 'asig' | 'plant' | 'ajustes';
+type Tab = 'reglas' | 'procesos' | 'asig' | 'plant' | 'ajustes';
 type Modulo = 'mod_asignacion' | 'mod_bases' | 'mod_exportacion';
 
 /** Degradado del ícono del buzón: personal (azul) o genérico (violeta). */
@@ -37,6 +38,7 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
     AlmaLoaderComponent,
     DemoBadgeComponent,
     ReglasTabComponent,
+    ProcesosSimplesTabComponent,
     AsignacionTabComponent,
     ExportacionTabComponent,
     AjustesTabComponent,
@@ -105,7 +107,8 @@ export function gradienteBuzon(b: Pick<Buzon, 'tipo_cuenta'>): string {
         </div>
 
         @switch (tabVisible()) {
-          @case ('reglas') { <alma-reglas-tab animate.enter="nova-entra" class="block" [buzon]="b" (buzonActualizado)="buzon.set($event)" /> }
+          @case ('reglas') { <alma-reglas-tab animate.enter="nova-entra" class="block" [buzon]="b" (buzonActualizado)="buzon.set($event)" (irAProcesos)="tab.set('procesos')" /> }
+          @case ('procesos') { <alma-procesos-simples-tab animate.enter="nova-entra" class="block stack" [buzon]="b" (buzonActualizado)="buzon.set($event)" /> }
           @case ('asig') { <alma-asignacion-tab animate.enter="nova-entra" class="block" [buzon]="b" [categorias]="categorias()" (irAModulos)="tab.set('ajustes')" (activarModulo)="activar($event)" /> }
           @case ('plant') { <alma-exportacion-tab animate.enter="nova-entra" class="block" [buzon]="b" [categorias]="categorias()" (buzonActualizado)="buzon.set($event)" (irAModulos)="tab.set('ajustes')" /> }
           @case ('ajustes') { <alma-ajustes-tab animate.enter="nova-entra" class="block" [buzon]="b" (buzonActualizado)="buzon.set($event)" (reconectar)="conectar($event)" /> }
@@ -166,6 +169,8 @@ export class BuzonConfigComponent {
     const b = this.buzon();
     return [
       { id: 'reglas' as Tab, nombre: 'Reglas', icon: 'scroll-text' },
+      // 095: procesos «simples» (un proceso = un prompt + casillas), con su asistente.
+      { id: 'procesos' as Tab, nombre: 'Procesos (nuevo)', icon: 'workflow' },
       ...(b?.mod_asignacion ? [{ id: 'asig' as Tab, nombre: 'Asignación', icon: 'user-check' }] : []),
       ...(b?.mod_exportacion ? [{ id: 'plant' as Tab, nombre: 'Exportación', icon: 'file-spreadsheet' }] : []),
       { id: 'ajustes' as Tab, nombre: 'Ajustes', icon: 'sliders-horizontal' },
@@ -217,7 +222,7 @@ export class BuzonConfigComponent {
 
   private tabInicial(): Tab {
     const t = inject(ActivatedRoute).snapshot.queryParamMap.get('tab');
-    return t === 'asig' || t === 'plant' || t === 'ajustes' ? t : 'reglas';
+    return t === 'procesos' || t === 'asig' || t === 'plant' || t === 'ajustes' ? t : 'reglas';
   }
 
   private async cargar(): Promise<void> {

@@ -34,6 +34,7 @@ import {
   resumenEtiqueta,
 } from './buzon.api';
 import { ajustesConservados, columnasNuevas, Conservado } from './buzon-campos';
+import { describirCondicion, primerParrafo } from './buzon-casillas';
 import { CategoriaEditorComponent } from './categoria-editor.component';
 import { BASE_FIELDS, ProcesoEditorComponent } from './proceso-editor.component';
 import { EJEMPLO_PROMPT, PLANTILLA_PROMPT } from './reglas-plantilla';
@@ -260,33 +261,44 @@ interface FijaEd {
                         @default { <span class="badge b-amber">Por revisar</span> }
                       }
                     }
-                    @if (!p.campos_extraer.length) { <span class="badge b-sky">Solo categorización</span> }
+                    @if (p.modo === 'simple') {
+                      <span class="badge b-violet" title="Se edita en la pestaña «Procesos (nuevo)»"><lucide-icon name="lock" [size]="12" /> Proceso nuevo</span>
+                    } @else if (!p.campos_extraer.length) { <span class="badge b-sky">Solo categorización</span> }
                     @if (!p.activo) { <span class="badge b-slate">Desactivado</span> }
                   </p>
-                  <p class="xs muted" [class.clamp3]="!verMas()[p.clave]">{{ p.descripcion }}</p>
+                  <p class="xs muted" [class.clamp3]="!verMas()[p.clave]">{{ textoProceso(p) }}</p>
                   @if ((p.descripcion || '').length > 220) {
                     <button type="button" class="linkbtn xs" style="justify-self:start" (click)="alternarVerMas(p.clave)">{{ verMas()[p.clave] ? 'Ver menos' : 'Ver más' }}</button>
                   }
                 </div>
                 <div class="row" style="gap:4px;flex-wrap:nowrap">
-                    <button type="button" class="btn outline sm" (click)="abierto ? editando.set(null) : editar(p)">
-                      <lucide-icon [name]="abierto ? 'chevron-up' : 'pencil'" [size]="13" /> {{ abierto ? 'Cerrar' : esWiz() ? 'Abrir' : 'Editar' }}
-                    </button>
+                    @if (p.modo === 'simple' && !esWiz()) {
+                      <!-- 095: el editor de aquí reescribe las etiquetas y dañaría sus casillas (el backend responde 409). -->
+                      <button type="button" class="btn outline sm" (click)="irAProcesos.emit()"><lucide-icon name="lock" [size]="13" /> Se edita en Procesos (nuevo)</button>
+                    } @else {
+                      <button type="button" class="btn outline sm" (click)="abierto ? editando.set(null) : editar(p)">
+                        <lucide-icon [name]="abierto ? 'chevron-up' : 'pencil'" [size]="13" /> {{ abierto ? 'Cerrar' : esWiz() ? 'Abrir' : 'Editar' }}
+                      </button>
+                    }
                     @if (esWiz()) {
                       @if (estadoWiz(p) !== 'ok') { <button type="button" class="btn primary sm" (click)="aceptarWiz(p)">Aceptar</button> }
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="descartarWiz(p)" [attr.aria-label]="'Descartar ' + p.clave"><lucide-icon name="trash-2" [size]="13" /></button>
                     } @else {
+                      @if (p.modo !== 'simple') {
                       <button type="button" class="btn ghost" (click)="abrirPegar(p)" [attr.aria-label]="(p.reglas ? 'Reglas de ' : 'Actualizar con prompt ') + p.clave" [title]="p.reglas ? 'Reglas del proceso' : 'Actualizar con prompt'"><lucide-icon name="file-pen" [size]="16" /></button>
+                      }
                       @if (procesos().length > 1) {
                         <!-- Orden de evaluación: OTROS siempre va de último. -->
                         <button type="button" class="btn ghost" [disabled]="primero" (click)="mover(i, -1)" [attr.aria-label]="'Subir ' + p.clave" title="Evaluar antes"><lucide-icon name="arrow-up" [size]="16" /></button>
                         <button type="button" class="btn ghost" [disabled]="ultimo" (click)="mover(i, 1)" [attr.aria-label]="'Bajar ' + p.clave" title="Evaluar después"><lucide-icon name="arrow-down" [size]="16" /></button>
                       }
-                      <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave" title="Duplicar"><lucide-icon name="copy" [size]="16" /></button>
+                      @if (p.modo !== 'simple') {
+                        <button type="button" class="btn ghost" (click)="editar(p, true)" [attr.aria-label]="'Duplicar ' + p.clave" title="Duplicar"><lucide-icon name="copy" [size]="16" /></button>
+                      }
                       <button type="button" class="btn ghost" (click)="alternarActivo(p)" [attr.aria-label]="(p.activo ? 'Desactivar ' : 'Activar ') + p.clave" [title]="p.activo ? 'Desactivar' : 'Activar'"><lucide-icon [name]="p.activo ? 'eye-off' : 'eye'" [size]="16" /></button>
                       <button type="button" class="btn ghost danger" [disabled]="!!descartando()" (click)="pedirEliminar(p)" [attr.aria-label]="'Eliminar ' + p.clave" title="Eliminar"><lucide-icon name="trash-2" [size]="16" /></button>
                     }
-                  @if (!abierto && !esWiz()) {
+                  @if (!abierto && !esWiz() && p.modo !== 'simple') {
                     <button type="button" class="btn ghost" (click)="alternarJson(p.clave)" [attr.aria-label]="'Ver formato JSON de ' + p.clave"><lucide-icon [name]="jsonAbierto() === p.clave ? 'chevron-up' : 'braces'" [size]="16" /></button>
                   }
                 </div>
@@ -686,6 +698,8 @@ export class ReglasTabComponent implements OnInit {
   readonly buzonActualizado = output<Buzon>();
   /** Asistente: ¿se puede continuar al paso 3? */
   readonly listo = output<{ puedeSeguir: boolean; porque: string }>();
+  /** 095: un proceso «simple» se edita en la pestaña «Procesos (nuevo)». */
+  readonly irAProcesos = output<void>();
 
   protected readonly plantilla = PLANTILLA_PROMPT;
   protected readonly ejemplo = EJEMPLO_PROMPT;
@@ -864,7 +878,13 @@ export class ReglasTabComponent implements OnInit {
   }
 
   protected criterioTexto(c: Categoria): string {
-    return c.criterio === 'datos' && c.condicion ? `${c.condicion.campo} ${c.condicion.op} ${c.condicion.valor}` : c.descripcion;
+    // Las condiciones compuestas (alma-backend PR 449) se leen completas: «(a vacio y (b en [...] o c contiene x))».
+    return c.criterio === 'datos' && c.condicion ? describirCondicion(c.condicion) : c.descripcion;
+  }
+
+  /** Un proceso «simple» no tiene señales: se muestra el primer párrafo de su prompt. */
+  protected textoProceso(p: Proceso): string | null {
+    return p.modo === 'simple' ? primerParrafo(p.reglas ?? '') : p.descripcion;
   }
 
   protected resumenCampos(p: Proceso): string {
