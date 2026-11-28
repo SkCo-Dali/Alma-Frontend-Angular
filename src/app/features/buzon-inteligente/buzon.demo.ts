@@ -58,8 +58,12 @@ import {
   PruebaSeco,
   TipoCuenta,
   VersionReglas,
+  CorreoEncontrado,
+  PruebaCorreo,
+  Revision,
 } from './buzon.api';
 import { nrm, simularAsignacion } from './buzon-asignacion';
+import { aRevision, nuevaCasilla, primerParrafo } from './buzon-casillas';
 import { fusionarCampos } from './buzon-campos';
 import { matriz, nombreArchivo, salidaPara, sugerirColumna } from './buzon-exportacion';
 
@@ -674,7 +678,68 @@ function procesosBase(): Proceso[] {
       [['numero_encargo', 'Número de encargo', true], ['valor', 'Valor', false]]),
     p('PILA', 'Planillas PILA', '#30D158', 4, 'Planillas integradas de liquidación de aportes enviadas por empresas.', null,
       [['numero_planilla', 'Número de planilla', true], ['nit_aportante', 'NIT del aportante', true], ['periodo', 'Periodo AAAA-MM', false]]),
+    // 095: un proceso «simple» (un prompt + casillas), como los que arma el asistente nuevo.
+    { ...p('RETIRO_FPV', 'Retiro de aportes voluntarios', '#BF5AF2', 5, null as unknown as string, null, []), modo: 'simple', reglas: PROMPT_RETIRO, revisiones: REVISIONES_RETIRO, familia: 'Retiros' },
+    // Dos de la familia «4X1000» (como queda 4X1000 partido en un proceso por caso).
+    { ...p('4X1000R_BANCOLOMBIA', '4X1000 Respuesta Bancolombia', '#E5392A', 6, null as unknown as string, null, []), modo: 'simple', familia: '4X1000',
+      reglas: '4X1000 RESPUESTA BANCOLOMBIA: el banco ya contestó una carta de traslado exento del 4x1000: la aprobó o la rechazó. Si el banco todavía no ha contestado, NO es este proceso.',
+      revisiones: [aRevision({ ...nuevaCasilla('obligatorio'), dato: 'la respuesta del banco' })] },
+    { ...p('4X1000R_DAVIVIENDA', '4X1000 Respuesta Davivienda', '#E5392A', 7, null as unknown as string, null, []), modo: 'simple', familia: '4X1000',
+      reglas: '4X1000 RESPUESTA DAVIVIENDA: Davivienda ya contestó una carta de traslado exento del 4x1000. Si el banco todavía no ha contestado, NO es este proceso.',
+      revisiones: [] },
   ];
+}
+
+const PROMPT_RETIRO = `RETIRO DE APORTES VOLUNTARIOS: carta del cliente pidiendo retirar plata de su fondo de pensiones voluntarias hacia su cuenta bancaria. Se reconoce porque dice «retiro», trae la carta firmada y el certificado de la cuenta. Si es un traslado a otro fondo, NO es este proceso.
+
+QUÉ ES LA CARTA: va dirigida a Skandia, dice el valor a retirar y la cuenta a la que se consigna.
+QUÉ ES EL CERTIFICADO: lo expide el banco y dice de quién es la cuenta.`;
+
+// Construidas con el mismo catálogo que el asistente (buzon-casillas), para que se lean como frases.
+const REVISIONES_RETIRO: Revision[] = [
+  aRevision({ ...nuevaCasilla('digitos'), dato: 'la cuenta del cliente', numero: '11' }),
+  aRevision({ ...nuevaCasilla('iguales'), dato: 'el nombre', docA: 'la carta', docB: 'el certificado' }),
+  aRevision({ ...nuevaCasilla('fecha'), dato: 'la fecha de la carta', numero: '1' }),
+  { ...aRevision(nuevaCasilla('firmada')), activa: false },
+];
+
+/** Valor que «copia la IA» en la demo; con un correo de id impar, la cuenta y el nombre fallan. */
+function valorDemo(clave: string, impar: boolean): string {
+  if (/fecha/.test(clave)) return new Date().toISOString().slice(0, 10);
+  if (/firmad/.test(clave)) return 'si';
+  if (/cuenta/.test(clave)) return impar ? '1110002040' : '11100020401';
+  if (/contrato/.test(clave)) return '10000123456';
+  if (/cedula/.test(clave)) return '1020304050';
+  if (/nombre/.test(clave)) return impar && /certificado/.test(clave) ? 'PEDRO TORRES' : 'MARIA TORRES';
+  if (/valor/.test(clave)) return '1250000';
+  return 'Ejemplo';
+}
+
+/** Versión corta de buzon_revisiones._falla del backend (sin el «solo cuando»). */
+function fallaDemo(r: Revision, d: Record<string, unknown>): string | null {
+  const v = (k?: string) => String(d[k ?? ''] ?? '').trim();
+  const dig = (k?: string) => v(k).replace(/\D/g, '');
+  switch (r.tipo) {
+    case 'digitos': return dig(r.campo).length === r.cantidad ? null : `tiene ${dig(r.campo).length} dígitos`;
+    case 'empieza_por': return dig(r.campo).startsWith(r.prefijo ?? '') ? null : `empieza por ${dig(r.campo).slice(0, (r.prefijo ?? '').length)}`;
+    case 'obligatorios': {
+      const faltan = (r.campos ?? []).filter((k) => !v(k));
+      return faltan.length ? `faltan ${faltan.join(', ')}` : null;
+    }
+    case 'no_permitido': return (r.valores ?? []).some((x) => nrm(x) === nrm(v(r.campo))) ? `es «${v(r.campo)}»` : null;
+    case 'distintos': return v(r.a) && v(r.b) && dig(r.a) === dig(r.b) ? 'son iguales' : null;
+    case 'iguales': {
+      const no = (r.pares ?? []).filter((x) => nrm(v(x.a)) !== nrm(v(x.b))).map((x) => x.nombre ?? x.a);
+      return no.length ? `no coinciden: ${no.join(', ')}` : null;
+    }
+    case 'fecha_vigente': {
+      const f = Date.parse(v(r.campo));
+      if (isNaN(f)) return 'la fecha no se puede leer';
+      const dias = (Date.now() - f) / 86_400_000;
+      return dias <= (r.dias ?? 0) + 1 ? null : `fechada ${v(r.campo)}`;
+    }
+  }
+  return null;
 }
 
 function gruposBase(): Grupo[] {
@@ -954,6 +1019,11 @@ export class DemoStore {
     }
     const conRespuesta = this.correos.find((c) => c.estado === 'ejecutado' && c.proceso_clave);
     if (conRespuesta) this.correos = this.correos.map((c) => (c.id === conRespuesta.id ? { ...c, respuestas: 1 } : c));
+    // La etiqueta de cada proceso «simple» de ejemplo (una por proceso, con su misma clave).
+    for (const s of this.procesos.filter((x) => x.modo === 'simple')) {
+      this.categorias.push(cat(s.buzon_id, s.clave, s.nombre, primerParrafo(s.reglas ?? ''), s.color ?? '',
+        [{ tipo: 'categorizar', parametros: {}, orden: 1, activa: true }], { proceso_id: s.id, criterio: 'ia', origen: 'user' }));
+    }
   }
 
   // ── Bandeja (060) ──
@@ -1364,6 +1434,11 @@ export class DemoStore {
       etiquetas: [],
       umbral: body.umbral !== undefined ? body.umbral : (previo?.umbral ?? null),
       causas_validar: body.causas_validar ?? previo?.causas_validar ?? [],
+      // Como el backend: cada uno solo cambia si viene.
+      reglas: body.reglas !== undefined ? body.reglas : (previo?.reglas ?? null),
+      modo: body.modo ?? previo?.modo ?? 'clasico',
+      revisiones: body.revisiones !== undefined ? body.revisiones : (previo?.revisiones ?? []),
+      familia: body.familia !== undefined ? body.familia : (previo?.familia ?? null),
     };
     this.procesos = previo ? this.procesos.map((p) => (p.id === id ? nuevo : p)) : [...this.procesos, nuevo];
     return this.listarProcesos(bid).find((p) => p.id === nuevo.id)!;
@@ -1476,12 +1551,23 @@ export class DemoStore {
   guardarProcesoCompleto(buzonId: string, body: ProcesoCompletoIn): Proceso {
     const previo = body.original ? this.procesos.find((p) => p.buzon_id === buzonId && p.clave === body.original) : undefined;
     if (body.original && !previo) throw new Error(`El proceso ${body.original} ya no existe.`);
+    // Como el backend (409): un proceso «simple» solo se guarda desde el asistente nuevo.
+    if (previo?.modo === 'simple' && !body.proceso.modo) throw new Error(`El proceso ${previo.clave} se edita en «Procesos (nuevo)», no en la pestaña Reglas.`);
     const paleta = ['#1976D2', '#7B1FA2', '#00796B', '#D32F2F', '#F57C00', '#0097A7'];
     const color = body.proceso.color ?? previo?.color ?? paleta[this.procesos.length % paleta.length];
     const p = this.guardarProceso(buzonId, { ...body.proceso, color }, previo?.id);
     const nuevas = body.etiquetas.map((e) => e.clave);
     for (const e of body.etiquetas) {
-      const c = this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.clave);
+      let c = this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.clave);
+      // Renombre (como el backend): la misma etiqueta con su clave nueva, y los grupos la siguen.
+      const previa = !c && e.original && e.original !== e.clave
+        ? this.categorias.find((x) => x.buzon_id === buzonId && x.clave === e.original && (x.proceso_id === p.id || !x.proceso_id))
+        : undefined;
+      if (previa) {
+        this.categorias = this.categorias.map((x) => (x.id === previa.id ? { ...x, clave: e.clave } : x));
+        this.grupos = this.grupos.map((g) => (g.buzon_id === buzonId ? { ...g, etiquetas: g.etiquetas.map((k) => (k === e.original ? e.clave : k)) } : g));
+        c = this.categorias.find((x) => x.id === previa.id);
+      }
       if (c && c.proceso_id && c.proceso_id !== p.id && c.activa) throw new Error(`La etiqueta ${e.clave} ya pertenece a otro proceso.`);
       const campos = { nombre: e.nombre || e.clave, descripcion: e.descripcion, criterio: e.criterio, condicion: e.condicion ?? null, origen: e.origen, proceso_id: p.id, activa: true };
       if (c) this.categorias = this.categorias.map((x) => (x.id === c.id ? { ...x, ...campos } : x));
@@ -1586,6 +1672,52 @@ export class DemoStore {
     });
     const total = resumen.reduce((n, r) => n + r.correos, 0) + 1;
     return { total, validar: 1, resumen, filas: [] };
+  }
+
+  // ── 095: probar un proceso con un correo del buzón ──
+  async buscarCorreos(buzonId: string, asunto: string): Promise<CorreoEncontrado[]> {
+    await espera(500);
+    const q = nrm(asunto);
+    return this.correos
+      .filter((c) => c.buzon_id === buzonId && nrm(c.asunto).includes(q))
+      .slice(0, 15)
+      .map((c) => ({ id: c.id, asunto: c.asunto, remitente: c.remitente_nombre || c.remitente, fecha: c.recibido_en, adjuntos: c.adjuntos.length > 0 }));
+  }
+
+  /** Como el backend: con el borrador, sin tocar Outlook. La «IA» elige el proceso simple
+   *  cuyo nombre aparece en el asunto (o el último creado, que suele ser el que se está
+   *  armando) y copia valores de ejemplo. */
+  async probarCorreo(buzonId: string, messageId: string): Promise<PruebaCorreo> {
+    await espera(1800);
+    const c = this.correos.find((x) => x.id === messageId);
+    if (!c) throw new Error('Ese correo no se puede leer.');
+    const simples = this.listarProcesos(buzonId).filter((p) => p.modo === 'simple' && p.activo);
+    const pal = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+    const delAsunto = pal(c.asunto);
+    const p = simples.find((x) => pal(x.nombre).some((w) => delAsunto.includes(w))) ?? simples[simples.length - 1];
+    const base = { asunto: c.asunto, remitente: c.remitente_nombre || c.remitente, fecha: c.recibido_en };
+    if (!p) {
+      return { ...base, proceso: null, etiqueta: 'OTROS', confianza: 0.9, resumen: c.resumen, justificacion: 'No encaja con ningún proceso.', datos: {},
+        revisiones: [], requiere_humano: false, motivo: '', resultado: 'otros', destino: null, umbral: null };
+    }
+    const et = this.categorias.find((x) => x.proceso_id === p.id && x.activa)?.clave ?? p.clave;
+    const impar = Number(messageId.replace(/\D/g, '').slice(-1) || '0') % 2 === 1;
+    const datos: Record<string, unknown> = {};
+    // Como el backend: la IA solo copia los datos de las casillas activas.
+    for (const r of (p.revisiones ?? []).filter((x) => x.activa !== false)) for (const d of r.datos ?? []) datos[d.clave] = valorDemo(d.clave, impar);
+    const revisiones = (p.revisiones ?? []).filter((r) => r.activa !== false).map((r) => {
+      const falla = fallaDemo(r, datos);
+      return { nombre: r.nombre, ok: falla === null, motivo: falla === null ? '' : (r.motivo ?? `${r.nombre}: {detalle}`).replace('{detalle}', falla) };
+    });
+    const fallan = revisiones.filter((r) => !r.ok);
+    const grupo = this.grupos.find((g) => g.buzon_id === buzonId && g.etiquetas.includes(et));
+    return {
+      ...base, proceso: p.clave, etiqueta: et, confianza: 0.93, resumen: c.resumen,
+      justificacion: `Encaja con «${p.nombre}»: ${primerParrafo(p.reglas ?? '').slice(0, 140)}…`,
+      datos, revisiones, requiere_humano: fallan.length > 0, motivo: fallan.map((r) => r.motivo).join('; '),
+      resultado: fallan.length ? 'validar' : 'sale', destino: grupo ? (grupo.carpeta ?? grupo.nombre) : null,
+      umbral: p.umbral ?? this.buzones.find((b) => b.id === buzonId)?.umbral_confianza ?? 0.8,
+    };
   }
 
   // ── 2.0: grupos ──

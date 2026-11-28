@@ -212,13 +212,19 @@ export interface Categoria {
 
 export type CriterioEtiqueta = 'ia' | 'datos';
 export type OrigenRegla = 'ia' | 'user';
-export type OperadorCondicion = '=' | 'contiene' | 'distinto de';
+export type OperadorCondicion = '=' | 'contiene' | 'distinto de' | 'en' | 'vacio' | 'no vacio' | 'empieza por';
 
-export interface CondicionEtiqueta {
+/** Condición sobre un dato que copió la IA. Con «en», `valor` es una lista; con «vacio»
+ *  y «no vacio» no lleva valor. */
+export interface CondicionSimple {
   campo: string;
   op: OperadorCondicion;
-  valor: string;
+  valor?: string | string[];
 }
+
+/** Etiqueta «por datos»: una condición o grupos «todas» (y) / «alguna» (o), anidables
+ *  (alma-backend PR 449). La pantalla vieja solo edita la simple de un operador clásico. */
+export type CondicionEtiqueta = CondicionSimple | { todas: CondicionEtiqueta[] } | { alguna: CondicionEtiqueta[] };
 
 export type CategoriaIn = Omit<Categoria, 'id' | 'buzon_id' | 'correos_30d' | 'orden' | 'proceso_id'> & {
   orden?: number;
@@ -463,6 +469,81 @@ export interface Proceso {
   causas_validar?: string[];
   /** 069: texto completo de las secciones del prompt que son de este proceso. */
   reglas?: string | null;
+  /** 095: «simple» = un proceso, un prompt (pestaña «Procesos (nuevo)»). Sin la clave = clásico. */
+  modo?: ModoProceso;
+  /** Revisiones de Nova (las «casillas»): se evalúan con código sobre lo que copió la IA. */
+  revisiones?: Revision[];
+  /** Solo para ver juntos en «Procesos (nuevo)» los casos parecidos (p. ej. «4X1000»). No
+   *  cambia cómo clasifica Nova (alma-backend PR 451, migración 096; null = sin familia). */
+  familia?: string | null;
+}
+
+export type ModoProceso = 'clasico' | 'simple';
+
+export type TipoRevision = 'fecha_vigente' | 'iguales' | 'distintos' | 'obligatorios' | 'digitos' | 'empieza_por' | 'no_permitido';
+
+/** Dato que la IA copia para una casilla (095). La clave va en snake_case. */
+export interface DatoRevision {
+  clave: string;
+  descripcion: string;
+}
+
+export interface ParIguales {
+  a: string;
+  b: string;
+  como?: 'numero' | 'texto' | 'palabras';
+  nombre?: string;
+}
+
+/** Una revisión de Nova (alma-backend PR 447 y 450). Si falla, el correo va a Validar con
+ *  `motivo` (plantilla con {dato}, {hoy} y {detalle}); no cambia la etiqueta ni los datos. */
+export interface Revision {
+  nombre: string;
+  activa?: boolean;
+  /** Vacío = todas las etiquetas del proceso. */
+  etiquetas?: string[];
+  /** Solo se revisa si se cumplen TODAS. */
+  si?: CondicionSimple[];
+  tipo: TipoRevision;
+  campo?: string;
+  dias?: number;
+  pares?: ParIguales[];
+  a?: string;
+  b?: string;
+  campos?: string[];
+  cantidad?: number;
+  prefijo?: string;
+  valores?: string[];
+  motivo?: string;
+  datos?: DatoRevision[];
+}
+
+/** Correo del buzón encontrado por asunto, para probar un proceso (095). */
+export interface CorreoEncontrado {
+  id: string;
+  asunto: string;
+  remitente: string;
+  fecha: string | null;
+  adjuntos: boolean;
+}
+
+/** Paso a paso de «probar un correo» con el BORRADOR: no toca Outlook ni guarda nada. */
+export interface PruebaCorreo {
+  asunto: string | null;
+  remitente: string | null;
+  fecha: string | null;
+  proceso: string | null;
+  etiqueta: string | null;
+  confianza: number | null;
+  resumen: string | null;
+  justificacion: string | null;
+  datos: Record<string, unknown>;
+  revisiones: { nombre: string; ok: boolean; motivo: string }[];
+  requiere_humano: boolean;
+  motivo: string;
+  resultado: 'sale' | 'validar' | 'otros';
+  destino: string | null;
+  umbral: number | null;
 }
 
 export interface ProcesoIn {
@@ -477,6 +558,12 @@ export interface ProcesoIn {
   umbral?: number | null;
   causas_validar?: string[];
   reglas?: string | null;
+  /** Solo se cambia si viene. El asistente nuevo SIEMPRE manda «simple» (sin él, el backend responde 409). */
+  modo?: ModoProceso;
+  /** Sin la clave se conserva lo guardado; [] las borra. */
+  revisiones?: Revision[];
+  /** Ver `Proceso.familia`. Solo se cambia si viene; null o "" = sin familia. */
+  familia?: string | null;
 }
 
 /** Editor de procesos de Reglas (061): el proceso con sus etiquetas y su discriminación. */
@@ -484,7 +571,8 @@ export interface ProcesoCompletoIn {
   /** Clave anterior al renombrar; null = proceso nuevo. */
   original: string | null;
   proceso: ProcesoIn;
-  etiquetas: { clave: string; nombre?: string; descripcion: string; criterio: CriterioEtiqueta; condicion?: CondicionEtiqueta | null; origen: OrigenRegla }[];
+  /** `original` = clave anterior de la etiqueta al renombrarla (conserva id, acciones, historial y grupos). */
+  etiquetas: { clave: string; original?: string | null; nombre?: string; descripcion: string; criterio: CriterioEtiqueta; condicion?: CondicionEtiqueta | null; origen: OrigenRegla }[];
   discriminacion?: { con: string; manda: string }[];
 }
 
@@ -1728,6 +1816,22 @@ export class BuzonApi {
   }
 
   /** Publica el borrador como vN+1 (y activa el buzón si estaba en configuración). */
+  /** 095: correos del buzón cuyo asunto contiene el texto (≥3 letras; hasta 15). */
+  buscarCorreos(buzonId: string, asunto: string): Promise<CorreoEncontrado[]> {
+    return this.conDemo(
+      () => this.api.fetch<CorreoEncontrado[]>(`${BASE}/buzones/${buzonId}/buscar-correos?asunto=${encodeURIComponent(asunto)}`),
+      () => this.demo.buscarCorreos(buzonId, asunto),
+    );
+  }
+
+  /** 095: clasifica UN correo con el borrador y devuelve el paso a paso (10 a 60 s). */
+  probarCorreo(buzonId: string, messageId: string): Promise<PruebaCorreo> {
+    return this.conDemo(
+      () => this.api.fetch<PruebaCorreo>(`${BASE}/buzones/${buzonId}/probar-correo`, { method: 'POST', body: JSON.stringify({ message_id: messageId }) }),
+      () => this.demo.probarCorreo(buzonId, messageId),
+    );
+  }
+
   publicarReglas(buzonId: string): Promise<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }> {
     return this.conDemo(
       () => this.api.fetch<{ version: number; cambios: CambioRegla[]; grupos?: GrupoLimpiado[] }>(`${BASE}/buzones/${buzonId}/versiones`, { method: 'POST' }),
